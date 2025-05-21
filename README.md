@@ -3,7 +3,9 @@ Astra Assets Experiment
 
 ## Environments
 - Preview: https://main--{repo}--{owner}.aem.page/
+- https://main--koassets--aemsites.aem.page/
 - Live: https://main--{repo}--{owner}.aem.live/
+- https://main--koassets--aemsites.aem.live/
 
 ## Documentation
 
