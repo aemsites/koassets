@@ -1,8 +1,47 @@
 .columns {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 24px;
   padding: 24px 0;
+}
+
+/* Default: 1 column on mobile */
+.columns {
+  grid-template-columns: 1fr;
+}
+
+/* 2 columns */
+.columns.columns-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* 3 columns */
+.columns.columns-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* 4 columns */
+.columns.columns-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* 5 columns */
+.columns.columns-5 {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+/* 6 columns */
+.columns.columns-6 {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+/* Auto-detect number of columns based on available space */
+.columns:not([class*="columns-"]) {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+/* Grid auto-rows for consistent height across rows */
+.columns {
+  grid-auto-rows: 1fr;
 }
 
 .columns > div {
@@ -13,6 +52,7 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  height: 100%; /* Ensure cards fill the grid cell */
 }
 
 .columns > div:hover {
@@ -24,15 +64,20 @@
   width: 100%;
   height: 200px;
   object-fit: cover;
+  flex-shrink: 0; /* Prevent image from shrinking */
 }
 
 .columns > div > div {
   order: 1;
   padding: 20px;
+  flex: 1; /* Allow content area to grow and fill remaining space */
+  display: flex;
+  flex-direction: column;
 }
 
 .columns > div > .columns-img-col {
   order: 0;
+  flex-shrink: 0; /* Prevent image container from shrinking */
 }
 
 .columns > div > .columns-img-col img {
@@ -50,6 +95,7 @@
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--text-color);
+  flex-shrink: 0; /* Prevent title from shrinking */
 }
 
 .columns > div > div p {
@@ -57,47 +103,107 @@
   font-size: 0.9rem;
   color: var(--dark-color);
   line-height: 1.4;
+  flex: 1; /* Allow description to fill remaining space */
+}
+
+/* Equal height rows option */
+.columns.equal-height {
+  grid-auto-rows: 1fr;
+}
+
+.columns.equal-height > div {
+  height: 100%;
+}
+
+/* Responsive breakpoints */
+@media (width >= 480px) {
+  .columns {
+    gap: 20px;
+  }
+  
+  /* 2 columns for medium content on small screens */
+  .columns.columns-4,
+  .columns.columns-5,
+  .columns.columns-6 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (width >= 600px) {
+  .columns {
+    gap: 24px;
+  }
+  
+  /* 3 columns for larger content on medium screens */
+  .columns.columns-5,
+  .columns.columns-6 {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 @media (width >= 900px) {
   .columns {
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
     gap: 32px;
   }
 
-  .columns > div {
-    flex-direction: row;
-    align-items: stretch;
+  /* Restore full column count on larger screens */
+  .columns.columns-2 {
+    grid-template-columns: repeat(2, 1fr);
   }
 
-  .columns > div > div {
-    flex: 1;
-    order: unset;
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+  .columns.columns-3 {
+    grid-template-columns: repeat(3, 1fr);
   }
 
-  .columns > div > .columns-img-col {
-    flex: 0 0 40%;
-    order: unset;
+  .columns.columns-4 {
+    grid-template-columns: repeat(4, 1fr);
   }
 
-  .columns > div > .columns-img-col img {
-    height: 100%;
-    width: 100%;
-    object-fit: cover;
+  .columns.columns-5 {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .columns.columns-6 {
+    grid-template-columns: repeat(6, 1fr);
+  }
+
+  /* Auto-detect with better min-width */
+  .columns:not([class*="columns-"]) {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   }
 }
 
-/* Alternate layout for right-aligned images */
-.columns > div.columns-img-right {
-  flex-direction: column;
+@media (width >= 1200px) {
+  .columns {
+    gap: 40px;
+  }
+
+  /* Auto-detect with even better min-width for large screens */
+  .columns:not([class*="columns-"]) {
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  }
 }
 
-@media (width >= 900px) {
-  .columns > div.columns-img-right {
-    flex-direction: row-reverse;
+/* For very wide screens, limit max columns */
+@media (width >= 1600px) {
+  .columns:not([class*="columns-"]) {
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   }
+}
+
+/* Special styling for dense layouts (many items) */
+.columns.dense {
+  gap: 16px;
+}
+
+.columns.dense > div {
+  border-radius: 8px;
+}
+
+.columns.dense > div > div {
+  padding: 16px;
+}
+
+.columns.dense img {
+  height: 150px;
 }
