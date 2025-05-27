@@ -77,7 +77,7 @@ export default function decorate(block) {
   const performSearch = () => {
     const query = input.value;
     const selectedQueryType = select.value;
-    const url = `/tools/assets-browser/?query=${query}&selectedQueryType=${selectedQueryType}`;
+    const url = `/tools/assets-browser/index.html?query=${query}&selectedQueryType=${selectedQueryType}`;
     window.location.href = url; // Open URL in the same tab
   }
 
