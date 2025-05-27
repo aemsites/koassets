@@ -256,6 +256,6 @@ main .section.highlight {
   padding: 40px 0;
 }
 
-:foo {
+.foo {
   --background-color: red;
 }
