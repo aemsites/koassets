@@ -64,18 +64,6 @@
     object-fit: cover;
 }
 
-/* Dark gradient overlay */
-.carousel .carousel-slide::before {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 50%;
-    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
-    z-index: 1;
-}
-
 /* Dark overlay at bottom only */
 .carousel .carousel-slide::after {
     content: '';
@@ -104,7 +92,7 @@
 /* Remove any center/right alignment */
 .carousel .carousel-slide:has(.carousel-slide-content[data-align='center']),
 .carousel .carousel-slide:has(.carousel-slide-content[data-align='right']) {
-    align-items: flex-start;
+    align-items: flex-start; /* Force all to left alignment */
 }
 
 .carousel .carousel-slide-indicators {
@@ -204,19 +192,22 @@
     left: calc(50% - 2px);
 }
 
+/* UPDATE the media query to not override your content styling */
 @media (width >=600px) {
     .carousel .carousel-navigation-buttons {
         left: 24px;
         right: 24px;
     }
 
+    /* REMOVE or comment out these content overrides */
+    /*
     .carousel .carousel-slide .carousel-slide-content {
         --slide-content-width: calc((100% - 184px) / 2);
-
         margin: 92px;
     }
 
     .carousel .carousel-slide .carousel-slide-content[data-align='justify'] {
         --slide-content-width: auto;
     }
+    */
 }
