@@ -32,12 +32,13 @@ function showSlide(block, slideIndex = 0) {
     const slides = block.querySelectorAll('.carousel-slide');
     let realSlideIndex = slideIndex < 0 ? slides.length - 1 : slideIndex;
     if (slideIndex >= slides.length) realSlideIndex = 0;
-    const activeSlide = slides[realSlideIndex];
-
-    activeSlide.querySelectorAll('a').forEach((link) => link.removeAttribute('tabindex'));
-    block.querySelector('.carousel-slides').scrollTo({
+    
+    const container = block.querySelector('.carousel-slides');
+    const slideWidth = container.offsetWidth / 3; // Width of one slide when showing 3
+    
+    container.scrollTo({
         top: 0,
-        left: activeSlide.offsetLeft,
+        left: slideWidth * realSlideIndex,
         behavior: 'smooth',
     });
 }
