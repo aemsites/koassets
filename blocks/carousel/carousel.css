@@ -28,10 +28,10 @@
     justify-content: flex-end; /* Position content at bottom */
     position: relative;
     width: 33.333%;
-    min-height: 300px; /* Adjust as needed */
-    border-radius: 12px;
+    min-height: 300px;
+    border-radius: 16px; /* Slightly more rounded like your example */
     overflow: hidden;
-    margin-right: 12px; /* Gap between cards */
+    margin-right: 16px; /* Gap between cards */
 }
 
 .carousel .carousel-slide:nth-child(3n) {
@@ -76,15 +76,35 @@
     z-index: 1;
 }
 
-/* Content styling */
+/* Dark overlay at bottom only */
+.carousel .carousel-slide::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 40%;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.3) 70%, transparent 100%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* Content styling - positioned at bottom */
 .carousel .carousel-slide .carousel-slide-content {
     position: relative;
     z-index: 2;
-    padding: 20px;
+    padding: 24px;
     color: white;
-    background: none; /* Remove existing background */
-    margin: 0; /* Remove existing margins */
+    background: none;
+    margin: 0;
     width: 100%;
+    align-self: flex-start; /* Align text to left */
+}
+
+/* Remove any center/right alignment */
+.carousel .carousel-slide:has(.carousel-slide-content[data-align='center']),
+.carousel .carousel-slide:has(.carousel-slide-content[data-align='right']) {
+    align-items: flex-start;
 }
 
 .carousel .carousel-slide-indicators {
@@ -113,23 +133,27 @@
     background-color: var(--text-color);
 }
 
+/* Typography */
 .carousel .carousel-slide .carousel-slide-content h1,
 .carousel .carousel-slide .carousel-slide-content h2,
 .carousel .carousel-slide .carousel-slide-content h3,
 .carousel .carousel-slide .carousel-slide-content h4,
 .carousel .carousel-slide .carousel-slide-content h5,
 .carousel .carousel-slide .carousel-slide-content h6 {
-    margin: 0;
+    margin: 0 0 8px 0;
     font-size: 1.25rem;
     font-weight: 600;
-    line-height: 1.3;
+    line-height: 1.2;
     color: white;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .carousel .carousel-slide .carousel-slide-content p {
-    margin: 8px 0 0 0;
+    margin: 0;
     font-size: 0.9rem;
     opacity: 0.9;
+    line-height: 1.4;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .carousel .carousel-navigation-buttons {
