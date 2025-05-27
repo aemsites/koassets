@@ -1,3 +1,13 @@
+.section.search-container,
+.section.carousel-container {
+  margin: 0 !important;
+}
+
+.search-wrapper {
+  max-width: none !important;
+  padding: 0 !important;
+}
+
 .query-input-container {
   background: black;
   display: flex;
