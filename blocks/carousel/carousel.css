@@ -100,14 +100,14 @@
     flex-wrap: wrap;
     justify-content: center;
     gap: 6px 12px;
-    padding: 12px;
-    background-color: var(--light-color);
+    padding: 20px;
+    background-color: none; /* var(--light-color); */
     line-height: 0;
 }
 
 .carousel .carousel-slide-indicator button {
-    width: 24px;
-    height: 24px;
+    width: 18px;
+    height: 18px;
     margin: 0;
     padding: 0;
     border-radius: 50%;
@@ -195,8 +195,8 @@
 /* UPDATE the media query to not override your content styling */
 @media (width >=600px) {
     .carousel .carousel-navigation-buttons {
-        left: 24px;
-        right: 24px;
+        left: 18px;
+        right: 18px;
     }
 
     /* REMOVE or comment out these content overrides */
