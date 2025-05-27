@@ -34,7 +34,7 @@ function showSlide(block, slideIndex = 0) {
     if (slideIndex >= slides.length) realSlideIndex = 0;
     
     const container = block.querySelector('.carousel-slides');
-    const slideWidth = container.offsetWidth / 3; // Width of one slide when showing 3
+    const slideWidth = container.offsetWidth / 3; // Calculate for 3 visible slides
     
     container.scrollTo({
         top: 0,
