@@ -28,7 +28,7 @@
     justify-content: flex-end; /* Position content at bottom */
     position: relative;
     width: 33.333%;
-    min-height: 300px;
+    aspect-ratio: 1 / 1; /* min-height: 300px; */
     border-radius: 16px; /* Slightly more rounded like your example */
     overflow: hidden;
     margin-right: 16px; /* Gap between cards */
