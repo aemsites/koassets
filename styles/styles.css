@@ -257,5 +257,13 @@ main .section.highlight {
 }
 
 .foo {
-  --background-color: red;
+  background-image: url('ko-assets-bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  /* Other properties */
+  color: var(--text-color);
+  padding: 16px;
+  margin: 8px 0;
+  border-radius: 4px;
 }
