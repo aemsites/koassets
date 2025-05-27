@@ -21,14 +21,14 @@
 }
 
 .carousel .carousel-slide {
-    flex: 0 0 100%;
+    flex: 0 0 33.333%; /* Changed from 100% to show 3 slides */
     scroll-snap-align: start;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     justify-content: center;
     position: relative;
-    width: 100%;
+    width: 33.333%; /* Changed from 100% */
     min-height: min(50vw, calc(100dvh - var(--header-height)));
 }
 
