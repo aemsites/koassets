@@ -118,7 +118,7 @@
 .carousel .carousel-slide-indicator button:disabled,
 .carousel .carousel-slide-indicator button:hover,
 .carousel .carousel-slide-indicator button:focus-visible {
-    background-color: var(--text-color);
+    background-color: red; /* var(--text-color); */
 }
 
 /* Typography */
