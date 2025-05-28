@@ -1,0 +1,233 @@
+{
+  "tabs": [
+    {
+      "name": "Global Initiatives",
+      "active": true,
+      "brands": [
+        {
+          "name": "Coca-Cola",
+          "active": true,
+          "initiatives": [
+            {
+              "title": "Coca-Cola Uplift",
+              "image": "blocks/konavigation/assets/uplift.png",
+              "alt": "Coca-Cola Uplift initiative"
+            },
+            {
+              "title": "Ramadan 2025",
+              "image": "blocks/konavigation/assets/ramanda.png",
+              "alt": "Ramadan 2025 campaign"
+            },
+            {
+              "title": "FIFA Club World Cup 2025",
+              "image": "blocks/konavigation/assets/fifa-club.png",
+              "alt": "FIFA Club World Cup 2025 campaign"
+            },
+            {
+              "title": "FIFA WC 2026",
+              "image": "blocks/konavigation/assets/fifa.png",
+              "alt": "FIFA WC 2026 campaign"
+            }
+          ]
+        },
+        {
+          "name": "Fanta",
+          "active": false,
+          "initiatives": [
+            {
+              "title": "Coca-Cola Uplift",
+              "image": "blocks/konavigation/assets/uplift.png",
+              "alt": "Coca-Cola Uplift initiative"
+            },
+            {
+              "title": "Ramadan 2025",
+              "image": "blocks/konavigation/assets/ramanda.png",
+              "alt": "Ramadan 2025 campaign"
+            }
+          ]
+        },
+        {
+          "name": "Sprite",
+          "active": false,
+          "initiatives": [
+            {
+              "title": "Coca-Cola Uplift",
+              "image": "blocks/konavigation/assets/uplift.png",
+              "alt": "Coca-Cola Uplift initiative"
+            },
+            {
+              "title": "Ramadan 2025",
+              "image": "blocks/konavigation/assets/ramanda.png",
+              "alt": "Ramadan 2025 campaign"
+            }
+          ]
+        },
+        {
+          "name": "Powerade",
+          "active": false,
+          "initiatives": [
+            {
+              "title": "Coca-Cola Uplift",
+              "image": "blocks/konavigation/assets/uplift.png",
+              "alt": "Coca-Cola Uplift initiative"
+            },
+            {
+              "title": "Ramadan 2025",
+              "image": "blocks/konavigation/assets/ramanda.png",
+              "alt": "Ramadan 2025 campaign"
+            }
+          ]
+        },
+        {
+          "name": "Minute Maid",
+          "active": false,
+          "initiatives": [
+            {
+              "title": "Coca-Cola Uplift",
+              "image": "blocks/konavigation/assets/uplift.png",
+              "alt": "Coca-Cola Uplift initiative"
+            },
+            {
+              "title": "Ramadan 2025",
+              "image": "blocks/konavigation/assets/ramanda.png",
+              "alt": "Ramadan 2025 campaign"
+            }
+          ]
+        },
+        {
+          "name": "Schweppes",
+          "active": false,
+          "initiatives": [
+            {
+              "title": "Coca-Cola Uplift",
+              "image": "blocks/konavigation/assets/uplift.png",
+              "alt": "Coca-Cola Uplift initiative"
+            },
+            {
+              "title": "Ramadan 2025",
+              "image": "blocks/konavigation/assets/ramanda.png",
+              "alt": "Ramadan 2025 campaign"
+            }
+          ]
+        },
+        {
+          "name": "Fuze Tea",
+          "active": false,
+          "initiatives": [
+            {
+              "title": "Coca-Cola Uplift",
+              "image": "blocks/konavigation/assets/uplift.png",
+              "alt": "Coca-Cola Uplift initiative"
+            },
+            {
+              "title": "Ramadan 2025",
+              "image": "blocks/konavigation/assets/ramanda.png",
+              "alt": "Ramadan 2025 campaign"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Regional Initiatives",
+      "active": false,
+      "brands": [
+        {
+          "name": "Coca-Cola",
+          "active": true,
+          "initiatives": [
+            {
+              "title": "FIFA Club World Cup 2025",
+              "image": "blocks/konavigation/assets/fifa-club.png",
+              "alt": "FIFA Club World Cup 2025 campaign"
+            },
+            {
+              "title": "FIFA WC 2026",
+              "image": "blocks/konavigation/assets/fifa.png",
+              "alt": "FIFA WC 2026 campaign"
+            }
+          ]
+        },
+        {
+          "name": "Fanta",
+          "active": false,
+          "initiatives": [
+            {
+              "title": "Fanta Regional Festival",
+              "image": "/path/to/fanta-regional.jpg",
+              "alt": "Fanta Regional Festival"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Past Initiatives",
+      "active": false,
+      "brands": [
+        {
+          "name": "Coca-Cola",
+          "active": true,
+          "initiatives": [
+            {
+              "title": "Coca-Cola Legacy 2024",
+              "image": "/path/to/legacy-2024.jpg",
+              "alt": "Coca-Cola Legacy 2024"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Brands",
+      "active": false,
+      "brands": [
+        {
+          "name": "Coca-Cola",
+          "active": true,
+          "initiatives": [
+            {
+              "title": "Brand Guidelines",
+              "image": "/path/to/brand-guidelines.jpg",
+              "alt": "Coca-Cola Brand Guidelines"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Essentials",
+      "active": false,
+      "brands": [
+        {
+          "name": "Coca-Cola",
+          "active": true,
+          "initiatives": [
+            {
+              "title": "Essential Assets",
+              "image": "/path/to/essential-assets.jpg",
+              "alt": "Essential Assets"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Customers",
+      "active": false,
+      "brands": [
+        {
+          "name": "Coca-Cola",
+          "active": true,
+          "initiatives": [
+            {
+              "title": "Customer Stories",
+              "image": "/path/to/customer-stories.jpg",
+              "alt": "Customer Stories"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+} 
