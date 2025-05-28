@@ -43,6 +43,16 @@
               "title": "Ramadan 2025",
               "image": "blocks/konavigation/assets/ramanda.png",
               "alt": "Ramadan 2025 campaign"
+            },
+            {
+              "title": "FIFA Club World Cup 2025",
+              "image": "blocks/konavigation/assets/fifa-club.png",
+              "alt": "FIFA Club World Cup 2025 campaign"
+            },
+            {
+              "title": "FIFA WC 2026",
+              "image": "blocks/konavigation/assets/fifa.png",
+              "alt": "FIFA WC 2026 campaign"
             }
           ]
         },
@@ -59,6 +69,16 @@
               "title": "Ramadan 2025",
               "image": "blocks/konavigation/assets/ramanda.png",
               "alt": "Ramadan 2025 campaign"
+            },
+            {
+              "title": "FIFA Club World Cup 2025",
+              "image": "blocks/konavigation/assets/fifa-club.png",
+              "alt": "FIFA Club World Cup 2025 campaign"
+            },
+            {
+              "title": "FIFA WC 2026",
+              "image": "blocks/konavigation/assets/fifa.png",
+              "alt": "FIFA WC 2026 campaign"
             }
           ]
         },
@@ -75,6 +95,16 @@
               "title": "Ramadan 2025",
               "image": "blocks/konavigation/assets/ramanda.png",
               "alt": "Ramadan 2025 campaign"
+            },
+            {
+              "title": "FIFA Club World Cup 2025",
+              "image": "blocks/konavigation/assets/fifa-club.png",
+              "alt": "FIFA Club World Cup 2025 campaign"
+            },
+            {
+              "title": "FIFA WC 2026",
+              "image": "blocks/konavigation/assets/fifa.png",
+              "alt": "FIFA WC 2026 campaign"
             }
           ]
         },
@@ -88,9 +118,19 @@
               "alt": "Coca-Cola Uplift initiative"
             },
             {
+              "title": "FIFA Club World Cup 2025",
+              "image": "blocks/konavigation/assets/fifa-club.png",
+              "alt": "FIFA Club World Cup 2025 campaign"
+            },
+            {
               "title": "Ramadan 2025",
               "image": "blocks/konavigation/assets/ramanda.png",
               "alt": "Ramadan 2025 campaign"
+            },
+            {
+              "title": "FIFA WC 2026",
+              "image": "blocks/konavigation/assets/fifa.png",
+              "alt": "FIFA WC 2026 campaign"
             }
           ]
         },
@@ -104,9 +144,19 @@
               "alt": "Coca-Cola Uplift initiative"
             },
             {
+              "title": "FIFA Club World Cup 2025",
+              "image": "blocks/konavigation/assets/fifa-club.png",
+              "alt": "FIFA Club World Cup 2025 campaign"
+            },
+            {
               "title": "Ramadan 2025",
               "image": "blocks/konavigation/assets/ramanda.png",
               "alt": "Ramadan 2025 campaign"
+            },
+            {
+              "title": "FIFA WC 2026",
+              "image": "blocks/konavigation/assets/fifa.png",
+              "alt": "FIFA WC 2026 campaign"
             }
           ]
         },
@@ -120,9 +170,19 @@
               "alt": "Coca-Cola Uplift initiative"
             },
             {
+              "title": "FIFA Club World Cup 2025",
+              "image": "blocks/konavigation/assets/fifa-club.png",
+              "alt": "FIFA Club World Cup 2025 campaign"
+            },
+            {
               "title": "Ramadan 2025",
               "image": "blocks/konavigation/assets/ramanda.png",
               "alt": "Ramadan 2025 campaign"
+            },
+            {
+              "title": "FIFA WC 2026",
+              "image": "blocks/konavigation/assets/fifa.png",
+              "alt": "FIFA WC 2026 campaign"
             }
           ]
         }
@@ -137,9 +197,19 @@
           "active": true,
           "initiatives": [
             {
+              "title": "Coca-Cola Uplift",
+              "image": "blocks/konavigation/assets/uplift.png",
+              "alt": "Coca-Cola Uplift initiative"
+            },
+            {
               "title": "FIFA Club World Cup 2025",
               "image": "blocks/konavigation/assets/fifa-club.png",
               "alt": "FIFA Club World Cup 2025 campaign"
+            },
+            {
+              "title": "Ramadan 2025",
+              "image": "blocks/konavigation/assets/ramanda.png",
+              "alt": "Ramadan 2025 campaign"
             },
             {
               "title": "FIFA WC 2026",
@@ -153,9 +223,24 @@
           "active": false,
           "initiatives": [
             {
-              "title": "Fanta Regional Festival",
-              "image": "/path/to/fanta-regional.jpg",
-              "alt": "Fanta Regional Festival"
+              "title": "Coca-Cola Uplift",
+              "image": "blocks/konavigation/assets/uplift.png",
+              "alt": "Coca-Cola Uplift initiative"
+            },
+            {
+              "title": "FIFA Club World Cup 2025",
+              "image": "blocks/konavigation/assets/fifa-club.png",
+              "alt": "FIFA Club World Cup 2025 campaign"
+            },
+            {
+              "title": "Ramadan 2025",
+              "image": "blocks/konavigation/assets/ramanda.png",
+              "alt": "Ramadan 2025 campaign"
+            },
+            {
+              "title": "FIFA WC 2026",
+              "image": "blocks/konavigation/assets/fifa.png",
+              "alt": "FIFA WC 2026 campaign"
             }
           ]
         }
@@ -170,9 +255,24 @@
           "active": true,
           "initiatives": [
             {
-              "title": "Coca-Cola Legacy 2024",
-              "image": "/path/to/legacy-2024.jpg",
-              "alt": "Coca-Cola Legacy 2024"
+              "title": "FIFA Club World Cup 2025",
+              "image": "blocks/konavigation/assets/fifa-club.png",
+              "alt": "FIFA Club World Cup 2025 campaign"
+            },
+            {
+              "title": "Coca-Cola Uplift",
+              "image": "blocks/konavigation/assets/uplift.png",
+              "alt": "Coca-Cola Uplift initiative"
+            },
+            {
+              "title": "Ramadan 2025",
+              "image": "blocks/konavigation/assets/ramanda.png",
+              "alt": "Ramadan 2025 campaign"
+            },
+            {
+              "title": "FIFA WC 2026",
+              "image": "blocks/konavigation/assets/fifa.png",
+              "alt": "FIFA WC 2026 campaign"
             }
           ]
         }
@@ -187,9 +287,24 @@
           "active": true,
           "initiatives": [
             {
-              "title": "Brand Guidelines",
-              "image": "/path/to/brand-guidelines.jpg",
-              "alt": "Coca-Cola Brand Guidelines"
+              "title": "FIFA Club World Cup 2025",
+              "image": "blocks/konavigation/assets/fifa-club.png",
+              "alt": "FIFA Club World Cup 2025 campaign"
+            },
+            {
+              "title": "Coca-Cola Uplift",
+              "image": "blocks/konavigation/assets/uplift.png",
+              "alt": "Coca-Cola Uplift initiative"
+            },
+            {
+              "title": "Ramadan 2025",
+              "image": "blocks/konavigation/assets/ramanda.png",
+              "alt": "Ramadan 2025 campaign"
+            },
+            {
+              "title": "FIFA WC 2026",
+              "image": "blocks/konavigation/assets/fifa.png",
+              "alt": "FIFA WC 2026 campaign"
             }
           ]
         }
@@ -204,9 +319,24 @@
           "active": true,
           "initiatives": [
             {
-              "title": "Essential Assets",
-              "image": "/path/to/essential-assets.jpg",
-              "alt": "Essential Assets"
+              "title": "FIFA Club World Cup 2025",
+              "image": "blocks/konavigation/assets/fifa-club.png",
+              "alt": "FIFA Club World Cup 2025 campaign"
+            },
+            {
+              "title": "Coca-Cola Uplift",
+              "image": "blocks/konavigation/assets/uplift.png",
+              "alt": "Coca-Cola Uplift initiative"
+            },
+            {
+              "title": "Ramadan 2025",
+              "image": "blocks/konavigation/assets/ramanda.png",
+              "alt": "Ramadan 2025 campaign"
+            },
+            {
+              "title": "FIFA WC 2026",
+              "image": "blocks/konavigation/assets/fifa.png",
+              "alt": "FIFA WC 2026 campaign"
             }
           ]
         }
@@ -221,9 +351,24 @@
           "active": true,
           "initiatives": [
             {
-              "title": "Customer Stories",
-              "image": "/path/to/customer-stories.jpg",
-              "alt": "Customer Stories"
+              "title": "FIFA Club World Cup 2025",
+              "image": "blocks/konavigation/assets/fifa-club.png",
+              "alt": "FIFA Club World Cup 2025 campaign"
+            },
+            {
+              "title": "Coca-Cola Uplift",
+              "image": "blocks/konavigation/assets/uplift.png",
+              "alt": "Coca-Cola Uplift initiative"
+            },
+            {
+              "title": "Ramadan 2025",
+              "image": "blocks/konavigation/assets/ramanda.png",
+              "alt": "Ramadan 2025 campaign"
+            },
+            {
+              "title": "FIFA WC 2026",
+              "image": "blocks/konavigation/assets/fifa.png",
+              "alt": "FIFA WC 2026 campaign"
             }
           ]
         }
