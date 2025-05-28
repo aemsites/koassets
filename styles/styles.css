@@ -288,14 +288,14 @@ main .section.highlight {
 
 .contentstore-formbutton button,
 .contentstore-formbutton a.button {
-  background-color: #dc3545;
+  background-color: #d11700;
   color: white;
   transition: background-color 0.2s ease;
 }
 
 .contentstore-formbutton button:hover,
 .contentstore-formbutton a.button:hover {
-  background-color: #c82333;
+  background-color: #d11700;
 }
 
 main h2::after {
