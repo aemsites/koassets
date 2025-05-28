@@ -269,7 +269,7 @@ main .section.highlight {
 }
 
 .contentstore-bg {
-  background-image: url('ko-assets-bg.png');
+  background-color: #131313;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
