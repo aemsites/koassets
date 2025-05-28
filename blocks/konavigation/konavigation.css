@@ -11,7 +11,7 @@
 .main-tabs {
     display: flex;
     background: white;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #f76d5b;
     padding: 0;
     margin: 0;
     gap: 10px;
@@ -46,7 +46,7 @@
 .brand-tabs {
     display: flex;
     background: white;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #f76d5b;
     gap: 8px;
     margin-bottom: 30px;
 }
