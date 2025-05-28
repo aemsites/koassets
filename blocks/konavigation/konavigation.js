@@ -74,13 +74,17 @@ export default async function decorate(block) {
                 const image = document.createElement('img');
                 image.src = initiative.image;
                 image.alt = initiative.alt;
-                image.className = 'initiative-image';
+                const cardImage = document.createElement('div');
+                cardImage.className = 'initiative-card-image';
+                cardImage.append(image);
 
-                const title = document.createElement('h3');
-                title.className = 'initiative-title';
+                const title = document.createElement('p');
                 title.textContent = initiative.title;
+                const cardBody = document.createElement('div');
+                cardBody.className = 'initiative-card-body';
+                cardBody.append(title);
 
-                card.append(image, title);
+                card.append(cardImage, cardBody);
                 contentGrid.append(card);
             });
         }
