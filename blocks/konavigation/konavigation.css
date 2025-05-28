@@ -1,0 +1,139 @@
+.konavigation {
+  width: 100%;
+  background: #f5f5f5;
+  font-family: Arial, sans-serif;
+}
+
+.main-tabs {
+  display: flex;
+  background: white;
+  border-bottom: 1px solid #ddd;
+  padding: 0;
+  margin: 0;
+  gap: 10px;
+}
+
+.main-tabs button {
+    border-radius: 5px 5px 0 0;
+}
+
+.main-tab {
+  background: #f5f5f5;
+  border: none;
+  padding: 12px 24px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  border-radius: 0;
+  transition: all 0.3s ease;
+}
+
+.main-tab.active {
+  background: #d11700 !important;
+  color: white;
+}
+
+.main-tab:hover:not(.active) {
+  background: #e0e0e0;
+}
+
+.brand-tabs {
+  display: flex;
+  background: white;
+  padding: 8px 0;
+  border-bottom: 1px solid #ddd;
+  gap: 8px;
+  padding-left: 16px;
+}
+
+.brand-tab {
+  background: #f5f5f5;
+  border: none;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #666;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+}
+
+.brand-tab.active {
+  background: #d11700 !important;
+  color: white;
+}
+
+.brand-tab:hover:not(.active) {
+  background: #e0e0e0;
+}
+
+.brand-tabs button {
+  border-radius: 5px 5px 0 0;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 270px));
+  grid-template-rows: repeat(auto-fit, 130px);
+  gap: 20px;
+  padding: 20px;
+  background: white;
+}
+
+.initiative-card {
+  /* height: 100%; */
+  width: 100%;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+.initiative-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.initiative-image {
+  width: 150px;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  flex-shrink: 0;
+}
+
+.initiative-title {
+  padding: 12px 16px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.4;
+  flex: 1;
+}
+
+@media (max-width: 768px) {
+  .main-tabs {
+    flex-wrap: wrap;
+  }
+  
+  .main-tab {
+    flex: 1;
+    min-width: 120px;
+  }
+  
+  .brand-tabs {
+    flex-wrap: wrap;
+  }
+  
+  .content-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    padding: 16px;
+  }
+}

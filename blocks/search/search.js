@@ -1,5 +1,3 @@
-import { createOptimizedPicture } from '../../scripts/aem.js';
-
 const QUERY_TYPES = {
   ASSETS: 'Assets',
   COLLECTIONS: 'Collections',
