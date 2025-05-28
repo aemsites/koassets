@@ -279,3 +279,21 @@ main .section.highlight {
   margin: 8px 0;
   border-radius: 4px;
 }
+
+.contentstore-formbutton {
+  display: flex;
+  justify-content: center; /* Centers the button horizontally */
+  align-items: center; /* Centers the button vertically if needed */
+}
+
+.contentstore-formbutton button,
+.contentstore-formbutton a.button {
+  background-color: #dc3545;
+  color: white;
+  transition: background-color 0.2s ease;
+}
+
+.contentstore-formbutton button:hover,
+.contentstore-formbutton a.button:hover {
+  background-color: #c82333;
+}
