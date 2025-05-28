@@ -269,12 +269,12 @@ main .section.highlight {
 }
 
 .contentstore-bg {
-  background-color: #2e2e2e;
+  background-color: #222222;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   /* Other properties */
-  color: white;
+  color: var(--light-color);
   padding: 16px;
   margin: 8px 0;
   border-radius: 4px;
