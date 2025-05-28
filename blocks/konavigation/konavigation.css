@@ -72,10 +72,9 @@
 }
 
 .content-grid {
-  width: 100%;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 280px));
-  grid-template-rows: repeat(auto-fit, 150px);
+  grid-template-columns: repeat(auto-fit, minmax(250px, 270px));
+  grid-template-rows: repeat(auto-fit, 130px);
   gap: 20px;
   padding: 20px;
   background: white;
