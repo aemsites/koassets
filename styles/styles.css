@@ -290,14 +290,6 @@ main .section.highlight {
 .contentstore-formbutton a.button {
   background-color: #dc3545;
   color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: 500;
-  text-decoration: none;
-  display: inline-block;
   transition: background-color 0.2s ease;
 }
 
