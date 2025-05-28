@@ -279,3 +279,7 @@ main .section.highlight {
   margin: 8px 0;
   border-radius: 4px;
 }
+
+.contentstore-formbutton {
+  justify-content: center;
+}
