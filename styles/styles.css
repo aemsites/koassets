@@ -301,7 +301,9 @@ main .section.highlight {
 main h2::after {
   content:'';
   display:block;
-  width: 50px;
+  width: 70px;
   height: 2px;
+  margin-top: 10px;
+  margin-bottom: 30px;
   background-color: red;
 }

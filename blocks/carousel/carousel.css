@@ -21,13 +21,13 @@
 }
 
 .carousel .carousel-slide {
-    flex: 0 0 33.333%; /* For 3 slides */
+    flex: 0 0 32%; /* For 3 slides */
     scroll-snap-align: start;
     display: flex;
     flex-direction: column;
     justify-content: flex-end; /* Position content at bottom */
     position: relative;
-    width: 33.333%;
+    width: 32%;
     aspect-ratio: 1 / 1; /* min-height: 300px; */
     border-radius: 16px; /* Slightly more rounded like your example */
     overflow: hidden;
@@ -35,7 +35,7 @@
 }
 
 .carousel .carousel-slide:nth-child(3n) {
-    margin-right: 0;
+    margin-right: 10;
 }
 
 .carousel .carousel-slide:has(.carousel-slide-content[data-align='center']) {
@@ -71,7 +71,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: 40%;
+    height: 30%;
     background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.3) 70%, transparent 100%);
     z-index: 1;
     pointer-events: none;
@@ -164,7 +164,7 @@
     margin: 0;
     border-radius: 50%;
     padding: 0;
-    background-color: rgb(19 19 19 / 25%);
+    background-color: rgba(255, 0, 0, 0.25);
     transition: background-color 0.2s;
 }
 

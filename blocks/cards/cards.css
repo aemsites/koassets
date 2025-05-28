@@ -3,25 +3,66 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(257px, 1fr));
+  grid-template-columns: repeat(4, 1fr); /* 4 columns */
   grid-gap: 24px;
 }
 
 .cards > ul > li {
-  border: 1px solid #dadada;
-  background-color: var(--background-color);
+  background-color: #f8f9fa; /* Light grey background */
+  border-radius: 12px; /* Rounded corners */
+  overflow: hidden; /* Ensures image corners are also rounded */
+  display: flex; /* Enable horizontal layout */
+  align-items: stretch; /* Ensure both image and content have same height */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+  transition: box-shadow 0.3s ease, transform 0.3s ease; /* Smooth hover effect */
+}
+
+.cards > ul > li:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); /* Stronger shadow on hover */
+  transform: translateY(-2px); /* Slight lift effect on hover */
 }
 
 .cards .cards-card-body {
   margin: 16px;
+  flex: 1; /* Allow text content to take remaining space */
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* Center text content vertically */
 }
 
 .cards .cards-card-image {
   line-height: 0;
+  flex: 0 0 40%; /* Fixed width for image (40% of card width) */
 }
 
 .cards > ul > li img {
   width: 100%;
+  height: 100%; /* Make image fill the full height of the card */
   aspect-ratio: 4 / 3;
   object-fit: cover;
+}
+
+/* Responsive: Adjust for smaller screens */
+@media (width < 1200px) {
+  .cards > ul {
+    grid-template-columns: repeat(2, 1fr); /* 2 columns on medium screens */
+  }
+}
+
+@media (width < 600px) {
+  .cards > ul {
+    grid-template-columns: 1fr; /* 1 column on mobile */
+  }
+  
+  .cards > ul > li {
+    flex-direction: column; /* Stack vertically on mobile */
+  }
+  
+  .cards .cards-card-image {
+    flex: none; /* Reset flex on mobile */
+  }
+  
+  .cards > ul > li img {
+    height: auto; /* Reset height on mobile */
+  }
 }
