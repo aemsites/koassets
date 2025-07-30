@@ -13,13 +13,13 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 70px;
+  min-height: 90px;
 }
 
 .query-dropdown,
 .query-input-wrapper,
 .query-search-btn {
-  height: 35px;
+  height: 40px;
   display: flex;
   align-items: center;
 }
@@ -100,7 +100,7 @@
 }
 
 .query-search-btn {
-  background: #d11700 !important;
+  background: #ed0000 !important;
   color: #fff;
   border: none;
   border-radius: 999px;
