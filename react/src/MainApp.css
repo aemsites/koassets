@@ -1,0 +1,63 @@
+/* CSS Variables */
+:root {
+  --button-color: #f81c04;
+}
+
+/* Main layout */
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  margin: 0 auto;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.container,
+.container * {
+  font-family: "TCCC-UnityHeadline-Regular" !important;
+  color: #1e1e1e;
+}
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  /* Allow scrolling instead of constraining height */
+  gap: 20px;
+  min-height: calc(100vh - 130px);
+  /* Minimum height instead of fixed */
+}
+
+/* Global button styling */
+button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #d11700;
+}
+
+button:active {
+  background-color: #bd1500;
+}
+
+button:disabled {
+  background-color: #ff8c80;
+  color: #f8f8f8;
+  cursor: not-allowed;
+}
+
+/* Responsive layout */
+@media (min-width: 768px) {
+  .main-content {
+    flex-direction: column;
+  }
+}
