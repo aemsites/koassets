@@ -241,6 +241,13 @@ function MainApp(): React.JSX.Element {
         dynamicMediaClient && window.history.replaceState({}, '', `${window.location.pathname}`);
     }, [query, selectedQueryType, dynamicMediaClient]);
 
+    // Auto-search with empty query on app load
+    useEffect(() => {
+        if (dynamicMediaClient) {
+            search();
+        }
+    }, [dynamicMediaClient]);
+
     // Cart functions
     const handleAddToCart = async (image: Asset): Promise<void> => {
         if (!cartItems.some(item => item.id === image.id)) {
