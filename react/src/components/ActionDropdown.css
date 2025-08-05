@@ -1,0 +1,86 @@
+/* Action Dropdown Component */
+.dropdown-actions-section {
+    flex: 0 0 auto;
+}
+
+.ui.simple.dropdown.item {
+    -webkit-text-size-adjust: 100%;
+    line-height: 1.5;
+    color: #202020;
+    box-sizing: inherit;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    cursor: pointer;
+    outline: none;
+    position: relative;
+    text-align: left;
+    transition: box-shadow 0.1s ease, width 0.1s ease;
+    user-select: none;
+    border: 1px solid #9a9a9a;
+    border-radius: 8px;
+    font-size: 12px;
+    padding: 8px 12px;
+    display: inline-block;
+}
+
+.ui.simple.dropdown.item:hover,
+.ui.simple.dropdown.item:hover .dropdown-label {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.ui.simple.dropdown.item:hover .dropdown.icon {
+    filter: brightness(0) saturate(100%) invert(18%) sepia(100%) saturate(7500%) hue-rotate(0deg) brightness(97%) contrast(97%);
+}
+
+.dropdown.icon {
+    display: inline-block;
+    margin-left: 8px;
+    width: 20px;
+    height: 20px;
+    background-image: url('/arrow-black.svg');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    vertical-align: bottom;
+    transition: transform 0s ease;
+}
+
+.ui.simple.dropdown.item.active .dropdown.icon,
+.ui.simple.dropdown.item:focus .dropdown.icon,
+.ui.simple.dropdown.item.open .dropdown.icon {
+    transform: rotate(180deg);
+}
+
+.ui.simple.dropdown .menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: white;
+    border: 1px solid #d4d4d5;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    min-width: 160px;
+    margin-top: 2px;
+    display: none;
+}
+
+.ui.simple.dropdown .menu .item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #333;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.ui.simple.dropdown .dropdown-label {
+    font-weight: 500;
+}
+
+.ui.simple.dropdown .menu .item:last-child {
+    border-bottom: none;
+}
+
+.ui.simple.dropdown .menu .item.selected {
+    font-weight: bold;
+}
