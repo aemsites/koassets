@@ -1,0 +1,92 @@
+.lazy-image-container {
+    position: relative;
+    width: 100%;
+    height: 300px;
+    /* Match the original image-container height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f8f8;
+    /* Match original background */
+    border-top-left-radius: 7px;
+    /* Inherit from parent */
+    border-top-right-radius: 7px;
+    /* Inherit from parent */
+    overflow: hidden;
+    margin: 0;
+}
+
+.lazy-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    /* Match original gallery-image */
+    background-color: white;
+    word-break: break-word;
+    box-sizing: border-box;
+    transition: transform 0.3s ease;
+}
+
+/* Hover effect - applied by parent card */
+.image-card:hover .lazy-image {
+    transform: scale(1.1);
+}
+
+.lazy-image-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    font-size: 14px;
+    text-align: center;
+    padding: 20px;
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
+}
+
+.lazy-image-placeholder.loading {
+    background-color: #f0f0f0;
+    /* Match original loading-thumbnail */
+    color: #666;
+    font-size: 12px;
+}
+
+.lazy-image-placeholder.error {
+    background-color: #ffccc7;
+    /* Match original error-thumbnail */
+    color: #f5222d;
+    font-size: 12px;
+}
+
+.lazy-image-placeholder span {
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.lazy-image-placeholder.loading span,
+.lazy-image-placeholder.error span {
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.loading-spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid #e0e0e0;
+    border-top: 2px solid #666;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 8px;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
