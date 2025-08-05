@@ -42,8 +42,8 @@ const FacetFilter: React.FC<FacetFilterProps> = ({
         const facets: FacetsFromHits = {};
         Object.keys(FILTERS_MAP).forEach(key => {
             const values = new Set<string>();
-            hits?.forEach(item => {
-                const value = item[key];
+            hits?.forEach(hit => {
+                const value = hit[key];
                 if (typeof value === 'string') {
                     value && values.add(value);
                 } else if (Array.isArray(value)) {

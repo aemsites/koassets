@@ -35,7 +35,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
                 <div className="query-dropdown">
                     <select value={selectedQueryType} onChange={handleSelectChange}>
                         <option value={QUERY_TYPES.ASSETS}>{QUERY_TYPES.ASSETS}</option>
-                        <option value={QUERY_TYPES.COLLECTIONS}>{QUERY_TYPES.COLLECTIONS}</option>
                     </select>
                 </div>
                 <div className="query-input-wrapper">

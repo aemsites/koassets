@@ -21,8 +21,14 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
     selectedSortType,
     selectedSortDirection,
     onSortTypeChange,
-    onSortDirectionChange
+    onSortDirectionChange,
+    showFullDetails = true,
+    onShowFullDetailsChange
 }) => {
+    const handleToggleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        onShowFullDetailsChange?.(e.target.checked);
+    };
+
     return (
         <>
             {/* Search Primary Panel */}
@@ -48,6 +54,11 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
                             selectedItem={selectedSortDirection}
                             onSelectedItemChange={onSortDirectionChange}
                         />
+
+                        {/* Show Full Details Toggle */}
+                        <div className="cmp-title" id="showfulldetails">
+                            <h1>Show full details<label className="switch"><input type="checkbox" checked={showFullDetails} onChange={handleToggleChange} /><span className="slider round"></span></label></h1>
+                        </div>
                     </div>
 
                     {/* Right side: Filter button */}

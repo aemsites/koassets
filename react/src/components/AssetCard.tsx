@@ -15,7 +15,8 @@ const AssetCard: React.FC<AssetCardProps> = ({
     cartItems = [],
     isSelected = false,
     onCheckboxChange,
-    dynamicMediaClient
+    dynamicMediaClient,
+    showFullDetails = true
 }) => {
     // Check if this item is already in the cart
     const isInCart = cartItems.some(cartItem => cartItem.id === image.id);
@@ -83,28 +84,30 @@ const AssetCard: React.FC<AssetCardProps> = ({
                         )}
                     </div>
 
-                    <div className="product-meta-grid">
-                        <div className="product-meta-item">
-                            <span className="product-meta-label">SIZE</span>
-                            <span className="product-meta-value">{formatFileSize(image.size)}</span>
+                    {showFullDetails && (
+                        <div className="product-meta-grid">
+                            <div className="product-meta-item">
+                                <span className="product-meta-label">SIZE</span>
+                                <span className="product-meta-value">{formatFileSize(image.size)}</span>
+                            </div>
+                            <div className="product-meta-item">
+                                <span className="product-meta-label">TYPE</span>
+                                <span className="product-meta-value">{image.format || 'Unknown'}</span>
+                            </div>
+                            <div className="product-meta-item">
+                                <span className="product-meta-label">FILE EXT</span>
+                                <span className="product-meta-value">{getFileExtension(image.name || image.mimeType)}</span>
+                            </div>
+                            <div className="product-meta-item">
+                                <span className="product-meta-label">RIGHTS FREE</span>
+                                <span className="product-meta-value">YES</span>
+                            </div>
+                            <div className="product-meta-item">
+                                <span className="product-meta-label">CATEGORY</span>
+                                <span className="product-meta-value">{formatCategory(image.metadata?.subject)}</span>
+                            </div>
                         </div>
-                        <div className="product-meta-item">
-                            <span className="product-meta-label">TYPE</span>
-                            <span className="product-meta-value">{image.format || 'Unknown'}</span>
-                        </div>
-                        <div className="product-meta-item">
-                            <span className="product-meta-label">FILE EXT</span>
-                            <span className="product-meta-value">{getFileExtension(image.name || image.mimeType)}</span>
-                        </div>
-                        <div className="product-meta-item">
-                            <span className="product-meta-label">RIGHTS FREE</span>
-                            <span className="product-meta-value">YES</span>
-                        </div>
-                        <div className="product-meta-item">
-                            <span className="product-meta-label">CATEGORY</span>
-                            <span className="product-meta-value">{formatCategory(image.metadata?.subject)}</span>
-                        </div>
-                    </div>
+                    )}
 
                     <div className="product-actions">
                         <button

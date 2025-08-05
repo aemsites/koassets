@@ -36,6 +36,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     const [showFullScreenModal, setShowFullScreenModal] = useState<boolean>(false);
     // Checkbox selection state
     const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
+    // Show full details toggle state
+    const [showFullDetails, setShowFullDetails] = useState<boolean>(true);
 
     const displayedCount = images.length;
     const selectedCount = selectedCards.size;
@@ -201,6 +203,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 selectedSortDirection={selectedSortDirection}
                 onSortTypeChange={onSortTypeChange}
                 onSortDirectionChange={onSortDirectionChange}
+                showFullDetails={showFullDetails}
+                onShowFullDetailsChange={setShowFullDetails}
             />
 
             {loading ? (
@@ -232,6 +236,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                                 isSelected={selectedCards.has(image.id)}
                                 onCheckboxChange={handleCheckboxChange}
                                 dynamicMediaClient={dynamicMediaClient}
+                                showFullDetails={showFullDetails}
                             />
                         ))}
                     </div>

@@ -50,6 +50,7 @@ export interface AssetCardProps {
     isSelected?: boolean;
     onCheckboxChange?: (id: string, checked: boolean) => void;
     dynamicMediaClient?: DynamicMediaClient | null;
+    showFullDetails?: boolean;
 }
 
 // Query and filter types
@@ -353,4 +354,6 @@ export interface SearchPanelProps {
     selectedSortDirection: string;
     onSortTypeChange: (sortType: string) => void;
     onSortDirectionChange: (direction: string) => void;
+    showFullDetails?: boolean;
+    onShowFullDetailsChange?: (showDetails: boolean) => void;
 } 
