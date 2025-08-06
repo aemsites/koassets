@@ -28,7 +28,7 @@
 }
 
 /* Hover effect - applied by parent card */
-.image-card:hover .lazy-image {
+.asset-card-view-grid:hover .lazy-image {
     transform: scale(1.1);
 }
 

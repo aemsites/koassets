@@ -1,6 +1,6 @@
-/* Asset Card Component Styles */
+/* Asset Card View Grid Component Styles */
 
-.image-card {
+.asset-card-view-grid {
     display: flex;
     flex-direction: column;
     border: 1px solid #e1e1e1;
@@ -14,11 +14,11 @@
     height: 100%;
 }
 
-.image-card:hover {
+.asset-card-view-grid:hover {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
-.image-card-inner {
+.asset-card-view-grid-inner {
     display: flex;
     flex-direction: column;
     padding: 0;
@@ -26,7 +26,7 @@
     height: 100%;
 }
 
-.image-card .image-preview-button {
+.asset-card-view-grid .image-preview-button {
     position: absolute;
     top: 20px;
     right: 10px;
@@ -47,13 +47,13 @@
     font-size: 16px;
 }
 
-.image-card .image-preview-button:hover {
+.asset-card-view-grid .image-preview-button:hover {
     opacity: 1;
     background-color: var(--primary-color);
     color: white;
 }
 
-.image-card .image-preview-button svg {
+.asset-card-view-grid .image-preview-button svg {
     pointer-events: none;
     width: 16px;
     height: 16px;
@@ -62,11 +62,11 @@
     flex-shrink: 0;
 }
 
-.image-card .image-preview-button:hover svg {
+.asset-card-view-grid .image-preview-button:hover svg {
     fill: white;
 }
 
-.image-card .asset-checkbox {
+.asset-card-view-grid .asset-checkbox {
     position: absolute;
     top: 20px;
     left: 10px;
@@ -89,11 +89,11 @@
 }
 
 
-.image-card .asset-checkbox:checked {
+.asset-card-view-grid .asset-checkbox:checked {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
-.image-card .asset-checkbox::before {
+.asset-card-view-grid .asset-checkbox::before {
     content: "";
     position: absolute;
     top: 50%;
@@ -108,17 +108,17 @@
     padding: 0 !important;
 }
 
-.image-card .asset-checkbox:checked::before {
+.asset-card-view-grid .asset-checkbox:checked::before {
     background-color: #f40000;
     border-color: #f40000;
 }
 
-.image-card .asset-checkbox::after {
+.asset-card-view-grid .asset-checkbox::after {
     content: "";
     display: none;
 }
 
-.image-card .asset-checkbox:checked::after {
+.asset-card-view-grid .asset-checkbox:checked::after {
     content: '';
     position: absolute;
     top: 44%;
@@ -131,7 +131,7 @@
     display: block;
 }
 
-.image-card .image-container {
+.asset-card-view-grid .image-container {
     width: 100%;
     height: 300px;
     /* Essential for grid auto-sizing - provides intrinsic height */
@@ -142,7 +142,7 @@
 
 /* Image styles moved to LazyImage.css */
 
-.image-card .product-info-container {
+.asset-card-view-grid .product-info-container {
     padding: 16px;
     margin-bottom: 70px;
     /* Space for button (42px height + 16px spacing + 12px buffer) */
@@ -152,17 +152,17 @@
     border-bottom: 1px solid #e1e1e1;
 }
 
-.image-card .product-info {
+.asset-card-view-grid .product-info {
     /* Add styles for the new wrapper */
 }
 
-.image-card .product-actions {
+.asset-card-view-grid .product-actions {
     position: absolute;
     bottom: 16px;
     left: 16px;
 }
 
-.image-card .product-title {
+.asset-card-view-grid .product-title {
     margin: 0 0 8px 0;
     font-size: 14px;
     font-weight: 600;
@@ -177,11 +177,11 @@
     overflow: hidden;
 }
 
-.image-card .product-title-section {
+.asset-card-view-grid .product-title-section {
     margin-bottom: 20px;
 }
 
-.image-card .product-description {
+.asset-card-view-grid .product-description {
     margin: 0;
     font-size: 12px;
     color: #666;
@@ -194,7 +194,7 @@
     overflow: hidden;
 }
 
-.image-card .product-meta-grid {
+.asset-card-view-grid .product-meta-grid {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
@@ -202,14 +202,14 @@
     text-transform: uppercase;
 }
 
-.image-card .product-meta-item {
+.asset-card-view-grid .product-meta-item {
     display: flex;
     flex-direction: column;
     gap: 4px;
     width: 25%;
 }
 
-.image-card .product-meta-label {
+.asset-card-view-grid .product-meta-label {
     font-size: 11px;
     font-weight: 400;
     color: #888;
@@ -217,14 +217,14 @@
     letter-spacing: 0.5px;
 }
 
-.image-card .product-meta-value {
+.asset-card-view-grid .product-meta-value {
     font-size: 11px;
     font-weight: 600;
     color: #333;
     word-break: break-word;
 }
 
-.image-card .add-to-cart-btn {
+.asset-card-view-grid .add-to-cart-btn {
     width: 140px;
     height: 42px;
     display: flex;
@@ -242,29 +242,29 @@
     white-space: nowrap;
 }
 
-.image-card .add-to-cart-btn::before {
+.asset-card-view-grid .add-to-cart-btn::before {
     display: none;
 }
 
-.image-card .add-to-cart-btn:hover {
+.asset-card-view-grid .add-to-cart-btn:hover {
     background-color: var(--primary-color);
 }
 
-.image-card .add-to-cart-btn:active {
+.asset-card-view-grid .add-to-cart-btn:active {
     transform: translateY(1px);
 }
 
-.image-card .add-to-cart-btn:disabled {
+.asset-card-view-grid .add-to-cart-btn:disabled {
     background-color: #bdc3c7;
     color: #ecf0f1;
     cursor: not-allowed;
 }
 
-.image-card .add-to-cart-btn.remove-from-cart {
+.asset-card-view-grid .add-to-cart-btn.remove-from-cart {
     width: 190px;
 }
 
-.image-card .add-to-cart-btn.pop-effect {
+.asset-card-view-grid .add-to-cart-btn.pop-effect {
     animation: pop 0.3s cubic-bezier(0.4, 0.2, 0.2, 1);
 }
 

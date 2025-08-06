@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { Asset, ImageGalleryProps } from '../types';
-import AssetCard from './AssetCard';
-import AssetCardRow from './AssetCardRow';
+import AssetCardViewGrid from './AssetCardViewGrid';
+import AssetCardViewList from './AssetCardViewList';
 import AssetDetails from './AssetDetails';
 import AssetPreview from './AssetPreview';
 import './ImageGallery.css';
@@ -227,7 +227,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 <div className="image-grid-wrapper">
                     <div className={viewType === 'grid' ? 'image-grid' : 'image-grid-list'}>
                         {images.map((image) => {
-                            const CardComponent = viewType === 'grid' ? AssetCard : AssetCardRow;
+                            const CardComponent = viewType === 'grid' ? AssetCardViewGrid : AssetCardViewList;
                             return (
                                 <CardComponent
                                     key={image.id}
