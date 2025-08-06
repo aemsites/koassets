@@ -186,7 +186,11 @@ function MainApp(): React.JSX.Element {
         dynamicMediaClient.searchAssets(query.trim(), {
             collectionId: selectedCollection?.collectionId,
             facets: selectedFacets
-        }).then(processDMImages);
+        }).then(processDMImages).catch((error) => {
+            console.error('Error searching assets:', error);
+            setLoading(prev => ({ ...prev, [LOADING.dmImages]: false }));
+            setDmImages([]);
+        });
 
         setQuery('');
     }, [dynamicMediaClient, processDMImages]);
