@@ -91,7 +91,6 @@
 
 .grid-view-btn,
 .list-view-btn {
-    display: none;
     align-items: center;
     justify-content: center;
     width: 32px;
