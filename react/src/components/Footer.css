@@ -3,23 +3,78 @@
     background: black;
     display: flex;
     align-items: center;
-    justify-content: center;
     width: 100%;
-    /* Full width of parent container */
     flex-shrink: 0;
-    /* Prevent footer from shrinking */
     margin-top: 20px;
-    /* Add some spacing above footer */
 }
 
 .footer-content {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     height: 100%;
     width: 100%;
-    max-width: 1200px;
-    padding: 0 20px;
+    padding: 0 45px 0 40px;
     color: white;
-    /* Make text visible on black background */
+}
+
+.footer-left {
+    display: flex;
+    align-items: center;
+}
+
+.footer-logo {
+    height: 1.875rem;
+    padding: 0 !important;
+    width: 12rem;
+}
+
+.footer-right {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+}
+
+.footer-right p {
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.575rem;
+}
+
+.footer-link {
+    display: flex;
+    align-items: center;
+    color: white;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.footer-link:hover {
+    color: #f0f0f0;
+}
+
+.footer-link::before {
+    content: '';
+    display: inline-block;
+    margin-right: 8px;
+    background-repeat: no-repeat;
+    background-position: center;
+    height: 1.25rem;
+    width: 1.5rem;
+}
+
+.footer-link.meet-team::before {
+    background-image: url('/icons/meet-people.svg');
+}
+
+.footer-link.contact-us::before {
+    background-image: url('/icons/contact-mail.svg');
+}
+
+.footer-link.support-training::before {
+    background-image: url('/icons/support-assistance.svg');
+}
+
+.footer-link.faqs::before {
+    background-image: url('/icons/faq-footer.svg');
 }
