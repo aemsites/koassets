@@ -8,12 +8,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  /* Fixed height to enable proper scrolling */
   margin: 0 auto;
-  /* overflow: auto; */
-  /* overflow: hidden; */
-  /* Prevent container from scrolling */
-
   box-sizing: border-box;
 }
 
@@ -27,13 +22,8 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  /* Take available space */
-  /* overflow: auto; */
-  /* Restore scrolling for main content */
-  /* Allow scrolling instead of constraining height */
   gap: 20px;
   min-height: 0;
-  /* Allow content to shrink if needed */
 }
 
 /* Global button styling */

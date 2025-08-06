@@ -16,6 +16,7 @@ import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
 // Components
 import CollectionGallery from './CollectionGallery';
 import FacetFilter from './FacetFilter';
+import Footer from './Footer';
 import HeaderBar from './HeaderBar';
 import ImageGallery from './ImageGallery';
 import SearchBar from './SearchBar';
@@ -516,22 +517,26 @@ function MainApp(): React.JSX.Element {
             />
             <div className="main-content">
                 <div className="images-container">
-                    <div className="images-main">
-                        {breadcrumbs}
-                        {enhancedGallery}
-                    </div>
-                    <div className={`facet-filter-panel ${isMobileFilterOpen ? 'mobile-open' : ''}`}>
-                        <FacetFilter
-                            hits={hits?.hits || []}
-                            selectedFacets={selectedFacets}
-                            setSelectedFacets={setSelectedFacets}
-                            search={search}
-                            checked={checked}
-                            setChecked={setChecked}
-                        />
+                    <div className="images-content-wrapper">
+                        <div className="images-content-row">
+                            <div className="images-main">
+                                {breadcrumbs}
+                                {enhancedGallery}
+                            </div>
+                            <div className={`facet-filter-panel ${isMobileFilterOpen ? 'mobile-open' : ''}`}>
+                                <FacetFilter
+                                    hits={hits?.hits || []}
+                                    selectedFacets={selectedFacets}
+                                    setSelectedFacets={setSelectedFacets}
+                                    search={search}
+                                    checked={checked}
+                                    setChecked={setChecked}
+                                />
+                            </div>
+                        </div>
+                        <Footer />
                     </div>
                 </div>
-                {/* <Footer /> */}
             </div>
         </div>
     );
