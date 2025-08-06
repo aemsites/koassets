@@ -51,6 +51,12 @@
     align-items: stretch;
     border-bottom: none;
     margin-bottom: 0;
+    min-width: 0;
+    /* Allow container to shrink */
+    width: calc(100% - 318px);
+    /* Calculate width: total width minus image width (318px) */
+    position: relative;
+    /* Create positioning context for absolutely positioned actions */
 }
 
 /* Product info takes most of the space */
@@ -59,16 +65,32 @@
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
+    min-width: 0;
+    /* Allow content to shrink and prevent overflow */
+    overflow: hidden;
+    /* Prevent content from spilling over */
+    width: calc(100% - 172px);
+    /* Calculate width: container width minus actions width (140px) and margins (32px) */
+    max-width: calc(100% - 172px);
+    /* Enforce maximum width */
 }
 
 /* Product actions positioned on the right */
 .asset-card-view-list .product-actions {
-    position: static;
-    /* Override absolute positioning */
-    flex: 0 0 auto;
+    position: absolute;
+    /* Use absolute positioning to guarantee position */
+    right: 16px;
+    /* Position from right edge */
+    top: 50%;
+    /* Center vertically */
+    transform: translateY(-50%);
+    /* Center vertically */
+    width: 140px;
+    /* Fixed width */
     display: flex;
     align-items: center;
-    margin-left: 16px;
+    justify-content: center;
+    /* Center content within the actions area */
 }
 
 /* Image container adjustments for row layout */
