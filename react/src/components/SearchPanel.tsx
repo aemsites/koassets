@@ -25,7 +25,10 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
     showFullDetails = true,
     onShowFullDetailsChange,
     viewType = 'grid',
-    onViewTypeChange
+    onViewTypeChange,
+    currentPage,
+    totalPages,
+    hasMorePages
 }) => {
     const handleToggleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         onShowFullDetailsChange?.(e.target.checked);

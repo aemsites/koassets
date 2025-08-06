@@ -1,9 +1,9 @@
 import React from 'react';
 import type { AssetCardProps } from '../types';
-import './AssetCardRow.css';
+import './AssetCardViewList.css';
 import LazyImage from './LazyImage';
 
-const AssetCardRow: React.FC<AssetCardProps> = ({
+const AssetCardViewList: React.FC<AssetCardProps> = ({
     image,
     handleCardClick,
     handlePreviewClick,
@@ -43,9 +43,9 @@ const AssetCardRow: React.FC<AssetCardProps> = ({
     };
 
     return (
-        <div className="image-card-row">
+        <div className="asset-card-view-list">
             <div
-                className="image-card-row-inner"
+                className="asset-card-view-list-inner"
                 onClick={(e) => handleCardClick(image, e)}
                 style={{ cursor: 'pointer' }}
             >
@@ -127,4 +127,4 @@ const AssetCardRow: React.FC<AssetCardProps> = ({
     );
 };
 
-export default AssetCardRow; 
+export default AssetCardViewList; 

@@ -216,6 +216,9 @@ export interface ImageGalleryProps {
     selectedSortDirection: string;
     onSortTypeChange: (sortType: string) => void;
     onSortDirectionChange: (direction: string) => void;
+    onLoadMoreResults?: () => void;
+    hasMorePages?: boolean;
+    isLoadingMore?: boolean;
 }
 
 // Main App types (for the most complex component)
@@ -358,4 +361,7 @@ export interface SearchPanelProps {
     onShowFullDetailsChange?: (showDetails: boolean) => void;
     viewType?: 'grid' | 'list';
     onViewTypeChange?: (viewType: 'grid' | 'list') => void;
+    currentPage?: number;
+    totalPages?: number;
+    hasMorePages?: boolean;
 } 

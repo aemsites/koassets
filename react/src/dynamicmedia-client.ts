@@ -159,9 +159,13 @@ export class DynamicMediaClient {
         const {
             collectionId,
             facets = [],
-            hitsPerPage = 40,
+            hitsPerPage,
             page = 0
         } = options;
+
+        if (!hitsPerPage) {
+            throw new Error('hitsPerPage is required');
+        }
 
         const combinedSelectedFacets = [...facets, ...(collectionId ? [[`collectionIds:${collectionId.split(':')[3]}`]] : [])];
         const indexName = this.getIndexName();
@@ -202,9 +206,13 @@ export class DynamicMediaClient {
         options: SearchCollectionsOptions = {}
     ): AlgoliaSearchQuery {
         const {
-            hitsPerPage = 40,
+            hitsPerPage,
             page = 0
         } = options;
+
+        if (!hitsPerPage) {
+            throw new Error('hitsPerPage is required');
+        }
 
         const indexName = this.getIndexName();
 

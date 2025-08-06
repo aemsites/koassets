@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { Asset, ImageGalleryProps } from '../types';
-import AssetCard from './AssetCard';
-import AssetCardRow from './AssetCardRow';
+import AssetCardViewGrid from './AssetCardViewGrid';
+import AssetCardViewList from './AssetCardViewList';
 import AssetDetails from './AssetDetails';
 import AssetPreview from './AssetPreview';
 import './ImageGallery.css';
@@ -28,7 +28,10 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     selectedSortType,
     selectedSortDirection,
     onSortTypeChange,
-    onSortDirectionChange
+    onSortDirectionChange,
+    onLoadMoreResults,
+    hasMorePages = false,
+    isLoadingMore = false
 }) => {
     // Modal state management for asset preview
     const [selectedCard, setSelectedCard] = useState<Asset | null>(null);
@@ -210,6 +213,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 onShowFullDetailsChange={setShowFullDetails}
                 viewType={viewType}
                 onViewTypeChange={setViewType}
+                hasMorePages={hasMorePages}
+                currentPage={hits?.page || 0}
+                totalPages={hits?.nbPages || 0}
             />
 
             {loading ? (
@@ -227,7 +233,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 <div className="image-grid-wrapper">
                     <div className={viewType === 'grid' ? 'image-grid' : 'image-grid-list'}>
                         {images.map((image) => {
-                            const CardComponent = viewType === 'grid' ? AssetCard : AssetCardRow;
+                            const CardComponent = viewType === 'grid' ? AssetCardViewGrid : AssetCardViewList;
                             return (
                                 <CardComponent
                                     key={image.id}
@@ -248,6 +254,26 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                             );
                         })}
                     </div>
+
+                    {/* Loading more indicator */}
+                    {isLoadingMore && (
+                        <div className="loading-more-container">
+                            <div className="loading-spinner"></div>
+                            <p>Loading more results...</p>
+                        </div>
+                    )}
+
+                    {/* Load More Button */}
+                    {hasMorePages && !isLoadingMore && (
+                        <div className="load-more-button-container">
+                            <button
+                                className="load-more-button"
+                                onClick={onLoadMoreResults}
+                            >
+                                Load more
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 

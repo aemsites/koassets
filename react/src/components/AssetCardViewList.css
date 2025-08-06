@@ -1,6 +1,6 @@
 /* Asset Card Row Component Styles */
 
-.image-card-row {
+.asset-card-view-list {
     display: flex;
     flex-direction: column;
     border: 1px solid #e1e1e1;
@@ -15,16 +15,16 @@
     /* Fixed height for list view */
 }
 
-.image-card-row:hover {
+.asset-card-view-list:hover {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
 /* Hover zoom effect for image */
-.image-card-row:hover .lazy-image {
+.asset-card-view-list:hover .lazy-image {
     transform: scale(1.1);
 }
 
-.image-card-row-inner {
+.asset-card-view-list-inner {
     display: flex;
     flex-direction: row;
     /* Horizontal layout */
@@ -34,7 +34,7 @@
 }
 
 /* Image wrapper takes fixed width */
-.image-card-row .image-wrapper {
+.asset-card-view-list .image-wrapper {
     flex: 0 0 318px;
     /* Fixed width for image section */
     position: relative;
@@ -42,7 +42,7 @@
 }
 
 /* Product info container takes remaining space */
-.image-card-row .product-info-container {
+.asset-card-view-list .product-info-container {
     flex: 1;
     padding: 16px;
     display: flex;
@@ -54,7 +54,7 @@
 }
 
 /* Product info takes most of the space */
-.image-card-row .product-info {
+.asset-card-view-list .product-info {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -62,7 +62,7 @@
 }
 
 /* Product actions positioned on the right */
-.image-card-row .product-actions {
+.asset-card-view-list .product-actions {
     position: static;
     /* Override absolute positioning */
     flex: 0 0 auto;
@@ -72,7 +72,7 @@
 }
 
 /* Image container adjustments for row layout */
-.image-card-row .image-container {
+.asset-card-view-list .image-container {
     width: 100%;
     height: 100%;
     border-radius: 7px 0 0 7px;
@@ -80,7 +80,7 @@
 }
 
 /* Checkbox and preview button positioning for row layout */
-.image-card-row .asset-checkbox {
+.asset-card-view-list .asset-checkbox {
     position: absolute;
     top: 10px;
     left: 10px;
@@ -89,7 +89,7 @@
     z-index: 15;
 }
 
-.image-card-row .image-preview-button {
+.asset-card-view-list .image-preview-button {
     position: absolute;
     top: 10px;
     right: 10px;
@@ -99,49 +99,49 @@
 }
 
 /* Adjust text sizing for row layout */
-.image-card-row .product-title {
+.asset-card-view-list .product-title {
     font-size: 16px;
     margin-bottom: 4px;
     -webkit-line-clamp: 2;
     /* Limit to 2 lines in row view */
 }
 
-.image-card-row .product-title-section {
+.asset-card-view-list .product-title-section {
     margin-bottom: 20px;
 }
 
-.image-card-row .product-description {
+.asset-card-view-list .product-description {
     font-size: 13px;
     -webkit-line-clamp: 2;
     /* Limit to 2 lines in row view */
 }
 
 /* Adjust meta grid for row layout */
-.image-card-row .product-meta-grid {
+.asset-card-view-list .product-meta-grid {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     margin: 16px 0;
 }
 
-.image-card-row .product-meta-label {
+.asset-card-view-list .product-meta-label {
     font-size: 11px;
     font-weight: 400;
 }
 
-.image-card-row .product-meta-value {
+.asset-card-view-list .product-meta-value {
     font-size: 12px;
     font-weight: 600;
 }
 
-.image-card-row .product-meta-item {
+.asset-card-view-list .product-meta-item {
     display: flex;
     flex-direction: column;
     gap: 4px;
     width: 18%;
 }
 
-.image-card-row .add-to-cart-btn {
+.asset-card-view-list .add-to-cart-btn {
     width: 140px;
     height: 42px;
     display: flex;
@@ -159,33 +159,33 @@
     white-space: nowrap;
 }
 
-.image-card-row .add-to-cart-btn::before {
+.asset-card-view-list .add-to-cart-btn::before {
     display: none;
 }
 
-.image-card-row .add-to-cart-btn:hover {
+.asset-card-view-list .add-to-cart-btn:hover {
     background-color: var(--primary-color);
 }
 
-.image-card-row .add-to-cart-btn:active {
+.asset-card-view-list .add-to-cart-btn:active {
     transform: translateY(1px);
 }
 
-.image-card-row .add-to-cart-btn:disabled {
+.asset-card-view-list .add-to-cart-btn:disabled {
     background-color: #bdc3c7;
     color: #ecf0f1;
     cursor: not-allowed;
 }
 
-.image-card-row .add-to-cart-btn.remove-from-cart {
+.asset-card-view-list .add-to-cart-btn.remove-from-cart {
     width: 190px;
 }
 
-.image-card-row .add-to-cart-btn.pop-effect {
+.asset-card-view-list .add-to-cart-btn.pop-effect {
     animation: pop 0.3s cubic-bezier(0.4, 0.2, 0.2, 1);
 }
 
-.image-card-row .image-preview-button {
+.asset-card-view-list .image-preview-button {
     position: absolute;
     top: 20px;
     right: 10px;
@@ -206,13 +206,13 @@
     font-size: 16px;
 }
 
-.image-card-row .image-preview-button:hover {
+.asset-card-view-list .image-preview-button:hover {
     opacity: 1;
     background-color: var(--primary-color);
     color: white;
 }
 
-.image-card-row .image-preview-button svg {
+.asset-card-view-list .image-preview-button svg {
     pointer-events: none;
     width: 16px;
     height: 16px;
@@ -221,11 +221,11 @@
     flex-shrink: 0;
 }
 
-.image-card-row .image-preview-button:hover svg {
+.asset-card-view-list .image-preview-button:hover svg {
     fill: white;
 }
 
-.image-card-row .asset-checkbox {
+.asset-card-view-list .asset-checkbox {
     position: absolute;
     top: 20px;
     left: 10px;
@@ -248,11 +248,11 @@
 }
 
 
-.image-card-row .asset-checkbox:checked {
+.asset-card-view-list .asset-checkbox:checked {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
-.image-card-row .asset-checkbox::before {
+.asset-card-view-list .asset-checkbox::before {
     content: "";
     position: absolute;
     top: 50%;
@@ -267,17 +267,17 @@
     padding: 0 !important;
 }
 
-.image-card-row .asset-checkbox:checked::before {
+.asset-card-view-list .asset-checkbox:checked::before {
     background-color: #f40000;
     border-color: #f40000;
 }
 
-.image-card-row .asset-checkbox::after {
+.asset-card-view-list .asset-checkbox::after {
     content: "";
     display: none;
 }
 
-.image-card-row .asset-checkbox:checked::after {
+.asset-card-view-list .asset-checkbox:checked::after {
     content: '';
     position: absolute;
     top: 44%;

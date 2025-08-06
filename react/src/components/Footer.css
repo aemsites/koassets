@@ -1,0 +1,25 @@
+.footer {
+    height: 78px;
+    background: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    /* Full width of parent container */
+    flex-shrink: 0;
+    /* Prevent footer from shrinking */
+    margin-top: 20px;
+    /* Add some spacing above footer */
+}
+
+.footer-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    max-width: 1200px;
+    padding: 0 20px;
+    color: white;
+    /* Make text visible on black background */
+}
