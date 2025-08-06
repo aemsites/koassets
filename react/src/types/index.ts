@@ -40,7 +40,7 @@ export interface CartIconProps {
 export interface AssetCardProps {
     image: Asset;
     handleCardClick: (image: Asset, event: React.MouseEvent) => void;
-    handleZoomClick: (image: Asset, event: React.MouseEvent) => void;
+    handlePreviewClick: (image: Asset, event: React.MouseEvent) => void;
     formatFileSize: (size?: number) => string;
     getFileExtension: (filename?: string) => string;
     formatCategory: (subject?: string | string[]) => string;
@@ -356,4 +356,6 @@ export interface SearchPanelProps {
     onSortDirectionChange: (direction: string) => void;
     showFullDetails?: boolean;
     onShowFullDetailsChange?: (showDetails: boolean) => void;
+    viewType?: 'grid' | 'list';
+    onViewTypeChange?: (viewType: 'grid' | 'list') => void;
 } 

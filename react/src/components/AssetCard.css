@@ -26,7 +26,7 @@
     height: 100%;
 }
 
-.image-zoom-button {
+.image-card .image-preview-button {
     position: absolute;
     top: 20px;
     right: 10px;
@@ -47,13 +47,13 @@
     font-size: 16px;
 }
 
-.image-zoom-button:hover {
+.image-card .image-preview-button:hover {
     opacity: 1;
     background-color: var(--primary-color);
     color: white;
 }
 
-.image-zoom-button svg {
+.image-card .image-preview-button svg {
     pointer-events: none;
     width: 16px;
     height: 16px;
@@ -62,11 +62,11 @@
     flex-shrink: 0;
 }
 
-.image-zoom-button:hover svg {
+.image-card .image-preview-button:hover svg {
     fill: white;
 }
 
-.asset-checkbox {
+.image-card .asset-checkbox {
     position: absolute;
     top: 20px;
     left: 10px;
@@ -89,11 +89,11 @@
 }
 
 
-.asset-checkbox:checked {
+.image-card .asset-checkbox:checked {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
-.asset-checkbox::before {
+.image-card .asset-checkbox::before {
     content: "";
     position: absolute;
     top: 50%;
@@ -108,17 +108,17 @@
     padding: 0 !important;
 }
 
-.asset-checkbox:checked::before {
+.image-card .asset-checkbox:checked::before {
     background-color: #f40000;
     border-color: #f40000;
 }
 
-.asset-checkbox::after {
+.image-card .asset-checkbox::after {
     content: "";
     display: none;
 }
 
-.asset-checkbox:checked::after {
+.image-card .asset-checkbox:checked::after {
     content: '';
     position: absolute;
     top: 44%;
@@ -131,7 +131,7 @@
     display: block;
 }
 
-.image-container {
+.image-card .image-container {
     width: 100%;
     height: 300px;
     /* Essential for grid auto-sizing - provides intrinsic height */
@@ -142,7 +142,7 @@
 
 /* Image styles moved to LazyImage.css */
 
-.product-info {
+.image-card .product-info-container {
     padding: 16px;
     margin-bottom: 70px;
     /* Space for button (42px height + 16px spacing + 12px buffer) */
@@ -152,13 +152,17 @@
     border-bottom: 1px solid #e1e1e1;
 }
 
-.product-actions {
+.image-card .product-info {
+    /* Add styles for the new wrapper */
+}
+
+.image-card .product-actions {
     position: absolute;
     bottom: 16px;
     left: 16px;
 }
 
-.product-title {
+.image-card .product-title {
     margin: 0 0 8px 0;
     font-size: 14px;
     font-weight: 600;
@@ -173,7 +177,11 @@
     overflow: hidden;
 }
 
-.product-description {
+.image-card .product-title-section {
+    margin-bottom: 20px;
+}
+
+.image-card .product-description {
     margin: 0;
     font-size: 12px;
     color: #666;
@@ -186,36 +194,37 @@
     overflow: hidden;
 }
 
-.product-meta-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+.image-card .product-meta-grid {
+    display: flex;
+    flex-wrap: wrap;
     gap: 12px;
     margin-bottom: 16px;
     text-transform: uppercase;
 }
 
-.product-meta-item {
+.image-card .product-meta-item {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    width: 25%;
 }
 
-.product-meta-label {
-    font-size: 10px;
-    font-weight: 600;
+.image-card .product-meta-label {
+    font-size: 11px;
+    font-weight: 400;
     color: #888;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
-.product-meta-value {
-    font-size: 12px;
+.image-card .product-meta-value {
+    font-size: 11px;
+    font-weight: 600;
     color: #333;
-    font-weight: 500;
     word-break: break-word;
 }
 
-.add-to-cart-btn {
+.image-card .add-to-cart-btn {
     width: 140px;
     height: 42px;
     display: flex;
@@ -233,26 +242,30 @@
     white-space: nowrap;
 }
 
-.add-to-cart-btn::before {
+.image-card .add-to-cart-btn::before {
     display: none;
 }
 
-.add-to-cart-btn:hover {
+.image-card .add-to-cart-btn:hover {
     background-color: var(--primary-color);
 }
 
-.add-to-cart-btn:active {
+.image-card .add-to-cart-btn:active {
     transform: translateY(1px);
 }
 
-.add-to-cart-btn:disabled {
+.image-card .add-to-cart-btn:disabled {
     background-color: #bdc3c7;
     color: #ecf0f1;
     cursor: not-allowed;
 }
 
-.add-to-cart-btn.remove-from-cart {
+.image-card .add-to-cart-btn.remove-from-cart {
     width: 190px;
+}
+
+.image-card .add-to-cart-btn.pop-effect {
+    animation: pop 0.3s cubic-bezier(0.4, 0.2, 0.2, 1);
 }
 
 /* Pop effect animation for Add to Cart */
@@ -268,8 +281,4 @@
     100% {
         transform: scale(1);
     }
-}
-
-.add-to-cart-btn.pop-effect {
-    animation: pop 0.3s cubic-bezier(0.4, 0.2, 0.2, 1);
 }

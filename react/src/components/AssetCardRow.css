@@ -1,0 +1,291 @@
+/* Asset Card Row Component Styles */
+
+.image-card-row {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e1e1e1;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    padding: 0;
+    position: relative;
+    height: 192px;
+    /* Fixed height for list view */
+}
+
+.image-card-row:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Hover zoom effect for image */
+.image-card-row:hover .lazy-image {
+    transform: scale(1.1);
+}
+
+.image-card-row-inner {
+    display: flex;
+    flex-direction: row;
+    /* Horizontal layout */
+    padding: 0;
+    position: relative;
+    height: 100%;
+}
+
+/* Image wrapper takes fixed width */
+.image-card-row .image-wrapper {
+    flex: 0 0 318px;
+    /* Fixed width for image section */
+    position: relative;
+    height: 178px;
+}
+
+/* Product info container takes remaining space */
+.image-card-row .product-info-container {
+    flex: 1;
+    padding: 16px;
+    display: flex;
+    flex-direction: row;
+    /* Horizontal layout for info and actions */
+    align-items: stretch;
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+/* Product info takes most of the space */
+.image-card-row .product-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+/* Product actions positioned on the right */
+.image-card-row .product-actions {
+    position: static;
+    /* Override absolute positioning */
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    margin-left: 16px;
+}
+
+/* Image container adjustments for row layout */
+.image-card-row .image-container {
+    width: 100%;
+    height: 100%;
+    border-radius: 7px 0 0 7px;
+    /* Only round left corners */
+}
+
+/* Checkbox and preview button positioning for row layout */
+.image-card-row .asset-checkbox {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 24px;
+    height: 24px;
+    z-index: 15;
+}
+
+.image-card-row .image-preview-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 24px;
+    height: 24px;
+    z-index: 10;
+}
+
+/* Adjust text sizing for row layout */
+.image-card-row .product-title {
+    font-size: 16px;
+    margin-bottom: 4px;
+    -webkit-line-clamp: 2;
+    /* Limit to 2 lines in row view */
+}
+
+.image-card-row .product-title-section {
+    margin-bottom: 20px;
+}
+
+.image-card-row .product-description {
+    font-size: 13px;
+    -webkit-line-clamp: 2;
+    /* Limit to 2 lines in row view */
+}
+
+/* Adjust meta grid for row layout */
+.image-card-row .product-meta-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.image-card-row .product-meta-label {
+    font-size: 11px;
+    font-weight: 400;
+}
+
+.image-card-row .product-meta-value {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.image-card-row .product-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 18%;
+}
+
+.image-card-row .add-to-cart-btn {
+    width: 140px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 0 12px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    white-space: nowrap;
+}
+
+.image-card-row .add-to-cart-btn::before {
+    display: none;
+}
+
+.image-card-row .add-to-cart-btn:hover {
+    background-color: var(--primary-color);
+}
+
+.image-card-row .add-to-cart-btn:active {
+    transform: translateY(1px);
+}
+
+.image-card-row .add-to-cart-btn:disabled {
+    background-color: #bdc3c7;
+    color: #ecf0f1;
+    cursor: not-allowed;
+}
+
+.image-card-row .add-to-cart-btn.remove-from-cart {
+    width: 190px;
+}
+
+.image-card-row .add-to-cart-btn.pop-effect {
+    animation: pop 0.3s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+
+.image-card-row .image-preview-button {
+    position: absolute;
+    top: 20px;
+    right: 10px;
+    width: 28px;
+    height: 28px;
+    background-color: rgba(74, 74, 74, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: 16px;
+}
+
+.image-card-row .image-preview-button:hover {
+    opacity: 1;
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.image-card-row .image-preview-button svg {
+    pointer-events: none;
+    width: 16px;
+    height: 16px;
+    fill: #fff;
+    display: block;
+    flex-shrink: 0;
+}
+
+.image-card-row .image-preview-button:hover svg {
+    fill: white;
+}
+
+.image-card-row .asset-checkbox {
+    position: absolute;
+    top: 20px;
+    left: 10px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    z-index: 15;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: white;
+    border: 0px solid #ddd;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+
+.image-card-row .asset-checkbox:checked {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.image-card-row .asset-checkbox::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    height: 13px;
+    width: 13px;
+    background-color: white;
+    border: 2px solid #6d6d6d;
+    border-radius: 3px;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.image-card-row .asset-checkbox:checked::before {
+    background-color: #f40000;
+    border-color: #f40000;
+}
+
+.image-card-row .asset-checkbox::after {
+    content: "";
+    display: none;
+}
+
+.image-card-row .asset-checkbox:checked::after {
+    content: '';
+    position: absolute;
+    top: 44%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(45deg);
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 3px 3px 0;
+    display: block;
+}

@@ -76,6 +76,59 @@
 .right-panel-group {
     display: flex;
     align-items: center;
+    gap: 12px;
+}
+
+/* Card View Container */
+.card-view-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 6px;
+    padding: 2px;
+    background: #fff;
+}
+
+.grid-view-btn,
+.list-view-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s, color 0.2s;
+    padding: 6px;
+}
+
+.grid-view-btn:hover,
+.list-view-btn:hover {
+    background-color: #f0f0f0;
+}
+
+.grid-view-btn:hover img,
+.list-view-btn:hover img {
+    filter: brightness(0) saturate(100%) invert(18%) sepia(100%) saturate(7500%) hue-rotate(0deg) brightness(97%) contrast(97%);
+}
+
+.grid-view-btn.active,
+.list-view-btn.active {
+    color: white;
+}
+
+.grid-view-btn img,
+.list-view-btn img {
+    height: 17px;
+    width: 100%;
+    display: block;
+}
+
+.grid-view-btn.active img,
+.list-view-btn.active img {
+    filter: brightness(0) saturate(100%) invert(18%) sepia(100%) saturate(7500%) hue-rotate(0deg) brightness(97%) contrast(97%);
 }
 
 /* Total Statistics */
@@ -175,6 +228,13 @@
     .filter-button {
         display: none;
     }
+}
+
+/* Temporary: Disable sort dropdowns */
+.sort-dropdown-disabled {
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: not-allowed;
 }
 
 /* Toggle Switch Styles */
