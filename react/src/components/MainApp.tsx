@@ -531,6 +531,7 @@ function MainApp(): React.JSX.Element {
                         />
                     </div>
                 </div>
+                {/* <Footer /> */}
             </div>
         </div>
     );
