@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { Asset, ImageGalleryProps } from '../types';
 import AssetCard from './AssetCard';
+import AssetCardRow from './AssetCardRow';
 import AssetDetails from './AssetDetails';
 import AssetPreview from './AssetPreview';
 import './ImageGallery.css';
@@ -29,7 +30,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     onSortTypeChange,
     onSortDirectionChange
 }) => {
-    // Modal state management for asset preview (zoom button)
+    // Modal state management for asset preview
     const [selectedCard, setSelectedCard] = useState<Asset | null>(null);
     const [showPreviewModal, setShowPreviewModal] = useState<boolean>(false);
     // Modal state management for asset details (card click)
@@ -38,6 +39,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
     // Show full details toggle state
     const [showFullDetails, setShowFullDetails] = useState<boolean>(true);
+    // View type state (grid or list)
+    const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
 
     const displayedCount = images.length;
     const selectedCount = selectedCards.size;
@@ -71,7 +74,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         onAddToCart?.(image);
     };
 
-    // Handler for zoom button click to show asset preview modal
+    // Handler for preview button click to show asset preview modal
     const handleCardPreviewClick = (image: Asset, e: React.MouseEvent) => {
         e.stopPropagation();
         setSelectedCard(image);
@@ -205,6 +208,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 onSortDirectionChange={onSortDirectionChange}
                 showFullDetails={showFullDetails}
                 onShowFullDetailsChange={setShowFullDetails}
+                viewType={viewType}
+                onViewTypeChange={setViewType}
             />
 
             {loading ? (
@@ -220,25 +225,28 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 </div>
             ) : (
                 <div className="image-grid-wrapper">
-                    <div className="image-grid">
-                        {images.map((image) => (
-                            <AssetCard
-                                key={image.id}
-                                image={image}
-                                handleCardClick={handleCardDetailClick}
-                                handleZoomClick={handleCardPreviewClick}
-                                formatFileSize={formatFileSize}
-                                getFileExtension={getFileExtension}
-                                formatCategory={formatCategory}
-                                handleAddToCart={handleAddToCart}
-                                handleRemoveFromCart={onRemoveFromCart}
-                                cartItems={cartItems}
-                                isSelected={selectedCards.has(image.id)}
-                                onCheckboxChange={handleCheckboxChange}
-                                dynamicMediaClient={dynamicMediaClient}
-                                showFullDetails={showFullDetails}
-                            />
-                        ))}
+                    <div className={viewType === 'grid' ? 'image-grid' : 'image-grid-list'}>
+                        {images.map((image) => {
+                            const CardComponent = viewType === 'grid' ? AssetCard : AssetCardRow;
+                            return (
+                                <CardComponent
+                                    key={image.id}
+                                    image={image}
+                                    handleCardClick={handleCardDetailClick}
+                                    handlePreviewClick={handleCardPreviewClick}
+                                    formatFileSize={formatFileSize}
+                                    getFileExtension={getFileExtension}
+                                    formatCategory={formatCategory}
+                                    handleAddToCart={handleAddToCart}
+                                    handleRemoveFromCart={onRemoveFromCart}
+                                    cartItems={cartItems}
+                                    isSelected={selectedCards.has(image.id)}
+                                    onCheckboxChange={handleCheckboxChange}
+                                    dynamicMediaClient={dynamicMediaClient}
+                                    showFullDetails={showFullDetails}
+                                />
+                            );
+                        })}
                     </div>
                 </div>
             )}

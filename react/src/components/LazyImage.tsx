@@ -106,7 +106,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
 
             {isError && (
                 <div className="lazy-image-placeholder error">
-                    <span>Failed to load image</span>
+                    <span>Image not available</span>
                 </div>
             )}
 
