@@ -80,10 +80,6 @@ const AdobeSignInButton: React.FC<AdobeSignInButtonProps> = ({ onAuthenticated, 
 
     // On mount, check for token in URL hash or localStorage
     React.useEffect(() => {
-        console.log('AdobeSignInButton mounted');
-        console.log('Current URL:', window.location.href);
-        console.log('Hash:', window.location.hash);
-
         // Check for access token in URL hash (from Adobe IMS redirect)
         if (window.location.hash) {
             console.log('Hash detected, parsing...');
@@ -144,7 +140,6 @@ const AdobeSignInButton: React.FC<AdobeSignInButtonProps> = ({ onAuthenticated, 
         if (storedToken && storedExpiresAt) {
             const expiresAt = parseInt(storedExpiresAt);
             if (Date.now() < expiresAt) {
-                console.log('✅ Valid stored token found');
                 setIsAuthenticated(true);
                 if (onAuthenticated) {
                     onAuthenticated(storedToken);

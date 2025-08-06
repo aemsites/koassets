@@ -28,7 +28,10 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     selectedSortType,
     selectedSortDirection,
     onSortTypeChange,
-    onSortDirectionChange
+    onSortDirectionChange,
+    onLoadMoreResults,
+    hasMorePages = false,
+    isLoadingMore = false
 }) => {
     // Modal state management for asset preview
     const [selectedCard, setSelectedCard] = useState<Asset | null>(null);
@@ -210,6 +213,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 onShowFullDetailsChange={setShowFullDetails}
                 viewType={viewType}
                 onViewTypeChange={setViewType}
+                hasMorePages={hasMorePages}
+                currentPage={hits?.page || 0}
+                totalPages={hits?.nbPages || 0}
             />
 
             {loading ? (
@@ -248,6 +254,26 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                             );
                         })}
                     </div>
+
+                    {/* Loading more indicator */}
+                    {isLoadingMore && (
+                        <div className="loading-more-container">
+                            <div className="loading-spinner"></div>
+                            <p>Loading more results...</p>
+                        </div>
+                    )}
+
+                    {/* Load More Button */}
+                    {hasMorePages && !isLoadingMore && (
+                        <div className="load-more-button-container">
+                            <button
+                                className="load-more-button"
+                                onClick={onLoadMoreResults}
+                            >
+                                Load more
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 

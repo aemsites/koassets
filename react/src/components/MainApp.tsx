@@ -22,6 +22,7 @@ import SearchBar from './SearchBar';
 
 const searchAssetsTitle = 'Search Assets - where you can discover the company\'s latest and greatest content!';
 const searchCollectionsTitle = 'My Collections';
+const HITS_PER_PAGE = 24;
 
 function MainApp(): React.JSX.Element {
     // Local state
@@ -50,6 +51,11 @@ function MainApp(): React.JSX.Element {
     const [selectedQueryType, setSelectedQueryType] = useState<string>(QUERY_TYPES.ASSETS);
     const [selectedFacets, setSelectedFacets] = useState<string[][]>([]);
     const [checked, setChecked] = useState<FacetCheckedState>({});
+
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState<number>(0);
+    const [totalPages, setTotalPages] = useState<number>(0);
+    const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
 
     // Cart state
     const [cartItems, setCartItems] = useState<CartItem[]>(() => {
@@ -105,10 +111,11 @@ function MainApp(): React.JSX.Element {
     }, [accessToken]);
 
     // Process and display Adobe Dynamic Media images
-    const processDMImages = useCallback(async (content: any): Promise<void> => {
-        // console.log(`processDMImages: ${JSON.stringify(content, null, 2)}`);
+    const processDMImages = useCallback(async (content: any, isLoadingMore: boolean = false): Promise<void> => {
         // For demo, just parse and set images if possible
-        setDmImages([]);
+        if (!isLoadingMore) {
+            setDmImages([]);
+        }
         setHits(null);
         try {
             if (content.results && content.results[0]?.hits) {
@@ -142,22 +149,30 @@ function MainApp(): React.JSX.Element {
                             ...hit
                         };
                     });
-                    setDmImages(processedImages);
+
+                    if (isLoadingMore) {
+                        // Append to existing images
+                        setDmImages(prev => [...prev, ...processedImages]);
+                    } else {
+                        // Replace existing images
+                        setDmImages(processedImages);
+                    }
                 }
-                // Store the complete results object with nbHits
+                // Store the complete results object with nbHits and update pagination info
                 setHits(content.results[0]);
+                setTotalPages(content.results[0].nbPages || 0);
             } else {
-                console.log('No hits in response');
+                setTotalPages(0);
             }
         } catch (error) {
             console.error('Error processing dynamic media images:', error);
         }
         setLoading(prev => ({ ...prev, [LOADING.dmImages]: false }));
+        setIsLoadingMore(false);
     }, []);
 
     // Process and display collections
     const processCollections = useCallback(async (content: any): Promise<void> => {
-        console.log(`processCollections: ${JSON.stringify(content, null, 2)}`);
         setCollections([]);
         try {
             if (content.results && content.results[0]?.hits) {
@@ -177,32 +192,46 @@ function MainApp(): React.JSX.Element {
     }, []);
 
     // Search assets (images, videos, etc.)
-    const performSearchImages = useCallback((query: string, selectedCollection: Collection | null = null, selectedFacets: string[][] = []): void => {
+    const performSearchImages = useCallback((query: string, selectedCollection: Collection | null = null, selectedFacets: string[][] = [], page: number = 0): void => {
         if (!dynamicMediaClient) return;
-        console.log(`search for images: "${query}"`);
-        setLoading(prev => ({ ...prev, [LOADING.dmImages]: true }));
+
+        const isLoadingMore = page > 0;
+        if (isLoadingMore) {
+            setIsLoadingMore(true);
+        } else {
+            setLoading(prev => ({ ...prev, [LOADING.dmImages]: true }));
+            setCurrentPage(0);
+        }
         setCurrentView(CURRENT_VIEW.images);
 
         dynamicMediaClient.searchAssets(query.trim(), {
             collectionId: selectedCollection?.collectionId,
-            facets: selectedFacets
-        }).then(processDMImages).catch((error) => {
+            facets: selectedFacets,
+            hitsPerPage: HITS_PER_PAGE,
+            page: page
+        }).then((content) => processDMImages(content, isLoadingMore)).catch((error) => {
             console.error('Error searching assets:', error);
             setLoading(prev => ({ ...prev, [LOADING.dmImages]: false }));
-            setDmImages([]);
+            setIsLoadingMore(false);
+            if (!isLoadingMore) {
+                setDmImages([]);
+            }
         });
 
-        setQuery('');
+        if (!isLoadingMore) {
+            setQuery('');
+        }
     }, [dynamicMediaClient, processDMImages]);
 
     // Search collections
     const performSearchCollections = useCallback((query: string): void => {
         if (!dynamicMediaClient) return;
-        console.log(`search for collections: "${query}"`);
         setLoading(prev => ({ ...prev, [LOADING.collections]: true }));
         setCurrentView(CURRENT_VIEW.collections);
 
-        dynamicMediaClient.searchCollections(query.trim()).then(processCollections);
+        dynamicMediaClient.searchCollections(query.trim(), {
+            hitsPerPage: HITS_PER_PAGE
+        }).then(processCollections);
 
         setQuery('');
     }, [dynamicMediaClient, processCollections]);
@@ -211,19 +240,30 @@ function MainApp(): React.JSX.Element {
     const handleSelectCollection = useCallback((collection: Collection): void => {
         setChecked({});
         setSelectedCollection(collection);
+        setCurrentPage(0);
         handleSetSelectedQueryType(QUERY_TYPES.ASSETS);
-        performSearchImages('', collection, []);
+        performSearchImages('', collection, [], 0);
         setQuery('');
     }, [handleSetSelectedQueryType, performSearchImages]);
 
+    // Handler for loading more results (pagination)
+    const handleLoadMoreResults = useCallback((): void => {
+        if (currentPage + 1 < totalPages && !isLoadingMore) {
+            const nextPage = currentPage + 1;
+            setCurrentPage(nextPage);
+            performSearchImages(query, selectedCollection, selectedFacets, nextPage);
+        }
+    }, [currentPage, totalPages, isLoadingMore, query, selectedCollection, selectedFacets, performSearchImages]);
+
     // Handler for searching
     const search = useCallback((): void => {
+        setCurrentPage(0);
         if (selectedQueryType === QUERY_TYPES.COLLECTIONS) {
             // Search for collections
             performSearchCollections(query);
         } else {
             // Search for assets or assets in a collection
-            performSearchImages(query, selectedCollection, selectedFacets);
+            performSearchImages(query, selectedCollection, selectedFacets, 0);
         }
     }, [query, selectedQueryType, selectedCollection, selectedFacets, performSearchCollections, performSearchImages]);
 
@@ -420,7 +460,7 @@ function MainApp(): React.JSX.Element {
                     loading={loading[LOADING.collections]}
                     onSelectCollection={handleSelectCollection}
                 />
-            ) : currentView === CURRENT_VIEW.images || dmImages.length > 0 ? (
+            ) : currentView === CURRENT_VIEW.images ? (
                 <ImageGallery
                     title={selectedCollection ? `${selectedCollection.collectionMetadata?.title} Collection` : searchAssetsTitle}
                     images={dmImages}
@@ -442,30 +482,12 @@ function MainApp(): React.JSX.Element {
                     selectedSortDirection={selectedSortDirection}
                     onSortTypeChange={setSelectedSortType}
                     onSortDirectionChange={setSelectedSortDirection}
+                    onLoadMoreResults={handleLoadMoreResults}
+                    hasMorePages={currentPage + 1 < totalPages}
+                    isLoadingMore={isLoadingMore}
                 />
             ) : (
-                <ImageGallery
-                    title={searchAssetsTitle}
-                    images={dmImages}
-                    loading={loading[LOADING.dmImages]}
-                    onAddToCart={handleAddToCart}
-                    onRemoveFromCart={handleRemoveFromCart}
-                    cartItems={cartItems}
-                    dynamicMediaClient={dynamicMediaClient}
-                    hits={hits}
-                    onToggleMobileFilter={handleToggleMobileFilter}
-                    onBulkAddToCart={handleBulkAddToCart}
-                    onSortByTopResults={handleSortByTopResults}
-                    onSortByDateCreated={handleSortByDateCreated}
-                    onSortByLastModified={handleSortByLastModified}
-                    onSortBySize={handleSortBySize}
-                    onSortDirectionAscending={handleSortDirectionAscending}
-                    onSortDirectionDescending={handleSortDirectionDescending}
-                    selectedSortType={selectedSortType}
-                    selectedSortDirection={selectedSortDirection}
-                    onSortTypeChange={setSelectedSortType}
-                    onSortDirectionChange={setSelectedSortDirection}
-                />
+                <></>
             )}
         </>
     );
