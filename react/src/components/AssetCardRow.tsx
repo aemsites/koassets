@@ -1,9 +1,9 @@
 import React from 'react';
 import type { AssetCardProps } from '../types';
-import './AssetCard.css';
+import './AssetCardRow.css';
 import LazyImage from './LazyImage';
 
-const AssetCard: React.FC<AssetCardProps> = ({
+const AssetCardRow: React.FC<AssetCardProps> = ({
     image,
     handleCardClick,
     handlePreviewClick,
@@ -43,9 +43,9 @@ const AssetCard: React.FC<AssetCardProps> = ({
     };
 
     return (
-        <div className="image-card">
+        <div className="image-card-row">
             <div
-                className="image-card-inner"
+                className="image-card-row-inner"
                 onClick={(e) => handleCardClick(image, e)}
                 style={{ cursor: 'pointer' }}
             >
@@ -81,7 +81,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
                 <div className="product-info-container">
                     <div className="product-info">
                         <div className="product-title-section">
-                            <h3 className="product-title">{image.name || image.alt || 'Untitled Asset'}</h3>
+                            <div className="product-title">{image.name || image.alt || 'Untitled Asset'}</div>
                             {image.metadata?.description && (
                                 <p className="product-description">{image.metadata.description}</p>
                             )}
@@ -127,4 +127,4 @@ const AssetCard: React.FC<AssetCardProps> = ({
     );
 };
 
-export default AssetCard; 
+export default AssetCardRow; 

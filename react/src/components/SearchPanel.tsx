@@ -23,10 +23,20 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
     onSortTypeChange,
     onSortDirectionChange,
     showFullDetails = true,
-    onShowFullDetailsChange
+    onShowFullDetailsChange,
+    viewType = 'grid',
+    onViewTypeChange
 }) => {
     const handleToggleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         onShowFullDetailsChange?.(e.target.checked);
+    };
+
+    const handleGridViewClick = () => {
+        onViewTypeChange?.('grid');
+    };
+
+    const handleListViewClick = () => {
+        onViewTypeChange?.('list');
     };
 
     return (
@@ -37,7 +47,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
                     {/* Left side */}
                     <div className="left-panel-group">
                         <ActionDropdown
-                            className="SortCards"
+                            className="SortCards sort-dropdown-disabled"
                             items={['Top Results', 'Date Created', 'Last Modified', 'Size']}
                             handlers={[onSortByTopResults, onSortByDateCreated, onSortByLastModified, onSortBySize]}
                             show={true}
@@ -46,7 +56,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
                             onSelectedItemChange={onSortTypeChange}
                         />
                         <ActionDropdown
-                            className="SortDirection"
+                            className="SortDirection sort-dropdown-disabled"
                             items={['Ascending', 'Descending']}
                             handlers={[onSortDirectionAscending, onSortDirectionDescending]}
                             show={true}
@@ -63,6 +73,25 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
 
                     {/* Right side: Filter button */}
                     <div className="right-panel-group">
+                        <div className="card-view-container">
+                            <button
+                                className={`grid-view-btn ${viewType === 'grid' ? 'active' : ''}`}
+                                type="button"
+                                title="Grid View"
+                                onClick={handleGridViewClick}
+                            >
+                                <img src="icons/gridview.svg" alt="Grid View" />
+                            </button>
+                            <button
+                                className={`list-view-btn ${viewType === 'list' ? 'active' : ''}`}
+                                type="button"
+                                title="List View"
+                                onClick={handleListViewClick}
+                            >
+                                <img src="icons/listview.svg" alt="List View" />
+                            </button>
+                        </div>
+
                         <button
                             className="filter-button"
                             type="button"
