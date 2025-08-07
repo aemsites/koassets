@@ -19,7 +19,7 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
     const [imageLoading, setImageLoading] = useState<boolean>(false);
 
     // Check if this item is already in the cart
-    const isInCart = selectedImage ? cartItems.some(cartItem => cartItem.id === selectedImage.id) : false;
+    const isInCart = selectedImage ? cartItems.some(cartItem => cartItem.assetId === selectedImage.assetId) : false;
 
     // Handle button click - either add or remove from cart
     const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -59,12 +59,12 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                         {
                             cache: true,
                             cacheKey: `${selectedImage.assetId}-350`,
-                            fallbackUrl: selectedImage.url 
+                            fallbackUrl: selectedImage.url
                         }
                     );
                     setBlobUrl(blobUrl);
                 } catch (error) {
-                    console.error(`Error getting optimized delivery blob for asset ${selectedImage.id}: ${error}`);
+                    console.error(`Error getting optimized delivery blob for asset ${selectedImage.assetId}: ${error}`);
                     // Fallback to original URL
                     setBlobUrl(selectedImage.url);
                 } finally {
@@ -94,15 +94,15 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
 
                 <div className="modal-header">
                     <div className="modal-tags">
-                        {selectedImage.metadata?.subject && (
-                            <span className="modal-tag">{formatCategory(selectedImage.metadata.subject)}</span>
+                        {selectedImage?.subject && (
+                            <span className="modal-tag">{formatCategory(selectedImage?.subject)}</span>
                         )}
                     </div>
                     <h2 className="modal-title">
                         {selectedImage.name || selectedImage.alt || 'Untitled Asset'}
                     </h2>
-                    {selectedImage.metadata?.description && (
-                        <p className="modal-description">{selectedImage.metadata.description}</p>
+                    {selectedImage?.description && (
+                        <p className="modal-description">{selectedImage?.description}</p>
                     )}
                 </div>
 
@@ -143,7 +143,7 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                         </div>
                         <div className="modal-detail-group">
                             <span className="modal-detail-label">CATEGORY</span>
-                            <span className="modal-detail-value">{formatCategory(selectedImage.metadata?.subject)}</span>
+                            <span className="modal-detail-value">{formatCategory(selectedImage?.subject)}</span>
                         </div>
                     </div>
                 </div>

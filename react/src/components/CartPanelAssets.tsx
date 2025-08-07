@@ -418,7 +418,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                             {cartItems.map(item => {
                                 const authorizedItem = item as AuthorizedCartItem;
                                 return (
-                                    <div key={item.id} className={`cart-item-row ${authorizedItem.authorized === false ? 'disabled' : ''}`}>
+                                    <div key={item.assetId} className={`cart-item-row ${authorizedItem.authorized === false ? 'disabled' : ''}`}>
                                         <div className="col-thumbnail">
                                             <div className="item-thumbnail">
                                                 <OptimizedCartImage

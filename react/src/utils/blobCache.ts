@@ -29,8 +29,8 @@ export async function fetchOptimizedDeliveryBlob(
 
     try {
         // Extract common asset properties
-        const assetId = asset.assetId || asset.id;
-        const repoName = asset['repo-name'] || asset.name || 'unknown';
+        const assetId = asset.assetId || '';
+        const repoName = asset.name || 'unknown';
 
         // Check cache first if caching is enabled
         if (options.cache && options.cacheKey) {
@@ -52,7 +52,7 @@ export async function fetchOptimizedDeliveryBlob(
         return URL.createObjectURL(blob);
 
     } catch (error) {
-        console.error(`Error getting optimized delivery blob for asset ${asset.id}:`, error);
+        console.error(`Error getting optimized delivery blob for asset ${asset.assetId}:`, error);
         // Return fallback URL if provided
         return options.fallbackUrl || null;
     }

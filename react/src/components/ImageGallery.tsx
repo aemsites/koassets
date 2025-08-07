@@ -119,7 +119,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     // Handle select all
     const handleSelectAll = (isChecked: boolean) => {
         if (isChecked) {
-            setSelectedCards(new Set(images.map(img => img.id)));
+            setSelectedCards(new Set(images.map(img => img.assetId || '')));
         } else {
             setSelectedCards(new Set());
         }
@@ -236,7 +236,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                             const CardComponent = viewType === 'grid' ? AssetCardViewGrid : AssetCardViewList;
                             return (
                                 <CardComponent
-                                    key={image.id}
+                                    key={image.assetId}
                                     image={image}
                                     handleCardClick={handleCardDetailClick}
                                     handlePreviewClick={handleCardPreviewClick}
@@ -246,7 +246,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                                     handleAddToCart={handleAddToCart}
                                     handleRemoveFromCart={onRemoveFromCart}
                                     cartItems={cartItems}
-                                    isSelected={selectedCards.has(image.id)}
+                                    isSelected={selectedCards.has(image.assetId || '')}
                                     onCheckboxChange={handleCheckboxChange}
                                     dynamicMediaClient={dynamicMediaClient}
                                     showFullDetails={showFullDetails}

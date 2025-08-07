@@ -8,7 +8,7 @@ export interface AssetMetadata {
 }
 
 export interface Asset {
-    id: string;
+    assetId?: string;
     name?: string;
     alt?: string;
     url: string;
@@ -20,9 +20,7 @@ export interface Asset {
     metadata?: AssetMetadata;
     path?: string;
     tags?: string[];
-    assetId?: string;
-    'repo-name'?: string;
-    'dc-creator'?: string;
+    creator?: string;
     [key: string]: any; // For additional Algolia hit properties
 }
 
@@ -182,8 +180,6 @@ export interface FacetFilterProps {
     selectedFacets: string[][];
     setSelectedFacets: (facets: string[][]) => void;
     search: () => void;
-    checked: FacetCheckedState;
-    setChecked: React.Dispatch<React.SetStateAction<FacetCheckedState>>;
 }
 
 // Phase 3 Component Types

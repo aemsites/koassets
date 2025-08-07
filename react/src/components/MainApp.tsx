@@ -6,12 +6,12 @@ import type {
     CartItem,
     Collection,
     CurrentView,
-    FacetCheckedState,
     LoadingState,
     SearchResults
 } from '../types';
 import { CURRENT_VIEW, LOADING, QUERY_TYPES } from '../types';
 import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
+import { getBucket } from '../utils/config';
 
 // Components
 import CollectionGallery from './CollectionGallery';
@@ -36,7 +36,7 @@ function MainApp(): React.JSX.Element {
     });
     const [bucket] = useState<string>(() => {
         try {
-            return localStorage.getItem('bucket') || 'delivery-p108396-e1040009';
+            return getBucket();
         } catch {
             return '';
         }
@@ -51,7 +51,6 @@ function MainApp(): React.JSX.Element {
     const [currentView, setCurrentView] = useState<CurrentView>(CURRENT_VIEW.images);
     const [selectedQueryType, setSelectedQueryType] = useState<string>(QUERY_TYPES.ASSETS);
     const [selectedFacets, setSelectedFacets] = useState<string[][]>([]);
-    const [checked, setChecked] = useState<FacetCheckedState>({});
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState<number>(0);
@@ -126,27 +125,21 @@ function MainApp(): React.JSX.Element {
                         const repoName = hit['repo-name'] || 'Untitled';
 
                         return {
-                            id: hit.assetId,
+                            assetId: hit.assetId,
                             name: repoName,
                             url: '', // Empty URL - will be loaded lazily
                             alt: hit['dc-title'] || hit['repo-name'] || 'Asset',
                             size: hit['size'] || 0,
-                            format: hit['dc-format'] || 'Unknown',
+                            format: hit?.['dc-format'] || hit?.['dc-format-label'] || 'Unknown',
+                            creator: hit?.['dc-creator'],
                             mimeType: hit['repo-mimetype'] || 'Unknown',
                             path: hit['repo-path'] || '',
                             tags: hit['xcm-machineKeywords'] || [],
-                            metadata: {
-                                title: hit['dc-title'],
-                                description: hit['dc-description'],
-                                subject: hit['dc-subject'],
-                                createDate: hit['repo-createDate'],
-                                modifyDate: hit['repo-modifyDate'],
-                                format: hit['dc-format-label'],
-                                campaignName: hit['xdm-campaignName']
-                            },
-                            // Store data needed for lazy loading
-                            assetId: hit.assetId,
-                            'repo-name': repoName,
+                            description: hit?.['dc-description'],
+                            title: hit?.['dc-title'],
+                            subject: hit?.['dc-subject'],
+                            createDate: hit?.['repo-createDate'],
+                            modifyDate: hit?.['repo-modifyDate'],
                             ...hit
                         };
                     });
@@ -239,7 +232,6 @@ function MainApp(): React.JSX.Element {
 
     // Select a collection and load all assets in the collection (no query & no facet filters)
     const handleSelectCollection = useCallback((collection: Collection): void => {
-        setChecked({});
         setSelectedCollection(collection);
         setCurrentPage(0);
         handleSetSelectedQueryType(QUERY_TYPES.ASSETS);
@@ -295,7 +287,7 @@ function MainApp(): React.JSX.Element {
 
     // Cart functions
     const handleAddToCart = async (image: Asset): Promise<void> => {
-        if (!cartItems.some(item => item.id === image.id)) {
+        if (!cartItems.some(item => item.assetId === image.assetId)) {
             // Cache the image when adding to cart
             if (dynamicMediaClient && image.assetId) {
                 try {
@@ -312,7 +304,7 @@ function MainApp(): React.JSX.Element {
                     );
                     console.log(`Cached image for cart: ${image.assetId}`);
                 } catch (error) {
-                    console.warn(`Failed to cache image for cart ${image.id}:`, error);
+                    console.warn(`Failed to cache image for cart ${image.assetId}:`, error);
                 }
             }
 
@@ -321,15 +313,15 @@ function MainApp(): React.JSX.Element {
     };
 
     const handleRemoveFromCart = (image: Asset): void => {
-        setCartItems(prev => prev.filter(item => item.id !== image.id));
+        setCartItems(prev => prev.filter(item => item.assetId !== image.assetId));
     };
 
     const handleBulkAddToCart = async (selectedCardIds: Set<string>, images: Asset[]): Promise<void> => {
         const newItems: Asset[] = [];
 
         for (const imageId of selectedCardIds) {
-            const image = images.find(img => img.id === imageId);
-            if (image && !cartItems.some(item => item.id === image.id)) {
+            const image = images.find(img => img.assetId === imageId);
+            if (image && !cartItems.some(item => item.assetId === image.assetId)) {
                 // Cache each image when adding to cart
                 if (dynamicMediaClient && image.assetId) {
                     try {
@@ -346,7 +338,7 @@ function MainApp(): React.JSX.Element {
                         );
                         console.log(`Cached bulk image for cart: ${image.assetId}`);
                     } catch (error) {
-                        console.warn(`Failed to cache bulk image for cart ${image.id}:`, error);
+                        console.warn(`Failed to cache bulk image for cart ${image.assetId}:`, error);
                     }
                 }
 
@@ -529,8 +521,6 @@ function MainApp(): React.JSX.Element {
                                     selectedFacets={selectedFacets}
                                     setSelectedFacets={setSelectedFacets}
                                     search={search}
-                                    checked={checked}
-                                    setChecked={setChecked}
                                 />
                             </div>
                         </div>

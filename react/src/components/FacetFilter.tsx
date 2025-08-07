@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import type { FacetFilterProps } from '../types';
+import type { FacetCheckedState, FacetFilterProps } from '../types';
 import './FacetFilter.css';
 
 interface FiltersMap {
@@ -14,23 +14,25 @@ interface OpenState {
     [key: string]: boolean;
 }
 
-const FILTERS_MAP: FiltersMap = {
-    'gmo-lineofBusiness': 'Business Line',
-    'gmo-campaignName': 'Campaign Name',
-    'gmo-programName': 'Program Name',
+export const FILTERS_MAP: FiltersMap = {
     'dc-format-label': 'File Format',
-    'gmo-licensedContent': 'Licensed Content',
-    'gmo-contentType': 'Content Type',
+    'dc-subject': 'Subject',
+    'repo-modifyDate': 'Modified Date', // TODO
+    'xcm-colorDistribution': 'Color Distribution', // TODO
+    'xcm-machineKeywords': 'Machine Keywords',
+    'xdm-activeDates': 'Active Dates',
+    'xdm-campaignName': 'Campaign Name',
+    'xdm-channelName': 'Channel Name',
+    'xdm-region': 'Region'
 };
 
 const FacetFilter: React.FC<FacetFilterProps> = ({
     hits = [],
     setSelectedFacets,
-    search,
-    checked,
-    setChecked
+    search
 }) => {
     const [open, setOpen] = useState<OpenState>({});
+    const [checked, setChecked] = useState<FacetCheckedState>({});
 
     const toggle = (key: string) => {
         setOpen(prev => ({ ...prev, [key]: !prev[key] }));
@@ -38,13 +40,14 @@ const FacetFilter: React.FC<FacetFilterProps> = ({
 
     // 'hits' changed --> 'facetsFromHits' changed --> 'checked' state updated --> 'selectedFacets' updated
     const facetsFromHits = useMemo<FacetsFromHits>(() => {
-        // e.g. { 'gmo-lineofBusiness': ['digital-media-dme', 'digital-experience-dx'] }
         const facets: FacetsFromHits = {};
         Object.keys(FILTERS_MAP).forEach(key => {
             const values = new Set<string>();
             hits?.forEach(hit => {
                 const value = hit[key];
-                if (typeof value === 'string') {
+                if (key.toLowerCase().includes('date')) {
+                    // skip
+                } else if (typeof value === 'string') {
                     value && values.add(value);
                 } else if (Array.isArray(value)) {
                     value.forEach(v => typeof v === 'string' && v && values.add(v));
@@ -59,7 +62,6 @@ const FacetFilter: React.FC<FacetFilterProps> = ({
     useEffect(() => {
         const handler = setTimeout(() => {
             setChecked(prevChecked => {
-                // e.g. {"gmo-lineofBusiness":{"digital-media-dme":true,"digital-experience-dx":true}}
                 const newChecked: typeof prevChecked = {};
                 Object.keys(prevChecked).forEach(key => {
                     if (facetsFromHits[key]) {
@@ -86,7 +88,10 @@ const FacetFilter: React.FC<FacetFilterProps> = ({
             const facetFilter: string[] = [];
             Object.entries(checked[key]).forEach(([facet, isChecked]) => {
                 if (isChecked) {
-                    facetFilter.push(`${key}:${facet}`);
+                    if (key.endsWith('Date')) {
+                    } else {
+                        facetFilter.push(`${key}:${facet}`);
+                    }
                 }
             });
             facetFilter.length > 0 && newSelectedFacets.push(facetFilter);

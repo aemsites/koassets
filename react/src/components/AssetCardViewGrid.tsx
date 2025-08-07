@@ -19,7 +19,7 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
     showFullDetails = true
 }) => {
     // Check if this item is already in the cart
-    const isInCart = cartItems.some(cartItem => cartItem.id === image.id);
+    const isInCart = cartItems.some(cartItem => cartItem.assetId === image.assetId);
 
     // Handle button click - either add or remove from cart
     const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -34,7 +34,7 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
 
     // Handle checkbox change
     const handleCheckboxClick = (e: React.ChangeEvent<HTMLInputElement>) => {
-        onCheckboxChange?.(image.id, e.target.checked);
+        onCheckboxChange?.(image.assetId || '', e.target.checked);
     };
 
     // Handle checkbox click to prevent propagation
@@ -82,8 +82,8 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                     <div className="product-info">
                         <div className="product-title-section">
                             <h3 className="product-title">{image.name || image.alt || 'Untitled Asset'}</h3>
-                            {image.metadata?.description && (
-                                <p className="product-description">{image.metadata.description}</p>
+                            {image?.description && (
+                                <p className="product-description">{image.description}</p>
                             )}
                         </div>
 
@@ -107,7 +107,7 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                                 </div>
                                 <div className="product-meta-item">
                                     <span className="product-meta-label">CATEGORY</span>
-                                    <span className="product-meta-value">{formatCategory(image.metadata?.subject)}</span>
+                                    <span className="product-meta-value">{formatCategory(image?.subject)}</span>
                                 </div>
                             </div>
                         )}

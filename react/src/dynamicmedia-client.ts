@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import { FILTERS_MAP } from './components/FacetFilter';
 import { AlgoliaSearchQuery } from './types';
 
 interface DynamicMediaClientConfig {
@@ -175,14 +176,7 @@ export class DynamicMediaClient {
                 {
                     "indexName": indexName,
                     "params": {
-                        "facets": [
-                            "dc-format-label",
-                            "dc-subject",
-                            "repo-createDate",
-                            "size",
-                            "xcm-machineKeywords",
-                            "xdm-campaignName"
-                        ],
+                        "facets": Object.keys(FILTERS_MAP),
                         "facetFilters": combinedSelectedFacets,
                         "filters": "",
                         "highlightPostTag": "__/ais-highlight__",
@@ -373,6 +367,11 @@ export class DynamicMediaClient {
     }
 
     async getOptimizedDeliveryBlob(assetId: string, repoName: string, width: number = 350) {
+
+        // // TODO: remove this
+        // const metadata = await this.getMetadata(assetId);
+        // console.log('metadata: ', metadata);
+
         // Convert video extensions to avif for optimal delivery
         const processedRepoName = this.convertVideoExtensionToAvif(repoName);
 

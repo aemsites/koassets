@@ -111,7 +111,7 @@ src/
    npm install
    ```
 
-3. **Configure Adobe Client ID**
+3. **Configure Adobe Client ID and Bucket**
 
    **Option 1: Using Environment Variables (Recommended)**
 
@@ -119,8 +119,9 @@ src/
    # Copy the example file
    cp env.example .env.local
 
-   # Edit .env.local with your Client ID
+   # Edit .env.local with your Client ID and Bucket
    VITE_ADOBE_CLIENT_ID=your-actual-client-id-here
+   VITE_BUCKET=your-adobe-dynamic-media-bucket-id
    ```
 
    **Option 2: Update the fallback in code**
@@ -132,6 +133,18 @@ src/
        import.meta.env.VITE_ADOBE_CLIENT_ID || "your-adobe-client-id-here",
      // ...
    };
+
+   // In src/components/MainApp.tsx
+   const [bucket] =
+     useState <
+     string >
+     (() => {
+       try {
+         return import.meta.env.VITE_BUCKET || "";
+       } catch {
+         return "";
+       }
+     });
    ```
 
 4. **Start the development server**
@@ -281,6 +294,45 @@ The app automatically detects the protocol and configures Adobe IMS accordingly:
 
 ### Environment Variables & Security
 
+**Environment File Structure:**
+
+Vite supports multiple environment files with the following loading priority:
+
+1. `.env.local` - Local overrides (highest priority, ignored by git)
+2. `.env.[mode]` - Mode-specific files (e.g., `.env.production`)
+3. `.env` - Base environment file
+4. Default values in code (lowest priority)
+
+**Environment Files Setup:**
+
+```bash
+# For Development
+cp .env.development.template .env.development
+# Edit .env.development with your real development values
+
+# For Staging
+cp .env.staging.template .env.staging
+# Edit .env.staging with your real staging values
+
+# For Production
+cp .env.production.template .env.production
+# Edit .env.production with your real production values
+
+# For Personal Overrides (highest priority)
+cp env.example .env.local
+# Edit .env.local with your personal settings
+```
+
+**Available Environment Files:**
+
+- `env.example` - Template with placeholder values (copy this to create new env files)
+- `.env.development.template` - Development template (copy to `.env.development`)
+- `.env.staging.template` - Staging template (copy to `.env.staging`)
+- `.env.production.template` - Production template (copy to `.env.production`)
+- `.env.local` - Personal overrides (highest priority, not committed to git)
+
+**Security Note:** Only template files with placeholder values are committed to git. The actual `.env.development`, `.env.staging`, and `.env.production` files containing real secrets are gitignored.
+
 **OAuth Client ID Security Model:**
 
 - In OAuth 2.0 for public clients (SPAs), the **Client ID is not a secret**
@@ -291,7 +343,7 @@ The app automatically detects the protocol and configures Adobe IMS accordingly:
 
 - Use environment variables for different environments (dev, staging, production)
 - Keep `.env.local` files out of version control (already in `.gitignore`)
-- Configure different Client IDs for different environments
+- Configure different Client IDs and Bucket IDs for different environments
 - Ensure redirect URIs are properly configured in Adobe Developer Console
 
 **Environment Variable Setup:**
@@ -299,9 +351,38 @@ The app automatically detects the protocol and configures Adobe IMS accordingly:
 ```bash
 # .env.local (for local development)
 VITE_ADOBE_CLIENT_ID=your-dev-client-id
+VITE_BUCKET=your-dev-bucket-id
 
 # .env.production (for production builds)
 VITE_ADOBE_CLIENT_ID=your-prod-client-id
+VITE_BUCKET=your-prod-bucket-id
+```
+
+### Building for Different Environments
+
+**Development Build:**
+
+```bash
+npm run build:dev
+```
+
+**Staging Build:**
+
+```bash
+npm run build:staging
+```
+
+**Production Build:**
+
+```bash
+npm run build:prod
+```
+
+**Environment-Specific Preview:**
+
+```bash
+npm run preview:staging  # Preview staging build
+npm run preview:prod     # Preview production build
 ```
 
 ## Troubleshooting

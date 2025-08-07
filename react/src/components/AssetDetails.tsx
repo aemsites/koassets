@@ -19,7 +19,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     const [imageLoading, setImageLoading] = useState<boolean>(false);
 
     // Check if this item is already in the cart
-    const isInCart = selectedImage ? cartItems.some(cartItem => cartItem.id === selectedImage.id) : false;
+    const isInCart = selectedImage ? cartItems.some(cartItem => cartItem.assetId === selectedImage.assetId) : false;
 
     // Handle button click - either add or remove from cart
     const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -64,7 +64,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                     );
                     setBlobUrl(blobUrl);
                 } catch (error) {
-                    console.error(`Error getting optimized delivery blob for asset ${selectedImage.id}: ${error}`);
+                    console.error(`Error getting optimized delivery blob for asset ${selectedImage.assetId}: ${error}`);
                     // Fallback to original URL
                     setBlobUrl(selectedImage.url);
                 } finally {
@@ -84,8 +84,6 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     }, [showModal, selectedImage, dynamicMediaClient]);
 
     if (!showModal || !selectedImage) return null;
-
-    console.log(JSON.stringify(selectedImage, null, 2));
 
     return (
         <div className="fullscreen-modal-overlay" onClick={handleOverlayClick}>
@@ -122,8 +120,8 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                             <h2 className="fullscreen-title">
                                 {selectedImage.name || selectedImage.alt || 'Untitled Asset'}
                             </h2>
-                            {selectedImage.metadata?.description && (
-                                <p className="fullscreen-description">{selectedImage.metadata.description}</p>
+                            {selectedImage?.description && (
+                                <p className="fullscreen-description">{selectedImage?.description}</p>
                             )}
                         </div>
 
@@ -147,7 +145,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                 </div>
                                 <div className="fullscreen-detail-group">
                                     <span className="fullscreen-detail-label">CATEGORY</span>
-                                    <span className="fullscreen-detail-value">{formatCategory(selectedImage.metadata?.subject)}</span>
+                                    <span className="fullscreen-detail-value">{formatCategory(selectedImage?.subject)}</span>
                                 </div>
                                 <div className="fullscreen-detail-group">
                                     <span className="fullscreen-detail-label">PATH</span>
@@ -155,7 +153,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                 </div>
                                 <div className="fullscreen-detail-group">
                                     <span className="fullscreen-detail-label">CREATOR</span>
-                                    <span className="fullscreen-detail-value">{selectedImage['dc-creator'] || 'N/A'}</span>
+                                    <span className="fullscreen-detail-value">{selectedImage?.creator || 'N/A'}</span>
                                 </div>
                             </div>
                         </div>

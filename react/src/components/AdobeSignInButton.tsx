@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { AdobeSignInButtonProps } from '../types';
+import { getAdobeClientId } from '../utils/config';
 
 interface IMSConfig {
     clientId: string;
@@ -23,7 +24,7 @@ const AdobeSignInButton: React.FC<AdobeSignInButtonProps> = ({ onAuthenticated, 
 
     // IMS config for implicit flow
     const imsConfig: IMSConfig = {
-        clientId: (import.meta as any).env?.VITE_ADOBE_CLIENT_ID || '',
+        clientId: getAdobeClientId(),
         redirectUri: window.location.href,
         scope: 'AdobeID,openid,read_organizations,additional_info.projectedProductContext',
         responseType: 'token', // Implicit flow - returns token directly

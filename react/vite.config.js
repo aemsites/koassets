@@ -1,6 +1,6 @@
 import react from '@vitejs/plugin-react';
 import fs from 'fs';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 
 // Check if HTTPS certificates exist and if HTTP is forced
 const httpsConfig = (() => {
@@ -32,26 +32,44 @@ const httpsConfig = (() => {
 })();
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    ...(httpsConfig && { https: httpsConfig }), // Only add HTTPS config if certificates exist and HTTP not forced
-    port: 5173
-  },
-  base: '/tools/assets-browser/',
-  build: {
-    rollupOptions: {
-      external: [],
-      output: {
-        entryFileNames: 'assets/index.js',
-        chunkFileNames: 'assets/[name].js',
-        assetFileNames: (assetInfo) => {
-          if (assetInfo.name && assetInfo.name.endsWith('.css')) {
-            return 'assets/index.css';
+export default defineConfig(({ command, mode }) => {
+  // Load env file based on `mode` in the current working directory.
+  // Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
+  const env = loadEnv(mode, process.cwd(), '');
+
+  // Determine which env file to load based on NODE_ENV or mode
+  const envMode = process.env.NODE_ENV || mode || 'development';
+  console.log(`🌍 Loading environment: ${envMode}`);
+
+  return {
+    plugins: [react()],
+    server: {
+      ...(httpsConfig && { https: httpsConfig }), // Only add HTTPS config if certificates exist and HTTP not forced
+      port: 5173
+    },
+    base: '/tools/assets-browser/',
+    // Load environment files in order of priority
+    envDir: './', // Look for env files in the current directory
+    envPrefix: 'VITE_', // Only expose variables starting with VITE_
+    build: {
+      rollupOptions: {
+        external: [],
+        output: {
+          entryFileNames: 'assets/index.js',
+          chunkFileNames: 'assets/[name].js',
+          assetFileNames: (assetInfo) => {
+            if (assetInfo.name && assetInfo.name.endsWith('.css')) {
+              return 'assets/index.css';
+            }
+            return 'assets/[name][extname]';
           }
-          return 'assets/[name][extname]';
         }
       }
+    },
+    define: {
+      // Expose environment info to the app
+      __APP_ENV__: JSON.stringify(envMode),
+      __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
     }
-  }
-})
+  };
+});

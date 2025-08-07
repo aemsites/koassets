@@ -1,4 +1,21 @@
-.env.*
+# Environment files with secrets - NEVER commit these
+.env.local
+.env.*.local
+.env.development
+.env.staging  
+.env.production
+
+# Allow template environment files to be committed (placeholders only)
+# env.example (safe template with placeholders)
+!.env.development.template
+!.env.staging.template
+!.env.production.template
+
+# But if you want to commit template versions, use these names instead:
+# .env.development.template (safe to commit)
+# .env.staging.template (safe to commit) 
+# .env.production.template (safe to commit)
+
 # Logs
 logs
 *.log
@@ -34,3 +51,7 @@ localhost*
 
 # VS Code Chrome debugging profile
 .vscode/chrome-debug-profile/
+# Add your new ignore patterns here
+*.tmp
+temp/
+debug.log
