@@ -119,40 +119,44 @@ const FacetFilter: React.FC<FacetFilterProps> = ({
     };
 
     return (
-        <div className="facet-filter">
-            <div className="facet-filter-header">
-                <span className="facet-filter-header-title">Filters</span>
-                <button className="facet-filter-header-clear" onClick={handleClearAllChecks} type="button">
-                    CLEAR ALL
-                </button>
-            </div>
-            <div className="facet-filter-list">
-                {Object.entries(FILTERS_MAP).map(([key, label]) => (
-                    <div key={key} className="facet-filter-section">
-                        <button
-                            className="facet-filter-button"
-                            tabIndex={0}
-                            onClick={() => toggle(key)}
-                            aria-expanded={!!open[key]}
-                        >
-                            <span className="facet-filter-label">{label}</span>
-                            <span className="facet-filter-arrow">{open[key] ? '\u25B2' : '\u25BC'}</span>
+        <>
+            <div className="facet-filter-container">
+                <div className="facet-filter">
+                    <div className="facet-filter-header">
+                        <span className="facet-filter-header-title">Filters</span>
+                        <button className="facet-filter-header-clear" onClick={handleClearAllChecks} type="button">
+                            CLEAR ALL
                         </button>
-                        {open[key] && facetsFromHits[key]?.length > 0 && (
-                            <div className="facet-filter-checkbox-list">
-                                {facetsFromHits[key].map(facet => (
-                                    <label key={facet} className="facet-filter-checkbox-label">
-                                        <input
-                                            type="checkbox"
-                                            checked={!!checked[key]?.[facet]}
-                                            onChange={() => handleCheckbox(key, facet)}
-                                        /> {facet}
-                                    </label>
-                                ))}
-                            </div>
-                        )}
                     </div>
-                ))}
+                    <div className="facet-filter-list">
+                        {Object.entries(FILTERS_MAP).map(([key, label]) => (
+                            <div key={key} className="facet-filter-section">
+                                <button
+                                    className="facet-filter-button"
+                                    tabIndex={0}
+                                    onClick={() => toggle(key)}
+                                    aria-expanded={!!open[key]}
+                                >
+                                    <span className="facet-filter-label">{label}</span>
+                                    <span className="facet-filter-arrow">{open[key] ? '\u25B2' : '\u25BC'}</span>
+                                </button>
+                                {open[key] && facetsFromHits[key]?.length > 0 && (
+                                    <div className="facet-filter-checkbox-list">
+                                        {facetsFromHits[key].map(facet => (
+                                            <label key={facet} className="facet-filter-checkbox-label">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={!!checked[key]?.[facet]}
+                                                    onChange={() => handleCheckbox(key, facet)}
+                                                /> {facet}
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
             <button className="facet-filter-apply-btn" type="button" onClick={handleApplyFilters}>
                 <span className="facet-filter-apply-icon">
@@ -162,7 +166,7 @@ const FacetFilter: React.FC<FacetFilterProps> = ({
                 </span>
                 <span className="facet-filter-apply-text">Apply</span>
             </button>
-        </div>
+        </>
     );
 };
 
