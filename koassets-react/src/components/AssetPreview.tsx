@@ -1,15 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import type { AssetPreviewProps } from '../types';
 import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
+import { formatCategory, formatFileSize, getFileExtension } from '../utils/formatters';
 import './AssetPreview.css';
 
 const AssetPreview: React.FC<AssetPreviewProps> = ({
     showModal,
     selectedImage,
     closeModal,
-    formatCategory,
-    formatFileSize,
-    getFileExtension,
     handleAddToCart,
     handleRemoveFromCart,
     cartItems = [],
@@ -74,14 +72,16 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
 
             fetchOptimizedImage();
         }
+    }, [showModal, selectedImage, dynamicMediaClient]);
 
-        // Cleanup function to revoke blob URL when component unmounts or selectedImage changes
+    // Separate effect for cleanup
+    useEffect(() => {
         return () => {
             if (blobUrl && blobUrl.startsWith('blob:')) {
                 URL.revokeObjectURL(blobUrl);
             }
         };
-    }, [showModal, selectedImage, dynamicMediaClient]);
+    }, [blobUrl]);
 
     if (!showModal || !selectedImage) return null;
 
@@ -95,7 +95,7 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                 <div className="modal-header">
                     <div className="modal-tags">
                         {selectedImage?.subject && (
-                            <span className="modal-tag">{formatCategory(selectedImage?.subject)}</span>
+                            <span className="modal-tag">{formatCategory(selectedImage['tccc-campaignName'])}</span>
                         )}
                     </div>
                     <h2 className="modal-title">
@@ -139,7 +139,7 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                     <div className="modal-detail-row">
                         <div className="modal-detail-group">
                             <span className="modal-detail-label">RIGHTS FREE</span>
-                            <span className="modal-detail-value">YES</span>
+                            <span className="modal-detail-value">N/A</span>
                         </div>
                         <div className="modal-detail-group">
                             <span className="modal-detail-label">CATEGORY</span>

@@ -1,15 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import type { AssetDetailsProps } from '../types';
 import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
+import { formatCategory, formatFileSize, getFileExtension } from '../utils/formatters';
 import './AssetDetails.css';
 
 const AssetDetails: React.FC<AssetDetailsProps> = ({
     showModal,
     selectedImage,
     closeModal,
-    formatCategory,
-    formatFileSize,
-    getFileExtension,
     handleAddToCart,
     handleRemoveFromCart,
     cartItems = [],
@@ -74,14 +72,16 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 
             fetchHighResImage();
         }
+    }, [showModal, selectedImage, dynamicMediaClient]);
 
-        // Cleanup function to revoke blob URL when component unmounts or selectedImage changes
+    // Separate effect for cleanup
+    useEffect(() => {
         return () => {
             if (blobUrl && blobUrl.startsWith('blob:')) {
                 URL.revokeObjectURL(blobUrl);
             }
         };
-    }, [showModal, selectedImage, dynamicMediaClient]);
+    }, [blobUrl]);
 
     if (!showModal || !selectedImage) return null;
 
@@ -141,7 +141,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                 </div>
                                 <div className="fullscreen-detail-group">
                                     <span className="fullscreen-detail-label">RIGHTS FREE</span>
-                                    <span className="fullscreen-detail-value">YES</span>
+                                    <span className="fullscreen-detail-value">N/A</span>
                                 </div>
                                 <div className="fullscreen-detail-group">
                                     <span className="fullscreen-detail-label">CATEGORY</span>

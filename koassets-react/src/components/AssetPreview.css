@@ -59,8 +59,8 @@
 
 .modal-tag {
     display: inline-block;
-    background-color: #e8f4f8;
-    color: #2c5aa0;
+    background-color: var(--tag-background-color);
+    color: var(--tag-color);
     padding: 4px 12px;
     border-radius: 20px;
     font-size: 12px;

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { AssetCardProps } from '../types';
+import { formatCategory, formatFileSize, getFileExtension } from '../utils/formatters';
 import './AssetCardViewGrid.css';
 import LazyImage from './LazyImage';
 
@@ -7,9 +8,6 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
     image,
     handleCardClick,
     handlePreviewClick,
-    formatFileSize,
-    getFileExtension,
-    formatCategory,
     handleAddToCart,
     handleRemoveFromCart,
     cartItems = [],
@@ -103,7 +101,7 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                                 </div>
                                 <div className="product-meta-item">
                                     <span className="product-meta-label">RIGHTS FREE</span>
-                                    <span className="product-meta-value">YES</span>
+                                    <span className="product-meta-value">N/A</span>
                                 </div>
                                 <div className="product-meta-item">
                                     <span className="product-meta-label">CATEGORY</span>

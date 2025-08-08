@@ -1,10 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { FacetCheckedState, FacetFilterProps } from '../types';
 import './FacetFilter.css';
-
-interface FiltersMap {
-    [key: string]: string;
-}
+import { FILTERS_MAP } from './filterMaps';
 
 interface FacetsFromHits {
     [key: string]: string[];
@@ -13,24 +10,6 @@ interface FacetsFromHits {
 interface OpenState {
     [key: string]: boolean;
 }
-
-export const FILTERS_MAP: FiltersMap = {
-    'tccc-brand': 'Brand',
-    'tccc-campaignName': 'Campaign',
-    'tccc-assetCategoryAndType': 'Asset Category and Asset Type Execution',
-    'tccc-masterOrAdaptation': 'Master or Adaptation',
-    'tccc-rightsFree': 'Rights Free', // missing from metadata
-    'tccc-intendedBusinessUnitOrMarket': 'Intended Market',
-    'tccc-intendedChannel': 'Intended Channel',
-    'tccc-intendedBottlerCountry': 'Bottler Content by Country',
-    'tccc-packageContainerSize': 'Package Size',
-    'tccc-agencyName': 'Agency Name',
-    'repo-createDate': 'Date Created',
-    'rights-start-date': 'Rights Start Date', // missing from metadata
-    'rights-end-date': 'Rights End Date', // missing from metadata
-    'market-rights-covered': 'Market Rights Covered', // missing from metadata
-    'media-rights-covered': 'Media Rights Covered' // missing from metadata
-};
 
 const FacetFilter: React.FC<FacetFilterProps> = ({
     hits = [],
@@ -95,6 +74,7 @@ const FacetFilter: React.FC<FacetFilterProps> = ({
             Object.entries(checked[key]).forEach(([facet, isChecked]) => {
                 if (isChecked) {
                     if (key.endsWith('Date')) {
+                        // Date fields are currently not processed for facet filters
                     } else {
                         facetFilter.push(`${key}:${facet}`);
                     }

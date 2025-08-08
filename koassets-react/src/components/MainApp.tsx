@@ -76,7 +76,7 @@ function MainApp(): React.JSX.Element {
 
     const searchBarRef = useRef<HTMLInputElement>(null);
 
-    const handleSetSelectedQueryType = (newQueryType: string): void => {
+    const handleSetSelectedQueryType = useCallback((newQueryType: string): void => {
         setSelectedQueryType(prevType => {
             if (prevType !== newQueryType) {
                 setQuery('');
@@ -89,7 +89,7 @@ function MainApp(): React.JSX.Element {
                 searchBarRef.current.focus();
             }
         }, 0);
-    };
+    }, []);
 
     // Save cart items to localStorage when they change
     useEffect(() => {
@@ -107,41 +107,51 @@ function MainApp(): React.JSX.Element {
     useEffect(() => {
         try {
             localStorage.setItem('accessToken', accessToken || '');
-        } catch { }
+        } catch (error) {
+            // Silently fail if localStorage is not available
+            console.warn('Failed to save access token to localStorage:', error);
+        }
     }, [accessToken]);
 
     // Process and display Adobe Dynamic Media images
-    const processDMImages = useCallback(async (content: any, isLoadingMore: boolean = false): Promise<void> => {
+    const processDMImages = useCallback(async (content: unknown, isLoadingMore: boolean = false): Promise<void> => {
         // For demo, just parse and set images if possible
         if (!isLoadingMore) {
             setDmImages([]);
         }
+
         setHits(null);
         try {
-            if (content.results && content.results[0]?.hits) {
-                if (content.results[0]?.hits.length > 0) {
+            const contentData = content as Record<string, unknown>;
+            const results = contentData.results as Array<Record<string, unknown>>;
+            
+            if (results && results[0]?.hits) {
+                const hits = results[0].hits as Array<Record<string, unknown>>;
+                if (hits.length > 0) {
                     // No longer download blobs upfront - just prepare metadata for lazy loading
-                    const processedImages: Asset[] = content.results[0].hits.map((hit: any): Asset => {
-                        const repoName = hit['repo-name'] || 'Untitled';
+                    // Each hit is transformed to match the Asset interface
+                    const processedImages: Asset[] = hits.map((hit: Record<string, unknown>): Asset => {
+                        const repoName = (hit['repo-name'] as string) || 'Untitled';
 
+                        // Mapping hit data to Asset interface properties
                         return {
-                            assetId: hit.assetId,
+                            assetId: hit.assetId as string,
                             name: repoName,
                             url: '', // Empty URL - will be loaded lazily
-                            alt: hit['dc-title'] || hit['repo-name'] || 'Asset',
-                            size: hit['size'] || 0,
-                            format: hit?.['dc-format'] || hit?.['dc-format-label'] || 'Unknown',
-                            creator: hit?.['dc-creator'],
-                            mimeType: hit['repo-mimetype'] || 'Unknown',
-                            path: hit['repo-path'] || '',
-                            tags: hit['xcm-machineKeywords'] || [],
-                            description: hit?.['dc-description'],
-                            title: hit?.['dc-title'],
-                            subject: hit?.['dc-subject'],
-                            createDate: hit?.['repo-createDate'],
-                            modifyDate: hit?.['repo-modifyDate'],
+                            alt: (hit['dc-title'] as string) || (hit['repo-name'] as string) || 'Asset',
+                            size: (hit['size'] as number) || 0,
+                            format: (hit?.['dc-format'] as string) || (hit?.['dc-format-label'] as string) || 'Unknown',
+                            creator: hit?.['dc-creator'] as string,
+                            mimeType: (hit['repo-mimetype'] as string) || 'Unknown',
+                            path: (hit['repo-path'] as string) || '',
+                            tags: (hit['xcm-machineKeywords'] as string[]) || [],
+                            description: hit?.['dc-description'] as string,
+                            title: hit?.['dc-title'] as string,
+                            subject: hit?.['dc-subject'] as string | string[],
+                            createDate: hit?.['repo-createDate'] as string,
+                            modifyDate: hit?.['repo-modifyDate'] as string,
                             ...hit
-                        };
+                        } as Asset;
                     });
 
                     if (isLoadingMore) {
@@ -153,8 +163,8 @@ function MainApp(): React.JSX.Element {
                     }
                 }
                 // Store the complete results object with nbHits and update pagination info
-                setHits(content.results[0]);
-                setTotalPages(content.results[0].nbPages || 0);
+                setHits(results[0] as SearchResults);
+                setTotalPages((results[0] as { nbPages?: number }).nbPages || 0);
             } else {
                 setTotalPages(0);
             }

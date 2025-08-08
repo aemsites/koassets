@@ -39,4 +39,6 @@ code {
 
 :root {
   --primary-color: #ed0000;
+  --tag-color: #a46801;
+  --tag-background-color: #fff0da;
 }

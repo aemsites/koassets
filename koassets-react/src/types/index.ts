@@ -1,15 +1,14 @@
 // Asset-related types
+import React from 'react';
+import { FILTERS_MAP } from '../components/filterMaps';
 import type { DynamicMediaClient } from '../dynamicmedia-client';
 
-export interface AssetMetadata {
-    description?: string;
-    subject?: string | string[];
-    [key: string]: any;
-}
-
-export interface Asset {
+export interface Asset extends Partial<Record<keyof typeof FILTERS_MAP, string>> {
     assetId?: string;
     name?: string;
+    description?: string;
+    subject?: string | string[];
+    title?: string;
     alt?: string;
     url: string;
     size?: number;
@@ -17,11 +16,12 @@ export interface Asset {
     mimeType?: string;
     loading?: boolean;
     error?: boolean;
-    metadata?: AssetMetadata;
     path?: string;
     tags?: string[];
     creator?: string;
-    [key: string]: any; // For additional Algolia hit properties
+    createDate?: string;
+    modifyDate?: string;
+    [key: string]: unknown; // For additional Algolia hit properties
 }
 
 // Cart-related types
@@ -39,9 +39,6 @@ export interface AssetCardProps {
     image: Asset;
     handleCardClick: (image: Asset, event: React.MouseEvent) => void;
     handlePreviewClick: (image: Asset, event: React.MouseEvent) => void;
-    formatFileSize: (size?: number) => string;
-    getFileExtension: (filename?: string) => string;
-    formatCategory: (subject?: string | string[]) => string;
     handleAddToCart?: (image: Asset, event: React.MouseEvent) => void;
     handleRemoveFromCart?: (image: Asset) => void;
     cartItems?: CartItem[];
@@ -65,7 +62,6 @@ export type StepStatus = 'init' | 'pending' | 'success' | 'failure';
 export interface StepStatuses {
     cart: StepStatus;
     'request-download': StepStatus;
-    'rights-check': StepStatus;
     'download': StepStatus;
 }
 
@@ -144,7 +140,7 @@ export interface HeaderBarProps {
     handleRemoveFromCart: (item: CartItem) => void;
     handleApproveAssets: (items: CartItem[]) => void;
     handleDownloadAssets: (items: CartItem[]) => void;
-    handleAuthenticated: (userData: any) => void;
+    handleAuthenticated: (userData: string) => void;
     handleSignOut: () => void;
     dynamicMediaClient?: DynamicMediaClient | null;
 }
@@ -154,9 +150,6 @@ export interface AssetPreviewProps {
     showModal: boolean;
     selectedImage: Asset | null;
     closeModal: () => void;
-    formatCategory: (subject?: string | string[]) => string;
-    formatFileSize: (size?: number) => string;
-    getFileExtension: (filename?: string) => string;
     handleAddToCart?: (image: Asset, event: React.MouseEvent) => void;
     handleRemoveFromCart?: (image: Asset) => void;
     cartItems?: CartItem[];
@@ -176,7 +169,7 @@ export interface FacetCheckedState {
 }
 
 export interface FacetFilterProps {
-    hits?: any[]; // TODO: Define proper Asset/Hit type
+    hits?: Asset[]; // Using Asset type instead of any
     selectedFacets: string[][];
     setSelectedFacets: (facets: string[][]) => void;
     search: () => void;
@@ -187,7 +180,7 @@ export interface FacetFilterProps {
 // Search/Query Result types
 export interface SearchHits {
     nbHits?: number;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 // Image Gallery types
@@ -234,7 +227,7 @@ export interface AdobeUser {
     id: string;
     name: string;
     email: string;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 export interface AdobeSignInButtonProps {
@@ -273,7 +266,7 @@ export interface CartPanelAssetsProps {
 export interface AuthorizedCartItem extends CartItem {
     authorized?: boolean;
     authorizedDate?: string;
-    copyright?: any;
+    copyright?: unknown;
 }
 
 // MainApp types (most complex component)
@@ -321,7 +314,7 @@ export interface AlgoliaSearchQuery {
 export interface SearchResults {
     hits: Asset[];
     nbHits: number;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 // Action Dropdown types

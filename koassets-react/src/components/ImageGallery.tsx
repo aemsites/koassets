@@ -143,47 +143,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     // Calculate statistics
     const totalCount = hits && hits.nbHits ? (hits.nbHits > 100 ? '100+' : hits.nbHits.toString()) : '0';
 
-    // Helper function to format file size
-    const formatFileSize = (bytes?: number, decimalPoint: number = 2): string => {
-        if (!bytes || bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const dm = decimalPoint < 0 ? 0 : decimalPoint;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-    };
-
-    // Helper function to get file extension
-    const getFileExtension = (filename?: string): string => {
-        if (!filename) return '';
-        return filename.slice(((filename.lastIndexOf(".") - 1) >>> 0) + 2);
-    };
-
-    // Helper function to format category array
-    const formatCategory = (categories?: string | string[]): string => {
-        if (!categories) return 'Asset';
-
-        // If it's a string, convert to array (split by comma)
-        if (typeof categories === 'string') {
-            const categoryArray = categories.split(',').map(cat => cat.trim()).filter(cat => cat.length > 0);
-            return categoryArray.slice(0, 3).join(', ');
-        }
-
-        // If it's an array
-        if (Array.isArray(categories)) {
-            // Check if it's an array with a single comma-separated string
-            if (categories.length === 1 && typeof categories[0] === 'string' && categories[0].includes(',')) {
-                const categoryArray = categories[0].split(',').map(cat => cat.trim()).filter(cat => cat.length > 0);
-                return categoryArray.slice(0, 3).join(', ');
-            }
-            // Otherwise treat as array of individual categories
-            return categories.slice(0, 3).join(', ');
-        }
-
-        // Fallback
-        return 'Asset';
-    };
-
     return (
         <div className="image-gallery">
             <div className="gallery-title">
@@ -216,8 +175,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 viewType={viewType}
                 onViewTypeChange={setViewType}
                 hasMorePages={hasMorePages}
-                currentPage={hits?.page || 0}
-                totalPages={hits?.nbPages || 0}
+                currentPage={(hits?.page as number) || 0}
+                totalPages={(hits?.nbPages as number) || 0}
             />
 
             {loading ? (
@@ -242,9 +201,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                                     image={image}
                                     handleCardClick={handleCardDetailClick}
                                     handlePreviewClick={handleCardPreviewClick}
-                                    formatFileSize={formatFileSize}
-                                    getFileExtension={getFileExtension}
-                                    formatCategory={formatCategory}
                                     handleAddToCart={handleAddToCart}
                                     handleRemoveFromCart={onRemoveFromCart}
                                     cartItems={cartItems}
@@ -284,9 +240,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 showModal={showPreviewModal}
                 selectedImage={selectedCard}
                 closeModal={closeCardPreviewModal}
-                formatCategory={formatCategory}
-                formatFileSize={formatFileSize}
-                getFileExtension={getFileExtension}
                 handleAddToCart={handleAddToCart}
                 handleRemoveFromCart={onRemoveFromCart}
                 cartItems={cartItems}
@@ -298,9 +251,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 showModal={showFullScreenModal}
                 selectedImage={selectedCard}
                 closeModal={closeFullScreenModal}
-                formatCategory={formatCategory}
-                formatFileSize={formatFileSize}
-                getFileExtension={getFileExtension}
                 handleAddToCart={handleAddToCart}
                 handleRemoveFromCart={onRemoveFromCart}
                 cartItems={cartItems}

@@ -84,9 +84,9 @@ const LazyImage: React.FC<LazyImageProps> = ({
         };
 
         loadImage();
-    }, [isVisible, dynamicMediaClient, asset, width]);
+    }, [isVisible, dynamicMediaClient, asset, width, imageUrl]);
 
-    // Cleanup object URL when component unmounts
+    // Cleanup object URL when component unmounts or imageUrl changes
     useEffect(() => {
         return () => {
             if (imageUrl && imageUrl.startsWith('blob:')) {

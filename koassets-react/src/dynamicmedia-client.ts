@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import { FILTERS_MAP } from './components/FacetFilter';
-import { AlgoliaSearchQuery } from './types';
+import { FILTERS_MAP } from './components/filterMaps';
+import { AlgoliaSearchQuery, Asset } from './types';
 
 interface DynamicMediaClientConfig {
     bucket: string;
@@ -19,20 +19,6 @@ export interface SearchAssetsOptions {
 export interface SearchCollectionsOptions {
     hitsPerPage?: number;
     page?: number;
-}
-
-interface AssetMetadata {
-    assetId: string;
-    title?: string;
-    description?: string;
-    fileType?: string;
-    dimensions?: {
-        width: number;
-        height: number;
-    };
-    createdAt?: string;
-    lastModified?: string;
-    [key: string]: any;
 }
 
 interface CollectionMetadata {
@@ -238,7 +224,7 @@ export class DynamicMediaClient {
         };
     };
 
-    async getMetadata(assetId: string, ifNoneMatch?: string): Promise<AssetMetadata> {
+    async getMetadata(assetId: string, ifNoneMatch?: string): Promise<Asset> {
         const config: AxiosRequestConfig = {
             url: `/adobe/assets/${assetId}/metadata`,
             method: 'GET'
@@ -265,12 +251,12 @@ export class DynamicMediaClient {
     }
 
     /**
-     * Search for assets with a cleaner API
+     * Search for assets using the provided query and options
      * @param query - The search query string
      * @param options - Search options (collection, facets, pagination)
      * @returns Promise with search results
      */
-    async searchAssets(query: string, options: SearchAssetsOptions = {}): Promise<any> {
+    async searchAssets(query: string, options: SearchAssetsOptions = {}): Promise<unknown> {
         const algoliaQuery = this.transformToAlgoliaSearchAssets(query, options);
 
         const config: AxiosRequestConfig = {
@@ -338,7 +324,9 @@ export class DynamicMediaClient {
 
         const blob = await response.blob();
         const arrayBuffer = await blob.arrayBuffer();
-        const base64 = Buffer.from(arrayBuffer).toString('base64');
+        const bytes = new Uint8Array(arrayBuffer);
+        const binaryString = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+        const base64 = btoa(binaryString);
 
         return {
             type: blob.type,

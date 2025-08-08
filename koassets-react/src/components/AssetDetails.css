@@ -122,9 +122,9 @@
 
 .fullscreen-tag {
     display: inline-block;
-    background: #fff0da;
+    background: var(--tag-background-color);
     border: none;
-    color: #a46801;
+    color: var(--tag-color);
     padding: 6px 16px;
     border-radius: 25px;
     font-size: .625rem;
