@@ -7,10 +7,16 @@
     <title>KO Assets</title>
     <script type="module" crossorigin src="/tools/assets-browser/assets/index.js"></script>
     <link rel="stylesheet" crossorigin href="/tools/assets-browser/assets/index.css">
+      <!-- Runtime configuration embedded inline -->
+    <script>
+      window.APP_CONFIG = {
+        ADOBE_CLIENT_ID: 'ko-assets-ims',
+        BUCKET: 'delivery-p64403-e544653',
+        // Generated at: 2025-08-08T17:05:28.407Z
+      };
+    </script>
   </head>
   <body>
     <div id="root"></div>
-    <!-- Runtime configuration - load before React app -->
-    <script src="config.js"></script>
-  </body>
+    </body>
 </html>

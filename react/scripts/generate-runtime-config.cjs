@@ -70,6 +70,19 @@ const config = {
     // Add other environment variables as needed
 };
 
+// Validate required configuration
+const requiredVars = ['ADOBE_CLIENT_ID', 'BUCKET'];
+const missingVars = requiredVars.filter(key => !config[key]);
+
+if (missingVars.length > 0) {
+    console.error('❌ Missing required environment variables:');
+    missingVars.forEach(varName => {
+        console.error(`   - VITE_${varName}`);
+    });
+    console.error('\n💡 Please set these environment variables or add them to your .env file');
+    process.exit(1);
+}
+
 // Generate the config.js content
 const configContent = `// Runtime configuration generated from environment variables
 // Generated at: ${new Date().toISOString()}
@@ -87,12 +100,17 @@ if (!fs.existsSync(distDir)) {
     fs.mkdirSync(distDir, { recursive: true });
 }
 
-// Write the config file
+// Write the config file to dist/
 const configPath = path.join(distDir, 'config.js');
 fs.writeFileSync(configPath, configContent);
 
+// Also write to tools/assets-browser/ for deployment
+const toolsConfigPath = path.join(__dirname, '..', '..', 'tools', 'assets-browser', 'config.js');
+fs.writeFileSync(toolsConfigPath, configContent);
+
 // Log the results
 console.log('✅ Generated runtime config at:', configPath);
+console.log('✅ Generated deployment config at:', toolsConfigPath);
 console.log('📋 Configuration:');
 console.log(`   Environment: ${nodeEnv}`);
 console.log(`   ADOBE_CLIENT_ID: ${config.ADOBE_CLIENT_ID || '(not set)'}`);
@@ -103,4 +121,4 @@ console.log('\n🔍 Environment sources checked (in order of precedence):');
 console.log('   1. Runtime environment variables');
 console.log('   2. .env.local');
 console.log(`   3. .env.${nodeEnv}`);
-console.log('   4. .env'); 
+console.log('   4. .env');

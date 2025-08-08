@@ -40,13 +40,30 @@ npm run lint
 
 ### KO-Asset Search React App
 
-The KO-Asset Search React application is located in the `react/` folder. This is a Vite-based React application that provides asset search functionality.
+The KO-Asset Search React application is located in the `react/` folder. This is a comprehensive asset browsing and management application with Adobe IMS authentication.
 
-**Development workflow:**
+**📚 Full Documentation:** See [`react/README.md`](react/README.md) for complete setup, configuration, and deployment instructions.
 
-1. Navigate to the `react/` directory
-2. Install dependencies: `npm install`
-3. Start development server: `npm run dev`
-4. After making changes, build the application: `npm run build`
-   - This runs `vite build` and automatically copies the built files to `../tools/assets-browser`
-5. The built application will be available in the tools/assets-browser directory for integration with the main project
+**🚀 Quick Start:**
+
+```bash
+cd react
+npm install
+cp env.example .env.local  # Edit with your Adobe Client ID and Bucket
+npm run dev
+```
+
+**🏗️ Production Build:**
+
+```bash
+cd react
+npm run build:template  # Creates deployable files in tools/assets-browser/
+```
+
+**📁 Key Features:**
+
+- Adobe IMS authentication with automatic token renewal
+- Asset search and browsing with faceted filtering
+- Collection management and shopping cart functionality
+- Responsive design for desktop and mobile
+- Multiple deployment options (server-side templates, embedded config)

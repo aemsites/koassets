@@ -6,6 +6,37 @@ A React-based web application for browsing, searching, and managing Adobe Experi
 
 This application provides a modern interface for interacting with Adobe Dynamic Media assets, featuring intelligent search, collection browsing, cart functionality, and seamless Adobe IMS authentication with automatic token renewal.
 
+## Quick Reference
+
+### 🚀 **Get Started Fast**
+
+```bash
+npm install
+cp env.example .env.local  # Edit with your values
+npm run dev
+```
+
+### 🏗️ **Production Build**
+
+```bash
+# Option 1: Server-side template (recommended)
+npm run build:template
+
+# Option 2: Static embedded config
+VITE_ADOBE_CLIENT_ID=your-id VITE_BUCKET=your-bucket npm run build:embed
+
+# Option 3: Use .env files
+npm run build:prod
+```
+
+### 📁 **Key Files**
+
+- `src/components/MainApp.tsx` - Main application
+- `src/components/AdobeSignInButton.tsx` - Authentication
+- `src/utils/config.ts` - Configuration utility
+- `.env.local` - Your local environment variables
+- `tools/assets-browser/DEPLOYMENT.md` - Deployment guide
+
 ## Features
 
 ### 🔍 Asset Management
@@ -360,25 +391,77 @@ VITE_BUCKET=your-prod-bucket-id
 
 ### Building for Different Environments
 
-**Development Build:**
+#### Development Build
 
 ```bash
 npm run build:dev
 ```
 
-**Staging Build:**
+#### Staging Build
 
 ```bash
 npm run build:staging
 ```
 
-**Production Build:**
+#### Production Build Options
+
+**Option 1: Server-Side Template (Recommended for Production)**
+
+Build with environment variable placeholders that the target server will process:
+
+```bash
+npm run build:template
+```
+
+**Result:** Creates `tools/assets-browser/index.html` with:
+
+```html
+<script>
+  window.APP_CONFIG = {
+    ADOBE_CLIENT_ID: "${ADOBE_CLIENT_ID}",
+    BUCKET: "${BUCKET}",
+  };
+</script>
+```
+
+**Target server then processes it with:**
+
+```bash
+# Set environment variables on target server
+export ADOBE_CLIENT_ID=your-actual-client-id
+export BUCKET=your-actual-bucket-name
+
+# Process the template
+envsubst < index.html > index.html.tmp && mv index.html.tmp index.html
+```
+
+**Option 2: Embedded Config (Static Values)**
+
+Build with values embedded directly (if you know them at build time):
+
+```bash
+# PowerShell
+$env:VITE_ADOBE_CLIENT_ID="your-client-id"; $env:VITE_BUCKET="your-bucket-name"; npm run build:embed
+
+# Bash/Zsh
+VITE_ADOBE_CLIENT_ID=your-client-id VITE_BUCKET=your-bucket-name npm run build:embed
+```
+
+**Option 3: Legacy Build (Uses .env files)**
+
+Uses your local `.env.production` file:
 
 ```bash
 npm run build:prod
 ```
 
-**Environment-Specific Preview:**
+#### Which Production Build Should You Use?
+
+- **Use Option 1** if your target server can process environment variables (most secure)
+- **Use Option 2** if you want static values embedded at build time
+- **Use Option 3** for local development/testing with your `.env` files
+
+#### Environment-Specific Preview
 
 ```bash
 npm run preview:staging  # Preview staging build
