@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import type { AdobeSignInButtonProps } from '../types';
 import { getAdobeClientId } from '../utils/config';
 
@@ -12,7 +12,7 @@ interface IMSConfig {
 /**
  * AdobeSignInButton
  * Renders a "Sign in with Adobe" button and handles IMS authentication flow.
- * Uses implicit flow with direct redirect (no popup, no PKCE needed).
+ * Uses implicit flow with silent refresh for token renewal.
  * Props:
  *   - onAuthenticated: function(token) => void (called with Bearer token on success)
  *   - onSignOut: function() => void (called when user signs out)
@@ -30,9 +30,108 @@ const AdobeSignInButton: React.FC<AdobeSignInButtonProps> = ({ onAuthenticated, 
         responseType: 'token', // Implicit flow - returns token directly
     };
 
-    // Handle sign in with direct redirect
+    // Silent refresh using hidden iframe
+    const performSilentRefresh = useCallback(async (): Promise<string | null> => {
+        return new Promise((resolve) => {
+            // Create hidden iframe for silent refresh
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = `https://ims-na1.adobelogin.com/ims/authorize/v2?${new URLSearchParams({
+                client_id: imsConfig.clientId,
+                redirect_uri: imsConfig.redirectUri,
+                scope: imsConfig.scope,
+                response_type: imsConfig.responseType,
+                prompt: 'none', // Silent refresh
+            }).toString()}`;
+
+            // Set up timeout
+            const timeout = setTimeout(() => {
+                cleanup();
+                resolve(null);
+            }, 10000); // 10 second timeout
+
+            const cleanup = () => {
+                clearTimeout(timeout);
+                document.body.removeChild(iframe);
+                window.removeEventListener('message', handleMessage);
+            };
+
+            const handleMessage = (event: MessageEvent) => {
+                if (event.origin !== 'https://ims-na1.adobelogin.com') return;
+
+                try {
+                    const url = new URL(event.data);
+                    const params = new URLSearchParams(url.hash.substring(1));
+                    const accessToken = params.get('access_token');
+                    const error = params.get('error');
+
+                    cleanup();
+
+                    if (error) {
+                        resolve(null);
+                        return;
+                    }
+
+                    if (accessToken) {
+                        const token = `Bearer ${accessToken}`;
+                        const expiresIn = params.get('expires_in');
+
+                        // Update stored tokens
+                        localStorage.setItem('accessToken', token);
+                        const expiresAt = Date.now() + ((expiresIn ? parseInt(expiresIn) : 3600) * 1000);
+                        localStorage.setItem('tokenExpiresAt', expiresAt.toString());
+
+                        setIsAuthenticated(true);
+                        if (onAuthenticated) {
+                            onAuthenticated(token);
+                        }
+
+                        resolve(token);
+                        return;
+                    }
+                } catch (err) {
+                    console.error('Error parsing silent refresh response:', err);
+                }
+
+                resolve(null);
+            };
+
+            window.addEventListener('message', handleMessage);
+            document.body.appendChild(iframe);
+        });
+    }, [imsConfig, onAuthenticated]);
+
+    // Check if token is expired or about to expire (within 5 minutes)
+    const isTokenExpired = useCallback((): boolean => {
+        const expiresAt = localStorage.getItem('tokenExpiresAt');
+        if (!expiresAt) return true;
+
+        const expirationTime = parseInt(expiresAt);
+        const now = Date.now();
+        const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+        return now >= (expirationTime - fiveMinutes);
+    }, []);
+
+    // Auto-refresh token when it's about to expire
+    const setupTokenRefresh = useCallback(() => {
+        const expiresAt = localStorage.getItem('tokenExpiresAt');
+        if (!expiresAt) return;
+
+        const expirationTime = parseInt(expiresAt);
+        const now = Date.now();
+        const refreshTime = expirationTime - (5 * 60 * 1000); // Refresh 5 minutes before expiry
+        const timeUntilRefresh = refreshTime - now;
+
+        if (timeUntilRefresh > 0) {
+            setTimeout(async () => {
+                await performSilentRefresh();
+            }, timeUntilRefresh);
+        }
+    }, [performSilentRefresh]);
+
+    // Handle sign in with implicit flow
     const handleSignIn = (): void => {
-        console.log('🔑 Starting Adobe IMS sign in...');
         setError(null);
         setLoading(true);
 
@@ -49,13 +148,12 @@ const AdobeSignInButton: React.FC<AdobeSignInButtonProps> = ({ onAuthenticated, 
             });
 
             const authUrl = `https://ims-na1.adobelogin.com/ims/authorize/v2?${params.toString()}`;
-            console.log('🔗 Redirecting to Adobe authentication:', authUrl);
 
             // Direct redirect to Adobe IMS
             window.location.href = authUrl;
 
         } catch (error) {
-            console.error('❌ Sign in error:', error);
+            console.error('Sign in error:', error);
             setError(`Sign in failed: ${error instanceof Error ? error.message : String(error)}`);
             setLoading(false);
         }
@@ -63,8 +161,6 @@ const AdobeSignInButton: React.FC<AdobeSignInButtonProps> = ({ onAuthenticated, 
 
     // Handle sign out  
     const handleSignOut = (): void => {
-        console.log('🚪 Starting sign out...');
-
         // Clear all tokens and state
         setIsAuthenticated(false);
         localStorage.removeItem('accessToken');
@@ -72,18 +168,14 @@ const AdobeSignInButton: React.FC<AdobeSignInButtonProps> = ({ onAuthenticated, 
         setError(null);
 
         if (onSignOut) {
-            console.log('📢 Calling onSignOut callback');
             onSignOut();
         }
-
-        console.log('✅ Sign out complete');
     };
 
     // On mount, check for token in URL hash or localStorage
-    React.useEffect(() => {
+    useEffect(() => {
         // Check for access token in URL hash (from Adobe IMS redirect)
         if (window.location.hash) {
-            console.log('Hash detected, parsing...');
             try {
                 const params = new URLSearchParams(window.location.hash.substring(1));
                 const accessToken = params.get('access_token');
@@ -92,14 +184,12 @@ const AdobeSignInButton: React.FC<AdobeSignInButtonProps> = ({ onAuthenticated, 
                 const errorDescription = params.get('error_description');
 
                 if (error) {
-                    console.log('OAuth error found:', error);
                     setError(`OAuth error: ${error} - ${errorDescription || 'No description'}`);
                     setLoading(false);
                     return;
                 }
 
                 if (accessToken) {
-                    console.log('✅ Access token found in hash');
                     const token = `Bearer ${accessToken}`;
 
                     setIsAuthenticated(true);
@@ -109,21 +199,21 @@ const AdobeSignInButton: React.FC<AdobeSignInButtonProps> = ({ onAuthenticated, 
                     if (expiresIn) {
                         const expiresAt = Date.now() + (parseInt(expiresIn) * 1000);
                         localStorage.setItem('tokenExpiresAt', expiresAt.toString());
-                        console.log('⏰ Token expires at:', new Date(expiresAt).toLocaleString());
                     } else {
                         // Default 1 hour expiration if not provided
                         const expiresAt = Date.now() + (60 * 60 * 1000);
                         localStorage.setItem('tokenExpiresAt', expiresAt.toString());
-                        console.log('⏰ Token expires at (estimated):', new Date(expiresAt).toLocaleString());
                     }
 
                     if (onAuthenticated) {
-                        console.log('🎯 Calling onAuthenticated with token');
                         onAuthenticated(token);
                     }
 
                     // Clean up URL hash
                     window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+
+                    // Setup auto-refresh
+                    setupTokenRefresh();
                     setLoading(false);
                     return;
                 }
@@ -134,26 +224,39 @@ const AdobeSignInButton: React.FC<AdobeSignInButtonProps> = ({ onAuthenticated, 
             }
         }
 
-        // Check for existing valid token in localStorage
-        const storedToken = localStorage.getItem('accessToken');
-        const storedExpiresAt = localStorage.getItem('tokenExpiresAt');
+        // Check for existing token in localStorage
+        const checkExistingToken = async () => {
+            const storedToken = localStorage.getItem('accessToken');
+            const storedExpiresAt = localStorage.getItem('tokenExpiresAt');
 
-        if (storedToken && storedExpiresAt) {
-            const expiresAt = parseInt(storedExpiresAt);
-            if (Date.now() < expiresAt) {
-                setIsAuthenticated(true);
-                if (onAuthenticated) {
-                    onAuthenticated(storedToken);
+            if (storedToken && storedExpiresAt) {
+                if (isTokenExpired()) {
+                    console.log('⚠️ Stored token expired, attempting silent refresh...');
+                    const refreshedToken = await performSilentRefresh();
+
+                    if (refreshedToken) {
+                        setupTokenRefresh();
+                    } else {
+                        // Silent refresh failed, clear expired token
+                        localStorage.removeItem('accessToken');
+                        localStorage.removeItem('tokenExpiresAt');
+                        setIsAuthenticated(false);
+                    }
+                } else {
+                    // Token is not expired, use it directly
+                    setIsAuthenticated(true);
+                    if (onAuthenticated) {
+                        onAuthenticated(storedToken);
+                    }
+                    setupTokenRefresh();
                 }
-            } else {
-                console.log('⚠️ Stored token expired, removing');
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('tokenExpiresAt');
             }
-        }
 
-        setLoading(false);
-    }, [onAuthenticated]);
+            setLoading(false);
+        };
+
+        checkExistingToken();
+    }, [onAuthenticated, isTokenExpired, performSilentRefresh, setupTokenRefresh]);
 
     return (
         <>
