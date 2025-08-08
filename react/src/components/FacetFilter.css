@@ -64,15 +64,15 @@
 
 .facet-filter-header-title {
   color: #f44336;
-  font-weight: 500;
-  font-size: 15px;
+  font-weight: 900;
+  font-size: 14px;
   flex: 1;
 }
 
 .facet-filter-header-clear {
   color: #888;
-  font-weight: 500;
-  font-size: 13px;
+  font-weight: bold;
+  font-size: 11px;
   margin-right: 32px;
   cursor: pointer;
   background: none;

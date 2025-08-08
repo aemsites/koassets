@@ -31,14 +31,16 @@
 }
 
 .facet-filter-panel {
-  flex: 1 0 250px;
-  min-width: 220px;
-  max-width: 420px;
+  flex: 0 0 330px;
+  min-width: 330px;
+  max-width: 380px;
   border-left: 1px solid #e0e0e0;
   background: #fafbfc;
-  padding: 20px 30px 0 30px;
+  padding: 20px 20px 0 20px;
   overflow-y: auto;
   max-height: 100vh;
+  width: 330px;
+  /* Fixed width for consistency */
 }
 
 /* Image gallery component */
@@ -184,20 +186,42 @@
   }
 }
 
-/* Responsive: Hide FacetFilter on screens < 1440px */
-@media (max-width: 1439px) {
+/* Responsive: Hide FacetFilter on smaller screens where 330px min-width would be too large */
+@media (max-width: 1199px) {
   .facet-filter-panel {
     display: none;
   }
 
   .facet-filter-panel.mobile-open {
     display: block;
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100vh;
+    z-index: 1000;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+    width: 330px;
+    /* Fixed width for mobile overlay */
   }
 }
 
-/* Hide filter button and show FacetFilter on screens >= 1440px */
-@media (min-width: 1440px) {
+/* Show FacetFilter on larger screens where there's room for the 330px min-width */
+@media (min-width: 1200px) {
   .facet-filter-panel {
     display: block;
+  }
+
+  /* On very large screens, allow the panel to grow slightly */
+  @media (min-width: 1600px) {
+    .facet-filter-panel {
+      width: 350px;
+    }
+  }
+
+  /* On extra large screens, allow a bit more growth */
+  @media (min-width: 2000px) {
+    .facet-filter-panel {
+      width: 370px;
+    }
   }
 }
