@@ -37,9 +37,12 @@
   border-left: 1px solid #e0e0e0;
   background: #fafbfc;
   padding: 20px 20px 20px 20px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  max-height: 100vh;
+  overflow: hidden;
+  /* Completely prevent panel from scrolling */
+  /* Panel contains both the filter list AND the Apply button */
+  /* Size to available viewport space minus header/navigation */
+  height: calc(100vh - 200px);
+  max-height: calc(100vh - 200px);
   width: 330px;
   /* Fixed width for consistency */
   display: flex;

@@ -1,11 +1,11 @@
 .facet-filter-container {
   width: 100%;
-  height: calc(100vh - 250px);
-  /* 100vh minus app-header (65px) and query-input-container (90px) = 155px total */
   display: flex;
   flex-direction: column;
   overflow: hidden;
   flex: 1;
+  /* This container holds everything except the apply button */
+  /* The parent .facet-filter-panel handles the overall layout */
 }
 
 .facet-filter {
@@ -31,7 +31,10 @@
   overflow-x: hidden;
   padding-right: 4px;
   min-height: 0;
-  /* This will scroll when content exceeds available space, button always visible */
+  /* Calculate max-height to leave space for Apply button within the panel */
+  /* Panel total height minus header (~50px) minus Apply button space (~93px) */
+  max-height: calc(100vh - 343px);
+  /* Only this list scrolls, not the panel */
 }
 
 .facet-filter-section {
@@ -175,7 +178,7 @@
   border-radius: 999px;
   font-weight: 500;
   padding: 16px 0;
-  margin-top: 16px;
+  margin-top: 30px;
   cursor: pointer;
   transition: background 0.2s;
   box-shadow: 0 2px 8px rgba(209, 23, 0, 0.08);
