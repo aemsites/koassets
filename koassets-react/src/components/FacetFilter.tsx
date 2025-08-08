@@ -15,15 +15,21 @@ interface OpenState {
 }
 
 export const FILTERS_MAP: FiltersMap = {
-    'dc-format-label': 'File Format',
-    'dc-subject': 'Subject',
-    'repo-modifyDate': 'Modified Date', // TODO
-    'xcm-colorDistribution': 'Color Distribution', // TODO
-    'xcm-machineKeywords': 'Machine Keywords',
-    'xdm-activeDates': 'Active Dates',
-    'xdm-campaignName': 'Campaign Name',
-    'xdm-channelName': 'Channel Name',
-    'xdm-region': 'Region'
+    'tccc-brand': 'Brand',
+    'tccc-campaignName': 'Campaign',
+    'tccc-assetCategoryAndType': 'Asset Category and Asset Type Execution',
+    'tccc-masterOrAdaptation': 'Master or Adaptation',
+    'tccc-rightsFree': 'Rights Free', // missing from metadata
+    'tccc-intendedBusinessUnitOrMarket': 'Intended Market',
+    'tccc-intendedChannel': 'Intended Channel',
+    'tccc-intendedBottlerCountry': 'Bottler Content by Country',
+    'tccc-packageContainerSize': 'Package Size',
+    'tccc-agencyName': 'Agency Name',
+    'repo-createDate': 'Date Created',
+    'rights-start-date': 'Rights Start Date', // missing from metadata
+    'rights-end-date': 'Rights End Date', // missing from metadata
+    'market-rights-covered': 'Market Rights Covered', // missing from metadata
+    'media-rights-covered': 'Media Rights Covered' // missing from metadata
 };
 
 const FacetFilter: React.FC<FacetFilterProps> = ({

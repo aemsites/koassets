@@ -280,10 +280,10 @@ function MainApp(): React.JSX.Element {
 
     // Auto-search with empty query on app load
     useEffect(() => {
-        if (dynamicMediaClient) {
+        if (dynamicMediaClient && accessToken) {
             search();
         }
-    }, [dynamicMediaClient]);
+    }, [dynamicMediaClient, accessToken]);
 
     // Cart functions
     const handleAddToCart = async (image: Asset): Promise<void> => {

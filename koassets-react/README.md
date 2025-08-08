@@ -12,7 +12,7 @@ This application provides a modern interface for interacting with Adobe Dynamic 
 
 ```bash
 npm install
-cp env.example .env.local  # Edit with your values
+# Set up environment variables using .env.development or .env.production
 npm run dev
 ```
 
@@ -34,7 +34,7 @@ npm run build:prod
 - `src/components/MainApp.tsx` - Main application
 - `src/components/AdobeSignInButton.tsx` - Authentication
 - `src/utils/config.ts` - Configuration utility
-- `.env.local` - Your local environment variables
+- `.env.development`, `.env.production` - Environment-specific variables
 - `tools/assets-browser/DEPLOYMENT.md` - Deployment guide
 
 ## Features
@@ -133,7 +133,7 @@ src/
 
    ```bash
    git clone <repository-url>
-   cd ko-assets-search
+   cd koassets-react
    ```
 
 2. **Install dependencies**
@@ -147,10 +147,10 @@ src/
    **Option 1: Using Environment Variables (Recommended)**
 
    ```bash
-   # Copy the example file
-   cp env.example .env.local
+   # Copy the example file to environment-specific file
+   cp env.example .env.development
 
-   # Edit .env.local with your Client ID and Bucket
+   # Edit .env.development with your Client ID and Bucket
    VITE_ADOBE_CLIENT_ID=your-actual-client-id-here
    VITE_BUCKET=your-adobe-dynamic-media-bucket-id
    ```
@@ -222,8 +222,8 @@ For HTTPS development with trusted certificates:
    ```
 
 5. **Access your app**
-   - **HTTPS**: `https://localhost:5173/tools/assets-browser/`
-   - **HTTP**: `http://localhost:5173/tools/assets-browser/`
+   - **HTTPS**: `https://localhost:5173/tools/assets-browser/index.html`
+   - **HTTP**: `http://localhost:5173/tools/assets-browser/index.html`
 
 ### Adobe Developer Console Setup
 
@@ -244,7 +244,7 @@ For HTTPS development with trusted certificates:
 ### Getting Started
 
 1. **Start the application**: `npm run dev`
-2. **Open your browser**: Navigate to `https://localhost:5173/tools/assets-browser/`
+2. **Open your browser**: Navigate to `https://localhost:5173/tools/assets-browser/index.html`
 3. **Sign in with Adobe**: Click the "Sign in with Adobe" button
 4. **Complete authentication**: Follow the Adobe login flow
 5. **Start browsing**: Search for assets, browse collections, and manage your cart
@@ -323,14 +323,12 @@ The app automatically detects the protocol and configures Adobe IMS accordingly:
 - **Secure Storage**: Proper handling of sensitive authentication data
 - **CORS**: Proper cross-origin resource sharing configuration
 
-### Environment Variables & Security
-
 **Environment File Structure:**
 
 Vite supports multiple environment files with the following loading priority:
 
-1. `.env.local` - Local overrides (highest priority, ignored by git)
-2. `.env.[mode]` - Mode-specific files (e.g., `.env.production`)
+1. Runtime environment variables (highest priority)
+2. `.env.[mode]` - Mode-specific files (e.g., `.env.production`, `.env.development`)
 3. `.env` - Base environment file
 4. Default values in code (lowest priority)
 
@@ -348,10 +346,6 @@ cp .env.staging.template .env.staging
 # For Production
 cp .env.production.template .env.production
 # Edit .env.production with your real production values
-
-# For Personal Overrides (highest priority)
-cp env.example .env.local
-# Edit .env.local with your personal settings
 ```
 
 **Available Environment Files:**
@@ -360,7 +354,6 @@ cp env.example .env.local
 - `.env.development.template` - Development template (copy to `.env.development`)
 - `.env.staging.template` - Staging template (copy to `.env.staging`)
 - `.env.production.template` - Production template (copy to `.env.production`)
-- `.env.local` - Personal overrides (highest priority, not committed to git)
 
 **Security Note:** Only template files with placeholder values are committed to git. The actual `.env.development`, `.env.staging`, and `.env.production` files containing real secrets are gitignored.
 
@@ -373,14 +366,14 @@ cp env.example .env.local
 **Best Practices:**
 
 - Use environment variables for different environments (dev, staging, production)
-- Keep `.env.local` files out of version control (already in `.gitignore`)
+- Keep environment-specific files (`.env.development`, `.env.production`) out of version control (already in `.gitignore`)
 - Configure different Client IDs and Bucket IDs for different environments
 - Ensure redirect URIs are properly configured in Adobe Developer Console
 
 **Environment Variable Setup:**
 
 ```bash
-# .env.local (for local development)
+# .env.development (for development)
 VITE_ADOBE_CLIENT_ID=your-dev-client-id
 VITE_BUCKET=your-dev-bucket-id
 
@@ -491,7 +484,7 @@ npm run preview:prod     # Preview production build
 
 **Environment Variable Issues**
 
-- Ensure `.env.local` file is in the project root (same level as `package.json`)
+- Ensure environment files (`.env.development`, `.env.production`) are in the project root (same level as `package.json`)
 - Environment variables must start with `VITE_` to be accessible in frontend
 - Restart the development server after changing environment variables
 - Check browser console for "Adobe IMS Configuration" logs to verify Client ID
