@@ -464,6 +464,7 @@ function MainApp(): React.JSX.Element {
                     dynamicMediaClient={dynamicMediaClient}
                     hits={hits}
                     onToggleMobileFilter={handleToggleMobileFilter}
+                    isMobileFilterOpen={isMobileFilterOpen}
                     onBulkAddToCart={handleBulkAddToCart}
                     onSortByTopResults={handleSortByTopResults}
                     onSortByDateCreated={handleSortByDateCreated}

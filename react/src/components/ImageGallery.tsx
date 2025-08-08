@@ -18,6 +18,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     dynamicMediaClient,
     hits,
     onToggleMobileFilter,
+    isMobileFilterOpen,
     onBulkAddToCart,
     onSortByTopResults,
     onSortByDateCreated,
@@ -196,6 +197,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 displayedCount={displayedCount}
                 onSelectAll={handleSelectAll}
                 onToggleMobileFilter={onToggleMobileFilter}
+                isMobileFilterOpen={isMobileFilterOpen}
                 onBulkAddToCart={handleBulkAddToCartLocal}
                 onBulkShare={handleBulkShare}
                 onBulkAddToCollection={handleBulkAddToCollection}

@@ -201,6 +201,7 @@ export interface ImageGalleryProps {
     dynamicMediaClient?: DynamicMediaClient | null;
     hits?: SearchResults | null;
     onToggleMobileFilter?: () => void;
+    isMobileFilterOpen?: boolean;
     onBulkAddToCart: (selectedCardIds: Set<string>, images: Asset[]) => void;
     onSortByTopResults: () => void;
     onSortByDateCreated: () => void;
@@ -340,6 +341,7 @@ export interface SearchPanelProps {
     displayedCount: number;
     onSelectAll: (isChecked: boolean) => void;
     onToggleMobileFilter?: () => void;
+    isMobileFilterOpen?: boolean;
     onBulkAddToCart: () => void;
     onBulkShare: () => void;
     onBulkAddToCollection: () => void;

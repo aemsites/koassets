@@ -9,6 +9,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
     displayedCount,
     onSelectAll,
     onToggleMobileFilter,
+    isMobileFilterOpen,
     onBulkAddToCart,
     onBulkShare,
     onBulkAddToCollection,
@@ -22,9 +23,9 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
     selectedSortDirection,
     onSortTypeChange,
     onSortDirectionChange,
-    showFullDetails = true,
+    showFullDetails,
     onShowFullDetailsChange,
-    viewType = 'grid',
+    viewType,
     onViewTypeChange,
     currentPage,
     totalPages,
@@ -105,7 +106,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
                                 alt="Filter"
                                 className="filter-icon"
                             />
-                            Filter
+                            {isMobileFilterOpen ? 'Hide Filter' : 'Show Filter'}
                         </button>
                     </div>
                 </div>

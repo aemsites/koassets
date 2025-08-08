@@ -191,27 +191,38 @@
   }
 }
 
-/* Responsive: Hide FacetFilter on smaller screens where 330px min-width would be too large */
-@media (max-width: 1199px) {
+/* Responsive: Hide FacetFilter on smaller screens where filter button should appear */
+@media (max-width: 1439px) {
   .facet-filter-panel {
     display: none;
   }
 
   .facet-filter-panel.mobile-open {
     display: block;
-    position: fixed;
-    top: 0;
-    right: 0;
-    height: 100vh;
-    z-index: 1000;
-    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+    position: static;
+    /* Use normal document flow positioning */
     width: 330px;
-    /* Fixed width for mobile overlay */
+    /* Keep the same width as desktop */
+    height: auto;
+    /* Allow natural height */
+    box-shadow: none;
+    /* Remove overlay shadow since it's inline now */
+    z-index: auto;
+    /* Reset z-index */
+  }
+
+  /* Adjust width for smaller screens to ensure it fits */
+  @media (max-width: 768px) {
+    .facet-filter-panel.mobile-open {
+      width: 100%;
+      min-width: auto;
+      max-width: none;
+    }
   }
 }
 
-/* Show FacetFilter on larger screens where there's room for the 330px min-width */
-@media (min-width: 1200px) {
+/* Show FacetFilter on larger screens where filter button is hidden */
+@media (min-width: 1440px) {
   .facet-filter-panel {
     display: block;
   }
