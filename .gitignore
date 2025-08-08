@@ -7,3 +7,10 @@ helix-importer-ui
 .DS_Store
 *.bak
 .idea
+
+# Generated configuration files with sensitive data
+react/dist/config.js
+tools/assets-browser/config.js
+
+# Template files are safe to commit
+!**/*.template
