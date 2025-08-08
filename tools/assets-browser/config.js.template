@@ -1,0 +1,7 @@
+// Runtime configuration template
+// This file should be copied to config.js and values replaced during deployment
+window.APP_CONFIG = {
+  ADOBE_CLIENT_ID: '${ADOBE_CLIENT_ID}',
+  BUCKET: '${BUCKET}',
+  // Add other environment variables as needed
+}; 

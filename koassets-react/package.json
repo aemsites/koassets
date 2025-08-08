@@ -1,0 +1,49 @@
+{
+  "name": "koassets-react",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:http": "npx cross-env FORCE_HTTP=true vite",
+    "dev:http-win": "set FORCE_HTTP=true && vite",
+    "dev:https": "vite",
+    "build": "vite build && node scripts/generate-runtime-config.cjs && cp -rf dist/* ../tools/assets-browser",
+    "build:local": "npx cross-env NODE_ENV=local vite build && node scripts/generate-runtime-config.cjs && cp -rf dist/* ../tools/assets-browser",
+    "build:dev": "npx cross-env NODE_ENV=development vite build && node scripts/generate-runtime-config.cjs && cp -rf dist/* ../tools/assets-browser",
+    "build:staging": "npx cross-env NODE_ENV=staging vite build && node scripts/generate-runtime-config.cjs && cp -rf dist/* ../tools/assets-browser",
+    "build:prod": "npx cross-env NODE_ENV=production vite build && node scripts/generate-runtime-config.cjs && cp -rf dist/* ../tools/assets-browser",
+    "build:static": "vite build && cp -rf dist/* ../tools/assets-browser && node scripts/generate-safe-config.cjs",
+    "build:deploy": "vite build && cp -rf dist/* ../tools/assets-browser && node scripts/generate-deployment-config.cjs",
+    "build:embed": "vite build && cp -rf dist/* ../tools/assets-browser && node scripts/generate-html-with-config.cjs",
+    "build:template": "vite build && cp -rf dist/* ../tools/assets-browser && node scripts/generate-html-template.cjs",
+    "preview": "vite preview",
+    "preview:staging": "npx cross-env NODE_ENV=staging vite preview",
+    "preview:prod": "npx cross-env NODE_ENV=production vite preview",
+    "lint": "eslint src --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@identity/imslib": "^0.48.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.25.0",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@typescript-eslint/eslint-plugin": "^7.2.0",
+    "@typescript-eslint/parser": "^7.2.0",
+    "@vitejs/plugin-react": "^4.4.1",
+    "eslint": "^9.25.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^16.0.0",
+    "typescript": "^5.2.2",
+    "vite": "^6.3.5"
+  }
+}

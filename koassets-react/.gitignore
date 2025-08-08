@@ -1,0 +1,57 @@
+# Environment files with secrets - NEVER commit these
+.env.local
+.env.*.local
+.env.development
+.env.staging  
+.env.production
+
+# Allow template environment files to be committed (placeholders only)
+# env.example (safe template with placeholders)
+!.env.development.template
+!.env.staging.template
+!.env.production.template
+
+# But if you want to commit template versions, use these names instead:
+# .env.development.template (safe to commit)
+# .env.staging.template (safe to commit) 
+# .env.production.template (safe to commit)
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# SSL Certificates (never commit private keys!)
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+localhost*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# VS Code Chrome debugging profile
+.vscode/chrome-debug-profile/
+# Add your new ignore patterns here
+*.tmp
+temp/
+debug.log
