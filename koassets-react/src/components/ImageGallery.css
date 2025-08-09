@@ -203,15 +203,10 @@
   .facet-filter-panel.mobile-open {
     display: block;
     position: static;
-    /* Use normal document flow positioning */
     width: 330px;
-    /* Keep the same width as desktop */
     height: auto;
-    /* Allow natural height */
     box-shadow: none;
-    /* Remove overlay shadow since it's inline now */
     z-index: auto;
-    /* Reset z-index */
   }
 
   /* Adjust width for smaller screens to ensure it fits */

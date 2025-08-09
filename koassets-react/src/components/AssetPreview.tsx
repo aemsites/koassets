@@ -103,9 +103,6 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                     <h3 className="modal-title">
                         <a href={selectedImage?.name}>{selectedImage?.title}</a>
                     </h3>
-                    {selectedImage?.description && (
-                        <p className="modal-description">{selectedImage?.description}</p>
-                    )}
                 </div>
 
                 <div className="modal-image-container">
@@ -143,7 +140,7 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                         </div>
                         <div className="preview-modal-group">
                             <span className="preview-metadata-label tccc-metadata-label">CATEGORY</span>
-                            <span className="preview-metadata-value tccc-metadata-value">{formatCategory(selectedImage?.['tccc-assetCategoryAndType_hidden'] as string).split('|')[0]}</span>
+                            <span className="preview-metadata-value tccc-metadata-value">{formatCategory(selectedImage?.category as string)}</span>
                         </div>
                     </div>
                 </div>

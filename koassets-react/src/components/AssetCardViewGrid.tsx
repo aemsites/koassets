@@ -84,33 +84,32 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                                     <span className="product-tag tccc-tag">{removeHyphenTitleCase(image['tccc-campaignName'])}</span>
                                 )}
                             </div>
-                            <h3 className="product-title">{image.title}</h3>
-                            {image?.description && (
-                                <p className="product-description">{image.description}</p>
-                            )}
+                            <h3 className="product-title">
+                                <a href={image.name}>{image.title}</a>
+                            </h3>
                         </div>
 
                         {showFullDetails && (
                             <div className="product-meta-grid">
                                 <div className="product-meta-item">
-                                    <span className="product-meta-label">SIZE</span>
-                                    <span className="product-meta-value">{formatFileSize(image.size)}</span>
+                                    <span className="product-meta-label tccc-metadata-label">SIZE</span>
+                                    <span className="product-meta-value tccc-metadata-value">{formatFileSize(image.size)}</span>
                                 </div>
                                 <div className="product-meta-item">
-                                    <span className="product-meta-label">TYPE</span>
-                                    <span className="product-meta-value">{image.format || 'Unknown'}</span>
+                                    <span className="product-meta-label tccc-metadata-label">TYPE</span>
+                                    <span className="product-meta-value tccc-metadata-value">{image.format || 'Unknown'}</span>
                                 </div>
                                 <div className="product-meta-item">
-                                    <span className="product-meta-label">FILE EXT</span>
-                                    <span className="product-meta-value">{getFileExtension(image.name || image.mimeType)}</span>
+                                    <span className="product-meta-label tccc-metadata-label">FILE EXT</span>
+                                    <span className="product-meta-value tccc-metadata-value">{getFileExtension(image.name || image.mimeType)}</span>
                                 </div>
                                 <div className="product-meta-item">
-                                    <span className="product-meta-label">RIGHTS FREE</span>
-                                    <span className="product-meta-value">N/A</span>
+                                    <span className="product-meta-label tccc-metadata-label">RIGHTS FREE</span>
+                                    <span className="product-meta-value tccc-metadata-value">N/A</span>
                                 </div>
                                 <div className="product-meta-item">
-                                    <span className="product-meta-label">CATEGORY</span>
-                                    <span className="product-meta-value">{formatCategory(image?.['tccc-assetCategoryAndType_hidden'] as string).split('|')[0]}</span>
+                                    <span className="product-meta-label tccc-metadata-label">CATEGORY</span>
+                                    <span className="product-meta-value tccc-metadata-value">{formatCategory(image?.category as string)}</span>
                                 </div>
                             </div>
                         )}

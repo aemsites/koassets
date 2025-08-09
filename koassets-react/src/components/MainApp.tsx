@@ -140,7 +140,7 @@ function MainApp(): React.JSX.Element {
                             url: '', // Empty URL - will be loaded lazily
                             alt: (hit['dc-title'] as string) || (hit['repo-name'] as string) || 'Asset',
                             size: (hit['size'] as number) || 0,
-                            format: (hit?.['dc-format'] as string) || (hit?.['dc-format-label'] as string) || 'Unknown',
+                            format: (hit?.['dc-format-label'] as string) || 'Unknown',
                             creator: hit?.['dc-creator'] as string,
                             mimeType: (hit['repo-mimetype'] as string) || 'Unknown',
                             path: (hit['repo-path'] as string) || '',
@@ -151,6 +151,9 @@ function MainApp(): React.JSX.Element {
                             createDate: hit?.['repo-createDate'] as string,
                             modifyDate: hit?.['repo-modifyDate'] as string,
                             expired: hit?.['is_pur-expirationDate'] as boolean,
+                            category: (hit?.['tccc-assetCategoryAndType_hidden'] as string[])?.length > 0 
+                                ? (hit?.['tccc-assetCategoryAndType_hidden'] as string[])[0].split('|')[0] 
+                                : 'Unknown',
                             ...hit
                         } as Asset;
                     });

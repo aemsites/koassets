@@ -2,29 +2,36 @@
     position: relative;
     width: 100%;
     height: 300px;
-    /* Match the original image-container height */
     display: flex;
     align-items: center;
     justify-content: center;
     background-color: #f8f8f8;
-    /* Match original background */
     border-top-left-radius: 7px;
-    /* Inherit from parent */
     border-top-right-radius: 7px;
-    /* Inherit from parent */
     overflow: hidden;
     margin: 0;
+}
+
+.container .lazy-image-container .image-container img {
+    height: 100% !important;
 }
 
 .lazy-image {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    /* Match original gallery-image */
     background-color: white;
     overflow-wrap: break-word;
     box-sizing: border-box;
     transition: transform 0.3s ease;
+}
+
+.lazy-image.loading {
+    display: none;
+}
+
+.lazy-image.loaded {
+    display: block;
 }
 
 /* Hover effect - applied by parent card */

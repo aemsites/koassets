@@ -67,12 +67,12 @@ button:disabled {
 }
 
 .container .tccc-metadata-value {
-  font-family: "TCCC UnityHeadline", sans-serif !important;
-  text-transform: uppercase !important;
-  color: #0e202e !important;
-  font-size: 12px !important;
-  font-weight: 600 !important;
-  line-height: normal !important;
+  font-family: "TCCC UnityHeadline", sans-serif;
+  text-transform: uppercase;
+  color: #0e202e;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: normal;
 }
 
 .container .tccc-tag {
@@ -98,7 +98,7 @@ button:disabled {
   font-size: 14px;
   font-style: normal;
   font-weight: 600;
-  line-height: 140%;
+  line-height: 19px;
 }
 
 .container a:hover {

@@ -175,11 +175,11 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                         </div>
                                         <div className="tccc-assets-rights-group">
                                             <span className="tccc-metadata-label">RIGHTS START DATE</span>
-                                            <span className="tccc-metadata-value">{formatDate(selectedImage?.['tccc-rightsStartDate'] as string || 'Unknown')}</span>
+                                            <span className="tccc-metadata-value">{selectedImage?.['tccc-rightsStartDate'] as string || 'Unknown'}</span>
                                         </div>
                                         <div className="tccc-assets-rights-group">
                                             <span className="tccc-metadata-label">RIGHTS END DATE</span>
-                                            <span className="tccc-metadata-value">{formatDate(selectedImage?.['tccc-rightsEndDate'] as string || 'Unknown')}</span>
+                                            <span className="tccc-metadata-value">{selectedImage?.['tccc-rightsEndDate'] as string || 'Unknown'}</span>
                                         </div>
                                         <div className="tccc-assets-rights-group">
                                             <span className="tccc-metadata-label">MEDIA</span>

@@ -114,12 +114,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
                 <img
                     src={imageUrl}
                     alt={alt || asset.alt || asset.name}
-                    className="lazy-image"
-                    style={{
-                        display: isLoading ? 'none' : 'block',
-                        width: '100%',
-                        height: 'auto'
-                    }}
+                    className={`lazy-image ${isLoading ? 'loading' : 'loaded'}`}
                 />
             )}
 
