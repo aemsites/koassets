@@ -104,4 +104,37 @@ export const formatCategory = (categories) => {
 
     // Fallback
     return 'Asset';
+};
+
+// Helper function to format date from epoch time
+export const formatDate = (epochTime) => {
+    if (!epochTime) return '';
+    
+    // Convert epoch time to milliseconds if it's in seconds
+    const timestamp = typeof epochTime === 'string' ? parseInt(epochTime) : epochTime;
+    const date = new Date(timestamp < 10000000000 ? timestamp * 1000 : timestamp);
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) return '';
+    
+    const months = [
+        'Jan.', 'Feb.', 'Mar.', 'Apr.', 'May', 'Jun.',
+        'Jul.', 'Aug.', 'Sep.', 'Oct.', 'Nov.', 'Dec.'
+    ];
+    
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    
+    return `${day} ${month} ${year}`;
+};
+
+// Helper function to remove hyphens and convert to title case
+export const removeHyphenTitleCase = (text) => {
+    if (!text || typeof text !== 'string') return '';
+    
+    return text
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
 }; 

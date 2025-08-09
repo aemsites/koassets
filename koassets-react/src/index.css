@@ -1,21 +1,44 @@
 @font-face {
-  font-family: "TCCC-UnityHeadline-Regular";
-  src: url("/TCCC-UnityHeadline-Regular.ttf") format("truetype");
+  font-family: FontAwesome;
   font-display: swap;
+  src: url("/fonts/fontawesome-webfont.ttf") format("opentype");
+  font-weight: normal;
+  font-style: normal;
 }
 
 @font-face {
-  font-family: "TCCC-UnityText-Regular";
-  src: url("/TCCC-UnityText-Regular.ttf") format("truetype");
-  font-weight: 400;
+  font-family: "TCCC UnityHeadline";
   font-display: swap;
+  src: url("/fonts/TCCC-UnityHeadline-Regular.ttf")
+    format("opentype");
 }
 
 @font-face {
-  font-family: "TCCC-UnityText-Medium";
-  src: url("/TCCC-UnityText-Medium.ttf") format("truetype");
-  font-weight: 500;
+  font-family: "TCCC UnityHeadline Regular";
   font-display: swap;
+  src: url("/fonts/TCCC-UnityText-Regular.ttf")
+    format("opentype");
+}
+
+@font-face {
+  font-family: "TCCC UnityText Regular";
+  font-display: swap;
+  src: url("/fonts/TCCC-UnityText-Regular.ttf")
+    format("opentype");
+}
+
+@font-face {
+  font-family: "TCCC UnityText Bold";
+  font-display: swap;
+  src: url("/fonts/TCCC-UnityText-Bold.ttf")
+    format("opentype");
+}
+
+@font-face {
+  font-family: "TCCC UnityText Medium";
+  font-display: swap;
+  src: url("/fonts/TCCC-UnityText-Medium.ttf")
+    format("opentype");
 }
 
 body {
@@ -23,22 +46,16 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
-  /* Prevent scrolling on body */
   height: 100vh;
-  /* Full viewport height */
   position: fixed;
-  /* Fix position */
   width: 100%;
-  /* Full width */
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
 
 :root {
   --primary-color: #ed0000;
-  --tag-color: #a46801;
-  --tag-background-color: #fff0da;
 }

@@ -23,7 +23,7 @@ import SearchBar from './SearchBar';
 
 const searchAssetsTitle = 'Search Assets - where you can discover the company\'s latest and greatest content!';
 const searchCollectionsTitle = 'My Collections';
-const HITS_PER_PAGE = 24;
+const HITS_PER_PAGE = 2400;
 
 function MainApp(): React.JSX.Element {
     // Local state
@@ -145,11 +145,12 @@ function MainApp(): React.JSX.Element {
                             mimeType: (hit['repo-mimetype'] as string) || 'Unknown',
                             path: (hit['repo-path'] as string) || '',
                             tags: (hit['xcm-machineKeywords'] as string[]) || [],
-                            description: hit?.['dc-description'] as string,
+                            description: hit?.['tccc-description'] as string || hit?.['dc-description'] as string,
                             title: hit?.['dc-title'] as string,
                             subject: hit?.['dc-subject'] as string | string[],
                             createDate: hit?.['repo-createDate'] as string,
                             modifyDate: hit?.['repo-modifyDate'] as string,
+                            expired: hit?.['is_pur-expirationDate'] as boolean,
                             ...hit
                         } as Asset;
                     });

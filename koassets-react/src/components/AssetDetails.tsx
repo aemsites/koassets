@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { AssetDetailsProps } from '../types';
 import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
-import { formatCategory, formatFileSize, getFileExtension } from '../utils/formatters';
+import { formatCategory, formatDate, formatFileSize, removeHyphenTitleCase } from '../utils/formatters';
 import './AssetDetails.css';
 
 const AssetDetails: React.FC<AssetDetailsProps> = ({
@@ -86,16 +86,16 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     if (!showModal || !selectedImage) return null;
 
     return (
-        <div className="fullscreen-modal-overlay" onClick={handleOverlayClick}>
-            <div className="fullscreen-modal" onClick={handleModalClick}>
-                <button className="fullscreen-close-button" onClick={closeModal}>
+        <div className="asset-details-modal" onClick={handleOverlayClick}>
+            <div className="asset-details-modal-inner" onClick={handleModalClick}>
+                <button className="assets-details-close-button" onClick={closeModal}>
                     ×
                 </button>
 
-                <div className="fullscreen-content">
-                    <div className="fullscreen-image-section">
+                <div className="assets-details-content">
+                    <div className="assets-details-image-section">
                         {imageLoading ? (
-                            <div className="fullscreen-image-loading">
+                            <div className="assets-details-image-loading">
                                 <div className="loading-spinner"></div>
                                 <p>Loading high resolution image...</p>
                             </div>
@@ -103,67 +103,99 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                             <img
                                 src={blobUrl || selectedImage.url}
                                 alt={selectedImage.alt || selectedImage.name}
-                                className="fullscreen-image"
+                                className="assets-details-image"
                             />
                         )}
                     </div>
 
-                    <div className="fullscreen-info-section">
-                        <div className="fullscreen-header">
-                            <div className="fullscreen-tags">
-                                {selectedImage.tags && selectedImage.tags.length > 0 && (
-                                    selectedImage.tags.map((tag, index) => (
-                                        <span key={index} className="fullscreen-tag">{tag}</span>
-                                    ))
+                    <div className="assets-details-info-section">
+                        <div className="assets-details-info-section-inner">
+                            <div className="assets-details-header">
+                                <div className="assets-details-tags">
+                                    {selectedImage?.['tccc-campaignName'] && (
+                                        <span className="assets-details-tag tccc-tag">{removeHyphenTitleCase(selectedImage['tccc-campaignName'])}</span>
+                                    )}
+                                </div>
+                                <h2 className="assets-details-title">
+                                    {selectedImage.title}
+                                </h2>
+                                {selectedImage?.description && (
+                                    <p className="assets-details-description">{selectedImage?.description}</p>
                                 )}
                             </div>
-                            <h2 className="fullscreen-title">
-                                {selectedImage.name || selectedImage.alt || 'Untitled Asset'}
-                            </h2>
-                            {selectedImage?.description && (
-                                <p className="fullscreen-description">{selectedImage?.description}</p>
-                            )}
-                        </div>
 
-                        <div className="fullscreen-details">
-                            <div className="fullscreen-detail-row">
-                                <div className="fullscreen-detail-group">
-                                    <span className="fullscreen-detail-label">SIZE</span>
-                                    <span className="fullscreen-detail-value">{formatFileSize(selectedImage.size)}</span>
-                                </div>
-                                <div className="fullscreen-detail-group">
-                                    <span className="fullscreen-detail-label">TYPE</span>
-                                    <span className="fullscreen-detail-value">{selectedImage.format || 'Unknown'}</span>
-                                </div>
-                                <div className="fullscreen-detail-group">
-                                    <span className="fullscreen-detail-label">FILE EXT</span>
-                                    <span className="fullscreen-detail-value">{getFileExtension(selectedImage.name || selectedImage.mimeType)}</span>
-                                </div>
-                                <div className="fullscreen-detail-group">
-                                    <span className="fullscreen-detail-label">RIGHTS FREE</span>
-                                    <span className="fullscreen-detail-value">N/A</span>
-                                </div>
-                                <div className="fullscreen-detail-group">
-                                    <span className="fullscreen-detail-label">CATEGORY</span>
-                                    <span className="fullscreen-detail-value">{formatCategory(selectedImage?.subject)}</span>
-                                </div>
-                                <div className="fullscreen-detail-group">
-                                    <span className="fullscreen-detail-label">PATH</span>
-                                    <span className="fullscreen-detail-value">{selectedImage.path || 'N/A'}</span>
-                                </div>
-                                <div className="fullscreen-detail-group">
-                                    <span className="fullscreen-detail-label">CREATOR</span>
-                                    <span className="fullscreen-detail-value">{selectedImage?.creator || 'N/A'}</span>
+                            <div className="details-modal-details">
+                                <div className="details-modal-grid">
+                                    <div className="details-modal-group">
+                                        <span className="details-metadata-label tccc-metadata-label">CREATED</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{formatDate(selectedImage['repo-createDate'])}</span>
+                                    </div>
+                                    <div className="details-modal-group">
+                                        <span className="details-metadata-label tccc-metadata-label">TYPE</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.format || 'Unknown'}</span>
+                                    </div>
+                                    <div className="details-modal-group">
+                                        <span className="details-metadata-label tccc-metadata-label">SIZE</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{formatFileSize(selectedImage.size)}</span>
+                                    </div>
+                                    <div className="details-modal-group">
+                                        <span className="details-metadata-label tccc-metadata-label">LAST MODIFIED</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{formatDate(selectedImage.modifyDate)}</span>
+                                    </div>
+                                    <div className="details-modal-group">
+                                        <span className="details-metadata-label tccc-metadata-label">RES.</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{formatCategory(selectedImage.resolution as string || 'Unknown')}</span>
+                                    </div>
+                                    <div className="details-modal-group">
+                                        <span className="details-metadata-label tccc-metadata-label">EXPIRED</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{`${selectedImage.expired}`}</span>
+                                    </div>
+                                    <div className="details-modal-group">
+                                        <span className="details-metadata-label tccc-metadata-label">USAGE</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{formatCategory(selectedImage.usage as string || 'Unknown')}</span>
+                                    </div>
+                                    <div className="details-modal-group">
+                                        <span className="details-metadata-label tccc-metadata-label">RIGHTS FREE</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{formatCategory(selectedImage.rightsFree as string || 'Unknown')}</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <button
-                            className={`fullscreen-add-to-cart-button${isInCart ? ' remove-from-cart' : ''}`}
-                            onClick={handleButtonClick}
-                        >
-                            {isInCart ? 'Remove From Cart' : 'Add To Cart'}
-                        </button>
+                            <div className="tccc-assets-rights-container">
+                                <div className="tccc-assets-rights-inner">
+                                    <h3 className="tccc-assets-rights-title">Rights</h3>
+                                    <div className="tccc-assets-rights-grid">
+                                        <div className="tccc-assets-rights-group">
+                                            <span className="tccc-metadata-label">RIGHTS PROFILE TITLE</span>
+                                            <span className="tccc-metadata-value">{selectedImage?.['tccc-rightsProfileTitle'] as string || 'Unknown'}</span>
+                                        </div>
+                                        <div className="tccc-assets-rights-group">
+                                            <span className="tccc-metadata-label">MARKET COVERED</span>
+                                            <span className="tccc-metadata-value">{selectedImage?.['tccc-marketCovered'] as string || 'Unknown'}</span>
+                                        </div>
+                                        <div className="tccc-assets-rights-group">
+                                            <span className="tccc-metadata-label">RIGHTS START DATE</span>
+                                            <span className="tccc-metadata-value">{formatDate(selectedImage?.['tccc-rightsStartDate'] as string || 'Unknown')}</span>
+                                        </div>
+                                        <div className="tccc-assets-rights-group">
+                                            <span className="tccc-metadata-label">RIGHTS END DATE</span>
+                                            <span className="tccc-metadata-value">{formatDate(selectedImage?.['tccc-rightsEndDate'] as string || 'Unknown')}</span>
+                                        </div>
+                                        <div className="tccc-assets-rights-group">
+                                            <span className="tccc-metadata-label">MEDIA</span>
+                                            <span className="tccc-metadata-value">{selectedImage?.['tccc-media'] as string || 'Unknown'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                className={`assets-details-add-to-cart-button${isInCart ? ' remove-from-cart' : ''}`}
+                                onClick={handleButtonClick}
+                            >
+                                {isInCart ? 'Remove From Cart' : 'Add To Cart'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

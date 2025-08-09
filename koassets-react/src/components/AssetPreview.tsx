@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { AssetPreviewProps } from '../types';
 import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
-import { formatCategory, formatFileSize, getFileExtension } from '../utils/formatters';
+import { formatCategory, formatFileSize, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
 import './AssetPreview.css';
 
 const AssetPreview: React.FC<AssetPreviewProps> = ({
@@ -86,21 +86,23 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
     if (!showModal || !selectedImage) return null;
 
     return (
-        <div className="image-modal-overlay" onClick={handleOverlayClick}>
-            <div className="image-modal" onClick={handleModalClick}>
+        <div className="asset-preview-modal" onClick={handleOverlayClick}>
+            <div className="asset-preview-modal-inner" onClick={handleModalClick}>
                 <button className="modal-close-button" onClick={closeModal}>
                     ✕
                 </button>
 
                 <div className="modal-header">
-                    <div className="modal-tags">
-                        {selectedImage?.subject && (
-                            <span className="modal-tag">{formatCategory(selectedImage['tccc-campaignName'])}</span>
+                    <div className="preview-tags">
+                        {selectedImage?.['tccc-campaignName'] && (
+                            <a href={selectedImage?.name}>
+                                <span className="preview-tag tccc-tag">{removeHyphenTitleCase(selectedImage['tccc-campaignName'])}</span>
+                            </a>
                         )}
                     </div>
-                    <h2 className="modal-title">
-                        {selectedImage.name || selectedImage.alt || 'Untitled Asset'}
-                    </h2>
+                    <h3 className="modal-title">
+                        <a href={selectedImage?.name}>{selectedImage?.title}</a>
+                    </h3>
                     {selectedImage?.description && (
                         <p className="modal-description">{selectedImage?.description}</p>
                     )}
@@ -121,29 +123,27 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                     )}
                 </div>
 
-                <div className="modal-details">
-                    <div className="modal-detail-row">
-                        <div className="modal-detail-group">
-                            <span className="modal-detail-label">SIZE</span>
-                            <span className="modal-detail-value">{formatFileSize(selectedImage.size)}</span>
+                <div className="preview-modal-details">
+                    <div className="preview-modal-grid">
+                        <div className="preview-modal-group">
+                            <span className="preview-metadata-label tccc-metadata-label">SIZE</span>
+                            <span className="preview-metadata-value tccc-metadata-value">{formatFileSize(selectedImage.size)}</span>
                         </div>
-                        <div className="modal-detail-group">
-                            <span className="modal-detail-label">TYPE</span>
-                            <span className="modal-detail-value">{selectedImage.format || 'Unknown'}</span>
+                        <div className="preview-modal-group">
+                            <span className="preview-metadata-label tccc-metadata-label">TYPE</span>
+                            <span className="preview-metadata-value tccc-metadata-value">{selectedImage.format || 'Unknown'}</span>
                         </div>
-                        <div className="modal-detail-group">
-                            <span className="modal-detail-label">FILE EXT</span>
-                            <span className="modal-detail-value">{getFileExtension(selectedImage.name || selectedImage.mimeType)}</span>
+                        <div className="preview-modal-group">
+                            <span className="preview-metadata-label tccc-metadata-label">FILE EXT</span>
+                            <span className="preview-metadata-value tccc-metadata-value">{getFileExtension(selectedImage.name || selectedImage.mimeType)}</span>
                         </div>
-                    </div>
-                    <div className="modal-detail-row">
-                        <div className="modal-detail-group">
-                            <span className="modal-detail-label">RIGHTS FREE</span>
-                            <span className="modal-detail-value">N/A</span>
+                        <div className="preview-modal-group">
+                            <span className="preview-metadata-label tccc-metadata-label">RIGHTS FREE</span>
+                            <span className="preview-metadata-value tccc-metadata-value">N/A</span>
                         </div>
-                        <div className="modal-detail-group">
-                            <span className="modal-detail-label">CATEGORY</span>
-                            <span className="modal-detail-value">{formatCategory(selectedImage?.subject)}</span>
+                        <div className="preview-modal-group">
+                            <span className="preview-metadata-label tccc-metadata-label">CATEGORY</span>
+                            <span className="preview-metadata-value tccc-metadata-value">{formatCategory(selectedImage?.['tccc-assetCategoryAndType_hidden'] as string).split('|')[0]}</span>
                         </div>
                     </div>
                 </div>

@@ -22,7 +22,7 @@
     object-fit: contain;
     /* Match original gallery-image */
     background-color: white;
-    word-break: break-word;
+    overflow-wrap: break-word;
     box-sizing: border-box;
     transition: transform 0.3s ease;
 }

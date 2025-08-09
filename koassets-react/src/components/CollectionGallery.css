@@ -86,7 +86,7 @@
     font-size: 18px;
     font-weight: 600;
     color: #333;
-    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .collection-description {

@@ -1,6 +1,6 @@
 import React from 'react';
 import type { AssetCardProps } from '../types';
-import { formatCategory, formatFileSize, getFileExtension } from '../utils/formatters';
+import { formatCategory, formatFileSize, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
 import './AssetCardViewList.css';
 import LazyImage from './LazyImage';
 
@@ -79,7 +79,12 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
                 <div className="product-info-container">
                     <div className="product-info">
                         <div className="product-title-section">
-                            <div className="product-title">{image.name || image.alt || 'Untitled Asset'}</div>
+                            <div className="product-tags">
+                                {image?.['tccc-campaignName'] && (
+                                    <span className="product-tag tccc-tag">{removeHyphenTitleCase(image['tccc-campaignName'])}</span>
+                                )}
+                            </div>
+                            <div className="product-title">{image.title}</div>
                             {image?.description && (
                                 <p className="product-description">{image?.description}</p>
                             )}
@@ -105,7 +110,7 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
                                 </div>
                                 <div className="product-meta-item">
                                     <span className="product-meta-label">CATEGORY</span>
-                                    <span className="product-meta-value">{formatCategory(image?.subject)}</span>
+                                    <span className="product-meta-value">{formatCategory(image?.['tccc-assetCategoryAndType_hidden'] as string).split('|')[0]}</span>
                                 </div>
                             </div>
                         )}
