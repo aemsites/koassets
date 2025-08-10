@@ -13,5 +13,9 @@ export const FILTERS_MAP = {
     'rights-start-date': 'Rights Start Date', // missing from metadata
     'rights-end-date': 'Rights End Date', // missing from metadata
     'market-rights-covered': 'Market Rights Covered', // missing from metadata
-    'media-rights-covered': 'Media Rights Covered' // missing from metadata
+    'media-rights-covered': 'Media Rights Covered', // missing from metadata
+    'tccc-rightsCheckRequired': 'Rights Check Required',
+    'created': 'Date Created',
+    'tccc-marketCovered': 'Market Covered',
+    'tccc-mediaCovered': 'Media Covered'
 }; 

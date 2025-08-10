@@ -300,7 +300,16 @@ function MainApp(): React.JSX.Element {
             settingsLoadedRef.current = true;
             const excClient = new ExcClient({ accessToken });
             excClient.getSettings({}).then(settings => {
-                console.log('Settings:', settings);
+                console.log('Settings:', JSON.stringify(settings));
+                
+                // Extract keys from settings.facets.fields and replace ':' with '-'
+                const settingsData = settings as Record<string, unknown>;
+                const facetsData = settingsData?.facets as Record<string, unknown>;
+                const fieldsData = facetsData?.fields as Record<string, unknown>;
+                if (fieldsData) {
+                    const facetKeys = Object.keys(fieldsData).map(key => key.replace(/:/g, '-'));
+                    console.log('Facet keys (with : replaced by -):', facetKeys);
+                }
             }).catch(error => {
                 console.error('Error fetching settings:', error);
             });

@@ -26,6 +26,7 @@ const FacetFilter: React.FC<FacetFilterProps> = ({
     // 'hits' changed --> 'facetsFromHits' changed --> 'checked' state updated --> 'selectedFacets' updated
     const facetsFromHits = useMemo<FacetsFromHits>(() => {
         const facets: FacetsFromHits = {};
+        // Transform into facetsFromHits
         Object.keys(FILTERS_MAP).forEach(key => {
             const values = new Set<string>();
             hits?.forEach(hit => {
@@ -115,6 +116,7 @@ const FacetFilter: React.FC<FacetFilterProps> = ({
                         </button>
                     </div>
                     <div className="facet-filter-list">
+                        {/* Display the filters */}
                         {Object.entries(FILTERS_MAP).map(([key, label]) => (
                             <div key={key} className="facet-filter-section">
                                 <button
