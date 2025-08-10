@@ -1,5 +1,4 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import { FILTERS_MAP } from './components/filterMaps';
 import { AlgoliaSearchQuery, Asset } from './types';
 
 interface DynamicMediaClientConfig {
@@ -11,7 +10,8 @@ interface DynamicMediaClientConfig {
 
 export interface SearchAssetsOptions {
     collectionId?: string | null;
-    facets?: string[][];
+    facets?: string[];
+    facetFilters?: string[][];
     hitsPerPage?: number;
     page?: number;
 }
@@ -146,6 +146,7 @@ export class DynamicMediaClient {
         const {
             collectionId,
             facets = [],
+            facetFilters = [[]],
             hitsPerPage,
             page = 0
         } = options;
@@ -154,7 +155,7 @@ export class DynamicMediaClient {
             throw new Error('hitsPerPage is required');
         }
 
-        const combinedSelectedFacets = [...facets, ...(collectionId ? [[`collectionIds:${collectionId.split(':')[3]}`]] : [])];
+        const combinedSelectedFacetFilters = [...facetFilters, ...(collectionId ? [[`collectionIds:${collectionId.split(':')[3]}`]] : [])];
         const indexName = this.getIndexName();
 
         return {
@@ -162,8 +163,8 @@ export class DynamicMediaClient {
                 {
                     "indexName": indexName,
                     "params": {
-                        "facets": Object.keys(FILTERS_MAP),
-                        "facetFilters": combinedSelectedFacets,
+                        "facets": facets,
+                        "facetFilters": combinedSelectedFacetFilters,
                         "filters": "",
                         "highlightPostTag": "__/ais-highlight__",
                         "highlightPreTag": "__ais-highlight__",

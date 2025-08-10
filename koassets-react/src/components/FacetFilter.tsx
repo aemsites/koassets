@@ -13,7 +13,7 @@ interface OpenState {
 
 const FacetFilter: React.FC<FacetFilterProps> = ({
     hits = [],
-    setSelectedFacets,
+    setSelectedFacetFilters,
     search
 }) => {
     const [open, setOpen] = useState<OpenState>({});
@@ -68,7 +68,7 @@ const FacetFilter: React.FC<FacetFilterProps> = ({
 
     // Transform the checked object into an array of facet filters
     useEffect(() => {
-        const newSelectedFacets: string[][] = [];
+        const newSelectedFacetFilters: string[][] = [];
         Object.keys(checked).forEach(key => {
             const facetFilter: string[] = [];
             Object.entries(checked[key]).forEach(([facet, isChecked]) => {
@@ -80,10 +80,10 @@ const FacetFilter: React.FC<FacetFilterProps> = ({
                     }
                 }
             });
-            facetFilter.length > 0 && newSelectedFacets.push(facetFilter);
+            facetFilter.length > 0 && newSelectedFacetFilters.push(facetFilter);
         });
-        setSelectedFacets(newSelectedFacets);
-    }, [checked, setSelectedFacets]);
+        setSelectedFacetFilters(newSelectedFacetFilters);
+    }, [checked, setSelectedFacetFilters]);
 
     // Handler for checkbox change
     const handleCheckbox = (key: string, facet: string) => {

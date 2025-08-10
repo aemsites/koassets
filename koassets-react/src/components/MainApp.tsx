@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import '../MainApp.css';
 import { DynamicMediaClient } from '../dynamicmedia-client';
+import { ExcClient } from '../exc-client';
 import type {
     Asset,
     CartItem,
@@ -50,7 +51,7 @@ function MainApp(): React.JSX.Element {
     const [loading, setLoading] = useState<LoadingState>({ [LOADING.dmImages]: false, [LOADING.collections]: false });
     const [currentView, setCurrentView] = useState<CurrentView>(CURRENT_VIEW.images);
     const [selectedQueryType, setSelectedQueryType] = useState<string>(QUERY_TYPES.ASSETS);
-    const [selectedFacets, setSelectedFacets] = useState<string[][]>([]);
+    const [selectedFacetFilters, setSelectedFacetFilters] = useState<string[][]>([]);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState<number>(0);
@@ -75,6 +76,7 @@ function MainApp(): React.JSX.Element {
     const [selectedSortDirection, setSelectedSortDirection] = useState<string>('Ascending');
 
     const searchBarRef = useRef<HTMLInputElement>(null);
+    const settingsLoadedRef = useRef<boolean>(false);
 
     const handleSetSelectedQueryType = useCallback((newQueryType: string): void => {
         setSelectedQueryType(prevType => {
@@ -200,7 +202,7 @@ function MainApp(): React.JSX.Element {
     }, []);
 
     // Search assets (images, videos, etc.)
-    const performSearchImages = useCallback((query: string, selectedCollection: Collection | null = null, selectedFacets: string[][] = [], page: number = 0): void => {
+    const performSearchImages = useCallback((query: string, selectedCollection: Collection | null = null, selectedFacetFilters: string[][] = [], page: number = 0): void => {
         if (!dynamicMediaClient) return;
 
         const isLoadingMore = page > 0;
@@ -214,7 +216,7 @@ function MainApp(): React.JSX.Element {
 
         dynamicMediaClient.searchAssets(query.trim(), {
             collectionId: selectedCollection?.collectionId,
-            facets: selectedFacets,
+            facetFilters: selectedFacetFilters,
             hitsPerPage: HITS_PER_PAGE,
             page: page
         }).then((content) => processDMImages(content, isLoadingMore)).catch((error) => {
@@ -226,9 +228,6 @@ function MainApp(): React.JSX.Element {
             }
         });
 
-        if (!isLoadingMore) {
-            setQuery('');
-        }
     }, [dynamicMediaClient, processDMImages]);
 
     // Search collections
@@ -258,9 +257,9 @@ function MainApp(): React.JSX.Element {
         if (currentPage + 1 < totalPages && !isLoadingMore) {
             const nextPage = currentPage + 1;
             setCurrentPage(nextPage);
-            performSearchImages(query, selectedCollection, selectedFacets, nextPage);
+            performSearchImages(query, selectedCollection, selectedFacetFilters, nextPage);
         }
-    }, [currentPage, totalPages, isLoadingMore, query, selectedCollection, selectedFacets, performSearchImages]);
+    }, [currentPage, totalPages, isLoadingMore, selectedCollection, selectedFacetFilters, performSearchImages]);
 
     // Handler for searching
     const search = useCallback((): void => {
@@ -270,9 +269,9 @@ function MainApp(): React.JSX.Element {
             performSearchCollections(query);
         } else {
             // Search for assets or assets in a collection
-            performSearchImages(query, selectedCollection, selectedFacets, 0);
+            performSearchImages(query, selectedCollection, selectedFacetFilters, 0);
         }
-    }, [query, selectedQueryType, selectedCollection, selectedFacets, performSearchCollections, performSearchImages]);
+    }, [selectedQueryType, selectedCollection, selectedFacetFilters, performSearchCollections, performSearchImages]);
 
     // Read query and selectedQueryType from URL on mount
     useEffect(() => {
@@ -283,14 +282,11 @@ function MainApp(): React.JSX.Element {
         if (queryType !== null && (queryType === QUERY_TYPES.ASSETS || queryType === QUERY_TYPES.COLLECTIONS)) {
             setSelectedQueryType(queryType);
         }
-        if (urlQuery !== null || queryType !== null) {
-            dynamicMediaClient && search();
-        }
-    }, [dynamicMediaClient, search]);
+    }, [dynamicMediaClient]);
 
     useEffect(() => {
         dynamicMediaClient && window.history.replaceState({}, '', `${window.location.pathname}`);
-    }, [query, selectedQueryType, dynamicMediaClient]);
+    }, [selectedQueryType, dynamicMediaClient]);
 
     // Auto-search with empty query on app load
     useEffect(() => {
@@ -298,6 +294,18 @@ function MainApp(): React.JSX.Element {
             search();
         }
     }, [dynamicMediaClient, accessToken]);
+
+    useEffect(() => {
+        if (accessToken && !settingsLoadedRef.current) {
+            settingsLoadedRef.current = true;
+            const excClient = new ExcClient({ accessToken });
+            excClient.getSettings({}).then(settings => {
+                console.log('Settings:', settings);
+            }).catch(error => {
+                console.error('Error fetching settings:', error);
+            });
+        }
+    }, [accessToken]);
 
     // Cart functions
     const handleAddToCart = async (image: Asset): Promise<void> => {
@@ -533,8 +541,8 @@ function MainApp(): React.JSX.Element {
                             <div className={`facet-filter-panel ${isMobileFilterOpen ? 'mobile-open' : ''}`}>
                                 <FacetFilter
                                     hits={hits?.hits || []}
-                                    selectedFacets={selectedFacets}
-                                    setSelectedFacets={setSelectedFacets}
+                                    selectedFacetFilters={selectedFacetFilters}
+                                    setSelectedFacetFilters={setSelectedFacetFilters}
                                     search={search}
                                 />
                             </div>

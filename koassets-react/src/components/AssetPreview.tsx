@@ -94,9 +94,9 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
 
                 <div className="modal-header">
                     <div className="preview-tags">
-                        {selectedImage?.['tccc-campaignName'] && (
+                        {(selectedImage?.['tccc-campaignName'] as string) && (
                             <a href={selectedImage?.name}>
-                                <span className="preview-tag tccc-tag">{removeHyphenTitleCase(selectedImage['tccc-campaignName'])}</span>
+                                <span className="preview-tag tccc-tag">{removeHyphenTitleCase(selectedImage['tccc-campaignName'] as string)}</span>
                             </a>
                         )}
                     </div>

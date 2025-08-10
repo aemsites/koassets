@@ -1,9 +1,8 @@
 // Asset-related types
 import React from 'react';
-import { FILTERS_MAP } from '../components/filterMaps';
 import type { DynamicMediaClient } from '../dynamicmedia-client';
 
-export interface Asset extends Partial<Record<keyof typeof FILTERS_MAP, string>> {
+export interface Asset {
     assetId?: string;
     name?: string;
     description?: string;
@@ -170,8 +169,8 @@ export interface FacetCheckedState {
 
 export interface FacetFilterProps {
     hits?: Asset[]; // Using Asset type instead of any
-    selectedFacets: string[][];
-    setSelectedFacets: (facets: string[][]) => void;
+    selectedFacetFilters?: string[][];
+    setSelectedFacetFilters: (facetFilters: string[][]) => void;
     search: () => void;
 }
 

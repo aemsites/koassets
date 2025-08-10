@@ -80,8 +80,8 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
                     <div className="product-info">
                         <div className="product-title-section">
                             <div className="product-tags">
-                                {image?.['tccc-campaignName'] && (
-                                    <span className="product-tag tccc-tag">{removeHyphenTitleCase(image['tccc-campaignName'])}</span>
+                                {image?.['tccc-campaignName'] as string && (
+                                    <span className="product-tag tccc-tag">{removeHyphenTitleCase(image['tccc-campaignName'] as string)}</span>
                                 )}
                             </div>
                             <div className="product-title">

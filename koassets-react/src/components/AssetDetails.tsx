@@ -112,8 +112,8 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                         <div className="assets-details-info-section-inner">
                             <div className="assets-details-header">
                                 <div className="assets-details-tags">
-                                    {selectedImage?.['tccc-campaignName'] && (
-                                        <span className="assets-details-tag tccc-tag">{removeHyphenTitleCase(selectedImage['tccc-campaignName'])}</span>
+                                    {selectedImage?.['tccc-campaignName'] as string && (
+                                        <span className="assets-details-tag tccc-tag">{removeHyphenTitleCase(selectedImage['tccc-campaignName'] as string)}</span>
                                     )}
                                 </div>
                                 <h2 className="assets-details-title">
@@ -128,7 +128,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                 <div className="details-modal-grid">
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">CREATED</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{formatDate(selectedImage['repo-createDate'])}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{formatDate(selectedImage['repo-createDate'] as number)}</span>
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">TYPE</span>
