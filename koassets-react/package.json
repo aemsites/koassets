@@ -16,7 +16,6 @@
     "build:static": "vite build && cp -rf dist/* ../tools/assets-browser && node scripts/generate-safe-config.cjs",
     "build:deploy": "vite build && cp -rf dist/* ../tools/assets-browser && node scripts/generate-deployment-config.cjs",
     "build:embed": "vite build && cp -rf dist/* ../tools/assets-browser && node scripts/generate-html-with-config.cjs",
-    "build:template": "vite build && cp -rf dist/* ../tools/assets-browser && node scripts/generate-html-template.cjs",
     "preview": "vite preview",
     "preview:staging": "npx cross-env NODE_ENV=staging vite preview",
     "preview:prod": "npx cross-env NODE_ENV=production vite preview",
