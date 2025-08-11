@@ -19,14 +19,14 @@ npm run dev
 ### 🏗️ **Production Build**
 
 ```bash
-# Option 1: Server-side template (recommended)
-npm run build:template
-
-# Option 2: Static embedded config
+# Option 1: Static embedded config (recommended)
 VITE_ADOBE_CLIENT_ID=your-id VITE_BUCKET=your-bucket npm run build:embed
 
-# Option 3: Use .env files
+# Option 2: Use .env files
 npm run build:prod
+
+# Option 3: Deployment config
+npm run build:deploy
 ```
 
 ### 📁 **Key Files**
@@ -57,7 +57,7 @@ npm run build:prod
 
 ### 🚀 Development Experience
 
-- **HTTP/HTTPS Support**: Flexible development with automatic protocol detection
+- **HTTP Development**: Local development server with hot module replacement
 - **Hot Module Replacement**: Fast development with Vite
 - **Cross-Platform**: Works on Windows, macOS, and Linux
 - **Responsive Design**: Modern UI that works on desktop and mobile
@@ -117,7 +117,7 @@ src/
 - **Authentication**: Adobe IMS OAuth 2.0 + PKCE
 - **Search**: Algolia search integration
 - **Build Tool**: Vite with hot module replacement
-- **Development**: HTTP/HTTPS support with automatic certificate detection
+- **Development**: HTTP development server
 
 ## Getting Started
 
@@ -181,57 +181,15 @@ src/
 4. **Start the development server**
 
    ```bash
-   npm run dev          # HTTPS mode (if certificates exist)
-   npm run dev:http     # HTTP mode
-   npm run dev:https    # Force HTTPS mode
+   npm run dev
    ```
-
-### Local HTTPS Development (Optional)
-
-For HTTPS development with trusted certificates:
-
-1. **Install mkcert**
-
-   ```bash
-   # macOS
-   brew install mkcert
-
-   # Windows (using Chocolatey)
-   choco install mkcert
-
-   # Linux
-   # See https://github.com/FiloSottile/mkcert#installation
-   ```
-
-2. **Create local Certificate Authority**
-
-   ```bash
-   mkcert -install
-   ```
-
-3. **Generate certificates for localhost**
-
-   ```bash
-   mkcert localhost
-   ```
-
-4. **Run with HTTPS**
-
-   ```bash
-   npm run dev    # Auto-detects certificates and uses HTTPS
-   ```
-
-5. **Access your app**
-   - **HTTPS**: `https://localhost:5173/tools/assets-browser/index.html`
-   - **HTTP**: `http://localhost:5173/tools/assets-browser/index.html`
 
 ### Adobe Developer Console Setup
 
 1. **Create or access your Adobe Developer Console project**
 2. **Add OAuth Web App**
 3. **Configure Redirect URIs**:
-   - `https://localhost:5173` (for HTTPS development)
-   - `http://localhost:5173` (for HTTP development)
+   - `http://localhost:5173` (for development)
 4. **Enable Required Scopes**:
    - `aem.assets.author`
    - `AdobeID`
@@ -244,7 +202,7 @@ For HTTPS development with trusted certificates:
 ### Getting Started
 
 1. **Start the application**: `npm run dev`
-2. **Open your browser**: Navigate to `https://localhost:5173/tools/assets-browser/index.html`
+2. **Open your browser**: Navigate to `http://localhost:5173/tools/assets-browser/index.html`
 3. **Sign in with Adobe**: Click the "Sign in with Adobe" button
 4. **Complete authentication**: Follow the Adobe login flow
 5. **Start browsing**: Search for assets, browse collections, and manage your cart
@@ -273,19 +231,16 @@ For HTTPS development with trusted certificates:
 
 ### Available Scripts
 
-- `npm run dev` - Start development server (auto-detects HTTPS/HTTP)
-- `npm run dev:http` - Force HTTP development mode
-- `npm run dev:https` - Force HTTPS development mode
+- `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
 
 ### Environment Configuration
 
-The app automatically detects the protocol and configures Adobe IMS accordingly:
+The app uses HTTP for local development and configures Adobe IMS accordingly:
 
-- **HTTPS Mode**: Uses `https://localhost:5173` as redirect URI (recommended)
-- **HTTP Mode**: Uses `http://localhost:5173` as redirect URI
+- **Development Mode**: Uses `http://localhost:5173` as redirect URI
 
 ### Code Style
 
@@ -398,39 +353,9 @@ npm run build:staging
 
 #### Production Build Options
 
-**Option 1: Server-Side Template (Recommended for Production)**
+**Option 1: Static Embedded Config (Recommended for Production)**
 
-Build with environment variable placeholders that the target server will process:
-
-```bash
-npm run build:template
-```
-
-**Result:** Creates `tools/assets-browser/index.html` with:
-
-```html
-<script>
-  window.APP_CONFIG = {
-    ADOBE_CLIENT_ID: "${ADOBE_CLIENT_ID}",
-    BUCKET: "${BUCKET}",
-  };
-</script>
-```
-
-**Target server then processes it with:**
-
-```bash
-# Set environment variables on target server
-export ADOBE_CLIENT_ID=your-actual-client-id
-export BUCKET=your-actual-bucket-name
-
-# Process the template
-envsubst < index.html > index.html.tmp && mv index.html.tmp index.html
-```
-
-**Option 2: Embedded Config (Static Values)**
-
-Build with values embedded directly (if you know them at build time):
+Build with values embedded directly at build time:
 
 ```bash
 # PowerShell
@@ -439,6 +364,18 @@ $env:VITE_ADOBE_CLIENT_ID="your-client-id"; $env:VITE_BUCKET="your-bucket-name";
 # Bash/Zsh
 VITE_ADOBE_CLIENT_ID=your-client-id VITE_BUCKET=your-bucket-name npm run build:embed
 ```
+
+**Result:** Creates `tools/assets-browser/index.html` with values embedded directly in the JavaScript.
+
+**Option 2: Deployment Config**
+
+Build with deployment-specific configuration:
+
+```bash
+npm run build:deploy
+```
+
+**Result:** Creates optimized build for deployment environments.
 
 **Option 3: Legacy Build (Uses .env files)**
 
@@ -450,8 +387,8 @@ npm run build:prod
 
 #### Which Production Build Should You Use?
 
-- **Use Option 1** if your target server can process environment variables (most secure)
-- **Use Option 2** if you want static values embedded at build time
+- **Use Option 1** if you want static values embedded at build time (most straightforward)
+- **Use Option 2** for deployment environments with specific configuration needs
 - **Use Option 3** for local development/testing with your `.env` files
 
 #### Environment-Specific Preview
@@ -464,11 +401,6 @@ npm run preview:prod     # Preview production build
 ## Troubleshooting
 
 ### Common Issues
-
-**HTTPS Certificate Issues**
-
-- Ensure mkcert is properly installed and certificates are generated
-- Try HTTP mode: `npm run dev:http`
 
 **Adobe Authentication Failures**
 
