@@ -12,10 +12,6 @@
     margin: 0;
 }
 
-.container .lazy-image-container .image-container img {
-    height: 100% !important;
-}
-
 .lazy-image {
     width: 100%;
     height: 100%;
@@ -55,14 +51,12 @@
 
 .lazy-image-placeholder.loading {
     background-color: #f0f0f0;
-    /* Match original loading-thumbnail */
     color: #666;
     font-size: 12px;
 }
 
 .lazy-image-placeholder.error {
     background-color: #ffccc7;
-    /* Match original error-thumbnail */
     color: #f5222d;
     font-size: 12px;
 }

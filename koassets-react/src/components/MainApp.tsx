@@ -26,6 +26,39 @@ const searchAssetsTitle = 'Search Assets - where you can discover the company\'s
 const searchCollectionsTitle = 'My Collections';
 const HITS_PER_PAGE = 2400;
 
+/**
+ * Transforms a search hit record into an Asset object
+ * @param hit - The raw hit data from search results
+ * @returns Asset object with populated properties
+ */
+function populateAssetFromHit(hit: Record<string, unknown>): Asset {
+    const repoName = (hit['repo-name'] as string) || 'Untitled';
+
+    return {
+        assetId: hit.assetId as string,
+        name: repoName,
+        url: '', // Empty URL - will be loaded lazily
+        alt: (hit['dc-title'] as string) || (hit['repo-name'] as string) || 'Asset',
+        size: (hit['size'] as number) || 0,
+        format: (hit?.['dc-format-label'] as string) || 'Unknown',
+        creator: hit?.['dc-creator'] as string,
+        mimeType: (hit['repo-mimetype'] as string) || 'Unknown',
+        path: (hit['repo-path'] as string) || '',
+        tags: (hit['xcm-machineKeywords'] as string[]) || [],
+        description: hit?.['tccc-description'] as string || hit?.['dc-description'] as string,
+        title: hit?.['dc-title'] as string,
+        subject: hit?.['dc-subject'] as string | string[],
+        createDate: hit?.['repo-createDate'] as string,
+        modifyDate: hit?.['repo-modifyDate'] as string,
+        expired: hit?.['is_pur-expirationDate'] as boolean,
+        category: (hit?.['tccc-assetCategoryAndType_hidden'] as string[])?.length > 0
+            ? (hit?.['tccc-assetCategoryAndType_hidden'] as string[])[0].split('|')[0]
+            : 'Unknown',
+        rightsFree: hit?.['tccc-rightsFree'] as boolean,
+        ...hit
+    } as Asset;
+}
+
 function MainApp(): React.JSX.Element {
     // Local state
     const [accessToken, setAccessToken] = useState<string>(() => {
@@ -133,33 +166,7 @@ function MainApp(): React.JSX.Element {
                 if (hits.length > 0) {
                     // No longer download blobs upfront - just prepare metadata for lazy loading
                     // Each hit is transformed to match the Asset interface
-                    const processedImages: Asset[] = hits.map((hit: Record<string, unknown>): Asset => {
-                        const repoName = (hit['repo-name'] as string) || 'Untitled';
-
-                        // Mapping hit data to Asset interface properties
-                        return {
-                            assetId: hit.assetId as string,
-                            name: repoName,
-                            url: '', // Empty URL - will be loaded lazily
-                            alt: (hit['dc-title'] as string) || (hit['repo-name'] as string) || 'Asset',
-                            size: (hit['size'] as number) || 0,
-                            format: (hit?.['dc-format-label'] as string) || 'Unknown',
-                            creator: hit?.['dc-creator'] as string,
-                            mimeType: (hit['repo-mimetype'] as string) || 'Unknown',
-                            path: (hit['repo-path'] as string) || '',
-                            tags: (hit['xcm-machineKeywords'] as string[]) || [],
-                            description: hit?.['tccc-description'] as string || hit?.['dc-description'] as string,
-                            title: hit?.['dc-title'] as string,
-                            subject: hit?.['dc-subject'] as string | string[],
-                            createDate: hit?.['repo-createDate'] as string,
-                            modifyDate: hit?.['repo-modifyDate'] as string,
-                            expired: hit?.['is_pur-expirationDate'] as boolean,
-                            category: (hit?.['tccc-assetCategoryAndType_hidden'] as string[])?.length > 0
-                                ? (hit?.['tccc-assetCategoryAndType_hidden'] as string[])[0].split('|')[0]
-                                : 'Unknown',
-                            ...hit
-                        } as Asset;
-                    });
+                    const processedImages: Asset[] = hits.map(populateAssetFromHit);
 
                     if (isLoadingMore) {
                         // Append to existing images
