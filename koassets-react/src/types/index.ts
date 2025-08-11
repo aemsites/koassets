@@ -162,16 +162,17 @@ export interface AssetDetailsProps extends AssetPreviewProps {
 
 // Facet Filter types
 export interface FacetCheckedState {
-    [facetKey: string]: {
-        [facetValue: string]: boolean;
+    [facetGroup: string]: {
+        [facetName: string]: boolean;
     };
 }
 
 export interface FacetFilterProps {
-    hits?: Asset[]; // Using Asset type instead of any
+    searchResult?: SearchResult | null;
     selectedFacetFilters?: string[][];
     setSelectedFacetFilters: (facetFilters: string[][]) => void;
     search: () => void;
+    excFacets?: string[];
 }
 
 // Phase 3 Component Types
@@ -191,7 +192,7 @@ export interface ImageGalleryProps {
     onRemoveFromCart?: (image: Asset) => void;
     cartItems?: CartItem[];
     dynamicMediaClient?: DynamicMediaClient | null;
-    hits?: SearchResults | null;
+    searchResult?: SearchResult | null;
     onToggleMobileFilter?: () => void;
     isMobileFilterOpen?: boolean;
     onBulkAddToCart: (selectedCardIds: Set<string>, images: Asset[]) => void;
@@ -310,9 +311,15 @@ export interface AlgoliaSearchQuery {
     requests: AlgoliaSearchRequest[];
 }
 
-export interface SearchResults {
+export interface SearchResult {
     hits: Asset[];
     nbHits: number;
+    nbPages: number;
+    facets?: {
+        [facetGroup: string]: {
+            [facetName: string]: number;
+        };
+    };
     [key: string]: unknown;
 }
 

@@ -1,20 +1,17 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { FacetCheckedState, FacetFilterProps } from '../types';
 import './FacetFilter.css';
-import { FILTERS_MAP } from './filterMaps';
-
-interface FacetsFromHits {
-    [key: string]: string[];
-}
+import { FACETS_NAME_MAP, FACETS_WHITELIST } from './filterMaps';
 
 interface OpenState {
     [key: string]: boolean;
 }
 
 const FacetFilter: React.FC<FacetFilterProps> = ({
-    hits = [],
+    searchResult,
     setSelectedFacetFilters,
-    search
+    search,
+    excFacets = []
 }) => {
     const [open, setOpen] = useState<OpenState>({});
     const [checked, setChecked] = useState<FacetCheckedState>({});
@@ -23,37 +20,16 @@ const FacetFilter: React.FC<FacetFilterProps> = ({
         setOpen(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
-    // 'hits' changed --> 'facetsFromHits' changed --> 'checked' state updated --> 'selectedFacets' updated
-    const facetsFromHits = useMemo<FacetsFromHits>(() => {
-        const facets: FacetsFromHits = {};
-        // Transform into facetsFromHits
-        Object.keys(FILTERS_MAP).forEach(key => {
-            const values = new Set<string>();
-            hits?.forEach(hit => {
-                const value = hit[key];
-                if (key.toLowerCase().includes('date')) {
-                    // skip
-                } else if (typeof value === 'string') {
-                    value && values.add(value);
-                } else if (Array.isArray(value)) {
-                    value.forEach(v => typeof v === 'string' && v && values.add(v));
-                }
-            });
-            facets[key] = Array.from(values);
-        });
-        return facets;
-    }, [hits]);
-
-    // Sync facetsFromHits with checked state
+    // Sync searchResult?.facets with checked state
     useEffect(() => {
         const handler = setTimeout(() => {
             setChecked(prevChecked => {
                 const newChecked: typeof prevChecked = {};
                 Object.keys(prevChecked).forEach(key => {
-                    if (facetsFromHits[key]) {
+                    if (searchResult?.facets?.[key]) {
                         const filtered = Object.fromEntries(
                             Object.entries(prevChecked[key]).filter(
-                                ([facet, isChecked]) => isChecked && facetsFromHits[key].includes(facet)
+                                ([facet, isChecked]) => isChecked && Object.keys(searchResult.facets![key]).includes(facet)
                             )
                         );
                         if (Object.keys(filtered).length > 0) {
@@ -65,7 +41,7 @@ const FacetFilter: React.FC<FacetFilterProps> = ({
             });
         }, 2000); // 2000ms debounce
         return () => clearTimeout(handler);
-    }, [facetsFromHits, setChecked]);
+    }, [searchResult?.facets, setChecked]);
 
     // Transform the checked object into an array of facet filters
     useEffect(() => {
@@ -116,33 +92,42 @@ const FacetFilter: React.FC<FacetFilterProps> = ({
                         </button>
                     </div>
                     <div className="facet-filter-list">
-                        {/* Display the filters */}
-                        {Object.entries(FILTERS_MAP).map(([key, label]) => (
-                            <div key={key} className="facet-filter-section">
-                                <button
-                                    className="facet-filter-button"
-                                    tabIndex={0}
-                                    onClick={() => toggle(key)}
-                                    aria-expanded={!!open[key]}
-                                >
-                                    <span className="facet-filter-label">{label}</span>
-                                    <span className="facet-filter-arrow">{open[key] ? '\u25B2' : '\u25BC'}</span>
-                                </button>
-                                {open[key] && facetsFromHits[key]?.length > 0 && (
-                                    <div className="facet-filter-checkbox-list">
-                                        {facetsFromHits[key].map(facet => (
-                                            <label key={facet} className="facet-filter-checkbox-label">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={!!checked[key]?.[facet]}
-                                                    onChange={() => handleCheckbox(key, facet)}
-                                                /> {facet}
-                                            </label>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
+                        {/* Display the facets from the EXC */}
+                        {excFacets.map(facetGroup => {
+                            const label = FACETS_NAME_MAP[facetGroup as keyof typeof FACETS_NAME_MAP] || facetGroup;
+
+                            // Render if facets exist for this group OR facetGroup is in whitelist
+                            if (!searchResult?.facets?.[facetGroup] && !FACETS_WHITELIST.includes(facetGroup)) {
+                                return null;
+                            }
+
+                            return (
+                                <div key={facetGroup} className="facet-filter-section">
+                                    <button
+                                        className="facet-filter-button"
+                                        tabIndex={0}
+                                        onClick={() => toggle(facetGroup)}
+                                        aria-expanded={!!open[facetGroup]}
+                                    >
+                                        <span className="facet-filter-label">{label}</span>
+                                        <span className="facet-filter-arrow">{open[facetGroup] ? '\u25B2' : '\u25BC'}</span>
+                                    </button>
+                                    {open[facetGroup] && searchResult?.facets?.[facetGroup] && Object.keys(searchResult.facets[facetGroup] || {}).length > 0 && (
+                                        <div className="facet-filter-checkbox-list">
+                                            {Object.entries(searchResult.facets[facetGroup] || {}).map(([facetName, count]) => (
+                                                <label key={facetName} className="facet-filter-checkbox-label">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={!!checked[facetGroup]?.[facetName]}
+                                                        onChange={() => handleCheckbox(facetGroup, facetName)}
+                                                    /> {facetName} ({count})
+                                                </label>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </div>

@@ -16,7 +16,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     onRemoveFromCart,
     cartItems = [],
     dynamicMediaClient,
-    hits,
+    searchResult,
     onToggleMobileFilter,
     isMobileFilterOpen,
     onBulkAddToCart,
@@ -141,7 +141,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     };
 
     // Calculate statistics
-    const totalCount = hits && hits.nbHits ? (hits.nbHits > 100 ? '100+' : hits.nbHits.toString()) : '0';
+    const totalCount = searchResult && searchResult.nbHits ? (searchResult.nbHits > 100 ? '100+' : searchResult.nbHits.toString()) : '0';
 
     return (
         <div className="image-gallery">
@@ -175,8 +175,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 viewType={viewType}
                 onViewTypeChange={setViewType}
                 hasMorePages={hasMorePages}
-                currentPage={(hits?.page as number) || 0}
-                totalPages={(hits?.nbPages as number) || 0}
+                currentPage={(searchResult?.page as number) || 0}
+                totalPages={(searchResult?.nbPages as number) || 0}
             />
 
             {loading ? (

@@ -1,7 +1,7 @@
 const IMS_ORG = '9075A2B154DE8AF80A4C98A7@AdobeOrg';
-const CREATIVE_CLOUD_SETTINGS = {"assetDetails":"","assetCard":"","facets":"","search":"","hydration":"","branding":"","customLinks":"","generalConfig":"","renditionConfig":""};
-const AEM_ASSETS_APP_ID = 'ContentHub';
-const AEM_ASSETS_GROUP_ID = 'contenthub_aem_metadata_config-64403-544653';
+const CONTENT_HUB_SETTINGS = {"assetDetails":"","assetCard":"","facets":"","search":"","hydration":"","branding":"","customLinks":"","generalConfig":"","renditionConfig":""};
+const CONTENT_HUB_APP_ID = 'ContentHub';
+const CONTENT_HUB_GROUP_ID = 'contenthub_aem_metadata_config-64403-544653';
 
 // Custom error class for HTTP errors
 export class HttpError extends Error {
@@ -61,11 +61,11 @@ export class ExcClient {
         return headers;
     }
 
-    async getSettings({
+    async getExcSettings({
         imsOrg = IMS_ORG,
-        appId = AEM_ASSETS_APP_ID,
-        groupId = AEM_ASSETS_GROUP_ID,
-        settings = CREATIVE_CLOUD_SETTINGS
+        appId = CONTENT_HUB_APP_ID,
+        groupId = CONTENT_HUB_GROUP_ID,
+        settings = CONTENT_HUB_SETTINGS
     }: GetSettingsParams = {}): Promise<Record<string, unknown> | null> {
         const url = `${BASE_URL}/settings/v2/action/GET/level/org`;
         const headers = this.getHeaders({ imsOrg, contentType: 'application/json', addAuthTokens: true });
@@ -86,5 +86,29 @@ export class ExcClient {
 
         const res = await response.json();
         return res?.settings ?? null;
+    }
+
+    async getExcFacets({
+        imsOrg = IMS_ORG,
+        appId = CONTENT_HUB_APP_ID,
+        groupId = CONTENT_HUB_GROUP_ID,
+        settings = CONTENT_HUB_SETTINGS
+    }: GetSettingsParams = {}): Promise<string[]> {
+        const settingsData = await this.getExcSettings({ imsOrg, appId, groupId, settings });
+        
+        if (!settingsData) {
+            return [];
+        }
+
+        // Extract keys from settings.facets.fields and replace ':' with '-'
+        const settingsRecord = settingsData as Record<string, unknown>;
+        const facetsData = settingsRecord?.facets as Record<string, unknown>;
+        const fieldsData = facetsData?.fields as Record<string, unknown>;
+        
+        if (fieldsData) {
+            return Object.keys(fieldsData).map(key => key.replace(/:/g, '-'));
+        }
+        
+        return [];
     }
 } 
