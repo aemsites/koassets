@@ -5,9 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:http": "npx cross-env FORCE_HTTP=true vite",
-    "dev:http-win": "set FORCE_HTTP=true && vite",
-    "dev:https": "vite",
     "build": "vite build && node scripts/generate-runtime-config.cjs && cp -rf dist/* ../tools/assets-browser",
     "build:local": "npx cross-env NODE_ENV=local vite build && node scripts/generate-runtime-config.cjs && cp -rf dist/* ../tools/assets-browser",
     "build:dev": "npx cross-env NODE_ENV=development vite build && node scripts/generate-runtime-config.cjs && cp -rf dist/* ../tools/assets-browser",
