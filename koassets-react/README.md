@@ -19,14 +19,14 @@ npm run dev
 ### 🏗️ **Production Build**
 
 ```bash
-# Option 1: Server-side template (recommended)
-npm run build:template
-
-# Option 2: Static embedded config
+# Option 1: Static embedded config (recommended)
 VITE_ADOBE_CLIENT_ID=your-id VITE_BUCKET=your-bucket npm run build:embed
 
-# Option 3: Use .env files
+# Option 2: Use .env files
 npm run build:prod
+
+# Option 3: Deployment config
+npm run build:deploy
 ```
 
 ### 📁 **Key Files**
@@ -398,39 +398,9 @@ npm run build:staging
 
 #### Production Build Options
 
-**Option 1: Server-Side Template (Recommended for Production)**
+**Option 1: Static Embedded Config (Recommended for Production)**
 
-Build with environment variable placeholders that the target server will process:
-
-```bash
-npm run build:template
-```
-
-**Result:** Creates `tools/assets-browser/index.html` with:
-
-```html
-<script>
-  window.APP_CONFIG = {
-    ADOBE_CLIENT_ID: "${ADOBE_CLIENT_ID}",
-    BUCKET: "${BUCKET}",
-  };
-</script>
-```
-
-**Target server then processes it with:**
-
-```bash
-# Set environment variables on target server
-export ADOBE_CLIENT_ID=your-actual-client-id
-export BUCKET=your-actual-bucket-name
-
-# Process the template
-envsubst < index.html > index.html.tmp && mv index.html.tmp index.html
-```
-
-**Option 2: Embedded Config (Static Values)**
-
-Build with values embedded directly (if you know them at build time):
+Build with values embedded directly at build time:
 
 ```bash
 # PowerShell
@@ -439,6 +409,18 @@ $env:VITE_ADOBE_CLIENT_ID="your-client-id"; $env:VITE_BUCKET="your-bucket-name";
 # Bash/Zsh
 VITE_ADOBE_CLIENT_ID=your-client-id VITE_BUCKET=your-bucket-name npm run build:embed
 ```
+
+**Result:** Creates `tools/assets-browser/index.html` with values embedded directly in the JavaScript.
+
+**Option 2: Deployment Config**
+
+Build with deployment-specific configuration:
+
+```bash
+npm run build:deploy
+```
+
+**Result:** Creates optimized build for deployment environments.
 
 **Option 3: Legacy Build (Uses .env files)**
 
@@ -450,8 +432,8 @@ npm run build:prod
 
 #### Which Production Build Should You Use?
 
-- **Use Option 1** if your target server can process environment variables (most secure)
-- **Use Option 2** if you want static values embedded at build time
+- **Use Option 1** if you want static values embedded at build time (most straightforward)
+- **Use Option 2** for deployment environments with specific configuration needs
 - **Use Option 3** for local development/testing with your `.env` files
 
 #### Environment-Specific Preview
