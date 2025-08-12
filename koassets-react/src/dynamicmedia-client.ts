@@ -356,11 +356,6 @@ export class DynamicMediaClient {
     }
 
     async getOptimizedDeliveryBlob(assetId: string, repoName: string, width: number = 350) {
-
-        // // TODO: remove this
-        // const metadata = await this.getMetadata(assetId);
-        // console.log('metadata: ', metadata);
-
         // Convert video extensions to avif for optimal delivery
         const processedRepoName = this.convertVideoExtensionToAvif(repoName);
 

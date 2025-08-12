@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import type { Asset, ImageGalleryProps } from '../types';
 import AssetCardViewGrid from './AssetCardViewGrid';
 import AssetCardViewList from './AssetCardViewList';
-import AssetDetails from './AssetDetails';
+import AssetDetails from './AssetDetails/';
 import AssetPreview from './AssetPreview';
 import './ImageGallery.css';
 import SearchPanel from './SearchPanel';

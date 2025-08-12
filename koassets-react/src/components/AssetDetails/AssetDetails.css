@@ -7,15 +7,17 @@
     bottom: 0;
     background-color: rgba(0, 0, 0, 0.95);
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     z-index: 1100;
     padding: 0;
+    overflow-y: auto;
 }
 
 .asset-details-modal-inner {
     width: 100vw;
-    height: 100vh;
+    max-width: 100vw;
+    min-height: 100vh;
     background: white;
     position: relative;
     display: flex;
@@ -45,10 +47,17 @@
     background: rgba(0, 0, 0, 0.9);
 }
 
-.assets-details-content {
+.assets-details-main-section {
     display: flex;
-    height: 100%;
-    overflow: hidden;
+    flex: 1;
+    min-height: 70vh;
+    overflow: visible;
+}
+
+/* Metadata Grouping Section */
+.assets-details-metadata-section {
+    flex: 0 0 auto;
+    overflow: visible;
 }
 
 .assets-details-image-section {
@@ -103,7 +112,6 @@
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    border-left: 1px solid #e1e1e1;
 }
 
 .assets-details-info-section-inner {
@@ -184,6 +192,7 @@
     width: 140px;
     height: 42px;
     margin-top: 20px;
+    margin-left: auto;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -245,7 +254,7 @@
 
 /* Responsive full screen modal */
 @media (max-width: 1024px) {
-    .assets-details-content {
+    .assets-details-main-section {
         flex-direction: column;
     }
 
@@ -278,6 +287,50 @@
     .assets-details-title {
         font-size: 20px;
     }
+}
+
+/* Metadata Grouping Grid */
+.assets-details-metadata-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr;
+    gap: 20px;
+    padding: 20px;
+}
+
+.assets-details-metadata-label {
+    -webkit-text-size-adjust: 100%;
+    box-sizing: inherit;
+    border: none;
+    margin: calc(2rem - 0.14286em) 0 1rem;
+    padding: 0;
+    text-transform: none;
+    margin-top: -0.14285714em;
+    word-wrap: break-word;
+    margin-bottom: 0;
+    color: #707070;
+    font-family: "TCCC UnityHeadline Regular", "Helvetica Neue", Arial, Helvetica, sans-serif;
+    font-size: .6875rem;
+    font-weight: 400;
+    line-height: .825rem;
+    padding-bottom: .375rem;
+    width: 100%;
+}
+
+.assets-details-metadata-value {
+    -webkit-text-size-adjust: 100%;
+    box-sizing: inherit;
+    margin: 0 0 1em;
+    margin-bottom: 0;
+    margin-top: 0;
+    word-wrap: break-word;
+    color: #0e202e;
+    font-family: "TCCC UnityHeadline Regular", "Helvetica Neue", Arial, Helvetica, sans-serif;
+    font-size: .75rem;
+    font-weight: 600;
+    line-height: .9rem;
+    padding-left: 0rem;
+    width: 100%;
 }
 
 @media (max-width: 768px) {

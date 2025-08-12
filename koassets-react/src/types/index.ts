@@ -3,23 +3,37 @@ import React from 'react';
 import type { DynamicMediaClient } from '../dynamicmedia-client';
 
 export interface Asset {
-    assetId?: string;
-    name?: string;
-    description?: string;
-    subject?: string | string[];
-    title?: string;
     alt?: string;
-    url: string;
-    size?: number;
-    format?: string;
-    mimeType?: string;
-    loading?: boolean;
-    error?: boolean;
-    path?: string;
-    tags?: string[];
-    creator?: string;
+    assetId?: string;
+    category?: string;
+    categoryAndType?: string;
     createDate?: string;
+    createBy?: string;
+    description?: string;
+    error?: boolean;
+    expired?: boolean;
+    format?: string;
+    loading?: boolean;
+    marketCovered?: string;
+    media?: string;
+    migrationId?: string;
+    modifyBy?: string;
     modifyDate?: string;
+    name?: string;
+    publishDate?: string;
+    publishBy?: string;
+    publishStatus?: string;
+    resolution?: string;
+    rightsFree?: boolean;
+    rightsEndDate?: string;
+    rightsProfileTitle?: string;
+    rightsStartDate?: string;
+    size?: number;
+    sourceId?: string;
+    title?: string;
+    url: string;
+    usage?: string;
+    workfrontId?: string;
     [key: string]: unknown; // For additional Algolia hit properties
 }
 

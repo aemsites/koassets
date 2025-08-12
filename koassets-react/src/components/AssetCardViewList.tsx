@@ -97,7 +97,7 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
                                 </div>
                                 <div className="product-meta-item">
                                     <span className="product-meta-label tccc-metadata-label">TYPE</span>
-                                    <span className="product-meta-value tccc-metadata-value">{image.format || 'Unknown'}</span>
+                                    <span className="product-meta-value tccc-metadata-value">{image.format}</span>
                                 </div>
                                 <div className="product-meta-item">
                                     <span className="product-meta-label tccc-metadata-label">FILE EXT</span>

@@ -35,28 +35,39 @@ function populateAssetFromHit(hit: Record<string, unknown>): Asset {
     const repoName = (hit['repo-name'] as string) || 'Untitled';
 
     return {
-        assetId: hit.assetId as string,
-        name: repoName,
-        url: '', // Empty URL - will be loaded lazily
         alt: (hit['dc-title'] as string) || (hit['repo-name'] as string) || 'Asset',
-        size: (hit['size'] as number) || 0,
-        format: (hit?.['dc-format-label'] as string) || 'Unknown',
-        creator: hit?.['dc-creator'] as string,
-        mimeType: (hit['repo-mimetype'] as string) || 'Unknown',
-        path: (hit['repo-path'] as string) || '',
-        tags: (hit['xcm-machineKeywords'] as string[]) || [],
-        description: hit?.['tccc-description'] as string || hit?.['dc-description'] as string,
-        title: hit?.['dc-title'] as string,
-        subject: hit?.['dc-subject'] as string | string[],
-        createDate: hit?.['repo-createDate'] as string,
-        modifyDate: hit?.['repo-modifyDate'] as string,
-        expired: hit?.['is_pur-expirationDate'] as boolean,
+        assetId: hit['assetId'] as string,
         category: (hit?.['tccc-assetCategoryAndType_hidden'] as string[])?.length > 0
             ? (hit?.['tccc-assetCategoryAndType_hidden'] as string[])[0].split('|')[0]
             : 'Unknown',
-        rightsFree: hit?.['tccc-rightsFree'] as boolean,
+        categoryAndType: (hit?.['tccc-assetCategoryAndType'] as string[])?.join('|') || 'Unknown',
+        createDate: hit?.['repo-createDate'] as string,
+        createBy: hit?.['dc-creator'] as string, // Missing metadata
+        description: hit?.['tccc-description'] as string || hit?.['dc-description'] as string,
+        expired: hit?.['is_pur-expirationDate'] as boolean,
+        format: (hit?.['dc-format-label'] as string) || 'Unknown',
+        marketCovered: hit?.['tccc-marketCovered'] as string || 'Unknown', // Missing metadata
+        media: hit?.['tccc-media'] as string || 'Unknown', // Missing metadata
+        migrationId: hit?.['tccc-koAssetsMigrationId'] as string, // Missing metadata
+        modifyBy: hit?.['tccc-koAssetsIdModifiedBy'] as string,
+        modifyDate: hit?.['repo-modifyDate'] as string,
+        name: repoName,
+        publishDate: hit?.['tccc-publishDate'] as string || '', // Missing metadata
+        publishBy: hit?.['tccc-publishBy'] as string || 'Unknown', // Missing metadata
+        publishStatus: hit?.['tccc-publishStatus'] as string || 'Unknown', // Missing metadata
+        resolution: (hit?.['tccc-resolution'] as string) || 'Unknown', // Missing metadata
+        rightsFree: hit?.['tccc-rightsFree'] as boolean, // Missing metadata
+        rightsProfileTitle: hit?.['tccc-rightsProfileTitle'] as string || 'Unknown', // Missing metadata
+        rightsEndDate: hit?.['tccc-rightsEndDate'] as string || 'Unknown', // Missing metadata
+        rightsStartDate: hit?.['tccc-rightsStartDate'] as string || 'Unknown', // Missing metadata
+        size: (hit['size'] as number) || 0,
+        sourceId: hit?.['tccc-koAssetsSourceId'] as string, // Missing metadata
+        title: hit?.['dc-title'] as string,
+        url: '', // Empty URL - will be loaded lazily
+        usage: hit?.['tccc-usage'] as string || 'Unknown', // Missing metadata
+        workfrontId: hit?.['tccc-workfrontId'] as string || 'Unknown', // Missing metadata
         ...hit
-    } as Asset;
+    } satisfies Asset;
 }
 
 function MainApp(): React.JSX.Element {

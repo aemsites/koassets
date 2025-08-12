@@ -1,9 +1,9 @@
 // Helper to convert markdown to HTML
-export const markdownToHtml = (markdown) => {
+export const markdownToHtml = (markdown: string): string => {
     if (!markdown) return '';
 
     // Replace code blocks
-    let html = markdown.replace(/```(\w*)\n([\s\S]*?)```/g, (match, language, code) => {
+    let html = markdown.replace(/```(\w*)\n([\s\S]*?)```/g, (_, language: string, code: string) => {
         return `<pre><code class="language-${language}">${escapeHtml(code.trim())}</code></pre>`;
     });
 
@@ -29,7 +29,7 @@ export const markdownToHtml = (markdown) => {
 };
 
 // Helper to escape HTML
-export const escapeHtml = (text) => {
+export const escapeHtml = (text: string): string => {
     return text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -39,13 +39,13 @@ export const escapeHtml = (text) => {
 };
 
 // Helper to pretty print JSON
-export const prettyPrintJSON = (json) => {
+export const prettyPrintJSON = (json: unknown): string => {
     try {
         const jsonString = JSON.stringify(json, null, 2);
         return jsonString.replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
-            .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+            .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match: string) {
                 let cls = 'json-number';
                 if (/^"/.test(match)) {
                     if (/:$/.test(match)) {
@@ -61,12 +61,12 @@ export const prettyPrintJSON = (json) => {
                 return '<span class="' + cls + '">' + match + '</span>';
             });
     } catch (e) {
-        return json;
+        return String(json);
     }
 };
 
 // Helper function to format file size
-export const formatFileSize = (bytes, decimalPoint = 2) => {
+export const formatFileSize = (bytes: number | undefined, decimalPoint: number = 2): string => {
     if (!bytes || bytes === 0) return '0 Bytes';
     const k = 1024;
     const dm = decimalPoint < 0 ? 0 : decimalPoint;
@@ -76,13 +76,13 @@ export const formatFileSize = (bytes, decimalPoint = 2) => {
 };
 
 // Helper function to get file extension
-export const getFileExtension = (filename) => {
+export const getFileExtension = (filename: string | undefined): string => {
     if (!filename) return '';
     return filename.slice(((filename.lastIndexOf(".") - 1) >>> 0) + 2);
 };
 
 // Helper function to format category array
-export const formatCategory = (categories) => {
+export const formatCategory = (categories: string | string[] | undefined): string => {
     if (!categories) return 'Asset';
 
     // If it's a string, convert to array (split by comma)
@@ -107,7 +107,7 @@ export const formatCategory = (categories) => {
 };
 
 // Helper function to format date from epoch time
-export const formatDate = (epochTime) => {
+export const formatDate = (epochTime: string | number | undefined): string => {
     if (!epochTime) return '';
     
     // Convert epoch time to milliseconds if it's in seconds
@@ -130,7 +130,7 @@ export const formatDate = (epochTime) => {
 };
 
 // Helper function to remove hyphens and convert to title case
-export const removeHyphenTitleCase = (text) => {
+export const removeHyphenTitleCase = (text: string | undefined): string => {
     if (!text || typeof text !== 'string') return '';
     
     return text

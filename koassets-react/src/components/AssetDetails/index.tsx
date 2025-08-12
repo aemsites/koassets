@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import type { AssetDetailsProps } from '../types';
-import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
-import { formatCategory, formatDate, formatFileSize, removeHyphenTitleCase } from '../utils/formatters';
+import type { AssetDetailsProps } from '../../types';
+import { fetchOptimizedDeliveryBlob } from '../../utils/blobCache';
+import { formatDate, formatFileSize, removeHyphenTitleCase } from '../../utils/formatters';
 import './AssetDetails.css';
+import AssetDetailsSystem from './AssetDetailsSystem';
 
 const AssetDetails: React.FC<AssetDetailsProps> = ({
     showModal,
@@ -46,6 +47,15 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
         if (showModal && selectedImage && dynamicMediaClient) {
             setImageLoading(true);
             setBlobUrl(null);
+
+            // Get metadata for the asset
+            if (selectedImage.assetId) {
+                dynamicMediaClient.getMetadata(selectedImage.assetId).then(metadata => {
+                    console.log('Asset metadata:', metadata);
+                }).catch(error => {
+                    console.error(`Error getting metadata for asset ${selectedImage.assetId}:`, error);
+                });
+            }
 
             const fetchHighResImage = async () => {
                 try {
@@ -92,7 +102,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                     ×
                 </button>
 
-                <div className="assets-details-content">
+                <div className="assets-details-main-section">
                     <div className="assets-details-image-section">
                         {imageLoading ? (
                             <div className="assets-details-image-loading">
@@ -132,7 +142,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">TYPE</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.format || 'Unknown'}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.format}</span>
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">SIZE</span>
@@ -144,19 +154,19 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">RES.</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{formatCategory(selectedImage.resolution as string || 'Unknown')}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.resolution as string}</span>
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">EXPIRED</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{`${selectedImage.expired}`}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.expired ? 'Yes' : 'No'}</span>
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">USAGE</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{formatCategory(selectedImage.usage as string || 'Unknown')}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.usage as string}</span>
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">RIGHTS FREE</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{formatCategory(selectedImage.rightsFree as string || 'Unknown')}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.rightsFree ? 'Yes' : 'No'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -167,23 +177,23 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     <div className="tccc-assets-rights-grid">
                                         <div className="tccc-assets-rights-group">
                                             <span className="tccc-metadata-label">RIGHTS PROFILE TITLE</span>
-                                            <span className="tccc-metadata-value">{selectedImage?.['tccc-rightsProfileTitle'] as string || 'Unknown'}</span>
+                                            <span className="tccc-metadata-value">{selectedImage?.rightsProfileTitle as string}</span>
                                         </div>
                                         <div className="tccc-assets-rights-group">
                                             <span className="tccc-metadata-label">MARKET COVERED</span>
-                                            <span className="tccc-metadata-value">{selectedImage?.['tccc-marketCovered'] as string || 'Unknown'}</span>
+                                            <span className="tccc-metadata-value">{selectedImage?.marketCovered as string}</span>
                                         </div>
                                         <div className="tccc-assets-rights-group">
                                             <span className="tccc-metadata-label">RIGHTS START DATE</span>
-                                            <span className="tccc-metadata-value">{selectedImage?.['tccc-rightsStartDate'] as string || 'Unknown'}</span>
+                                            <span className="tccc-metadata-value">{selectedImage?.rightsStartDate as string}</span>
                                         </div>
                                         <div className="tccc-assets-rights-group">
                                             <span className="tccc-metadata-label">RIGHTS END DATE</span>
-                                            <span className="tccc-metadata-value">{selectedImage?.['tccc-rightsEndDate'] as string || 'Unknown'}</span>
+                                            <span className="tccc-metadata-value">{selectedImage?.rightsEndDate as string}</span>
                                         </div>
                                         <div className="tccc-assets-rights-group">
                                             <span className="tccc-metadata-label">MEDIA</span>
-                                            <span className="tccc-metadata-value">{selectedImage?.['tccc-media'] as string || 'Unknown'}</span>
+                                            <span className="tccc-metadata-value">{selectedImage?.media as string}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -196,6 +206,17 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                 {isInCart ? 'Remove From Cart' : 'Add To Cart'}
                             </button>
                         </div>
+                    </div>
+                </div>
+
+                <div className="assets-details-toggle-section"></div>
+
+                <div className="assets-details-metadata-section">
+                    <div className="assets-details-metadata-grid">
+                        <div className="assets-details-metadata-left-container">
+                            <AssetDetailsSystem selectedImage={selectedImage} />
+                        </div>
+                        <div className="assets-details-metadata-right-container"></div>
                     </div>
                 </div>
             </div>
