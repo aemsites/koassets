@@ -2,19 +2,22 @@ import react from '@vitejs/plugin-react';
 import { defineConfig, loadEnv } from 'vite';
 
 // https://vite.dev/config/
-export default defineConfig(({ command, mode }) => {
+export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current working directory.
   // Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
-  const env = loadEnv(mode, process.cwd(), '');
+  // eslint-disable-next-line no-undef
+  loadEnv(mode, process.cwd(), '');
 
   // Determine which env file to load based on NODE_ENV or mode
+  // eslint-disable-next-line no-undef
   const envMode = process.env.NODE_ENV || mode || 'development';
   console.log(`🌍 Loading environment: ${envMode}`);
 
   return {
     plugins: [react()],
     server: {
-      port: 5173
+      port: 5173,
+      open: '/tools/assets-browser/index.html'
     },
     base: '/tools/assets-browser/',
     // Load environment files in order of priority
