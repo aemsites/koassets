@@ -141,7 +141,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     };
 
     // Calculate statistics
-    const totalCount = searchResult && searchResult.nbHits ? (searchResult.nbHits > 100 ? '100+' : searchResult.nbHits.toString()) : '0';
+    const totalCount = searchResult && searchResult.nbHits ? searchResult.nbHits.toString() : '0';
 
     return (
         <div className="image-gallery">
