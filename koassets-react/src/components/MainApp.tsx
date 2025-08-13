@@ -54,14 +54,14 @@ function transformExcFacetsToHierarchyArray(excFacets: Record<string, unknown>):
 }
 
 // Safe extraction helpers for populateAssetFromHit
-function safeStringField(hit: Record<string, unknown>, key: string, fallback: string = 'Unknown'): string {
+function safeStringField(hit: Record<string, unknown>, key: string, fallback: string = 'N/A'): string {
     const value = (hit as Record<string, unknown>)[key];
     if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value.toString();
     if (value && typeof value === 'object') return 'ERROR';
     return fallback;
 }
 
-function safeStringFromCandidates(hit: Record<string, unknown>, keys: string[], fallback: string = 'Unknown'): string {
+function safeStringFromCandidates(hit: Record<string, unknown>, keys: string[], fallback: string = 'N/A'): string {
     let sawObject = false;
     for (const key of keys) {
         const value = (hit as Record<string, unknown>)[key];
@@ -92,7 +92,7 @@ function safeDateField(hit: Record<string, unknown>, key: string): string {
             return formatDate(ms);
         }
     }
-    return 'Unknown';
+    return 'N/A';
 }
 
 /**
@@ -104,7 +104,7 @@ function populateAssetFromHit(hit: Record<string, unknown>): Asset {
     const repoName = (hit['repo-name'] as string) || 'Untitled';
 
     // Category from hidden array field
-    let category: string = 'Unknown';
+    let category: string = 'N/A';
     const catHidden = hit?.['tccc-assetCategoryAndType_hidden'] as unknown;
     if (Array.isArray(catHidden) && (catHidden as string[]).length > 0) {
         category = (catHidden as string[])[0].split('|')[0];
@@ -113,7 +113,7 @@ function populateAssetFromHit(hit: Record<string, unknown>): Asset {
     }
 
     // Market Covered: prefer extracting from hierarchy values, else safe string; object without values => ERROR
-    let marketCovered = safeStringField(hit, 'tccc-marketCovered', 'Unknown');
+    let marketCovered = safeStringField(hit, 'tccc-marketCovered', 'N/A');
     const marketCoveredRaw = hit?.['tccc-marketCovered'] as unknown;
     if (marketCoveredRaw && typeof marketCoveredRaw === 'object') {
         const tcccObj = (marketCoveredRaw as Record<string, unknown>)['TCCC'] as Record<string, unknown> | undefined;
