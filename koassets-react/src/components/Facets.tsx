@@ -8,8 +8,43 @@ interface OpenState {
 
 const HIERARCHY_PREFIX = 'TCCC.#hierarchy.lvl';
 
+function areFacetCheckedStatesEqual(a: FacetCheckedState, b: FacetCheckedState): boolean {
+    const aKeys = Object.keys(a);
+    const bKeys = Object.keys(b);
+    if (aKeys.length !== bKeys.length) return false;
+    for (const key of aKeys) {
+        if (!b[key]) return false;
+        const aInner = a[key];
+        const bInner = b[key];
+        const aInnerKeys = Object.keys(aInner);
+        const bInnerKeys = Object.keys(bInner);
+        if (aInnerKeys.length !== bInnerKeys.length) return false;
+        for (const innerKey of aInnerKeys) {
+            if (aInner[innerKey] !== bInner[innerKey]) return false;
+        }
+    }
+    return true;
+}
+
+function normalizeFacetFilters(filters: string[][] = []): string[] {
+    return filters
+        .map(group => [...group].sort().join('\u0001'))
+        .sort();
+}
+
+function areFacetFiltersEqual(a: string[][] = [], b: string[][] = []): boolean {
+    const na = normalizeFacetFilters(a);
+    const nb = normalizeFacetFilters(b);
+    if (na.length !== nb.length) return false;
+    for (let i = 0; i < na.length; i++) {
+        if (na[i] !== nb[i]) return false;
+    }
+    return true;
+}
+
 const Facets: React.FC<FacetsProps> = ({
     searchResult,
+    selectedFacetFilters,
     setSelectedFacetFilters,
     search,
     excFacets = {}
@@ -162,11 +197,11 @@ const Facets: React.FC<FacetsProps> = ({
                         }
                     }
                 });
-                return newChecked;
+                return areFacetCheckedStatesEqual(prevChecked, newChecked) ? prevChecked : newChecked;
             });
         }, 2000); // 2000ms debounce
         return () => clearTimeout(handler);
-    }, [searchResult?.facets, setChecked]);
+    }, [searchResult?.facets]);
 
     // Transform the checked object into an array of facet filters
     useEffect(() => {
@@ -180,15 +215,14 @@ const Facets: React.FC<FacetsProps> = ({
             });
             facetFilter.length > 0 && newSelectedFacetFilters.push(facetFilter);
         });
-        setSelectedFacetFilters(newSelectedFacetFilters);
-    }, [checked, setSelectedFacetFilters]);
+        const currentFilters = selectedFacetFilters || [];
+        if (!areFacetFiltersEqual(currentFilters, newSelectedFacetFilters)) {
+            setSelectedFacetFilters(newSelectedFacetFilters);
+        }
+    }, [checked, setSelectedFacetFilters, selectedFacetFilters]);
 
     const handleClearAllChecks = () => {
         setChecked({});
-    };
-
-    const handleApplyFilters = () => {
-        search();
     };
 
     return (
@@ -225,14 +259,6 @@ const Facets: React.FC<FacetsProps> = ({
                     </div>
                 </div>
             </div>
-            <button className="facet-filter-apply-btn" type="button" onClick={handleApplyFilters}>
-                <span className="facet-filter-apply-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polygon points="3 4 21 4 14 14 14 21 10 21 10 14 3 4" />
-                    </svg>
-                </span>
-                <span className="facet-filter-apply-text">Apply</span>
-            </button>
         </>
     );
 };

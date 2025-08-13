@@ -431,6 +431,13 @@ function MainApp(): React.JSX.Element {
         }
     }, [selectedCollection, dynamicMediaClient, excFacets, performSearchImages]);
 
+    // Auto-apply filters: trigger search whenever selectedFacetFilters change (assets only)
+    useEffect(() => {
+        if (!dynamicMediaClient || excFacets === undefined) return;
+        if (selectedQueryType === QUERY_TYPES.COLLECTIONS) return;
+        performSearchImages(query, 0);
+    }, [selectedFacetFilters, dynamicMediaClient, excFacets, selectedQueryType, performSearchImages, query]);
+
     // Cart functions
     const handleAddToCart = async (image: Asset): Promise<void> => {
         if (!cartItems.some(item => item.assetId === image.assetId)) {
