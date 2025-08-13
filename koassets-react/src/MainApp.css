@@ -14,7 +14,7 @@
 
 .container,
 .container * {
-  font-family: "TCCC-UnityHeadline-Regular" !important;
+  font-family: "TCCC UnityText Regular","Helvetica Neue",Arial,Helvetica,sans-serif;
   color: #1e1e1e;
 }
 
@@ -57,4 +57,132 @@ button:disabled {
   .main-content {
     flex-direction: column;
   }
+}
+
+.container .tccc-metadata-label {
+  color: #9a9a9a;
+  font-size: .6875rem;
+  font-weight: 400;
+  line-height: .825rem;
+}
+
+.container .tccc-metadata-value {
+  font-family: "TCCC UnityHeadline", sans-serif;
+  text-transform: uppercase;
+  color: #0e202e;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: normal;
+}
+
+.container .tccc-tag {
+  background: #fff0da;
+  border-radius: 14px;
+  color: #a46801;
+  font-family: "TCCC UnityHeadline", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.container h3 {
+  font-size: 1.2857rem;
+}
+
+.container a {
+  text-decoration: none;
+}
+
+.container h3 a {
+  /* stylelint-disable-next-line font-family-no-missing-generic-family-keyword */
+  font-family: "TCCC UnityHeadline";
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 19px;
+}
+
+.container a:hover {
+  text-decoration: none;
+  color: var(--primary-color);
+}
+
+.container h1, .container h2, .container h3, .container h4, .container h5 {
+  font-weight: 700;
+  line-height: 1.2857em;
+}
+
+.container .add-to-cart-btn {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  white-space: nowrap;
+}
+
+.container .add-to-cart-btn::before {
+  display: none;
+}
+
+.container .add-to-cart-btn:hover {
+  background-color: var(--primary-color);
+}
+
+.container .add-to-cart-btn:active {
+  transform: translateY(1px);
+}
+
+.container .add-to-cart-btn:disabled {
+  background-color: #bdc3c7;
+  color: #ecf0f1;
+  cursor: not-allowed;
+}
+
+.container .add-to-cart-btn.remove-from-cart {
+  width: 190px;
+}
+
+.container .add-to-cart-btn.pop-effect {
+  animation: pop 0.3s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+
+.container input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: white;
+  border: 2px solid #828181;
+  border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+}
+
+.container input[type="checkbox"]:hover {
+  border: 2px solid var(--primary-color);
+}
+
+.container input[type="checkbox"]:checked {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.container input[type="checkbox"]:checked::after {
+  content: '';
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  transform: rotate(45deg) translateX(-1px) translateY(-1px);
 }

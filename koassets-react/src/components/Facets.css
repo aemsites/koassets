@@ -31,10 +31,7 @@
   overflow-x: hidden;
   padding-right: 4px;
   min-height: 0;
-  /* Calculate max-height to leave space for Apply button within the panel */
-  /* Panel total height minus header (~50px) minus Apply button space (~93px) */
   max-height: calc(100vh - 343px);
-  /* Only this list scrolls, not the panel */
 }
 
 .facet-filter-section {
@@ -46,11 +43,13 @@
   overflow: hidden;
   transition: box-shadow 0.2s;
   flex-shrink: 0;
-  /* Prevent sections from shrinking */
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
 }
 
 .facet-filter-button {
-  height: 45px;
+  height: auto;
   width: 100%;
   text-align: left;
   background: none;
@@ -62,9 +61,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 20px;
+  padding: 5px 20px;
   box-sizing: border-box;
-  /* Ensure padding doesn't cause overflow */
 }
 
 .facet-filter-button:hover {
@@ -77,9 +75,12 @@
 }
 
 .facet-filter-label {
-  color: #272727;
+  color: #1e1e1e;
   font-size: 14px;
-  font-weight: 500;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 140%;
+  font-family: "TCCC UnityHeadline", sans-serif !important;
 }
 
 .facet-filter-header {
@@ -139,30 +140,26 @@
 
 .facet-filter-checkbox-list {
   padding: 0 20px 16px 16px;
-  background: #fafbfc;
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-top: 8px;
   box-sizing: border-box;
-  /* Ensure padding doesn't cause overflow */
   overflow: hidden;
-  /* Prevent any potential overflow */
 }
 
 .facet-filter-checkbox-label {
-  font-size: 14px;
-  color: #333;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  color: #404040;
   display: flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
   word-wrap: break-word;
-  /* Break long words */
   overflow-wrap: break-word;
-  /* Break long words */
   max-width: 100%;
-  /* Ensure labels don't exceed container width */
 }
 
 .facet-filter-apply-btn {
@@ -183,9 +180,7 @@
   transition: background 0.2s;
   box-shadow: 0 2px 8px rgba(209, 23, 0, 0.08);
   flex-shrink: 0;
-  /* Prevent button from shrinking */
   align-self: stretch;
-  /* Ensure button takes full width */
 }
 
 .facet-filter-apply-btn:hover {

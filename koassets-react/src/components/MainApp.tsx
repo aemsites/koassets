@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import '../MainApp.css';
 import { DynamicMediaClient } from '../dynamicmedia-client';
+import { ExcClient } from '../exc-client';
 import type {
     Asset,
     CartItem,
     Collection,
     CurrentView,
     LoadingState,
-    SearchResults
+    SearchResult
 } from '../types';
 import { CURRENT_VIEW, LOADING, QUERY_TYPES } from '../types';
 import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
@@ -15,7 +16,7 @@ import { getBucket } from '../utils/config';
 
 // Components
 import CollectionGallery from './CollectionGallery';
-import FacetFilter from './FacetFilter';
+import Facets from './Facets';
 import Footer from './Footer';
 import HeaderBar from './HeaderBar';
 import ImageGallery from './ImageGallery';
@@ -24,6 +25,76 @@ import SearchBar from './SearchBar';
 const searchAssetsTitle = 'Search Assets - where you can discover the company\'s latest and greatest content!';
 const searchCollectionsTitle = 'My Collections';
 const HITS_PER_PAGE = 24;
+
+/**
+ * Transforms excFacets object into a string array for search facets
+ * @param excFacets - The facets object from EXC
+ * @returns Array of facet keys for search
+ */
+function transformExcFacetsToHierarchyArray(excFacets: Record<string, unknown>): string[] {
+    const facetKeys: string[] = [];
+
+    Object.entries(excFacets).forEach(([key, value]) => {
+        const facetValue = value as { type?: string };
+
+        if (facetValue?.type !== 'tags') {
+            // For non-tags types, append the entry key
+            facetKeys.push(key);
+        } else {
+            // For tags type, append 10 hierarchy level keys
+            for (let n = 0; n <= 9; n++) {
+                facetKeys.push(`${key}.TCCC.#hierarchy.lvl${n}`);
+            }
+            facetKeys.push(`${key}.TCCC.#values`);
+        }
+    });
+
+    return facetKeys;
+}
+
+/**
+ * Transforms a search hit record into an Asset object
+ * @param hit - The raw hit data from search results
+ * @returns Asset object with populated properties
+ */
+function populateAssetFromHit(hit: Record<string, unknown>): Asset {
+    const repoName = (hit['repo-name'] as string) || 'Untitled';
+
+    return {
+        alt: (hit['dc-title'] as string) || (hit['repo-name'] as string) || 'Asset',
+        assetId: hit['assetId'] as string,
+        category: (hit?.['tccc-assetCategoryAndType_hidden'] as string[])?.length > 0
+            ? (hit?.['tccc-assetCategoryAndType_hidden'] as string[])[0].split('|')[0]
+            : 'Unknown',
+        campaignName: hit?.['tccc-campaignName'] as string,
+        createDate: hit?.['repo-createDate'] as string,
+        createBy: hit?.['dc-creator'] as string, // Missing metadata
+        description: hit?.['tccc-description'] as string || hit?.['dc-description'] as string,
+        expired: hit?.['is_pur-expirationDate'] as boolean,
+        format: (hit?.['dc-format-label'] as string) || 'Unknown',
+        marketCovered: hit?.['tccc-marketCovered'] as string || 'Unknown', // Missing metadata
+        media: hit?.['tccc-media'] as string || 'Unknown', // Missing metadata
+        migrationId: hit?.['tccc-koAssetsMigrationId'] as string, // Missing metadata
+        modifyBy: hit?.['tccc-koAssetsIdModifiedBy'] as string,
+        modifyDate: hit?.['repo-modifyDate'] as string,
+        name: repoName,
+        publishDate: hit?.['tccc-publishDate'] as string || '', // Missing metadata
+        publishBy: hit?.['tccc-publishBy'] as string || 'Unknown', // Missing metadata
+        publishStatus: hit?.['tccc-publishStatus'] as string || 'Unknown', // Missing metadata
+        resolution: (hit?.['tccc-resolution'] as string) || 'Unknown', // Missing metadata
+        rightsFree: hit?.['tccc-rightsFree'] as boolean, // Missing metadata
+        rightsProfileTitle: hit?.['tccc-rightsProfileTitle'] as string || 'Unknown', // Missing metadata
+        rightsEndDate: hit?.['tccc-rightsEndDate'] as string || 'Unknown', // Missing metadata
+        rightsStartDate: hit?.['tccc-rightsStartDate'] as string || 'Unknown', // Missing metadata
+        size: (hit['size'] as number) || 0,
+        sourceId: hit?.['tccc-koAssetsSourceId'] as string, // Missing metadata
+        title: hit?.['dc-title'] as string,
+        url: '', // Empty URL - will be loaded lazily
+        usage: hit?.['tccc-usage'] as string || 'Unknown', // Missing metadata
+        workfrontId: hit?.['tccc-workfrontId'] as string || 'Unknown', // Missing metadata
+        ...hit
+    } satisfies Asset;
+}
 
 function MainApp(): React.JSX.Element {
     // Local state
@@ -45,12 +116,13 @@ function MainApp(): React.JSX.Element {
     const [query, setQuery] = useState<string>('');
     const [dmImages, setDmImages] = useState<Asset[]>([]);
     const [collections, setCollections] = useState<Collection[]>([]);
-    const [hits, setHits] = useState<SearchResults | null>(null);
+    const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
     const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
     const [loading, setLoading] = useState<LoadingState>({ [LOADING.dmImages]: false, [LOADING.collections]: false });
     const [currentView, setCurrentView] = useState<CurrentView>(CURRENT_VIEW.images);
     const [selectedQueryType, setSelectedQueryType] = useState<string>(QUERY_TYPES.ASSETS);
-    const [selectedFacets, setSelectedFacets] = useState<string[][]>([]);
+    const [selectedFacetFilters, setSelectedFacetFilters] = useState<string[][]>([]);
+    const [excFacets, setExcFacets] = useState<Record<string, unknown> | undefined>(undefined);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState<number>(0);
@@ -75,8 +147,9 @@ function MainApp(): React.JSX.Element {
     const [selectedSortDirection, setSelectedSortDirection] = useState<string>('Ascending');
 
     const searchBarRef = useRef<HTMLInputElement>(null);
+    const settingsLoadedRef = useRef<boolean>(false);
 
-    const handleSetSelectedQueryType = (newQueryType: string): void => {
+    const handleSetSelectedQueryType = useCallback((newQueryType: string): void => {
         setSelectedQueryType(prevType => {
             if (prevType !== newQueryType) {
                 setQuery('');
@@ -89,7 +162,7 @@ function MainApp(): React.JSX.Element {
                 searchBarRef.current.focus();
             }
         }, 0);
-    };
+    }, []);
 
     // Save cart items to localStorage when they change
     useEffect(() => {
@@ -107,42 +180,30 @@ function MainApp(): React.JSX.Element {
     useEffect(() => {
         try {
             localStorage.setItem('accessToken', accessToken || '');
-        } catch { }
+        } catch (error) {
+            // Silently fail if localStorage is not available
+            console.warn('Failed to save access token to localStorage:', error);
+        }
     }, [accessToken]);
 
     // Process and display Adobe Dynamic Media images
-    const processDMImages = useCallback(async (content: any, isLoadingMore: boolean = false): Promise<void> => {
+    const processDMImages = useCallback(async (content: unknown, isLoadingMore: boolean = false): Promise<void> => {
         // For demo, just parse and set images if possible
         if (!isLoadingMore) {
             setDmImages([]);
         }
-        setHits(null);
-        try {
-            if (content.results && content.results[0]?.hits) {
-                if (content.results[0]?.hits.length > 0) {
-                    // No longer download blobs upfront - just prepare metadata for lazy loading
-                    const processedImages: Asset[] = content.results[0].hits.map((hit: any): Asset => {
-                        const repoName = hit['repo-name'] || 'Untitled';
 
-                        return {
-                            assetId: hit.assetId,
-                            name: repoName,
-                            url: '', // Empty URL - will be loaded lazily
-                            alt: hit['dc-title'] || hit['repo-name'] || 'Asset',
-                            size: hit['size'] || 0,
-                            format: hit?.['dc-format'] || hit?.['dc-format-label'] || 'Unknown',
-                            creator: hit?.['dc-creator'],
-                            mimeType: hit['repo-mimetype'] || 'Unknown',
-                            path: hit['repo-path'] || '',
-                            tags: hit['xcm-machineKeywords'] || [],
-                            description: hit?.['dc-description'],
-                            title: hit?.['dc-title'],
-                            subject: hit?.['dc-subject'],
-                            createDate: hit?.['repo-createDate'],
-                            modifyDate: hit?.['repo-modifyDate'],
-                            ...hit
-                        };
-                    });
+        setSearchResult(null);
+        try {
+            const contentData = content as Record<string, unknown>;
+            const results = contentData.results as Array<Record<string, unknown>>;
+
+            if (results && results[0]?.hits) {
+                const hits = results[0].hits as Array<Record<string, unknown>>;
+                if (hits.length > 0) {
+                    // No longer download blobs upfront - just prepare metadata for lazy loading
+                    // Each hit is transformed to match the Asset interface
+                    const processedImages: Asset[] = hits.map(populateAssetFromHit);
 
                     if (isLoadingMore) {
                         // Append to existing images
@@ -153,8 +214,8 @@ function MainApp(): React.JSX.Element {
                     }
                 }
                 // Store the complete results object with nbHits and update pagination info
-                setHits(content.results[0]);
-                setTotalPages(content.results[0].nbPages || 0);
+                setSearchResult(results[0] as SearchResult);
+                setTotalPages((results[0] as { nbPages?: number }).nbPages || 0);
             } else {
                 setTotalPages(0);
             }
@@ -166,14 +227,14 @@ function MainApp(): React.JSX.Element {
     }, []);
 
     // Process and display collections
-    const processCollections = useCallback(async (content: any): Promise<void> => {
+    const processCollections = useCallback(async (content: { results?: Array<{ hits?: Array<{ objectID: string; collectionMetadata?: unknown; thumbnail?: string }> }> }): Promise<void> => {
         setCollections([]);
         try {
             if (content.results && content.results[0]?.hits) {
-                const processedCollections: Collection[] = content.results[0].hits.map((hit: any) => ({
-                    collectionId: hit.objectID,
-                    collectionMetadata: hit.collectionMetadata || {},
-                    thumbnail: hit.thumbnail,
+                const processedCollections: Collection[] = content.results[0].hits.map((hit) => ({
+                    collectionId: hit.objectID as string,
+                    collectionMetadata: (hit.collectionMetadata as Collection['collectionMetadata']) || { title: '', description: '' },
+                    thumbnail: hit.thumbnail as string,
                 }));
                 setCollections(processedCollections);
             } else {
@@ -186,7 +247,7 @@ function MainApp(): React.JSX.Element {
     }, []);
 
     // Search assets (images, videos, etc.)
-    const performSearchImages = useCallback((query: string, selectedCollection: Collection | null = null, selectedFacets: string[][] = [], page: number = 0): void => {
+    const performSearchImages = useCallback((query: string, page: number = 0): void => {
         if (!dynamicMediaClient) return;
 
         const isLoadingMore = page > 0;
@@ -200,7 +261,8 @@ function MainApp(): React.JSX.Element {
 
         dynamicMediaClient.searchAssets(query.trim(), {
             collectionId: selectedCollection?.collectionId,
-            facets: selectedFacets,
+            facets: excFacets ? transformExcFacetsToHierarchyArray(excFacets) : [],
+            facetFilters: selectedFacetFilters,
             hitsPerPage: HITS_PER_PAGE,
             page: page
         }).then((content) => processDMImages(content, isLoadingMore)).catch((error) => {
@@ -212,10 +274,7 @@ function MainApp(): React.JSX.Element {
             }
         });
 
-        if (!isLoadingMore) {
-            setQuery('');
-        }
-    }, [dynamicMediaClient, processDMImages]);
+    }, [dynamicMediaClient, processDMImages, selectedCollection, selectedFacetFilters, excFacets]);
 
     // Search collections
     const performSearchCollections = useCallback((query: string): void => {
@@ -233,20 +292,21 @@ function MainApp(): React.JSX.Element {
     // Select a collection and load all assets in the collection (no query & no facet filters)
     const handleSelectCollection = useCallback((collection: Collection): void => {
         setSelectedCollection(collection);
+        setSelectedFacetFilters([]);
         setCurrentPage(0);
-        handleSetSelectedQueryType(QUERY_TYPES.ASSETS);
-        performSearchImages('', collection, [], 0);
         setQuery('');
-    }, [handleSetSelectedQueryType, performSearchImages]);
+        handleSetSelectedQueryType(QUERY_TYPES.ASSETS);
+        // performSearchImages will be triggered by useEffect when selectedCollection changes
+    }, [handleSetSelectedQueryType]);
 
     // Handler for loading more results (pagination)
     const handleLoadMoreResults = useCallback((): void => {
         if (currentPage + 1 < totalPages && !isLoadingMore) {
             const nextPage = currentPage + 1;
             setCurrentPage(nextPage);
-            performSearchImages(query, selectedCollection, selectedFacets, nextPage);
+            performSearchImages(query, nextPage);
         }
-    }, [currentPage, totalPages, isLoadingMore, query, selectedCollection, selectedFacets, performSearchImages]);
+    }, [currentPage, totalPages, isLoadingMore, performSearchImages, query]);
 
     // Handler for searching
     const search = useCallback((): void => {
@@ -256,9 +316,9 @@ function MainApp(): React.JSX.Element {
             performSearchCollections(query);
         } else {
             // Search for assets or assets in a collection
-            performSearchImages(query, selectedCollection, selectedFacets, 0);
+            performSearchImages(query, 0);
         }
-    }, [query, selectedQueryType, selectedCollection, selectedFacets, performSearchCollections, performSearchImages]);
+    }, [selectedQueryType, performSearchCollections, performSearchImages, query]);
 
     // Read query and selectedQueryType from URL on mount
     useEffect(() => {
@@ -269,21 +329,39 @@ function MainApp(): React.JSX.Element {
         if (queryType !== null && (queryType === QUERY_TYPES.ASSETS || queryType === QUERY_TYPES.COLLECTIONS)) {
             setSelectedQueryType(queryType);
         }
-        if (urlQuery !== null || queryType !== null) {
-            dynamicMediaClient && search();
-        }
-    }, [dynamicMediaClient, search]);
+    }, [dynamicMediaClient]);
 
     useEffect(() => {
         dynamicMediaClient && window.history.replaceState({}, '', `${window.location.pathname}`);
-    }, [query, selectedQueryType, dynamicMediaClient]);
+    }, [selectedQueryType, dynamicMediaClient]);
 
     // Auto-search with empty query on app load
     useEffect(() => {
-        if (dynamicMediaClient && accessToken) {
+        if (dynamicMediaClient && accessToken && excFacets !== undefined) {
             search();
         }
-    }, [dynamicMediaClient, accessToken]);
+    }, [dynamicMediaClient, accessToken, excFacets]);
+
+    useEffect(() => {
+        if (accessToken && !settingsLoadedRef.current) {
+            settingsLoadedRef.current = true;
+            const excClient = new ExcClient({ accessToken });
+            // Get facets from EXC
+            excClient.getExcFacets({}).then(facets => {
+                setExcFacets(facets);
+                console.log('EXC Facets loaded:', facets);
+            }).catch(error => {
+                console.error('Error fetching facets:', error);
+            });
+        }
+    }, [accessToken]);
+
+    // Add useEffect to trigger search when selectedCollection changes
+    useEffect(() => {
+        if (selectedCollection && dynamicMediaClient && excFacets !== undefined) {
+            performSearchImages('', 0);
+        }
+    }, [selectedCollection, dynamicMediaClient, excFacets, performSearchImages]);
 
     // Cart functions
     const handleAddToCart = async (image: Asset): Promise<void> => {
@@ -462,7 +540,7 @@ function MainApp(): React.JSX.Element {
                     onRemoveFromCart={handleRemoveFromCart}
                     cartItems={cartItems}
                     dynamicMediaClient={dynamicMediaClient}
-                    hits={hits}
+                    searchResult={searchResult}
                     onToggleMobileFilter={handleToggleMobileFilter}
                     isMobileFilterOpen={isMobileFilterOpen}
                     onBulkAddToCart={handleBulkAddToCart}
@@ -517,11 +595,12 @@ function MainApp(): React.JSX.Element {
                                 {enhancedGallery}
                             </div>
                             <div className={`facet-filter-panel ${isMobileFilterOpen ? 'mobile-open' : ''}`}>
-                                <FacetFilter
-                                    hits={hits?.hits || []}
-                                    selectedFacets={selectedFacets}
-                                    setSelectedFacets={setSelectedFacets}
+                                <Facets
+                                    searchResult={searchResult}
+                                    selectedFacetFilters={selectedFacetFilters}
+                                    setSelectedFacetFilters={setSelectedFacetFilters}
                                     search={search}
+                                    excFacets={excFacets}
                                 />
                             </div>
                         </div>

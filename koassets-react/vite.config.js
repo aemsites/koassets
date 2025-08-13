@@ -23,7 +23,12 @@ export default defineConfig(({ mode }) => {
     // Load environment files in order of priority
     envDir: './', // Look for env files in the current directory
     envPrefix: 'VITE_', // Only expose variables starting with VITE_
+    // Enable source maps for debugging
+    css: {
+      devSourcemap: true
+    },
     build: {
+      sourcemap: true, // Enable source maps for production builds too
       rollupOptions: {
         external: [],
         output: {
