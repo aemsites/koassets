@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { AssetDetailsProps } from '../../types';
 import { fetchOptimizedDeliveryBlob } from '../../utils/blobCache';
-import { formatDate, formatFileSize, removeHyphenTitleCase } from '../../utils/formatters';
+import { formatFileSize, removeHyphenTitleCase } from '../../utils/formatters';
 import './AssetDetails.css';
 import AssetDetailsSystem from './AssetDetailsSystem';
 
@@ -138,7 +138,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                 <div className="details-modal-grid">
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">CREATED</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{formatDate(selectedImage['repo-createDate'] as number)}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.createDate}</span>
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">TYPE</span>
@@ -150,7 +150,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">LAST MODIFIED</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{formatDate(selectedImage.modifyDate)}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.lastModified}</span>
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">RES.</span>
@@ -158,7 +158,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">EXPIRED</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.expired ? 'Yes' : 'No'}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.expired}</span>
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">USAGE</span>
@@ -166,7 +166,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">RIGHTS FREE</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.rightsFree ? 'Yes' : 'No'}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.rightsFree}</span>
                                     </div>
                                 </div>
                             </div>

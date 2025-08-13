@@ -28,21 +28,21 @@ const AssetDetailsSystem: React.FC<AssetDetailsSystemProps> = ({ selectedImage }
                         <div className="asset-details-system-group">
                             <h4 className="assets-details-metadata-label asset-details-system-label">Date Created</h4>
                             <span className="assets-details-metadata-value asset-details-system-value">
-                                {selectedImage?.createDate ? formatDate(selectedImage?.createDate) : 'Unknown'}
+                                {selectedImage?.createDate}
                             </span>
                         </div>
 
                         <div className="asset-details-system-group">
                             <h4 className="assets-details-metadata-label asset-details-system-label">Date Published</h4>
                             <span className="assets-details-metadata-value asset-details-system-value">
-                                {selectedImage?.publishDate ? formatDate(selectedImage?.publishDate) : 'Unknown'}
+                                {selectedImage?.publishDate}
                             </span>
                         </div>
 
                         <div className="asset-details-system-group">
                             <h4 className="assets-details-metadata-label asset-details-system-label">Date Modified</h4>
                             <span className="assets-details-metadata-value asset-details-system-value">
-                                {selectedImage.modifyDate ? formatDate(selectedImage.modifyDate) : 'Unknown'}
+                                {selectedImage.modifyDate}
                             </span>
                         </div>
 
