@@ -49,49 +49,49 @@ const AssetDetailsSystem: React.FC<AssetDetailsSystemProps> = ({ selectedImage }
                         <div className="asset-details-system-group">
                             <h4 className="assets-details-metadata-label asset-details-system-label">Created By</h4>
                             <span className="assets-details-metadata-value asset-details-system-value">
-                                {selectedImage?.createBy || 'Unknown'}
+                                {selectedImage?.createBy}
                             </span>
                         </div>
 
                         <div className="asset-details-system-group">
                             <h4 className="assets-details-metadata-label asset-details-system-label">Published By</h4>
                             <span className="assets-details-metadata-value asset-details-system-value">
-                                {selectedImage?.publishBy || 'Unknown'}
+                                {selectedImage?.publishBy}
                             </span>
                         </div>
 
                         <div className="asset-details-system-group">
                             <h4 className="assets-details-metadata-label asset-details-system-label">Publish Status</h4>
                             <span className="assets-details-metadata-value asset-details-system-value">
-                                {selectedImage?.publishStatus || 'Unknown'}
+                                {selectedImage?.publishStatus}
                             </span>
                         </div>
 
                         <div className="asset-details-system-group">
                             <h4 className="assets-details-metadata-label asset-details-system-label">Workfront ID</h4>
                             <span className="assets-details-metadata-value asset-details-system-value">
-                                {selectedImage?.workfrontId || 'Unknown'}
+                                {selectedImage?.workfrontId}
                             </span>
                         </div>
 
                         <div className="asset-details-system-group">
                             <h4 className="assets-details-metadata-label asset-details-system-label">Modified By</h4>
                             <span className="assets-details-metadata-value asset-details-system-value">
-                                {selectedImage?.modifyBy || 'Unknown'}
+                                {selectedImage?.modifyBy}
                             </span>
                         </div>
 
                         <div className="asset-details-system-group">
                             <h4 className="assets-details-metadata-label asset-details-system-label">Source ID</h4>
                             <span className="assets-details-metadata-value asset-details-system-value">
-                                {selectedImage?.sourceId || 'Unknown'}
+                                {selectedImage?.sourceId}
                             </span>
                         </div>
 
                         <div className="asset-details-system-group">
                             <h4 className="assets-details-metadata-label asset-details-system-label">Migration ID</h4>
                             <span className="assets-details-metadata-value asset-details-system-value">
-                                {selectedImage?.migrationId || 'Unknown'}
+                                {selectedImage?.migrationId}
                             </span>
                         </div>
                     </div>

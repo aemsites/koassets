@@ -434,7 +434,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                                         <div className="col-title">
                                             <div className="item-title">{item.title || item.name}</div>
                                             <br />
-                                            <div className="item-type">TYPE: {item.format?.toUpperCase() || 'UNKNOWN'}</div>
+                                            <div className="item-type">TYPE: {item.format?.toUpperCase()}</div>
                                         </div>
                                         <div className="col-rights">
                                             <span className="rights-badge">Fully-managed rights (FMR)</span>

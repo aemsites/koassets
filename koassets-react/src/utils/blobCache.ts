@@ -30,7 +30,7 @@ export async function fetchOptimizedDeliveryBlob(
     try {
         // Extract common asset properties
         const assetId = asset.assetId || '';
-        const repoName = asset.name || 'unknown';
+        const repoName = asset.name || 'N/A';
 
         // Check cache first if caching is enabled
         if (options.cache && options.cacheKey) {
