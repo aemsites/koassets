@@ -70,6 +70,7 @@
 
 .assets-details-image {
     width: 100%;
+    max-width: 450px;
     height: 100%;
     object-fit: contain;
     border-radius: 8px;

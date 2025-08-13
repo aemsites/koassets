@@ -105,7 +105,7 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                                 </div>
                                 <div className="product-meta-item">
                                     <span className="product-meta-label tccc-metadata-label">RIGHTS FREE</span>
-                                    <span className="product-meta-value tccc-metadata-value">{image.rightsFree ? 'Yes' : 'No'}</span>
+                                    <span className="product-meta-value tccc-metadata-value">{image.rightsFree}</span>
                                 </div>
                                 <div className="product-meta-item">
                                     <span className="product-meta-label tccc-metadata-label">CATEGORY</span>

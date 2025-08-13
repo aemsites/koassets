@@ -13,6 +13,7 @@ import type {
 import { CURRENT_VIEW, LOADING, QUERY_TYPES } from '../types';
 import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
 import { getBucket } from '../utils/config';
+import { formatDate } from '../utils/formatters';
 
 // Components
 import CollectionGallery from './CollectionGallery';
@@ -52,6 +53,48 @@ function transformExcFacetsToHierarchyArray(excFacets: Record<string, unknown>):
     return facetKeys;
 }
 
+// Safe extraction helpers for populateAssetFromHit
+function safeStringField(hit: Record<string, unknown>, key: string, fallback: string = 'Unknown'): string {
+    const value = (hit as Record<string, unknown>)[key];
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value.toString();
+    if (value && typeof value === 'object') return 'ERROR';
+    return fallback;
+}
+
+function safeStringFromCandidates(hit: Record<string, unknown>, keys: string[], fallback: string = 'Unknown'): string {
+    let sawObject = false;
+    for (const key of keys) {
+        const value = (hit as Record<string, unknown>)[key];
+        if (typeof value === 'string' && value) return value;
+        if (value && typeof value === 'object') sawObject = true;
+    }
+    return sawObject ? 'ERROR' : fallback;
+}
+
+function safeNumberField(hit: Record<string, unknown>, key: string, fallback: number = 0): number {
+    const value = (hit as Record<string, unknown>)[key];
+    return typeof value === 'number' ? value : fallback;
+}
+
+function safeDateField(hit: Record<string, unknown>, key: string): string {
+    const value = (hit as Record<string, unknown>)[key];
+    if (typeof value === 'number') {
+        return formatDate(value);
+    }
+    if (typeof value === 'string') {
+        // Numeric string (epoch in seconds or ms)
+        if (/^\d+$/.test(value)) {
+            return formatDate(parseInt(value, 10));
+        }
+        // ISO-like string -> parse to ms
+        const ms = Date.parse(value);
+        if (!Number.isNaN(ms)) {
+            return formatDate(ms);
+        }
+    }
+    return 'Unknown';
+}
+
 /**
  * Transforms a search hit record into an Asset object
  * @param hit - The raw hit data from search results
@@ -60,38 +103,63 @@ function transformExcFacetsToHierarchyArray(excFacets: Record<string, unknown>):
 function populateAssetFromHit(hit: Record<string, unknown>): Asset {
     const repoName = (hit['repo-name'] as string) || 'Untitled';
 
+    // Category from hidden array field
+    let category: string = 'Unknown';
+    const catHidden = hit?.['tccc-assetCategoryAndType_hidden'] as unknown;
+    if (Array.isArray(catHidden) && (catHidden as string[]).length > 0) {
+        category = (catHidden as string[])[0].split('|')[0];
+    } else if (catHidden && typeof catHidden === 'object') {
+        category = 'ERROR';
+    }
+
+    // Market Covered: prefer extracting from hierarchy values, else safe string; object without values => ERROR
+    let marketCovered = safeStringField(hit, 'tccc-marketCovered', 'Unknown');
+    const marketCoveredRaw = hit?.['tccc-marketCovered'] as unknown;
+    if (marketCoveredRaw && typeof marketCoveredRaw === 'object') {
+        const tcccObj = (marketCoveredRaw as Record<string, unknown>)['TCCC'] as Record<string, unknown> | undefined;
+        const values = tcccObj && (tcccObj['#values'] as unknown);
+        if (Array.isArray(values)) {
+            const processed = (values as string[]).map((v) => {
+                const parts = v.split(' / ');
+                return parts[parts.length - 1].trim();
+            });
+            marketCovered = processed.join(', ');
+        } else {
+            marketCovered = 'ERROR';
+        }
+    }
+
     return {
-        alt: (hit['dc-title'] as string) || (hit['repo-name'] as string) || 'Asset',
-        assetId: hit['assetId'] as string,
-        category: (hit?.['tccc-assetCategoryAndType_hidden'] as string[])?.length > 0
-            ? (hit?.['tccc-assetCategoryAndType_hidden'] as string[])[0].split('|')[0]
-            : 'Unknown',
-        campaignName: hit?.['tccc-campaignName'] as string,
-        createDate: hit?.['repo-createDate'] as string,
-        createBy: hit?.['dc-creator'] as string, // Missing metadata
-        description: hit?.['tccc-description'] as string || hit?.['dc-description'] as string,
-        expired: hit?.['is_pur-expirationDate'] as boolean,
-        format: (hit?.['dc-format-label'] as string) || 'Unknown',
-        marketCovered: hit?.['tccc-marketCovered'] as string || 'Unknown', // Missing metadata
-        media: hit?.['tccc-media'] as string || 'Unknown', // Missing metadata
-        migrationId: hit?.['tccc-koAssetsMigrationId'] as string, // Missing metadata
-        modifyBy: hit?.['tccc-koAssetsIdModifiedBy'] as string,
-        modifyDate: hit?.['repo-modifyDate'] as string,
+        alt: safeStringFromCandidates(hit, ['dc-title', 'repo-name'], 'Asset'),
+        assetId: safeStringField(hit, 'assetId'),
+        category: category,
+        campaignName: safeStringField(hit, 'tccc-campaignName'),
+        createDate: safeDateField(hit, 'repo-createDate'),
+        createBy: safeStringField(hit, 'repo-createdBy'),
+        description: safeStringFromCandidates(hit, ['tccc-description', 'dc-description'], ''),
+        expired: safeStringField(hit, 'is_pur-expirationDate'),
+        format: safeStringField(hit, 'dc-format-label'),
+        lastModified: safeDateField(hit, 'tccc-lastModified'),
+        marketCovered: marketCovered,
+        media: safeStringField(hit, 'tccc-media'),
+        migrationId: safeStringField(hit, 'tccc-migrationID'),
+        modifyBy: safeStringField(hit, 'tccc-lastModifiedBy'),
+        modifyDate: safeDateField(hit, 'repo-modifyDate'),
         name: repoName,
-        publishDate: hit?.['tccc-publishDate'] as string || '', // Missing metadata
-        publishBy: hit?.['tccc-publishBy'] as string || 'Unknown', // Missing metadata
-        publishStatus: hit?.['tccc-publishStatus'] as string || 'Unknown', // Missing metadata
-        resolution: (hit?.['tccc-resolution'] as string) || 'Unknown', // Missing metadata
-        rightsFree: hit?.['tccc-rightsFree'] as boolean, // Missing metadata
-        rightsProfileTitle: hit?.['tccc-rightsProfileTitle'] as string || 'Unknown', // Missing metadata
-        rightsEndDate: hit?.['tccc-rightsEndDate'] as string || 'Unknown', // Missing metadata
-        rightsStartDate: hit?.['tccc-rightsStartDate'] as string || 'Unknown', // Missing metadata
-        size: (hit['size'] as number) || 0,
-        sourceId: hit?.['tccc-koAssetsSourceId'] as string, // Missing metadata
-        title: hit?.['dc-title'] as string,
-        url: '', // Empty URL - will be loaded lazily
-        usage: hit?.['tccc-usage'] as string || 'Unknown', // Missing metadata
-        workfrontId: hit?.['tccc-workfrontId'] as string || 'Unknown', // Missing metadata
+        publishDate: safeDateField(hit, 'tccc-publishDate'),
+        publishBy: safeStringField(hit, 'tccc-publishBy'),
+        publishStatus: safeStringField(hit, 'tccc-publishStatus'),
+        resolution: safeStringField(hit, 'tccc-resolution'),
+        rightsFree: safeStringField(hit, 'tccc-rightsFree'),
+        rightsProfileTitle: safeStringField(hit, 'tccc-rightsProfileTitle'),
+        rightsEndDate: safeDateField(hit, 'tccc-rightsEndDate'),
+        rightsStartDate: safeDateField(hit, 'tccc-rightsStartDate'),
+        size: safeNumberField(hit, 'size', 0),
+        sourceId: safeStringField(hit, 'tccc-sourceId'),
+        title: safeStringField(hit, 'dc-title'),
+        url: '', // Loaded lazily
+        usage: safeStringField(hit, 'tccc-usage'),
+        workfrontId: safeStringField(hit, 'tccc-workfrontID'),
         ...hit
     } satisfies Asset;
 }
