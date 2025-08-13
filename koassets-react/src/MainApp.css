@@ -156,13 +156,17 @@ button:disabled {
 .container input[type="checkbox"] {
   width: 16px;
   height: 16px;
+  min-width: 16px;
+  max-width: 16px;
+  min-height: 16px;
+  max-height: 16px;
+  flex: 0 0 16px;
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
   background-color: white;
   border: 2px solid #828181;
-  border-radius: 2px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
