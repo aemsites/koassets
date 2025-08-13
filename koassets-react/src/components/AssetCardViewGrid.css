@@ -29,7 +29,7 @@
 .asset-card-view-grid .image-preview-button {
     position: absolute;
     top: 20px;
-    right: 10px;
+    right: 15px;
     width: 28px;
     height: 28px;
     background-color: rgba(74, 74, 74, 0.9);
@@ -66,7 +66,7 @@
     fill: white;
 }
 
-.asset-card-view-grid .asset-checkbox {
+.asset-card-view-grid input[type="checkbox"].asset-checkbox {
     position: absolute;
     top: 20px;
     left: 10px;
@@ -88,12 +88,11 @@
     padding: 0 !important;
 }
 
-
-.asset-card-view-grid .asset-checkbox:checked {
+.asset-card-view-grid input[type="checkbox"].asset-checkbox:checked {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
-.asset-card-view-grid .asset-checkbox::before {
+.asset-card-view-grid input[type="checkbox"].asset-checkbox::before {
     content: "";
     position: absolute;
     top: 50%;
@@ -108,17 +107,21 @@
     padding: 0 !important;
 }
 
-.asset-card-view-grid .asset-checkbox:checked::before {
+.asset-card-view-grid input[type="checkbox"].asset-checkbox:hover::before {
+    border: 2px solid var(--primary-color);
+}
+
+.asset-card-view-grid input[type="checkbox"].asset-checkbox:checked::before {
     background-color: #f40000;
     border-color: #f40000;
 }
 
-.asset-card-view-grid .asset-checkbox::after {
+.asset-card-view-grid input[type="checkbox"].asset-checkbox::after {
     content: "";
     display: none;
 }
 
-.asset-card-view-grid .asset-checkbox:checked::after {
+.asset-card-view-grid input[type="checkbox"].asset-checkbox:checked::after {
     content: '';
     position: absolute;
     top: 44%;
@@ -134,7 +137,6 @@
 .asset-card-view-grid .image-container {
     width: 100%;
     height: 300px;
-    /* Essential for grid auto-sizing - provides intrinsic height */
     position: relative;
     border-top-left-radius: 7px;
     border-top-right-radius: 7px;
@@ -162,13 +164,26 @@
     left: 16px;
 }
 
+.asset-card-view-grid .product-tags {
+    margin-bottom: 10px;
+}
+
+.asset-card-view-grid .product-tag {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    overflow-wrap: break-word;
+    margin-right: 6px;
+    margin-bottom: 4px;
+}
+
 .asset-card-view-grid .product-title {
     margin: 0 0 8px 0;
     font-size: 14px;
     font-weight: 600;
     line-height: 1.4;
     color: #333;
-    word-break: break-word;
+    overflow-wrap: break-word;
 
     /* Limit to 3 lines with ellipsis */
     display: -webkit-box;
@@ -195,9 +210,10 @@
 }
 
 .asset-card-view-grid .product-meta-grid {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 14px;
     margin-bottom: 16px;
     text-transform: uppercase;
 }
@@ -206,7 +222,6 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    width: 25%;
 }
 
 .asset-card-view-grid .product-meta-label {
@@ -221,52 +236,9 @@
     font-size: 11px;
     font-weight: 600;
     color: #333;
-    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
-.asset-card-view-grid .add-to-cart-btn {
-    width: 140px;
-    height: 42px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 25px;
-    font-weight: 700;
-    font-size: 14px;
-    padding: 0 12px;
-    cursor: pointer;
-    transition: background-color 0.2s, transform 0.1s;
-    white-space: nowrap;
-}
-
-.asset-card-view-grid .add-to-cart-btn::before {
-    display: none;
-}
-
-.asset-card-view-grid .add-to-cart-btn:hover {
-    background-color: var(--primary-color);
-}
-
-.asset-card-view-grid .add-to-cart-btn:active {
-    transform: translateY(1px);
-}
-
-.asset-card-view-grid .add-to-cart-btn:disabled {
-    background-color: #bdc3c7;
-    color: #ecf0f1;
-    cursor: not-allowed;
-}
-
-.asset-card-view-grid .add-to-cart-btn.remove-from-cart {
-    width: 190px;
-}
-
-.asset-card-view-grid .add-to-cart-btn.pop-effect {
-    animation: pop 0.3s cubic-bezier(0.4, 0.2, 0.2, 1);
-}
 
 /* Pop effect animation for Add to Cart */
 @keyframes pop {

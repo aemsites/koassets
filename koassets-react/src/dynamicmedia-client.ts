@@ -1,6 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import { FILTERS_MAP } from './components/FacetFilter';
-import { AlgoliaSearchQuery } from './types';
+import { AlgoliaSearchQuery, Asset } from './types';
 
 interface DynamicMediaClientConfig {
     bucket: string;
@@ -11,7 +10,8 @@ interface DynamicMediaClientConfig {
 
 export interface SearchAssetsOptions {
     collectionId?: string | null;
-    facets?: string[][];
+    facets?: string[];
+    facetFilters?: string[][];
     hitsPerPage?: number;
     page?: number;
 }
@@ -19,20 +19,6 @@ export interface SearchAssetsOptions {
 export interface SearchCollectionsOptions {
     hitsPerPage?: number;
     page?: number;
-}
-
-interface AssetMetadata {
-    assetId: string;
-    title?: string;
-    description?: string;
-    fileType?: string;
-    dimensions?: {
-        width: number;
-        height: number;
-    };
-    createdAt?: string;
-    lastModified?: string;
-    [key: string]: any;
 }
 
 interface CollectionMetadata {
@@ -160,6 +146,7 @@ export class DynamicMediaClient {
         const {
             collectionId,
             facets = [],
+            facetFilters = [[]],
             hitsPerPage,
             page = 0
         } = options;
@@ -168,7 +155,7 @@ export class DynamicMediaClient {
             throw new Error('hitsPerPage is required');
         }
 
-        const combinedSelectedFacets = [...facets, ...(collectionId ? [[`collectionIds:${collectionId.split(':')[3]}`]] : [])];
+        const combinedSelectedFacetFilters = [...facetFilters, ...(collectionId ? [[`collectionIds:${collectionId.split(':')[3]}`]] : [])];
         const indexName = this.getIndexName();
 
         return {
@@ -176,13 +163,13 @@ export class DynamicMediaClient {
                 {
                     "indexName": indexName,
                     "params": {
-                        "facets": Object.keys(FILTERS_MAP),
-                        "facetFilters": combinedSelectedFacets,
-                        "filters": "",
+                        "facets": facets,
+                        "facetFilters": combinedSelectedFacetFilters,
+                        "filters": `(${this.getNonExpiredAssetsFilter()})`,
                         "highlightPostTag": "__/ais-highlight__",
                         "highlightPreTag": "__ais-highlight__",
                         "hitsPerPage": hitsPerPage,
-                        "maxValuesPerFacet": 10,
+                        "maxValuesPerFacet": 1000,
                         "page": page,
                         "query": query || "",
                         "tagFilters": ""
@@ -222,7 +209,7 @@ export class DynamicMediaClient {
                         "page": page,
                         "query": query || "",
                         "tagFilters": "",
-                        "filters": ""
+                        "filters": `(${this.getNonExpiredAssetsFilter()})`,
                     }
                 }
             ]
@@ -238,7 +225,7 @@ export class DynamicMediaClient {
         };
     };
 
-    async getMetadata(assetId: string, ifNoneMatch?: string): Promise<AssetMetadata> {
+    async getMetadata(assetId: string, ifNoneMatch?: string): Promise<Asset> {
         const config: AxiosRequestConfig = {
             url: `/adobe/assets/${assetId}/metadata`,
             method: 'GET'
@@ -265,12 +252,24 @@ export class DynamicMediaClient {
     }
 
     /**
-     * Search for assets with a cleaner API
+     * @returns {number} current epoch time.
+     */
+    private getSearchEpoch(): number {
+        const currentDate = new Date();
+        return Math.floor(currentDate.getTime() / 1000);
+    }
+
+    private getNonExpiredAssetsFilter(): string {
+        return `is_pur-expirationDate = 0 OR pur-expirationDate > ${this.getSearchEpoch()}`;
+    }
+
+    /**
+     * Search for assets using the provided query and options
      * @param query - The search query string
      * @param options - Search options (collection, facets, pagination)
      * @returns Promise with search results
      */
-    async searchAssets(query: string, options: SearchAssetsOptions = {}): Promise<any> {
+    async searchAssets(query: string, options: SearchAssetsOptions = {}): Promise<unknown> {
         const algoliaQuery = this.transformToAlgoliaSearchAssets(query, options);
 
         const config: AxiosRequestConfig = {
@@ -338,7 +337,9 @@ export class DynamicMediaClient {
 
         const blob = await response.blob();
         const arrayBuffer = await blob.arrayBuffer();
-        const base64 = Buffer.from(arrayBuffer).toString('base64');
+        const bytes = new Uint8Array(arrayBuffer);
+        const binaryString = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+        const base64 = btoa(binaryString);
 
         return {
             type: blob.type,
@@ -367,11 +368,6 @@ export class DynamicMediaClient {
     }
 
     async getOptimizedDeliveryBlob(assetId: string, repoName: string, width: number = 350) {
-
-        // // TODO: remove this
-        // const metadata = await this.getMetadata(assetId);
-        // console.log('metadata: ', metadata);
-
         // Convert video extensions to avif for optimal delivery
         const processedRepoName = this.convertVideoExtensionToAvif(repoName);
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { AssetCardProps } from '../types';
+import { formatCategory, formatFileSize, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
 import './AssetCardViewGrid.css';
 import LazyImage from './LazyImage';
 
@@ -7,9 +8,6 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
     image,
     handleCardClick,
     handlePreviewClick,
-    formatFileSize,
-    getFileExtension,
-    formatCategory,
     handleAddToCart,
     handleRemoveFromCart,
     cartItems = [],
@@ -81,33 +79,37 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                 <div className="product-info-container">
                     <div className="product-info">
                         <div className="product-title-section">
-                            <h3 className="product-title">{image.name || image.alt || 'Untitled Asset'}</h3>
-                            {image?.description && (
-                                <p className="product-description">{image.description}</p>
-                            )}
+                            <div className="product-tags">
+                                {(image?.campaignName as string) && (
+                                    <span className="product-tag tccc-tag">{removeHyphenTitleCase(image?.campaignName as string)}</span>
+                                )}
+                            </div>
+                            <h3 className="product-title">
+                                <a href={image.name}>{image.title}</a>
+                            </h3>
                         </div>
 
                         {showFullDetails && (
                             <div className="product-meta-grid">
                                 <div className="product-meta-item">
-                                    <span className="product-meta-label">SIZE</span>
-                                    <span className="product-meta-value">{formatFileSize(image.size)}</span>
+                                    <span className="product-meta-label tccc-metadata-label">SIZE</span>
+                                    <span className="product-meta-value tccc-metadata-value">{formatFileSize(image.size)}</span>
                                 </div>
                                 <div className="product-meta-item">
-                                    <span className="product-meta-label">TYPE</span>
-                                    <span className="product-meta-value">{image.format || 'Unknown'}</span>
+                                    <span className="product-meta-label tccc-metadata-label">TYPE</span>
+                                    <span className="product-meta-value tccc-metadata-value">{image.format}</span>
                                 </div>
                                 <div className="product-meta-item">
-                                    <span className="product-meta-label">FILE EXT</span>
-                                    <span className="product-meta-value">{getFileExtension(image.name || image.mimeType)}</span>
+                                    <span className="product-meta-label tccc-metadata-label">FILE EXT</span>
+                                    <span className="product-meta-value tccc-metadata-value">{getFileExtension(image.name || image.mimeType)}</span>
                                 </div>
                                 <div className="product-meta-item">
-                                    <span className="product-meta-label">RIGHTS FREE</span>
-                                    <span className="product-meta-value">YES</span>
+                                    <span className="product-meta-label tccc-metadata-label">RIGHTS FREE</span>
+                                    <span className="product-meta-value tccc-metadata-value">{image.rightsFree ? 'Yes' : 'No'}</span>
                                 </div>
                                 <div className="product-meta-item">
-                                    <span className="product-meta-label">CATEGORY</span>
-                                    <span className="product-meta-value">{formatCategory(image?.subject)}</span>
+                                    <span className="product-meta-label tccc-metadata-label">CATEGORY</span>
+                                    <span className="product-meta-value tccc-metadata-value">{formatCategory(image?.category as string)}</span>
                                 </div>
                             </div>
                         )}

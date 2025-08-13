@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import type { DynamicMediaClient } from '../dynamicmedia-client';
 import type {
+    Asset,
     AuthorizedCartItem,
     CartPanelAssetsProps,
     WorkflowStep,
@@ -11,8 +13,8 @@ import './CartPanelAssets.css';
 
 // Component to handle optimized image display with fallback to cache
 const OptimizedCartImage: React.FC<{
-    item: any;
-    dynamicMediaClient: any;
+    item: Asset;
+    dynamicMediaClient: DynamicMediaClient | null;
 }> = ({ item, dynamicMediaClient }) => {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
@@ -54,14 +56,16 @@ const OptimizedCartImage: React.FC<{
         };
 
         loadImage();
+    }, [item, item.assetId, item.url, dynamicMediaClient]);
 
-        // Cleanup function to revoke blob URL
+    // Separate effect for cleanup
+    useEffect(() => {
         return () => {
             if (imageUrl && imageUrl.startsWith('blob:')) {
                 URL.revokeObjectURL(imageUrl);
             }
         };
-    }, [item.assetId, item.url, dynamicMediaClient]);
+    }, [imageUrl]);
 
     if (loading) {
         return <div className="thumbnail-placeholder">Loading...</div>;
@@ -415,7 +419,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
 
                         {/* Cart Items */}
                         <div className="cart-items-table">
-                            {cartItems.map(item => {
+                            {cartItems.map((item: Asset) => {
                                 const authorizedItem = item as AuthorizedCartItem;
                                 return (
                                     <div key={item.assetId} className={`cart-item-row ${authorizedItem.authorized === false ? 'disabled' : ''}`}>
@@ -423,12 +427,12 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                                             <div className="item-thumbnail">
                                                 <OptimizedCartImage
                                                     item={item}
-                                                    dynamicMediaClient={dynamicMediaClient}
+                                                    dynamicMediaClient={dynamicMediaClient ?? null}
                                                 />
                                             </div>
                                         </div>
                                         <div className="col-title">
-                                            <div className="item-title">{item.metadata?.title || item.name}</div>
+                                            <div className="item-title">{item.title || item.name}</div>
                                             <br />
                                             <div className="item-type">TYPE: {item.format?.toUpperCase() || 'UNKNOWN'}</div>
                                         </div>
