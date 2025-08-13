@@ -165,11 +165,11 @@ export class DynamicMediaClient {
                     "params": {
                         "facets": facets,
                         "facetFilters": combinedSelectedFacetFilters,
-                        "filters": "",
+                        "filters": `(${this.getNonExpiredAssetsFilter()})`,
                         "highlightPostTag": "__/ais-highlight__",
                         "highlightPreTag": "__ais-highlight__",
                         "hitsPerPage": hitsPerPage,
-                        "maxValuesPerFacet": 10,
+                        "maxValuesPerFacet": 1000,
                         "page": page,
                         "query": query || "",
                         "tagFilters": ""
@@ -209,7 +209,7 @@ export class DynamicMediaClient {
                         "page": page,
                         "query": query || "",
                         "tagFilters": "",
-                        "filters": ""
+                        "filters": `(${this.getNonExpiredAssetsFilter()})`,
                     }
                 }
             ]
@@ -249,6 +249,18 @@ export class DynamicMediaClient {
             }
             throw error;
         }
+    }
+
+    /**
+     * @returns {number} current epoch time.
+     */
+    private getSearchEpoch(): number {
+        const currentDate = new Date();
+        return Math.floor(currentDate.getTime() / 1000);
+    }
+
+    private getNonExpiredAssetsFilter(): string {
+        return `is_pur-expirationDate = 0 OR pur-expirationDate > ${this.getSearchEpoch()}`;
     }
 
     /**

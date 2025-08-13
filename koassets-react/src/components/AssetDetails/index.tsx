@@ -122,8 +122,8 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                         <div className="assets-details-info-section-inner">
                             <div className="assets-details-header">
                                 <div className="assets-details-tags">
-                                    {selectedImage?.['tccc-campaignName'] as string && (
-                                        <span className="assets-details-tag tccc-tag">{removeHyphenTitleCase(selectedImage['tccc-campaignName'] as string)}</span>
+                                    {selectedImage?.campaignName as string && (
+                                        <span className="assets-details-tag tccc-tag">{removeHyphenTitleCase(selectedImage?.campaignName as string)}</span>
                                     )}
                                 </div>
                                 <h2 className="assets-details-title">

@@ -1,7 +1,19 @@
+import { getBucket } from './utils/config';
+
 const IMS_ORG = '9075A2B154DE8AF80A4C98A7@AdobeOrg';
 const CONTENT_HUB_SETTINGS = {"assetDetails":"","assetCard":"","facets":"","search":"","hydration":"","branding":"","customLinks":"","generalConfig":"","renditionConfig":""};
 const CONTENT_HUB_APP_ID = 'ContentHub';
-const CONTENT_HUB_GROUP_ID = 'contenthub_aem_metadata_config-64403-544653';
+
+// Extract the ID from VITE_BUCKET (format: delivery-p64403-e544653 -> 64403-544653)
+const extractIdFromBucket = (bucket: string): string => {
+    const match = bucket.match(/delivery-p(\d+)-e(\d+)/);
+    if (!match) {
+        throw new Error(`Invalid bucket format: ${bucket}. Expected format: delivery-p{number}-e{number}`);
+    }
+    return `${match[1]}-${match[2]}`;
+};
+
+const CONTENT_HUB_GROUP_ID = `contenthub_aem_metadata_config-${extractIdFromBucket(getBucket())}`;
 
 // Custom error class for HTTP errors
 export class HttpError extends Error {
@@ -93,22 +105,27 @@ export class ExcClient {
         appId = CONTENT_HUB_APP_ID,
         groupId = CONTENT_HUB_GROUP_ID,
         settings = CONTENT_HUB_SETTINGS
-    }: GetSettingsParams = {}): Promise<string[]> {
+    }: GetSettingsParams = {}): Promise<Record<string, unknown>> {
         const settingsData = await this.getExcSettings({ imsOrg, appId, groupId, settings });
         
         if (!settingsData) {
-            return [];
+            return {};
         }
 
         // Extract keys from settings.facets.fields and replace ':' with '-'
         const settingsRecord = settingsData as Record<string, unknown>;
         const facetsData = settingsRecord?.facets as Record<string, unknown>;
-        const fieldsData = facetsData?.fields as Record<string, unknown>;
+        const facetFields = facetsData?.fields as Record<string, unknown>;
         
-        if (fieldsData) {
-            return Object.keys(fieldsData).map(key => key.replace(/:/g, '-'));
+        if (facetFields) {
+            const transformedFacets: Record<string, unknown> = {};
+            Object.entries(facetFields).forEach(([key, value]) => {
+                const transformedKey = key.replace(/:/g, '-');
+                transformedFacets[transformedKey] = value;
+            });
+            return transformedFacets;
         }
         
-        return [];
+        return {};
     }
-} 
+}

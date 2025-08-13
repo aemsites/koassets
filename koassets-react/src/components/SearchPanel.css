@@ -192,7 +192,7 @@
     }
 }
 
-/* Hide filter button and show FacetFilter on screens >= 1440px */
+/* Hide filter button and show Facets on screens >= 1440px */
 @media (min-width: 1440px) {
     .filter-button {
         display: none;

@@ -80,8 +80,8 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                     <div className="product-info">
                         <div className="product-title-section">
                             <div className="product-tags">
-                                {(image?.['tccc-campaignName'] as string) && (
-                                    <span className="product-tag tccc-tag">{removeHyphenTitleCase(image['tccc-campaignName'] as string)}</span>
+                                {(image?.campaignName as string) && (
+                                    <span className="product-tag tccc-tag">{removeHyphenTitleCase(image?.campaignName as string)}</span>
                                 )}
                             </div>
                             <h3 className="product-title">

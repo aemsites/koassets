@@ -181,12 +181,12 @@ export interface FacetCheckedState {
     };
 }
 
-export interface FacetFilterProps {
+export interface FacetsProps {
     searchResult?: SearchResult | null;
     selectedFacetFilters?: string[][];
     setSelectedFacetFilters: (facetFilters: string[][]) => void;
     search: () => void;
-    excFacets?: string[];
+    excFacets?: Record<string, unknown>;
 }
 
 // Phase 3 Component Types
@@ -305,7 +305,7 @@ export interface LoadingState {
 
 export interface AlgoliaSearchParams {
     facets: string[];
-    facetFilters?: string[][];
+    facetFilters?: string[][] | string;
     filters: string;
     highlightPostTag: string;
     highlightPreTag: string;

@@ -16,7 +16,7 @@ import { getBucket } from '../utils/config';
 
 // Components
 import CollectionGallery from './CollectionGallery';
-import FacetFilter from './FacetFilter';
+import Facets from './Facets';
 import Footer from './Footer';
 import HeaderBar from './HeaderBar';
 import ImageGallery from './ImageGallery';
@@ -24,7 +24,33 @@ import SearchBar from './SearchBar';
 
 const searchAssetsTitle = 'Search Assets - where you can discover the company\'s latest and greatest content!';
 const searchCollectionsTitle = 'My Collections';
-const HITS_PER_PAGE = 2400;
+const HITS_PER_PAGE = 24;
+
+/**
+ * Transforms excFacets object into a string array for search facets
+ * @param excFacets - The facets object from EXC
+ * @returns Array of facet keys for search
+ */
+function transformExcFacetsToHierarchyArray(excFacets: Record<string, unknown>): string[] {
+    const facetKeys: string[] = [];
+
+    Object.entries(excFacets).forEach(([key, value]) => {
+        const facetValue = value as { type?: string };
+
+        if (facetValue?.type !== 'tags') {
+            // For non-tags types, append the entry key
+            facetKeys.push(key);
+        } else {
+            // For tags type, append 10 hierarchy level keys
+            for (let n = 0; n <= 9; n++) {
+                facetKeys.push(`${key}.TCCC.#hierarchy.lvl${n}`);
+            }
+            facetKeys.push(`${key}.TCCC.#values`);
+        }
+    });
+
+    return facetKeys;
+}
 
 /**
  * Transforms a search hit record into an Asset object
@@ -40,7 +66,7 @@ function populateAssetFromHit(hit: Record<string, unknown>): Asset {
         category: (hit?.['tccc-assetCategoryAndType_hidden'] as string[])?.length > 0
             ? (hit?.['tccc-assetCategoryAndType_hidden'] as string[])[0].split('|')[0]
             : 'Unknown',
-        categoryAndType: (hit?.['tccc-assetCategoryAndType'] as string[])?.join('|') || 'Unknown',
+        campaignName: hit?.['tccc-campaignName'] as string,
         createDate: hit?.['repo-createDate'] as string,
         createBy: hit?.['dc-creator'] as string, // Missing metadata
         description: hit?.['tccc-description'] as string || hit?.['dc-description'] as string,
@@ -96,7 +122,7 @@ function MainApp(): React.JSX.Element {
     const [currentView, setCurrentView] = useState<CurrentView>(CURRENT_VIEW.images);
     const [selectedQueryType, setSelectedQueryType] = useState<string>(QUERY_TYPES.ASSETS);
     const [selectedFacetFilters, setSelectedFacetFilters] = useState<string[][]>([]);
-    const [excFacets, setExcFacets] = useState<string[] | undefined>(undefined);
+    const [excFacets, setExcFacets] = useState<Record<string, unknown> | undefined>(undefined);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState<number>(0);
@@ -201,14 +227,14 @@ function MainApp(): React.JSX.Element {
     }, []);
 
     // Process and display collections
-    const processCollections = useCallback(async (content: any): Promise<void> => {
+    const processCollections = useCallback(async (content: { results?: Array<{ hits?: Array<{ objectID: string; collectionMetadata?: unknown; thumbnail?: string }> }> }): Promise<void> => {
         setCollections([]);
         try {
             if (content.results && content.results[0]?.hits) {
-                const processedCollections: Collection[] = content.results[0].hits.map((hit: any) => ({
-                    collectionId: hit.objectID,
-                    collectionMetadata: hit.collectionMetadata || {},
-                    thumbnail: hit.thumbnail,
+                const processedCollections: Collection[] = content.results[0].hits.map((hit) => ({
+                    collectionId: hit.objectID as string,
+                    collectionMetadata: (hit.collectionMetadata as Collection['collectionMetadata']) || { title: '', description: '' },
+                    thumbnail: hit.thumbnail as string,
                 }));
                 setCollections(processedCollections);
             } else {
@@ -235,7 +261,7 @@ function MainApp(): React.JSX.Element {
 
         dynamicMediaClient.searchAssets(query.trim(), {
             collectionId: selectedCollection?.collectionId,
-            facets: excFacets,
+            facets: excFacets ? transformExcFacetsToHierarchyArray(excFacets) : [],
             facetFilters: selectedFacetFilters,
             hitsPerPage: HITS_PER_PAGE,
             page: page
@@ -569,7 +595,7 @@ function MainApp(): React.JSX.Element {
                                 {enhancedGallery}
                             </div>
                             <div className={`facet-filter-panel ${isMobileFilterOpen ? 'mobile-open' : ''}`}>
-                                <FacetFilter
+                                <Facets
                                     searchResult={searchResult}
                                     selectedFacetFilters={selectedFacetFilters}
                                     setSelectedFacetFilters={setSelectedFacetFilters}

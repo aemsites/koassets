@@ -32,26 +32,19 @@
 
 .facet-filter-panel {
   flex: 0 0 330px;
-  min-width: 330px;
-  max-width: 380px;
+  min-width: 22%;
   border-left: 1px solid #e0e0e0;
   background: #fafbfc;
-  padding: 20px 20px 20px 20px;
+  padding: 30px;
   overflow: hidden;
-  /* Completely prevent panel from scrolling */
-  /* Panel contains both the filter list AND the Apply button */
-  /* Size to available viewport space minus header/navigation */
   height: calc(100vh - 200px);
   max-height: calc(100vh - 200px);
   width: 330px;
-  /* Fixed width for consistency */
   display: flex;
   flex-direction: column;
   min-height: 0;
-  /* Important for proper flex containment */
 }
 
-/* Image gallery component */
 .image-gallery {
   display: flex;
   flex-direction: column;
@@ -194,7 +187,7 @@
   }
 }
 
-/* Responsive: Hide FacetFilter on smaller screens where filter button should appear */
+/* Responsive: Hide Facets on smaller screens where filter button should appear */
 @media (max-width: 1439px) {
   .facet-filter-panel {
     display: none;
@@ -219,7 +212,7 @@
   }
 }
 
-/* Show FacetFilter on larger screens where filter button is hidden */
+/* Show Facets on larger screens where filter button is hidden */
 @media (min-width: 1440px) {
   .facet-filter-panel {
     display: block;

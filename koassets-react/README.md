@@ -74,7 +74,7 @@ src/
 │   ├── ImageGallery.jsx # Asset display grid
 │   ├── CollectionGallery.jsx # Collection browsing
 │   ├── CartPanel.jsx    # Shopping cart functionality
-│   ├── FacetFilter.jsx  # Search filtering
+│   ├── Facets.jsx  # Search filtering
 │   ├── SearchBar.tsx     # Search input component
 │   └── AppRouter.jsx    # Application routing
 ├── utils/
