@@ -132,7 +132,7 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                         </div>
                         <div className="preview-modal-group">
                             <span className="preview-metadata-label tccc-metadata-label">FILE EXT</span>
-                            <span className="preview-metadata-value tccc-metadata-value">{getFileExtension(selectedImage.name || selectedImage.mimeType)}</span>
+                            <span className="preview-metadata-value tccc-metadata-value">{getFileExtension(selectedImage.name as string)}</span>
                         </div>
                         <div className="preview-modal-group">
                             <span className="preview-metadata-label tccc-metadata-label">RIGHTS FREE</span>

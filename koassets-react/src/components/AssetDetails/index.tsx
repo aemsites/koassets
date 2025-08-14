@@ -3,6 +3,11 @@ import type { AssetDetailsProps } from '../../types';
 import { fetchOptimizedDeliveryBlob } from '../../utils/blobCache';
 import { formatFileSize, removeHyphenTitleCase } from '../../utils/formatters';
 import './AssetDetails.css';
+import AssetDetailsDRM from './AssetDetailsDRM';
+import AssetDetailsGeneralInfo from './AssetDetailsGeneralInfo';
+import AssetDetailsMarketing from './AssetDetailsMarketing';
+import AssetDetailsMarketingPackageContainer from './AssetDetailsMarketingPackageContainer';
+import AssetDetailsOverview from './AssetDetailsOverview';
 import AssetDetailsSystem from './AssetDetailsSystem';
 
 const AssetDetails: React.FC<AssetDetailsProps> = ({
@@ -49,13 +54,13 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
             setBlobUrl(null);
 
             // Get metadata for the asset
-            if (selectedImage.assetId) {
-                dynamicMediaClient.getMetadata(selectedImage.assetId).then(metadata => {
-                    console.log('Asset metadata:', metadata);
-                }).catch(error => {
-                    console.error(`Error getting metadata for asset ${selectedImage.assetId}:`, error);
-                });
-            }
+            // if (selectedImage.assetId) {
+            //     dynamicMediaClient.getMetadata(selectedImage.assetId).then(metadata => {
+            //         console.log('Asset metadata:', metadata);
+            //     }).catch(error => {
+            //         console.error(`Error getting metadata for asset ${selectedImage.assetId}:`, error);
+            //     });
+            // }
 
             const fetchHighResImage = async () => {
                 try {
@@ -215,8 +220,14 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                     <div className="assets-details-metadata-grid">
                         <div className="assets-details-metadata-left-container">
                             <AssetDetailsSystem selectedImage={selectedImage} />
+                            <AssetDetailsDRM selectedImage={selectedImage} />
+                            <AssetDetailsOverview selectedImage={selectedImage} />
+                            <AssetDetailsGeneralInfo selectedImage={selectedImage} />
                         </div>
-                        <div className="assets-details-metadata-right-container"></div>
+                        <div className="assets-details-metadata-right-container">
+                            <AssetDetailsMarketing selectedImage={selectedImage} />
+                            <AssetDetailsMarketingPackageContainer selectedImage={selectedImage} />
+                        </div>
                     </div>
                 </div>
             </div>

@@ -64,9 +64,15 @@ function safeStringField(hit: Record<string, unknown>, key: string, fallback: st
 function safeStringFromCandidates(hit: Record<string, unknown>, keys: string[], fallback: string = 'N/A'): string {
     let sawObject = false;
     for (const key of keys) {
-        const value = (hit as Record<string, unknown>)[key];
-        if (typeof value === 'string' && value) return value;
-        if (value && typeof value === 'object') sawObject = true;
+        // Normalize extraction using safeStringField
+        const candidate = safeStringField(hit, key, fallback);
+        if (candidate === 'ERROR') {
+            sawObject = true;
+            continue;
+        }
+        if (candidate !== '') {
+            return candidate;
+        }
     }
     return sawObject ? 'ERROR' : fallback;
 }
@@ -95,6 +101,63 @@ function safeDateField(hit: Record<string, unknown>, key: string): string {
     return 'N/A';
 }
 
+// Normalize fields that may be arrays: if the primary key contains an array,
+// join string entries with commas; otherwise, fall back to candidate keys using safeStringFromCandidates.
+function extractJoinedIfArrayElseSafe(
+    hit: Record<string, unknown>,
+    primaryKey: string,
+    candidateKeys: string[],
+    fallback: string = 'N/A'
+): string {
+    const raw = (hit as Record<string, unknown>)[primaryKey] as unknown;
+    if (Array.isArray(raw)) {
+        return (raw as unknown[])
+            .filter((v) => typeof v === 'string' && v)
+            .map((v) => (v as string).split('/'))
+            .map((parts) => parts[parts.length - 1].trim())
+            .join(', ');
+    }
+    return safeStringFromCandidates(hit, candidateKeys, fallback);
+}
+
+// Extract "last token" values from objects of the form { TCCC: { #values: [...] } }
+function extractFromTcccValues(hit: Record<string, unknown>, key: string): string | null {
+    const raw = (hit as Record<string, unknown>)[key] as unknown;
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        const tcccObj = (raw as Record<string, unknown>)['TCCC'] as Record<string, unknown> | undefined;
+        const values = tcccObj && (tcccObj['#values'] as unknown);
+        if (Array.isArray(values)) {
+            const processed = (values as string[]).map((v) => {
+                const parts = v.split(' / ');
+                return parts[parts.length - 1].trim();
+            });
+            return processed.join(', ');
+        }
+        return 'ERROR';
+    }
+    return 'N/A';
+}
+
+// Extract last tokens from xcm keywords object: uses _tagIDs strings, splitting by '/' or ':' and joining with commas
+function extractFromTcccTagIDs(hit: Record<string, unknown>, key: string): string {
+    const raw = (hit as Record<string, unknown>)[key] as unknown;
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        const tagIds = (raw as Record<string, unknown>)['_tagIDs'] as unknown;
+        if (Array.isArray(tagIds)) {
+            const tokens = (tagIds as unknown[])
+                .filter((v) => typeof v === 'string' && v)
+                .map((v) => {
+                    const s = v as string;
+                    const idx = Math.max(s.lastIndexOf('/'), s.lastIndexOf(':'));
+                    return (idx >= 0 ? s.slice(idx + 1) : s).trim();
+                });
+            return tokens.join(', ');
+        }
+        return 'N/A';
+    }
+    return 'N/A';
+}
+
 /**
  * Transforms a search hit record into an Asset object
  * @param hit - The raw hit data from search results
@@ -102,64 +165,85 @@ function safeDateField(hit: Record<string, unknown>, key: string): string {
  */
 function populateAssetFromHit(hit: Record<string, unknown>): Asset {
     const repoName = (hit['repo-name'] as string) || 'Untitled';
-
-    // Category from hidden array field
-    let category: string = 'N/A';
-    const catHidden = hit?.['tccc-assetCategoryAndType_hidden'] as unknown;
-    if (Array.isArray(catHidden) && (catHidden as string[]).length > 0) {
-        category = (catHidden as string[])[0].split('|')[0];
-    } else if (catHidden && typeof catHidden === 'object') {
-        category = 'ERROR';
-    }
-
-    // Market Covered: prefer extracting from hierarchy values, else safe string; object without values => ERROR
-    let marketCovered = safeStringField(hit, 'tccc-marketCovered', 'N/A');
-    const marketCoveredRaw = hit?.['tccc-marketCovered'] as unknown;
-    if (marketCoveredRaw && typeof marketCoveredRaw === 'object') {
-        const tcccObj = (marketCoveredRaw as Record<string, unknown>)['TCCC'] as Record<string, unknown> | undefined;
-        const values = tcccObj && (tcccObj['#values'] as unknown);
-        if (Array.isArray(values)) {
-            const processed = (values as string[]).map((v) => {
-                const parts = v.split(' / ');
-                return parts[parts.length - 1].trim();
-            });
-            marketCovered = processed.join(', ');
-        } else {
-            marketCovered = 'ERROR';
-        }
-    }
+    const category = extractFromTcccValues(hit, 'tccc-assetCategoryAndType') || 'N/A';
+    const marketCovered = extractFromTcccValues(hit, 'tccc-marketCovered') || 'N/A';
+    const language = extractJoinedIfArrayElseSafe(hit, 'tccc-language', ['tccc-language', 'dc-language'], 'N/A');
+    const longRangePlan = extractJoinedIfArrayElseSafe(hit, 'tccc-longRangePlan', ['tccc-longRangePlan'], 'N/A');
+    const longRangePlanTactic = extractJoinedIfArrayElseSafe(hit, 'tccc-longRangePlanTactic', ['tccc-longRangePlanTactic'], 'N/A');
+    const campaignReach = extractJoinedIfArrayElseSafe(hit, 'tccc-campaignReach', ['tccc-campaignReach'], 'N/A');
+    const ageDemographic = extractJoinedIfArrayElseSafe(hit, 'tccc-ageDemographic', ['tccc-ageDemographic'], 'N/A');
+    const brand = extractFromTcccValues(hit, 'tccc-brand') || 'N/A';
+    const subBrand = extractJoinedIfArrayElseSafe(hit, 'tccc-subBrand', ['tccc-subBrand'], 'N/A');
+    const beverageType = extractJoinedIfArrayElseSafe(hit, 'tccc-beverageType', ['tccc-beverageType'], 'N/A');
+    const packageOrContainerType = extractJoinedIfArrayElseSafe(hit, 'tccc-packageContainerType', ['tccc-packageContainerType']);
+    const packageOrContainerMaterial = extractJoinedIfArrayElseSafe(hit, 'tccc-packageContainerMaterial', ['tccc-packageContainerMaterial']);
+    const packageOrContainerSize = extractJoinedIfArrayElseSafe(hit, 'tccc-packageContainerSize', ['tccc-packageContainerSize']);
+    const secondaryPackaging = extractJoinedIfArrayElseSafe(hit, 'tccc-secondaryPackaging', ['tccc-secondaryPackaging']);
 
     return {
+        agencyName: safeStringField(hit, 'tccc-agencyName'),
+        ageDemographic: ageDemographic,
         alt: safeStringFromCandidates(hit, ['dc-title', 'repo-name'], 'Asset'),
         assetId: safeStringField(hit, 'assetId'),
-        category: category,
+        assetStatus: safeStringField(hit, 'tccc-assetStatus'),
+        beverageType: beverageType,
+        brand: brand,
+        businessAffairsManager: safeStringField(hit, 'tccc-businessAffairsManager'),
+        campaignActivationRemark: extractJoinedIfArrayElseSafe(hit, 'tccc-campaignActivationRemark', ['tccc-campaignActivationRemark']),
         campaignName: safeStringField(hit, 'tccc-campaignName'),
-        createDate: safeDateField(hit, 'repo-createDate'),
+        campaignReach: campaignReach,
+        campaignSubActivationRemark: extractJoinedIfArrayElseSafe(hit, 'tccc-campaignSubActivationRemark', ['tccc-campaignSubActivationRemark']),
+        category: category,
         createBy: safeStringField(hit, 'repo-createdBy'),
-        description: safeStringFromCandidates(hit, ['tccc-description', 'dc-description'], ''),
+        createDate: safeDateField(hit, 'repo-createDate'),
+        description: safeStringFromCandidates(hit, ['tccc-description', 'dc-description']),
+        derivedAssets: safeStringField(hit, 'tccc-derivedAssets'),
+        experienceId: safeStringField(hit, 'tccc-campaignExperienceID'),
         expired: safeStringField(hit, 'is_pur-expirationDate'),
+        expirationDate: safeDateField(hit, 'pur-expirationDate'),
+        fadelId: safeStringField(hit, 'tccc-fadelAssetId'),
         format: safeStringField(hit, 'dc-format-label'),
+        japaneseDescription: safeStringFromCandidates(hit, ['tccc-description.ja'], 'N/A'),
+        japaneseKeywords: extractJoinedIfArrayElseSafe(hit, 'tccc-keywords_ja', ['tccc-keywords_ja']),
+        japaneseTitle: safeStringFromCandidates(hit, ['dc-title_ja'], 'N/A'),
+        keywords: extractJoinedIfArrayElseSafe(hit, 'tccc-keywords', ['tccc-keywords']),
+        language: language,
         lastModified: safeDateField(hit, 'tccc-lastModified'),
+        longRangePlan: longRangePlan,
+        longRangePlanTactic: longRangePlanTactic,
         marketCovered: marketCovered,
+        masterOrAdaptation: safeStringField(hit, 'tccc-masterOrAdaptation'),
         media: safeStringField(hit, 'tccc-media'),
         migrationId: safeStringField(hit, 'tccc-migrationID'),
         modifyBy: safeStringField(hit, 'tccc-lastModifiedBy'),
         modifyDate: safeDateField(hit, 'repo-modifyDate'),
         name: repoName,
-        publishDate: safeDateField(hit, 'tccc-publishDate'),
+        otherAssets: safeStringField(hit, 'tccc-otherAssets'),
+        packageOrContainerMaterial: packageOrContainerMaterial,
+        packageOrContainerSize: packageOrContainerSize,
+        packageOrContainerType: packageOrContainerType,
         publishBy: safeStringField(hit, 'tccc-publishBy'),
+        publishDate: safeDateField(hit, 'tccc-publishDate'),
         publishStatus: safeStringField(hit, 'tccc-publishStatus'),
         resolution: safeStringField(hit, 'tccc-resolution'),
-        rightsFree: safeStringField(hit, 'tccc-rightsFree'),
-        rightsProfileTitle: safeStringField(hit, 'tccc-rightsProfileTitle'),
         rightsEndDate: safeDateField(hit, 'tccc-rightsEndDate'),
+        rightsFree: safeStringField(hit, 'tccc-rightsFree'),
+        rightsNotes: safeStringField(hit, 'tccc-rightsNotes'),
+        rightsProfileTitle: safeStringField(hit, 'tccc-rightsProfileTitle'),
         rightsStartDate: safeDateField(hit, 'tccc-rightsStartDate'),
+        rightsStatus: safeStringField(hit, 'tccc-rightsStatus'),
+        riskTypeManagement: safeStringField(hit, 'tccc-riskTypeMgmt'),
+        secondaryPackaging: secondaryPackaging,
         size: safeNumberField(hit, 'size', 0),
+        sourceAsset: safeStringField(hit, 'tccc-sourceAsset'),
         sourceId: safeStringField(hit, 'tccc-sourceId'),
+        subBrand: subBrand,
+        tags: safeStringFromCandidates(hit, ['dc-subject', 'tccc-tags', 'tags']),
         title: safeStringField(hit, 'dc-title'),
         url: '', // Loaded lazily
         usage: safeStringField(hit, 'tccc-usage'),
         workfrontId: safeStringField(hit, 'tccc-workfrontID'),
+        xcmKeywords: extractFromTcccTagIDs(hit, 'xcm-keywords'),
         ...hit
     } satisfies Asset;
 }
