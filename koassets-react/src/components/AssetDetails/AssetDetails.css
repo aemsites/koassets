@@ -60,6 +60,87 @@
     overflow: visible;
 }
 
+/* Shared collapsible section header (System/DRM) */
+.asset-details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e1e1e1;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+    position: relative;
+}
+
+.asset-details-header:hover {
+    background: #f0f1f2;
+}
+
+/* Shared content padding for left-column cards */
+.asset-details-content {
+    padding: 30px 20px;
+}
+
+/* Shared card container */
+.asset-details-card {
+    border: 1px solid #e1e1e1;
+    border-radius: 8px;
+    background: white;
+    overflow: hidden;
+}
+
+/* Shared section title */
+.asset-details-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Shared arrow */
+.asset-details-arrow {
+    font-size: 14px;
+    font-weight: bold;
+    color: #666;
+    transition: transform 0.2s;
+    position: relative;
+    width: 2rem;
+    height: 2rem;
+    display: inline-block;
+}
+
+.asset-details-arrow::before {
+    background: url("/icons/down-arrow-icon.svg") no-repeat 50% !important;
+    content: "" !important;
+    cursor: pointer;
+    height: 2rem;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 2rem;
+    transition: transform .3s ease, -webkit-transform .3s ease;
+    transform: rotate(180deg);
+}
+
+.asset-details-arrow.expanded::before {
+    transform: rotate(0deg);
+}
+
+/* Shared grid/group */
+.asset-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.asset-details-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
 .assets-details-image-section {
     flex: 2;
     display: flex;
@@ -116,7 +197,7 @@
 }
 
 .assets-details-info-section-inner {
-    padding: 40px 20px 30px 20px;
+    padding: 40px 40px 30px 0;
 }
 
 .assets-details-header {
@@ -136,15 +217,6 @@
     padding: 4px 12px;
     border-radius: 20px;
     overflow-wrap: break-word;
-}
-
-.assets-details-title {
-    margin: 0 0 10px 0;
-    overflow-wrap: break-word;
-    color: #1e1e1e;
-    font-size: 1.125rem;
-    font-weight: 600;
-    line-height: 1.575rem;
 }
 
 .assets-details-description {
@@ -334,6 +406,20 @@
     width: 100%;
 }
 
+/* Left metadata column layout */
+.assets-details-metadata-left-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Right metadata column layout */
+.assets-details-metadata-right-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
 @media (max-width: 768px) {
     .assets-details-header {
         padding-bottom: 15px;
@@ -353,5 +439,21 @@
         width: 35px;
         height: 35px;
         font-size: 20px;
+    }
+
+    /* Shared collapsible section header responsive */
+    .asset-details-header {
+        padding: 12px 16px;
+    }
+
+    /* Shared content padding responsive */
+    .asset-details-content {
+        padding: 16px;
+    }
+
+    /* Shared grid responsive */
+    .asset-details-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
     }
 }
