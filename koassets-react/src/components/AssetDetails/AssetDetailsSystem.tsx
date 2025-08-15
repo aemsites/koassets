@@ -1,26 +1,36 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { Asset } from '../../types';
 
 interface AssetDetailsSystemProps {
     selectedImage: Asset;
+    forceCollapse?: boolean;
 }
 
-const AssetDetailsSystem: React.FC<AssetDetailsSystemProps> = ({ selectedImage }) => {
+const AssetDetailsSystem: React.FC<AssetDetailsSystemProps> = ({ selectedImage, forceCollapse }) => {
     const [isExpanded, setIsExpanded] = useState(true);
 
     const toggleExpanded = () => {
         setIsExpanded(!isExpanded);
     };
 
+    // Sync local expanded state with global collapse toggle, but allow local overrides via clicks
+    useEffect(() => {
+        if (typeof forceCollapse === 'boolean') {
+            setIsExpanded(!forceCollapse);
+        }
+    }, [forceCollapse]);
+
+    const expanded = isExpanded;
+
     return (
         <div className="asset-details-card">
             <div className="asset-details-header" onClick={toggleExpanded}>
                 <h3 className="asset-details-title">System Details</h3>
-                <span className={`asset-details-arrow ${isExpanded ? 'expanded' : ''}`}>
+                <span className={`asset-details-arrow ${expanded ? 'expanded' : ''}`}>
                 </span>
             </div>
 
-            {isExpanded && (
+            {expanded && (
                 <div className="asset-details-content">
                     <div className="asset-details-grid">
                         <div className="asset-details-group">

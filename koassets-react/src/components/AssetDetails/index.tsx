@@ -1,14 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import type { AssetDetailsProps } from '../../types';
 import { fetchOptimizedDeliveryBlob } from '../../utils/blobCache';
-import { formatFileSize, removeHyphenTitleCase } from '../../utils/formatters';
+import { removeHyphenTitleCase } from '../../utils/formatters';
 import './AssetDetails.css';
 import AssetDetailsDRM from './AssetDetailsDRM';
 import AssetDetailsGeneralInfo from './AssetDetailsGeneralInfo';
+import AssetDetailsIntendedUse from './AssetDetailsIntendedUse';
+import AssetDetailsLegacyFields from './AssetDetailsLegacyFields';
 import AssetDetailsMarketing from './AssetDetailsMarketing';
 import AssetDetailsMarketingPackageContainer from './AssetDetailsMarketingPackageContainer';
 import AssetDetailsOverview from './AssetDetailsOverview';
+import AssetDetailsProduction from './AssetDetailsProduction';
+import AssetDetailsScheduledActivation from './AssetDetailsScheduledActivation';
 import AssetDetailsSystem from './AssetDetailsSystem';
+import AssetDetailsSystemInfoLegacy from './AssetDetailsSystemInfoLegacy';
+import AssetDetailsTechnicalInfo from './AssetDetailsTechnicalInfo';
 
 const AssetDetails: React.FC<AssetDetailsProps> = ({
     showModal,
@@ -21,6 +27,11 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 }) => {
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
     const [imageLoading, setImageLoading] = useState<boolean>(false);
+    const [collapseAll, setCollapseAll] = useState<boolean>(false);
+
+    const handleToggleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setCollapseAll(e.target.checked);
+    };
 
     // Check if this item is already in the cart
     const isInCart = selectedImage ? cartItems.some(cartItem => cartItem.assetId === selectedImage.assetId) : false;
@@ -52,15 +63,6 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
         if (showModal && selectedImage && dynamicMediaClient) {
             setImageLoading(true);
             setBlobUrl(null);
-
-            // Get metadata for the asset
-            // if (selectedImage.assetId) {
-            //     dynamicMediaClient.getMetadata(selectedImage.assetId).then(metadata => {
-            //         console.log('Asset metadata:', metadata);
-            //     }).catch(error => {
-            //         console.error(`Error getting metadata for asset ${selectedImage.assetId}:`, error);
-            //     });
-            // }
 
             const fetchHighResImage = async () => {
                 try {
@@ -151,7 +153,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">SIZE</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{formatFileSize(selectedImage.size)}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.formatedSize as string}</span>
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">LAST MODIFIED</span>
@@ -217,16 +219,31 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                 <div className="assets-details-toggle-section"></div>
 
                 <div className="assets-details-metadata-section">
+                    <div className="cmp-title" id="showfulldetails">
+                        <h1>
+                            Collapse All
+                            <label className="switch">
+                                <input type="checkbox" checked={collapseAll} onChange={handleToggleChange} />
+                                <span className="slider round"></span>
+                            </label>
+                        </h1>
+                    </div>
                     <div className="assets-details-metadata-grid">
                         <div className="assets-details-metadata-left-container">
-                            <AssetDetailsSystem selectedImage={selectedImage} />
-                            <AssetDetailsDRM selectedImage={selectedImage} />
-                            <AssetDetailsOverview selectedImage={selectedImage} />
-                            <AssetDetailsGeneralInfo selectedImage={selectedImage} />
+                            <AssetDetailsSystem selectedImage={selectedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsDRM selectedImage={selectedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsOverview selectedImage={selectedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsGeneralInfo selectedImage={selectedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsIntendedUse selectedImage={selectedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsScheduledActivation selectedImage={selectedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsTechnicalInfo selectedImage={selectedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsSystemInfoLegacy selectedImage={selectedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsProduction selectedImage={selectedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsLegacyFields selectedImage={selectedImage} forceCollapse={collapseAll} />
                         </div>
                         <div className="assets-details-metadata-right-container">
-                            <AssetDetailsMarketing selectedImage={selectedImage} />
-                            <AssetDetailsMarketingPackageContainer selectedImage={selectedImage} />
+                            <AssetDetailsMarketing selectedImage={selectedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsMarketingPackageContainer selectedImage={selectedImage} forceCollapse={collapseAll} />
                         </div>
                     </div>
                 </div>

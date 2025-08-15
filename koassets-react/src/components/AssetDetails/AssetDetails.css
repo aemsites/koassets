@@ -58,6 +58,10 @@
 .assets-details-metadata-section {
     flex: 0 0 auto;
     overflow: visible;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    padding: 0 30px 30px;
 }
 
 /* Shared collapsible section header (System/DRM) */
@@ -92,11 +96,13 @@
 }
 
 /* Shared section title */
-.asset-details-title {
-    margin: 0;
-    font-size: 16px;
+.asset-details-header .asset-details-title {
+    color: #1e1e1e;
+    font-size: 18px;
+    font-family: "TCCC UnityHeadline", "Helvetica Neue", Arial, Helvetica, sans-serif;
     font-weight: 600;
-    color: #333;
+    line-height: 1.575rem;
+    margin: 0;
 }
 
 /* Shared arrow */
@@ -151,10 +157,11 @@
 
 .assets-details-image {
     width: 100%;
-    max-width: 450px;
     height: 100%;
-    object-fit: contain;
+    max-width: 1000px;
+    max-height: 1000px;
     border-radius: 8px;
+    object-fit: contain;
     overflow-wrap: break-word;
 }
 
@@ -367,8 +374,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr;
-    gap: 20px;
-    padding: 20px;
+    gap: 25px;
 }
 
 .assets-details-metadata-label {

@@ -1,6 +1,6 @@
 import React from 'react';
 import type { AssetCardProps } from '../types';
-import { formatCategory, formatFileSize, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
+import { formatCategory, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
 import './AssetCardViewGrid.css';
 import LazyImage from './LazyImage';
 
@@ -93,7 +93,7 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                             <div className="product-meta-grid">
                                 <div className="product-meta-item">
                                     <span className="product-meta-label tccc-metadata-label">SIZE</span>
-                                    <span className="product-meta-value tccc-metadata-value">{formatFileSize(image.size)}</span>
+                                    <span className="product-meta-value tccc-metadata-value">{image.formatedSize as string}</span>
                                 </div>
                                 <div className="product-meta-item">
                                     <span className="product-meta-label tccc-metadata-label">TYPE</span>

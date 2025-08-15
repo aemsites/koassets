@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { AssetPreviewProps } from '../types';
 import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
-import { formatCategory, formatFileSize, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
+import { formatCategory, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
 import './AssetPreview.css';
 
 const AssetPreview: React.FC<AssetPreviewProps> = ({
@@ -124,7 +124,7 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                     <div className="preview-modal-grid">
                         <div className="preview-modal-group">
                             <span className="preview-metadata-label tccc-metadata-label">SIZE</span>
-                            <span className="preview-metadata-value tccc-metadata-value">{formatFileSize(selectedImage.size)}</span>
+                            <span className="preview-metadata-value tccc-metadata-value">{selectedImage.formatedSize as string}</span>
                         </div>
                         <div className="preview-modal-group">
                             <span className="preview-metadata-label tccc-metadata-label">TYPE</span>
