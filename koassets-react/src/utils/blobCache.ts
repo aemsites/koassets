@@ -28,10 +28,6 @@ export async function fetchOptimizedDeliveryBlob(
     }
 
     try {
-        // Extract common asset properties
-        const assetId = asset.assetId || '';
-        const repoName = asset.name || 'N/A';
-
         // Check cache first if caching is enabled
         if (options.cache && options.cacheKey) {
             const cachedBlob = getBlobFromCache(options.cacheKey);
@@ -41,7 +37,7 @@ export async function fetchOptimizedDeliveryBlob(
         }
 
         // Fetch optimized delivery blob
-        const blob = await dynamicMediaClient.getOptimizedDeliveryBlob(assetId, repoName, width);
+        const blob = await dynamicMediaClient.getOptimizedDeliveryBlob(asset.assetId || '', asset.name || '', width);
 
         // Cache if requested
         if (options.cache && options.cacheKey) {

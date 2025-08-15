@@ -64,8 +64,7 @@ function safeStringField(hit: Record<string, unknown>, key: string, fallback: st
 function safeStringFromCandidates(hit: Record<string, unknown>, keys: string[], fallback: string = 'N/A'): string {
     let sawObject = false;
     for (const key of keys) {
-        // Normalize extraction using safeStringField
-        const candidate = safeStringField(hit, key, fallback);
+        const candidate = safeStringField(hit, key, '');
         if (candidate === 'ERROR') {
             sawObject = true;
             continue;
