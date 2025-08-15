@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import type { Asset } from '../../types';
 
-interface AssetDetailsMarketingPackageContainerProps {
+interface AssetDetailsProductionProps {
     selectedImage: Asset;
     forceCollapse?: boolean;
 }
 
-const AssetDetailsMarketingPackageContainer: React.FC<AssetDetailsMarketingPackageContainerProps> = ({ selectedImage, forceCollapse }) => {
+const AssetDetailsProduction: React.FC<AssetDetailsProductionProps> = ({ selectedImage, forceCollapse }) => {
     const [isExpanded, setIsExpanded] = useState(true);
 
     const toggleExpanded = (): void => setIsExpanded(!isExpanded);
@@ -22,7 +22,7 @@ const AssetDetailsMarketingPackageContainer: React.FC<AssetDetailsMarketingPacka
     return (
         <div className="asset-details-card">
             <div className="asset-details-header" onClick={toggleExpanded}>
-                <h3 className="asset-details-title">Marketing Package and Container Info</h3>
+                <h3 className="asset-details-title">Production</h3>
                 <span className={`asset-details-arrow ${expanded ? 'expanded' : ''}`}></span>
             </div>
 
@@ -30,23 +30,23 @@ const AssetDetailsMarketingPackageContainer: React.FC<AssetDetailsMarketingPacka
                 <div className="asset-details-content">
                     <div className="asset-details-grid">
                         <div className="asset-details-group">
-                            <h4 className="assets-details-metadata-label">Package or Container Type</h4>
-                            <span className="assets-details-metadata-value">{selectedImage?.packageOrContainerType as string}</span>
+                            <h4 className="assets-details-metadata-label">Lead Operating Unit</h4>
+                            <span className="assets-details-metadata-value">{selectedImage?.leadOperatingUnit as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="assets-details-metadata-label">Package or Container Material</h4>
-                            <span className="assets-details-metadata-value">{selectedImage?.packageOrContainerMaterial as string}</span>
+                            <h4 className="assets-details-metadata-label">TCCC Lead Associate (Legacy)</h4>
+                            <span className="assets-details-metadata-value">{selectedImage?.tcccLeadAssociateLegacy as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="assets-details-metadata-label">Package or Container Size</h4>
-                            <span className="assets-details-metadata-value">{selectedImage?.packageOrContainerSize as string}</span>
+                            <h4 className="assets-details-metadata-label">TCCC Contact</h4>
+                            <span className="assets-details-metadata-value">{selectedImage?.tcccContact as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="assets-details-metadata-label">Secondary Packaging</h4>
-                            <span className="assets-details-metadata-value">{selectedImage?.secondaryPackaging as string}</span>
+                            <h4 className="assets-details-metadata-label">Fadel Job ID</h4>
+                            <span className="assets-details-metadata-value">{selectedImage?.fadelJobId as string}</span>
                         </div>
                     </div>
                 </div>
@@ -55,4 +55,4 @@ const AssetDetailsMarketingPackageContainer: React.FC<AssetDetailsMarketingPacka
     );
 };
 
-export default AssetDetailsMarketingPackageContainer;
+export default AssetDetailsProduction;

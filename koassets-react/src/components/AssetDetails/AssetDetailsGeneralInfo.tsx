@@ -1,14 +1,21 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { Asset } from '../../types';
 
 interface AssetDetailsGeneralInfoProps {
     selectedImage: Asset;
+    forceCollapse?: boolean;
 }
 
-const AssetDetailsGeneralInfo: React.FC<AssetDetailsGeneralInfoProps> = ({ selectedImage }) => {
+const AssetDetailsGeneralInfo: React.FC<AssetDetailsGeneralInfoProps> = ({ selectedImage, forceCollapse }) => {
     const [isExpanded, setIsExpanded] = useState(true);
 
     const toggleExpanded = () => setIsExpanded(!isExpanded);
+
+    useEffect(() => {
+        if (typeof forceCollapse === 'boolean') {
+            setIsExpanded(!forceCollapse);
+        }
+    }, [forceCollapse]);
 
     return (
         <div className="asset-details-card">
