@@ -95,13 +95,11 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                 <div className="modal-header">
                     <div className="preview-tags">
                         {(selectedImage?.campaignName as string) && (
-                            <a href={selectedImage?.name}>
-                                <span className="preview-tag tccc-tag">{removeHyphenTitleCase(selectedImage?.campaignName as string)}</span>
-                            </a>
+                            <span className="preview-tag tccc-tag">{removeHyphenTitleCase(selectedImage?.campaignName as string)}</span>
                         )}
                     </div>
                     <h3 className="modal-title">
-                        <a href={selectedImage?.name}>{selectedImage?.title}</a>
+                        {selectedImage?.title}
                     </h3>
                 </div>
 

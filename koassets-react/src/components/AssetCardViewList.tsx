@@ -85,7 +85,7 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
                                 )}
                             </div>
                             <div className="product-title">
-                                <a href={image.name}>{image.title}</a>
+                                {image.title}
                             </div>
                         </div>
 

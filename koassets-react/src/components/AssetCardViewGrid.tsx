@@ -85,7 +85,7 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                                 )}
                             </div>
                             <h3 className="product-title">
-                                <a href={image.name}>{image.title}</a>
+                                {image.title}
                             </h3>
                         </div>
 
