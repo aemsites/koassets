@@ -66,13 +66,28 @@ export const prettyPrintJSON = (json: unknown): string => {
 };
 
 // Helper function to format file size
-export const formatFileSize = (bytes: number | undefined, decimalPoint: number = 2): string => {
-    if (!bytes || bytes === 0) return '0 Bytes';
+export const formatFileSize = (bytes: number | string | undefined, decimalPoint: number = 2): string => {
+    if (bytes === undefined || bytes === null) return 'N/A';
+
+    let numericBytes: number;
+    if (typeof bytes === 'string') {
+        const cleaned = bytes.trim();
+        if (cleaned === '') return 'N/A';
+        const parsed = Number(cleaned);
+        if (Number.isNaN(parsed)) return 'N/A';
+        numericBytes = parsed;
+    } else {
+        numericBytes = bytes;
+    }
+
+    if (!Number.isFinite(numericBytes) || numericBytes < 0) return 'N/A';
+    if (numericBytes === 0) return '0 Bytes';
+
     const k = 1024;
     const dm = decimalPoint < 0 ? 0 : decimalPoint;
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    const i = Math.floor(Math.log(numericBytes) / Math.log(k));
+    return parseFloat((numericBytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 };
 
 // Helper function to get file extension
