@@ -198,6 +198,27 @@
   color: #fff;
 }
 
+/* Facet count tag styling */
+.facet-filter-count-tag {
+  margin-left: auto;
+  margin-right: 10px;
+}
+
+/* Hierarchy container styles */
+.facet-hierarchy-container {
+  /* Base container style - no special styling */
+}
+
+.facet-hierarchy-container-indented {
+  padding-left: 1.5ch;
+}
+
+.facet-hierarchy-container-with-sublevel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 /* Facet Filter Panel Layout */
 .facet-filter-panel {
   flex: 0 0 330px;

@@ -8,7 +8,8 @@ import type {
     Collection,
     CurrentView,
     LoadingState,
-    SearchResult
+    SearchResult,
+    SearchResults
 } from '../types';
 import { CURRENT_VIEW, LOADING, QUERY_TYPES } from '../types';
 import { populateAssetFromHit } from '../utils/assetTransformers';
@@ -53,8 +54,6 @@ function transformExcFacetsToHierarchyArray(excFacets: Record<string, unknown>):
     return facetKeys;
 }
 
-
-
 function MainApp(): React.JSX.Element {
     // Local state
     const [accessToken, setAccessToken] = useState<string>(() => {
@@ -75,7 +74,7 @@ function MainApp(): React.JSX.Element {
     const [query, setQuery] = useState<string>('');
     const [dmImages, setDmImages] = useState<Asset[]>([]);
     const [collections, setCollections] = useState<Collection[]>([]);
-    const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
+    const [searchResults, setSearchResults] = useState<SearchResults['results'] | null>(null);
     const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
     const [loading, setLoading] = useState<LoadingState>({ [LOADING.dmImages]: false, [LOADING.collections]: false });
     const [currentView, setCurrentView] = useState<CurrentView>(CURRENT_VIEW.images);
@@ -83,7 +82,6 @@ function MainApp(): React.JSX.Element {
     const [selectedFacetFilters, setSelectedFacetFilters] = useState<string[][]>([]);
     const [selectedNumericFilters, setSelectedNumericFilters] = useState<string[]>([]);
     const [excFacets, setExcFacets] = useState<Record<string, unknown> | undefined>(undefined);
-    const [unfilteredFacets, setUnfilteredFacets] = useState<{ [facetGroup: string]: { [facetName: string]: number } } | undefined>(undefined);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState<number>(0);
@@ -156,13 +154,13 @@ function MainApp(): React.JSX.Element {
             setDmImages([]);
         }
 
-        setSearchResult(null);
+        setSearchResults(null);
         try {
             const contentData = content as Record<string, unknown>;
-            const results = contentData.results as Array<Record<string, unknown>>;
+            const results = contentData.results as SearchResults['results'];
 
             if (results && results[0]?.hits) {
-                const hits = results[0].hits as Array<Record<string, unknown>>;
+                const hits = results[0].hits as SearchResult['hits'];
                 if (hits.length > 0) {
                     // No longer download blobs upfront - just prepare metadata for lazy loading
                     // Each hit is transformed to match the Asset interface
@@ -177,7 +175,7 @@ function MainApp(): React.JSX.Element {
                     }
                 }
                 // Store the complete results object with nbHits and update pagination info
-                setSearchResult(results[0] as SearchResult);
+                setSearchResults(results as SearchResults['results']);
                 setTotalPages((results[0] as { nbPages?: number }).nbPages || 0);
             } else {
                 setTotalPages(0);
@@ -240,24 +238,6 @@ function MainApp(): React.JSX.Element {
 
     }, [dynamicMediaClient, processDMImages, selectedCollection, selectedFacetFilters, selectedNumericFilters, excFacets]);
 
-    React.useEffect(() => {
-        if (!dynamicMediaClient || !excFacets) return;
-
-        dynamicMediaClient.searchAssets('', {
-            facets: transformExcFacetsToHierarchyArray(excFacets),
-            facetFilters: [[]],
-            numericFilters: [],
-            hitsPerPage: 1,
-            page: 0
-        }).then((content) => {
-            const contentData = content as Record<string, unknown>;
-            const results = contentData.results as Array<Record<string, unknown>>;
-            if (results && results[0]?.facets) {
-                setUnfilteredFacets(results[0].facets as SearchResult['facets']);
-            }
-        });
-
-    }, [dynamicMediaClient, excFacets]);
 
     // Search collections
     const performSearchCollections = useCallback((query: string): void => {
@@ -324,7 +304,7 @@ function MainApp(): React.JSX.Element {
             search();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dynamicMediaClient, accessToken, excFacets]);
+    }, [dynamicMediaClient, accessToken, excFacets, selectedFacetFilters, selectedNumericFilters]);
 
     useEffect(() => {
         if (accessToken && !settingsLoadedRef.current) {
@@ -345,18 +325,6 @@ function MainApp(): React.JSX.Element {
             performSearchImages('', 0);
         }
     }, [selectedCollection, dynamicMediaClient, excFacets, performSearchImages]);
-
-    useEffect(() => {
-        if (selectedNumericFilters.length > 0) {
-            search();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedNumericFilters]);
-
-    useEffect(() => {
-        search();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedFacetFilters]);
 
     // Cart functions
     const handleAddToCart = async (image: Asset): Promise<void> => {
@@ -535,7 +503,7 @@ function MainApp(): React.JSX.Element {
                     onRemoveFromCart={handleRemoveFromCart}
                     cartItems={cartItems}
                     dynamicMediaClient={dynamicMediaClient}
-                    searchResult={searchResult}
+                    searchResult={searchResults?.[0] || null}
                     onToggleMobileFilter={handleToggleMobileFilter}
                     isMobileFilterOpen={isMobileFilterOpen}
                     onBulkAddToCart={handleBulkAddToCart}
@@ -591,13 +559,12 @@ function MainApp(): React.JSX.Element {
                             </div>
                             <div className={`facet-filter-panel ${isMobileFilterOpen ? 'mobile-open' : ''}`}>
                                 <Facets
-                                    searchResult={searchResult}
+                                    searchResults={searchResults}
                                     setSelectedFacetFilters={setSelectedFacetFilters}
                                     search={search}
                                     excFacets={excFacets}
                                     selectedNumericFilters={selectedNumericFilters}
                                     setSelectedNumericFilters={setSelectedNumericFilters}
-                                    unfilteredFacets={unfilteredFacets}
                                 />
                             </div>
                         </div>

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import type { FacetCheckedState, FacetsProps } from '../types';
+import type { FacetCheckedState, FacetsProps, SearchResult } from '../types';
 import DateRange, { DateRangeRef } from './DateRange';
 import './Facets.css';
 
@@ -10,13 +10,12 @@ interface ExpandedFacetsState {
 const HIERARCHY_PREFIX = 'TCCC.#hierarchy.lvl';
 
 const Facets: React.FC<FacetsProps> = ({
-    searchResult,
+    searchResults,
     setSelectedFacetFilters,
     search,
     excFacets = {},
     selectedNumericFilters = [],
-    setSelectedNumericFilters,
-    unfilteredFacets
+    setSelectedNumericFilters
 }) => {
     const [expandedFacets, setExpandedFacets] = useState<ExpandedFacetsState>({}); // Keep track of expanded facets (from EXC)
     const [checked, setChecked] = useState<FacetCheckedState>({}); // Keep track of checked state of facets and nested facets if any
@@ -67,25 +66,24 @@ const Facets: React.FC<FacetsProps> = ({
             />;
         }
 
-        // Combine unfilteredFacets and searchResult.facets
-        // Get all facetName from unfilteredFacets, use count from searchResult.facets if exists, otherwise set to 0
-        const combinedFacets: { [key: string]: { [facetName: string]: number } } = {};
+        const combinedFacets: SearchResult['facets'] = {};
 
-        if (unfilteredFacets) {
-            Object.entries(unfilteredFacets).forEach(([key, unfilteredFacetData]) => {
-                const searchResultFacetData = searchResult?.facets?.[key] || {};
-                const combined: { [facetName: string]: number } = {};
-
-                Object.keys(unfilteredFacetData).forEach(facetName => {
-                    combined[facetName] = searchResultFacetData[facetName] ?? 0;
+        // Merge facets from all search results
+        searchResults?.forEach(searchResult => {
+            if (searchResult.facets) {
+                Object.entries(searchResult.facets).forEach(([key, facetData]) => {
+                    if (!combinedFacets[key]) {
+                        combinedFacets[key] = {};
+                    }
+                    Object.entries(facetData as { [key: string]: number }).forEach(([facetName, count]) => {
+                        combinedFacets[key]![facetName] = count;
+                    });
                 });
-
-                combinedFacets[key] = combined;
-            });
-        }
+            }
+        });
 
         // Check if this is a hierarchy facet by looking for hierarchy keys in search results
-        const isHierarchyFacet = Object.keys(unfilteredFacets || {}).some(key =>
+        const isHierarchyFacet = Object.keys(combinedFacets || {}).some(key =>
             key.startsWith(`${facetTechId}.${HIERARCHY_PREFIX}`)
         );
 
@@ -130,21 +128,19 @@ const Facets: React.FC<FacetsProps> = ({
                                 subFacetName.startsWith(fullPath + ' / ')
                             );
 
-                        // Apply flex styles if this level has sub-levels
-                        const containerStyle = {
-                            paddingLeft: level > 1 ? `1.5ch` : '0',
-                            ...(hasSubLevels ? {
-                                display: 'flex',
-                                flexDirection: 'column' as const,
-                                gap: '8px'
-                            } : {})
-                        };
+                        // Apply CSS classes based on level and sub-levels
+                        const containerClasses = [
+                            'facet-hierarchy-container',
+                            level > 1 ? 'facet-hierarchy-container-indented' : '',
+                            hasSubLevels ? 'facet-hierarchy-container-with-sublevel' : ''
+                        ].filter(Boolean).join(' ');
 
                         const checkboxKey = `${facetTechId}.${HIERARCHY_PREFIX}${level}`;
                         items.push(
-                            <div key={itemKey} style={containerStyle}>
+                            <div key={itemKey} className={containerClasses}>
                                 <label className="facet-filter-checkbox-label">
                                     <input
+                                        className="facet-filter-checkbox-input"
                                         type="checkbox"
                                         checked={!!checked[checkboxKey]?.[facetName]}
                                         onChange={() => handleCheckbox(checkboxKey, facetName)}
@@ -203,14 +199,6 @@ const Facets: React.FC<FacetsProps> = ({
         setSelectedFacetFilters(newSelectedFacetFilters);
     }, [checked, setSelectedFacetFilters]);
 
-    // React to changes in unfilteredFacets
-    useEffect(() => {
-        if (unfilteredFacets) {
-            console.log('Unfiltered facets updated:', unfilteredFacets);
-            // Additional logic can be added here when unfilteredFacets changes
-        }
-    }, [unfilteredFacets]);
-
     // Convert date ranges to numeric filters for search
     useEffect(() => {
         if (Object.keys(dateRanges).length > 0) {
@@ -232,6 +220,19 @@ const Facets: React.FC<FacetsProps> = ({
         // Note: When dateRanges is empty, we don't call setSelectedNumericFilters([])
         // because handleClearAllChecks handles this directly to avoid double searches
     }, [dateRanges, setSelectedNumericFilters]);
+
+    // Count checked facets for a specific facetTechId
+    const getCheckedCount = (facetTechId: string): number => {
+        let count = 0;
+        Object.entries(checked).forEach(([key, facetChecked]) => {
+            if (key === facetTechId || key.startsWith(`${facetTechId}.`)) {
+                Object.values(facetChecked).forEach(isChecked => {
+                    if (isChecked) count++;
+                });
+            }
+        });
+        return count;
+    };
 
     const handleClearAllChecks = () => {
         setChecked({});
@@ -260,6 +261,7 @@ const Facets: React.FC<FacetsProps> = ({
                         {/* Render facets that retrieved from EXC */}
                         {Object.entries(excFacets).map(([facetTechId, facet]) => {
                             const label = (facet as { label: string }).label || facetTechId;
+                            const checkedCount = getCheckedCount(facetTechId);
 
                             return (
                                 <div key={facetTechId} className="facet-filter-section">
@@ -270,6 +272,9 @@ const Facets: React.FC<FacetsProps> = ({
                                         aria-expanded={!!expandedFacets[facetTechId]}
                                     >
                                         <span className="facet-filter-label">{label}</span>
+                                        {checkedCount > 0 && (
+                                            <div className="assets-details-tag tccc-tag facet-filter-count-tag">{checkedCount}</div>
+                                        )}
                                         <span className="facet-filter-arrow">{expandedFacets[facetTechId] ? '\u25B2' : '\u25BC'}</span>
                                     </button>
                                     {/* For each facet retrieved from EXC, render the appropriate checkboxes and hierarchy if needed */}
