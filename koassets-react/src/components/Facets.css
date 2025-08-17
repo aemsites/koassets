@@ -2,7 +2,7 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  /* overflow: hidden; */
   flex: 1;
   /* This container holds everything except the apply button */
   /* The parent .facet-filter-panel handles the overall layout */
@@ -13,7 +13,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  /* overflow: hidden; */
   min-height: 0;
   /* Allow this to shrink as needed */
 }
@@ -27,11 +27,11 @@
   flex-direction: column;
   gap: 12px;
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  /* overflow-y: auto; */
+  /* overflow-x: hidden; */
   padding-right: 4px;
   min-height: 0;
-  max-height: calc(100vh - 343px);
+  /* max-height: calc(100vh - 343px); */
 }
 
 .facet-filter-section {
@@ -40,7 +40,7 @@
   background: #fff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   border: 1px solid #eee;
-  overflow: hidden;
+  /* overflow: hidden; */
   transition: box-shadow 0.2s;
   flex-shrink: 0;
   display: flex;
@@ -103,7 +103,6 @@
   color: #888;
   font-weight: bold;
   font-size: 11px;
-  margin-right: 32px;
   cursor: pointer;
   background: none;
   border: none;
@@ -145,7 +144,7 @@
   gap: 8px;
   margin-top: 8px;
   box-sizing: border-box;
-  overflow: hidden;
+  /* overflow: hidden; */
 }
 
 .facet-filter-checkbox-label {
@@ -197,4 +196,66 @@
   font-size: 16px;
   font-weight: 500;
   color: #fff;
+}
+
+/* Facet Filter Panel Layout */
+.facet-filter-panel {
+  flex: 0 0 330px;
+  min-width: 22%;
+  border-left: 1px solid #e0e0e0;
+  background: #fafbfc;
+  padding: 30px;
+  /* overflow: hidden; */
+  /* height: calc(100vh - 200px); */
+  /* max-height: calc(100vh - 200px); */
+  width: 330px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Responsive: Hide Facets on smaller screens where filter button should appear */
+@media (max-width: 1439px) {
+  .facet-filter-panel {
+    display: none;
+  }
+
+  .facet-filter-panel.mobile-open {
+    display: block;
+    position: static;
+    width: 330px;
+    height: auto;
+    box-shadow: none;
+    z-index: auto;
+  }
+
+  /* Adjust width for smaller screens to ensure it fits */
+  @media (max-width: 768px) {
+    .facet-filter-panel.mobile-open {
+      width: 100%;
+      min-width: auto;
+      max-width: none;
+    }
+  }
+}
+
+/* Show Facets on larger screens where filter button is hidden */
+@media (min-width: 1440px) {
+  .facet-filter-panel {
+    display: block;
+  }
+
+  /* On very large screens, allow the panel to grow slightly */
+  @media (min-width: 1600px) {
+    .facet-filter-panel {
+      width: 350px;
+    }
+  }
+
+  /* On extra large screens, allow a bit more growth */
+  @media (min-width: 2000px) {
+    .facet-filter-panel {
+      width: 370px;
+    }
+  }
 }

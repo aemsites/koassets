@@ -1,0 +1,197 @@
+.date-range-filter {
+    max-width: 100%;
+    overflow: visible;
+    padding: 10px;
+    position: relative;
+    z-index: 1;
+}
+
+.date-range-filter .date-range-wrapper {
+    max-width: 100%;
+    position: relative;
+}
+
+.date-range-filter .my-date-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.date-range-filter .my-date-picker .react-aria-Label {
+    font-size: 13px;
+    font-style: italic;
+    font-family: "TCCC UnityText Regular", "Helvetica Neue", Arial, Helvetica, sans-serif;
+    color: #1e1e1e;
+}
+
+.date-range-filter .date-range-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0;
+}
+
+.date-range-filter .date-range-input-wrapper {
+    position: relative;
+}
+
+/* Style the MyDatePicker components */
+.date-range-filter [data-react-aria-datepicker] {
+    width: 100%;
+}
+
+.date-range-filter [data-react-aria-group] {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border: 1px solid #e4e4e4;
+    border-radius: 6px;
+    padding: 0 12px;
+    position: relative;
+}
+
+.date-range-filter [data-react-aria-group]:focus-within {
+    border-color: var(--primary-color, #f81c04) !important;
+    border-width: 1px !important;
+}
+
+.date-range-filter [data-react-aria-dateinput] {
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+.date-range-filter [data-react-aria-dateinput] input {
+    border: none;
+    outline: none;
+    background: transparent;
+    color: #6c6f71;
+    width: 100%;
+    padding: 8px 0;
+    font-family: inherit;
+}
+
+.date-range-filter [data-react-aria-dateinput] input::placeholder {
+    color: #6c6f71;
+}
+
+.date-range-filter [data-react-aria-group] button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: #6c6f71;
+    font-size: 16px;
+}
+
+/* Calendar styling */
+.date-range-filter [data-react-aria-calendar] {
+    width: 280px;
+}
+
+.date-range-filter [data-react-aria-calendar] header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.date-range-filter [data-react-aria-calendar] header button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    color: #6c6f71;
+    font-size: 18px;
+}
+
+.date-range-filter [data-react-aria-group] button:hover {
+    color: var(--primary-color, #f81c04);
+}
+
+.date-range-filter [data-react-aria-calendar] header button:hover {
+    background-color: #f5f5f5;
+    color: var(--primary-color, #f81c04);
+}
+
+.date-range-filter .date-range-input-wrapper.has-value [data-react-aria-textfield] input {
+    color: #1e1e1e;
+}
+
+/* Popover styling */
+.date-range-filter [data-react-aria-popover] {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+    padding: 16px;
+    margin-top: 8px;
+    z-index: 9999;
+}
+
+.date-range-filter [data-react-aria-calendar] [data-react-aria-heading] {
+    font-weight: 600;
+    color: #1e1e1e;
+    font-size: 16px;
+    margin: 0;
+}
+
+.date-range-filter [data-react-aria-calendar-grid] {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.date-range-filter [data-react-aria-calendar-grid] th {
+    padding: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6c6f71;
+    text-align: center;
+}
+
+.date-range-filter [data-react-aria-calendar-cell] {
+    padding: 0;
+    text-align: center;
+}
+
+.date-range-filter [data-react-aria-calendar-cell] > div {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #1e1e1e;
+    font-size: 14px;
+    margin: 2px auto;
+}
+
+.date-range-filter [data-react-aria-calendar-cell]:hover > div {
+    background-color: #f5f5f5;
+}
+
+.date-range-filter [data-react-aria-calendar-cell][data-selected] > div {
+    background-color: var(--primary-color, #f81c04);
+    color: white;
+}
+
+.date-range-filter [data-react-aria-calendar-cell][data-today] > div {
+    border: 1px solid var(--primary-color, #f81c04);
+}
+
+.date-range-filter [data-react-aria-calendar-cell][data-outside-month] > div {
+    color: #ccc;
+}
+
+.date-range-filter [data-react-aria-calendar-cell][data-disabled] > div {
+    color: #ccc;
+    cursor: not-allowed;
+}
+
+.date-range-filter [data-react-aria-calendar-cell][data-unavailable] > div {
+    color: #ccc;
+    cursor: not-allowed;
+    text-decoration: line-through;
+}

@@ -1,0 +1,267 @@
+/* Calendar popup - must come first to avoid specificity issues */
+[role="dialog"] {
+  background: white !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  box-shadow: 0 6px 16px rgb(0 0 0 / 10%) !important;
+  padding: 12px !important;
+  min-width: 260px !important;
+  z-index: 1000 !important;
+}
+
+[role="dialog"] header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 8px !important;
+}
+
+[role="dialog"] header button,
+button[slot="previous"],
+button[slot="next"] {
+  background: transparent !important;
+  color: #666 !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 4px !important;
+  width: 24px !important;
+  height: 24px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+}
+
+[role="dialog"] header button:hover,
+button[slot="previous"]:hover,
+button[slot="next"]:hover {
+  background: #f3f4f6 !important;
+  border-color: #d1d5db !important;
+}
+
+[role="dialog"] h2,
+[role="heading"] {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #333 !important;
+  margin: 0 !important;
+}
+
+[role="dialog"] table,
+[role="grid"] {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Base calendar cell styling - gridcell first for proper specificity */
+[role="gridcell"] {
+  text-align: center !important;
+  border: none !important;
+  padding: 1px !important;
+  background: transparent !important;
+}
+
+[role="gridcell"] > div {
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  font-size: 12px !important;
+  color: #333 !important;
+  margin: 1px auto !important;
+  transition: all 0.2s !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+[role="gridcell"]:hover > div {
+  background: #f3f4f6 !important;
+}
+
+[role="gridcell"][data-selected] > div,
+[role="gridcell"][aria-selected="true"] > div {
+  background: var(--primary-color) !important;
+  color: white !important;
+}
+
+[role="gridcell"][data-today] > div {
+  border: 2px solid var(--primary-color) !important;
+  box-sizing: border-box !important;
+}
+
+[role="gridcell"][data-outside-month] > div {
+  color: #d1d5db !important;
+}
+
+[role="gridcell"][data-disabled] > div,
+[role="gridcell"][aria-disabled="true"] > div {
+  color: #d1d5db !important;
+  cursor: not-allowed !important;
+}
+
+/* Dialog table headers */
+[role="dialog"] th,
+[role="columnheader"] {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: #666 !important;
+  text-align: center !important;
+  padding: 4px !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+/* Dialog table cells - fallback for non-gridcell elements */
+[role="dialog"] td {
+  text-align: center !important;
+  border: none !important;
+  padding: 1px !important;
+  background: transparent !important;
+}
+
+[role="dialog"] td > div {
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  font-size: 12px !important;
+  color: #333 !important;
+  margin: 1px auto !important;
+  transition: all 0.2s !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+[role="dialog"] td:hover > div {
+  background: #f3f4f6 !important;
+}
+
+[role="dialog"] td[data-selected] > div,
+[role="dialog"] td[aria-selected="true"] > div {
+  background: var(--primary-color) !important;
+  color: white !important;
+}
+
+[role="dialog"] td[data-today] > div {
+  border: 2px solid var(--primary-color) !important;
+  box-sizing: border-box !important;
+}
+
+[role="dialog"] td[data-outside-month] > div {
+  color: #d1d5db !important;
+}
+
+[role="dialog"] td[data-disabled] > div,
+[role="dialog"] td[aria-disabled="true"] > div {
+  color: #d1d5db !important;
+  cursor: not-allowed !important;
+}
+
+/* Component base styling */
+.my-date-picker {
+  padding: 0 10px;
+  color: #333;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.my-date-picker label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.my-date-picker div[role="group"] {
+  display: flex !important;
+  align-items: stretch !important;
+  border: 1px solid #ccc !important;
+  border-radius: 6px !important;
+  background: white !important;
+  overflow: hidden !important;
+  width: 100% !important;
+  position: relative !important;
+  min-height: 32px !important;
+}
+
+.my-date-picker div[role="group"]:focus-within {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 2px rgb(99 102 241 / 10%) !important;
+}
+
+.my-date-picker div[role="group"] > div {
+  flex: 1 !important;
+  padding: 6px 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 1px !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.my-date-picker div[role="group"] span {
+  display: inline-block !important;
+  padding: 1px !important;
+  border-radius: 2px !important;
+  outline: none !important;
+  color: #333 !important;
+  font-size: 13px !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.my-date-picker div[role="group"] span[data-placeholder="true"] {
+  color: #999 !important;
+}
+
+.my-date-picker div[role="group"] span:focus {
+  background: #e0e7ff !important;
+  color: var(--primary-color) !important;
+}
+
+.my-date-picker div[role="group"] button {
+  background: var(--primary-color) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 0 6px 6px 0 !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+  transition: background-color 0.2s !important;
+}
+
+.my-date-picker div[role="group"] button:hover {
+  background: var(--primary-color) !important;
+}
+
+.my-date-picker div[role="group"] button[data-pressed] {
+  background: var(--primary-color) !important;
+}
+
+.my-date-picker[data-invalid] div[role="group"] {
+  border-color: var(--invalid-color) !important;
+}
+
+.my-date-picker[data-invalid] div[role="group"]:focus-within {
+  border-color: var(--invalid-color) !important;
+  box-shadow: 0 0 0 2px rgb(var(--invalid-color) / 10%) !important;
+}
+
+.my-date-picker [slot="description"] {
+  font-size: 10px !important;
+  color: #666 !important;
+  margin-top: 2px !important;
+}

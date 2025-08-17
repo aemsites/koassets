@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { FacetCheckedState, FacetsProps } from '../types';
+import DateRange, { DateRangeRef } from './DateRange';
 import './Facets.css';
 
-interface OpenState {
+interface ExpandedFacetsState {
     [key: string]: boolean;
 }
 
@@ -12,13 +13,17 @@ const Facets: React.FC<FacetsProps> = ({
     searchResult,
     setSelectedFacetFilters,
     search,
-    excFacets = {}
+    excFacets = {},
+    selectedNumericFilters = [],
+    setSelectedNumericFilters
 }) => {
-    const [open, setOpen] = useState<OpenState>({});
-    const [checked, setChecked] = useState<FacetCheckedState>({});
+    const [expandedFacets, setExpandedFacets] = useState<ExpandedFacetsState>({}); // Keep track of expanded facets (from EXC)
+    const [checked, setChecked] = useState<FacetCheckedState>({}); // Keep track of checked state of facets and nested facets if any
+    const [dateRanges, setDateRanges] = useState<{ [key: string]: [number | undefined, number | undefined] }>({});
+    const dateRangeRef = useRef<DateRangeRef>(null);
 
     const toggle = (key: string) => {
-        setOpen(prev => ({ ...prev, [key]: !prev[key] }));
+        setExpandedFacets(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
     // Handler for checkbox change
@@ -32,14 +37,33 @@ const Facets: React.FC<FacetsProps> = ({
         }));
     };
 
+    // Handler for date range change
+    const handleDateRangeChange = useCallback((key: string, startDate: Date | undefined, endDate: Date | undefined) => {
+        if (startDate || endDate) {
+            setDateRanges(prev => ({
+                ...prev,
+                [key]: [startDate ? startDate.getTime() / 1000 : undefined, endDate ? endDate.getTime() / 1000 : undefined]
+            }));
+        }
+    }, []);
+
     /**
      * Renders the facet checkboxes from search results
      * @param facetTechId - The technical ID of the facet
      * @returns JSX element with facet checkboxes or null
      */
     const renderFacetsFromSearchResult = (facetTechId: string) => {
-        if (!open[facetTechId]) {
+        if (!expandedFacets[facetTechId]) {
             return null;
+        }
+
+        // Render date range for date facet
+        if (facetTechId === 'repo-createDate') {
+            return <DateRange
+                ref={dateRangeRef}
+                selectedNumericFilters={selectedNumericFilters}
+                onDateRangeChange={(startDate, endDate) => handleDateRangeChange(facetTechId, startDate, endDate)}
+            />;
         }
 
         // Check if this is a hierarchy facet by looking for hierarchy keys in search results
@@ -47,6 +71,7 @@ const Facets: React.FC<FacetsProps> = ({
             key.startsWith(`${facetTechId}.${HIERARCHY_PREFIX}`)
         );
 
+        // Render hierarchy facet
         if (isHierarchyFacet) {
             // For hierarchy facets, collect all levels that start with our facet pattern
             const hierarchyData: { [level: number]: { [key: string]: number } } = {};
@@ -124,8 +149,8 @@ const Facets: React.FC<FacetsProps> = ({
             );
         }
 
-        // Regular facet rendering (non-hierarchy)
-        if (!open[facetTechId] || !searchResult?.facets?.[facetTechId] || Object.keys(searchResult.facets[facetTechId] || {}).length === 0) {
+        // Render non-hierarchy facet
+        if (!expandedFacets[facetTechId] || !searchResult?.facets?.[facetTechId] || Object.keys(searchResult.facets[facetTechId] || {}).length === 0) {
             return null;
         }
 
@@ -145,28 +170,7 @@ const Facets: React.FC<FacetsProps> = ({
         );
     };
 
-    // Sync searchResult?.facets with checked state
-    useEffect(() => {
-        const handler = setTimeout(() => {
-            setChecked(prevChecked => {
-                const newChecked: typeof prevChecked = {};
-                Object.keys(prevChecked).forEach(key => {
-                    if (searchResult?.facets?.[key]) {
-                        const filtered = Object.fromEntries(
-                            Object.entries(prevChecked[key]).filter(
-                                ([facet, isChecked]) => isChecked && Object.keys(searchResult.facets![key]).includes(facet)
-                            )
-                        );
-                        if (Object.keys(filtered).length > 0) {
-                            newChecked[key] = filtered;
-                        }
-                    }
-                });
-                return newChecked;
-            });
-        }, 2000); // 2000ms debounce
-        return () => clearTimeout(handler);
-    }, [searchResult?.facets, setChecked]);
+
 
     // Transform the checked object into an array of facet filters
     useEffect(() => {
@@ -183,8 +187,35 @@ const Facets: React.FC<FacetsProps> = ({
         setSelectedFacetFilters(newSelectedFacetFilters);
     }, [checked, setSelectedFacetFilters]);
 
+    // Convert date ranges to numeric filters for search
+    useEffect(() => {
+        if (Object.keys(dateRanges).length > 0) {
+            console.log('Date ranges updated:', dateRanges);
+            // Use setTimeout to defer the numeric filters update
+            setTimeout(() => {
+                setSelectedNumericFilters(Object.entries(dateRanges).flatMap(([key, value]) => {
+                    const filters = [];
+                    if (value[0] !== undefined) {
+                        filters.push(`${key} >= ${value[0]}`);
+                    }
+                    if (value[1] !== undefined) {
+                        filters.push(`${key} <= ${value[1]}`);
+                    }
+                    return filters;
+                }));
+            }, 0);
+        }
+        // Note: When dateRanges is empty, we don't call setSelectedNumericFilters([])
+        // because handleClearAllChecks handles this directly to avoid double searches
+    }, [dateRanges, setSelectedNumericFilters]);
+
     const handleClearAllChecks = () => {
         setChecked({});
+        setSelectedFacetFilters([]);
+        setDateRanges({});
+        setExpandedFacets({}); // Collapse all facets
+        setSelectedNumericFilters([]);
+        dateRangeRef.current?.reset();
     };
 
     const handleApplyFilters = () => {
@@ -212,10 +243,10 @@ const Facets: React.FC<FacetsProps> = ({
                                         className="facet-filter-button"
                                         tabIndex={0}
                                         onClick={() => toggle(facetTechId)}
-                                        aria-expanded={!!open[facetTechId]}
+                                        aria-expanded={!!expandedFacets[facetTechId]}
                                     >
                                         <span className="facet-filter-label">{label}</span>
-                                        <span className="facet-filter-arrow">{open[facetTechId] ? '\u25B2' : '\u25BC'}</span>
+                                        <span className="facet-filter-arrow">{expandedFacets[facetTechId] ? '\u25B2' : '\u25BC'}</span>
                                     </button>
                                     {/* For each facet retrieved from EXC, render the appropriate checkboxes and hierarchy if needed */}
                                     {renderFacetsFromSearchResult(facetTechId)}

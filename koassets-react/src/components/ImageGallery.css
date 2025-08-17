@@ -30,21 +30,6 @@
   flex-direction: column;
 }
 
-.facet-filter-panel {
-  flex: 0 0 330px;
-  min-width: 22%;
-  border-left: 1px solid #e0e0e0;
-  background: #fafbfc;
-  padding: 30px;
-  overflow: hidden;
-  height: calc(100vh - 200px);
-  max-height: calc(100vh - 200px);
-  width: 330px;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
 .image-gallery {
   display: flex;
   flex-direction: column;
@@ -159,7 +144,7 @@
   color: #ed0000;
   cursor: pointer;
   display: flex;
-  font-family: TCCC UnityHeadline;
+  font-family: "TCCC UnityHeadline", "Helvetica Neue", Arial, Helvetica, sans-serif;
   font-size: 14px;
   font-weight: 400;
   height: 50px;
@@ -184,51 +169,5 @@
 
   100% {
     transform: rotate(360deg);
-  }
-}
-
-/* Responsive: Hide Facets on smaller screens where filter button should appear */
-@media (max-width: 1439px) {
-  .facet-filter-panel {
-    display: none;
-  }
-
-  .facet-filter-panel.mobile-open {
-    display: block;
-    position: static;
-    width: 330px;
-    height: auto;
-    box-shadow: none;
-    z-index: auto;
-  }
-
-  /* Adjust width for smaller screens to ensure it fits */
-  @media (max-width: 768px) {
-    .facet-filter-panel.mobile-open {
-      width: 100%;
-      min-width: auto;
-      max-width: none;
-    }
-  }
-}
-
-/* Show Facets on larger screens where filter button is hidden */
-@media (min-width: 1440px) {
-  .facet-filter-panel {
-    display: block;
-  }
-
-  /* On very large screens, allow the panel to grow slightly */
-  @media (min-width: 1600px) {
-    .facet-filter-panel {
-      width: 350px;
-    }
-  }
-
-  /* On extra large screens, allow a bit more growth */
-  @media (min-width: 2000px) {
-    .facet-filter-panel {
-      width: 370px;
-    }
   }
 }

@@ -12,6 +12,7 @@ export interface SearchAssetsOptions {
     collectionId?: string | null;
     facets?: string[];
     facetFilters?: string[][];
+    numericFilters?: string[];
     hitsPerPage?: number;
     page?: number;
 }
@@ -147,13 +148,10 @@ export class DynamicMediaClient {
             collectionId,
             facets = [],
             facetFilters = [[]],
-            hitsPerPage,
+            numericFilters = [],
+            hitsPerPage = 24,
             page = 0
         } = options;
-
-        if (!hitsPerPage) {
-            throw new Error('hitsPerPage is required');
-        }
 
         const combinedSelectedFacetFilters = [...facetFilters, ...(collectionId ? [[`collectionIds:${collectionId.split(':')[3]}`]] : [])];
         const indexName = this.getIndexName();
@@ -165,6 +163,7 @@ export class DynamicMediaClient {
                     "params": {
                         "facets": facets,
                         "facetFilters": combinedSelectedFacetFilters,
+                        "numericFilters": numericFilters,
                         "filters": `(${this.getNonExpiredAssetsFilter()})`,
                         "highlightPostTag": "__/ais-highlight__",
                         "highlightPreTag": "__ais-highlight__",
