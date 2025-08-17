@@ -258,6 +258,7 @@ export interface FacetsProps {
     excFacets?: Record<string, unknown>;
     selectedNumericFilters?: string[];
     setSelectedNumericFilters: (filters: string[]) => void;
+    unfilteredFacets?: SearchResult['facets'];
 }
 
 // Phase 3 Component Types

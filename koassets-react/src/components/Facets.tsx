@@ -15,7 +15,8 @@ const Facets: React.FC<FacetsProps> = ({
     search,
     excFacets = {},
     selectedNumericFilters = [],
-    setSelectedNumericFilters
+    setSelectedNumericFilters,
+    unfilteredFacets
 }) => {
     const [expandedFacets, setExpandedFacets] = useState<ExpandedFacetsState>({}); // Keep track of expanded facets (from EXC)
     const [checked, setChecked] = useState<FacetCheckedState>({}); // Keep track of checked state of facets and nested facets if any
@@ -66,8 +67,25 @@ const Facets: React.FC<FacetsProps> = ({
             />;
         }
 
+        // Combine unfilteredFacets and searchResult.facets
+        // Get all facetName from unfilteredFacets, use count from searchResult.facets if exists, otherwise set to 0
+        const combinedFacets: { [key: string]: { [facetName: string]: number } } = {};
+
+        if (unfilteredFacets) {
+            Object.entries(unfilteredFacets).forEach(([key, unfilteredFacetData]) => {
+                const searchResultFacetData = searchResult?.facets?.[key] || {};
+                const combined: { [facetName: string]: number } = {};
+
+                Object.keys(unfilteredFacetData).forEach(facetName => {
+                    combined[facetName] = searchResultFacetData[facetName] ?? 0;
+                });
+
+                combinedFacets[key] = combined;
+            });
+        }
+
         // Check if this is a hierarchy facet by looking for hierarchy keys in search results
-        const isHierarchyFacet = Object.keys(searchResult?.facets || {}).some(key =>
+        const isHierarchyFacet = Object.keys(unfilteredFacets || {}).some(key =>
             key.startsWith(`${facetTechId}.${HIERARCHY_PREFIX}`)
         );
 
@@ -77,13 +95,13 @@ const Facets: React.FC<FacetsProps> = ({
             const hierarchyData: { [level: number]: { [key: string]: number } } = {};
 
             // Collect all hierarchy levels for this facet
-            Object.keys(searchResult?.facets || {}).forEach(key => {
+            Object.keys(combinedFacets || {}).forEach(key => {
                 if (key.startsWith(`${facetTechId}.${HIERARCHY_PREFIX}`)) {
                     // Extract level number from key like "tccc-brand.TCCC.#hierarchy.lvl0"
                     const levelMatch = key.match(/\.lvl(\d+)$/);
                     if (levelMatch) {
                         const level = parseInt(levelMatch[1]);
-                        hierarchyData[level] = searchResult?.facets![key] as { [key: string]: number };
+                        hierarchyData[level] = combinedFacets[key] as { [key: string]: number };
                     }
                 }
             });
@@ -130,7 +148,7 @@ const Facets: React.FC<FacetsProps> = ({
                                         type="checkbox"
                                         checked={!!checked[checkboxKey]?.[facetName]}
                                         onChange={() => handleCheckbox(checkboxKey, facetName)}
-                                    /> {displayName} ({count})
+                                    /> {displayName}{count > 0 ? ` (${count})` : ''}
                                 </label>
                                 {/* Render child levels */}
                                 {renderHierarchyLevel(level + 1, fullPath)}
@@ -150,27 +168,25 @@ const Facets: React.FC<FacetsProps> = ({
         }
 
         // Render non-hierarchy facet
-        if (!expandedFacets[facetTechId] || !searchResult?.facets?.[facetTechId] || Object.keys(searchResult.facets[facetTechId] || {}).length === 0) {
+        if (!expandedFacets[facetTechId] || !combinedFacets[facetTechId] || Object.keys(combinedFacets[facetTechId] || {}).length === 0) {
             return null;
         }
 
         const checkboxKey = `${facetTechId}`;
         return (
             <div className="facet-filter-checkbox-list">
-                {Object.entries(searchResult.facets[facetTechId] || {}).map(([facetName, count]) => (
+                {Object.entries(combinedFacets[facetTechId] || {}).map(([facetName, count]) => (
                     <label key={facetName} className="facet-filter-checkbox-label">
                         <input
                             type="checkbox"
                             checked={!!checked[checkboxKey]?.[facetName]}
                             onChange={() => handleCheckbox(checkboxKey, facetName)}
-                        /> {facetName} ({count})
+                        /> {facetName}{count > 0 ? ` (${count})` : ''}
                     </label>
                 ))}
             </div>
         );
     };
-
-
 
     // Transform the checked object into an array of facet filters
     useEffect(() => {
@@ -186,6 +202,14 @@ const Facets: React.FC<FacetsProps> = ({
         });
         setSelectedFacetFilters(newSelectedFacetFilters);
     }, [checked, setSelectedFacetFilters]);
+
+    // React to changes in unfilteredFacets
+    useEffect(() => {
+        if (unfilteredFacets) {
+            console.log('Unfiltered facets updated:', unfilteredFacets);
+            // Additional logic can be added here when unfilteredFacets changes
+        }
+    }, [unfilteredFacets]);
 
     // Convert date ranges to numeric filters for search
     useEffect(() => {

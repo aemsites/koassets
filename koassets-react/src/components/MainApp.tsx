@@ -83,6 +83,7 @@ function MainApp(): React.JSX.Element {
     const [selectedFacetFilters, setSelectedFacetFilters] = useState<string[][]>([]);
     const [selectedNumericFilters, setSelectedNumericFilters] = useState<string[]>([]);
     const [excFacets, setExcFacets] = useState<Record<string, unknown> | undefined>(undefined);
+    const [unfilteredFacets, setUnfilteredFacets] = useState<{ [facetGroup: string]: { [facetName: string]: number } } | undefined>(undefined);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState<number>(0);
@@ -238,6 +239,25 @@ function MainApp(): React.JSX.Element {
         });
 
     }, [dynamicMediaClient, processDMImages, selectedCollection, selectedFacetFilters, selectedNumericFilters, excFacets]);
+
+    React.useEffect(() => {
+        if (!dynamicMediaClient || !excFacets) return;
+
+        dynamicMediaClient.searchAssets('', {
+            facets: transformExcFacetsToHierarchyArray(excFacets),
+            facetFilters: [[]],
+            numericFilters: [],
+            hitsPerPage: 1,
+            page: 0
+        }).then((content) => {
+            const contentData = content as Record<string, unknown>;
+            const results = contentData.results as Array<Record<string, unknown>>;
+            if (results && results[0]?.facets) {
+                setUnfilteredFacets(results[0].facets as SearchResult['facets']);
+            }
+        });
+
+    }, [dynamicMediaClient, excFacets]);
 
     // Search collections
     const performSearchCollections = useCallback((query: string): void => {
@@ -577,6 +597,7 @@ function MainApp(): React.JSX.Element {
                                     excFacets={excFacets}
                                     selectedNumericFilters={selectedNumericFilters}
                                     setSelectedNumericFilters={setSelectedNumericFilters}
+                                    unfilteredFacets={unfilteredFacets}
                                 />
                             </div>
                         </div>
