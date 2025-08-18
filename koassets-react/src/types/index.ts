@@ -252,11 +252,12 @@ export interface FacetCheckedState {
 }
 
 export interface FacetsProps {
-    searchResult?: SearchResult | null;
-    selectedFacetFilters?: string[][];
+    searchResults?: SearchResults['results'] | null;
     setSelectedFacetFilters: (facetFilters: string[][]) => void;
     search: () => void;
     excFacets?: Record<string, unknown>;
+    selectedNumericFilters?: string[];
+    setSelectedNumericFilters: (filters: string[]) => void;
 }
 
 // Phase 3 Component Types
@@ -374,16 +375,19 @@ export interface LoadingState {
 }
 
 export interface AlgoliaSearchParams {
-    facets: string[];
+    facets?: string[] | string;
     facetFilters?: string[][] | string;
-    filters: string;
-    highlightPostTag: string;
-    highlightPreTag: string;
-    hitsPerPage: number;
+    filters?: string;
+    highlightPostTag?: string;
+    highlightPreTag?: string;
+    hitsPerPage?: number;
     maxValuesPerFacet?: number;
-    page: number;
-    query: string;
-    tagFilters: string;
+    page?: number;
+    query?: string;
+    tagFilters?: string;
+    numericFilters?: string[];
+    analytics?: boolean;
+    clickAnalytics?: boolean;
 }
 
 export interface AlgoliaSearchRequest {
@@ -405,6 +409,10 @@ export interface SearchResult {
         };
     };
     [key: string]: unknown;
+}
+
+export interface SearchResults {
+    results: SearchResult[];
 }
 
 // Action Dropdown types

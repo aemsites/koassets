@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import { AlgoliaSearchQuery, Asset } from './types';
+import { AlgoliaSearchQuery, AlgoliaSearchRequest, Asset } from './types';
 
 interface DynamicMediaClientConfig {
     bucket: string;
@@ -12,6 +12,7 @@ export interface SearchAssetsOptions {
     collectionId?: string | null;
     facets?: string[];
     facetFilters?: string[][];
+    numericFilters?: string[];
     hitsPerPage?: number;
     page?: number;
 }
@@ -147,16 +148,14 @@ export class DynamicMediaClient {
             collectionId,
             facets = [],
             facetFilters = [[]],
-            hitsPerPage,
+            numericFilters = [],
+            hitsPerPage = 24,
             page = 0
         } = options;
 
-        if (!hitsPerPage) {
-            throw new Error('hitsPerPage is required');
-        }
-
         const combinedSelectedFacetFilters = [...facetFilters, ...(collectionId ? [[`collectionIds:${collectionId.split(':')[3]}`]] : [])];
         const indexName = this.getIndexName();
+        const nonExpiredAssetsFilter = this.getNonExpiredAssetsFilter();
 
         return {
             "requests": [
@@ -165,7 +164,8 @@ export class DynamicMediaClient {
                     "params": {
                         "facets": facets,
                         "facetFilters": combinedSelectedFacetFilters,
-                        "filters": `(${this.getNonExpiredAssetsFilter()})`,
+                        "numericFilters": numericFilters,
+                        "filters": `(${nonExpiredAssetsFilter})`,
                         "highlightPostTag": "__/ais-highlight__",
                         "highlightPreTag": "__ais-highlight__",
                         "hitsPerPage": hitsPerPage,
@@ -174,7 +174,8 @@ export class DynamicMediaClient {
                         "query": query || "",
                         "tagFilters": ""
                     }
-                }
+                },
+                ...this.generateSubRequest(facetFilters, numericFilters)
             ]
         };
     }
@@ -249,6 +250,71 @@ export class DynamicMediaClient {
             }
             throw error;
         }
+    }
+
+    /**
+     * Generate sub-requests for facet queries
+     * @param facetFilters - Array of facet filter groups
+     * @returns Array of sub-request objects
+     */
+    generateSubRequest(facetFilters: string[][], numericFilters: string[]): Array<AlgoliaSearchRequest> {
+        const indexName = this.getIndexName();
+        const nonExpiredAssetsFilter = this.getNonExpiredAssetsFilter();
+        const requests = [];
+
+        // Create a sub-request for each facet group
+        for (let i = 0; i < facetFilters.length; i++) {
+            const subFacetFilters = facetFilters[i];
+            
+            // Get all other groups (excluding current one) for facetFilters
+            const otherGroups = facetFilters.filter((_, index) => index !== i);
+            
+            // Extract facet name from the first item in current group (part before ':')
+            const facetName = subFacetFilters[0]?.split(':')[0] || '';
+
+            const request = {
+                indexName: indexName,
+                params: {
+                    analytics: false,
+                    clickAnalytics: false,
+                    facetFilters: otherGroups,
+                    numericFilters: numericFilters || undefined,
+                    facets: facetName,
+                    filters: `(${nonExpiredAssetsFilter})`,
+                    highlightPostTag: "__/ais-highlight__",
+                    highlightPreTag: "__ais-highlight__",
+                    hitsPerPage: 0,
+                    maxValuesPerFacet: 1000,
+                    page: 0,
+                    query: ""
+                }
+            };
+
+            requests.push(request);
+
+            if (numericFilters && numericFilters.length > 0) {
+                const facetName = numericFilters[0]?.split(/[><=]+/)[0]?.trim() || '';
+                const request = {
+                    indexName: indexName,
+                    params: {
+                        analytics: false,
+                        clickAnalytics: false,
+                        facetFilters: facetFilters,
+                        facets: facetName,
+                        filters: `(${nonExpiredAssetsFilter})`,
+                        highlightPostTag: "__/ais-highlight__",
+                        highlightPreTag: "__ais-highlight__",
+                        hitsPerPage: 0,
+                        maxValuesPerFacet: 1000,
+                        page: 0,
+                        query: ""
+                    }
+                }
+                requests.push(request);
+            }
+        }
+
+        return requests;
     }
 
     /**
