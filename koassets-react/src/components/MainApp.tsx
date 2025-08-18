@@ -468,18 +468,17 @@ function MainApp(): React.JSX.Element {
 
     // Add breadcrumbs for navigation when inside a collection
     const breadcrumbs = selectedCollection && (
-        <div className="breadcrumbs" style={{ padding: '10px', backgroundColor: '#f5f5f5', marginBottom: '10px' }}>
+        <div className="breadcrumbs">
             <span
                 className="breadcrumb-link"
                 onClick={() => {
                     setSelectedCollection(null);
                     setCurrentView(CURRENT_VIEW.collections);
                 }}
-                style={{ cursor: 'pointer', color: '#f81c04' }}
             >
                 Collections
             </span>
-            <span style={{ margin: '0 5px' }}> &gt; </span>
+            <span className="breadcrumb-separator"> &gt; </span>
             <span>{selectedCollection.collectionMetadata?.title || 'Collection'}</span>
         </div>
     );

@@ -2,3 +2,4 @@
 
 npm run build-and-copy:koassets-react
 
+git add tools/assets-browser/ 
