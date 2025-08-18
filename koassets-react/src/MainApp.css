@@ -190,3 +190,19 @@ button:disabled {
   border-width: 0 3px 3px 0;
   transform: rotate(45deg) translateX(-1px) translateY(-1px);
 }
+
+/* Breadcrumb navigation styles */
+.breadcrumbs {
+  padding: 10px;
+  background-color: #f5f5f5;
+  margin-bottom: 10px;
+}
+
+.breadcrumb-link {
+  cursor: pointer;
+  color: #f81c04;
+}
+
+.breadcrumb-separator {
+  margin: 0 5px;
+}
