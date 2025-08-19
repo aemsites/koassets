@@ -1,8 +1,17 @@
 {
-  "name": "@koassets/monorepo",
+  "name": "@koassets/cloudflare-worker",
   "version": "1.0.0",
   "private": true,
-  "workspaces": [
-    "shared/auth"
-  ]
+  "description": "Cloudflare Worker for KO Assets",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "wrangler deploy",
+    "log": "wrangler tail",
+    "deploy-tail": "wrangler deploy && wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^4.31.0"
+  }
 }
