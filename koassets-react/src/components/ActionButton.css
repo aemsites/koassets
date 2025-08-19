@@ -1,0 +1,39 @@
+.action-button {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  word-wrap: break-word;
+  list-style: none;
+  box-sizing: inherit;
+  margin: 0;
+  overflow: visible;
+  text-transform: none;
+  -webkit-appearance: button;
+  appearance: auto;
+  font: inherit;
+  background: #fff;
+  border: 1px solid #9a9a9a;
+  border-radius: 50px;
+  height: 34px;
+  position: relative;
+  width: 34px;
+  padding: 0;
+}
+
+.action-button.download {
+  background-image: url('/icons/download-asset.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 16px 16px;
+}
+
+.action-button.downloading {
+  background-image: url('/icons/downloading-asset.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 16px 16px;
+}
+
+.action-button:hover {
+  background-color: transparent;
+  border: 1px solid var(--primary-color);
+}

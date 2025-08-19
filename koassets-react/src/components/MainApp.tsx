@@ -13,7 +13,7 @@ import type {
 } from '../types';
 import { CURRENT_VIEW, LOADING, QUERY_TYPES } from '../types';
 import { populateAssetFromHit } from '../utils/assetTransformers';
-import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
+import { fetchOptimizedDeliveryBlob, removeBlobFromCache } from '../utils/blobCache';
 import { getBucket } from '../utils/config';
 
 // Components
@@ -355,6 +355,11 @@ function MainApp(): React.JSX.Element {
 
     const handleRemoveFromCart = (image: Asset): void => {
         setCartItems(prev => prev.filter(item => item.assetId !== image.assetId));
+
+        // Clean up cached blobs for this asset
+        if (image.assetId) {
+            removeBlobFromCache(image.assetId);
+        }
     };
 
     const handleBulkAddToCart = async (selectedCardIds: Set<string>, images: Asset[]): Promise<void> => {

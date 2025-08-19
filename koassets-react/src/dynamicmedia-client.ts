@@ -1,6 +1,8 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { AlgoliaSearchQuery, AlgoliaSearchRequest, Asset } from './types';
 
+export const ORIGINAL_RENDITION = 'original';
+
 interface DynamicMediaClientConfig {
     bucket: string;
     accessToken: string;
@@ -217,10 +219,14 @@ export class DynamicMediaClient {
         };
     }
 
-    getSearchHeaders = () => {
+    getXApiKey = () => {
         const xApiKey: string = this.bucket.includes('-cmstg') ? apiKey.STAGE : apiKey.PROD;
+        return xApiKey;
+    }
+
+    getSearchHeaders = () => {
         return {
-            'X-Api-Key': xApiKey,
+            'X-Api-Key': this.getXApiKey(),
             'x-adobe-accept-experimental': '1',
             'x-ch-request': 'search'
         };
@@ -458,5 +464,80 @@ export class DynamicMediaClient {
         const processedRepoName = this.convertVideoExtensionToAvif(repoName);
 
         return `https://${this.bucket}.adobeaemcloud.com/adobe/assets/${assetId}/as/preview-${processedRepoName}?width=${width}&preferwebp=true`;
+    }
+
+    async getDownloadTokenResp(asset: Asset): Promise<{ token: string, expiryTime: number } | undefined> {
+        const url = `https://${this.bucket}.adobeaemcloud.com/adobe/assets/${asset?.assetId}/token`;
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${this.accessToken}`,
+                'x-api-key': this.getXApiKey()
+            }
+        });
+
+        if (response.status !== 200) {
+            return undefined;
+        }
+
+        return await response.json();
+    }
+
+    async downloadAsset(asset: Asset, renditionName: string) {
+        const tokenResp = await this.getDownloadTokenResp(asset);
+
+        const queryParams: Record<string, string> = {
+            // attachment: 'true'
+        };
+        if (tokenResp?.token) queryParams.token = tokenResp.token;
+        if (tokenResp?.expiryTime) queryParams.expiryTime = tokenResp.expiryTime.toString();
+        
+        const queryString = new URLSearchParams(queryParams).toString();
+
+        const url = `https://${this.bucket}.adobeaemcloud.com/adobe/assets/${asset?.assetId}/renditions/${renditionName}/as/${asset?.name}${queryString ? `?${queryString}` : ''}`;
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${this.accessToken}`,
+                'x-api-key': this.getXApiKey()
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to download assetId "${asset?.assetId}": ${response.statusText}`);
+        }
+
+        // Get binary data as blob
+        const blob = await response.blob();
+        
+        // Create download URL and trigger download
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = asset?.name || 'download';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up the URL object
+        URL.revokeObjectURL(downloadUrl);
+        
+        return blob;
+    }
+
+    async getAssetRenditions(asset: Asset) {
+        const url = `https://${this.bucket}.adobeaemcloud.com/adobe/assets/${asset?.assetId}/renditions`;
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${this.accessToken}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch assetId "${asset?.assetId}": ${response.statusText}`);
+        }
+
+        return await response.json();
     }
 } 

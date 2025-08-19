@@ -273,7 +273,7 @@ const Facets: React.FC<FacetsProps> = ({
                                     >
                                         <span className="facet-filter-label">{label}</span>
                                         {checkedCount > 0 && (
-                                            <div className="assets-details-tag tccc-tag facet-filter-count-tag">{checkedCount}</div>
+                                            <div className="tccc-tag facet-filter-count-tag">{checkedCount}</div>
                                         )}
                                         <span className="facet-filter-arrow">{expandedFacets[facetTechId] ? '\u25B2' : '\u25BC'}</span>
                                     </button>

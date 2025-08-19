@@ -120,7 +120,7 @@ export interface CartIconProps {
 
 export interface AssetCardProps {
     image: Asset;
-    handleCardClick: (image: Asset, event: React.MouseEvent) => void;
+    handleCardDetailClick: (image: Asset, event: React.MouseEvent) => void;
     handlePreviewClick: (image: Asset, event: React.MouseEvent) => void;
     handleAddToCart?: (image: Asset, event: React.MouseEvent) => void;
     handleRemoveFromCart?: (image: Asset) => void;
@@ -434,6 +434,7 @@ export interface SearchPanelProps {
     onToggleMobileFilter?: () => void;
     isMobileFilterOpen?: boolean;
     onBulkAddToCart: () => void;
+    onBulkDownload: () => void;
     onBulkShare: () => void;
     onBulkAddToCollection: () => void;
     onSortByTopResults: () => void;

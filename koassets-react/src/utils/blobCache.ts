@@ -108,4 +108,31 @@ export const base64ToBlob = (base64: string, mimeType: string): Blob => {
     }
     const byteArray = new Uint8Array(byteNumbers);
     return new Blob([byteArray], { type: mimeType });
+};
+
+/**
+ * Remove blob from cache for a specific asset ID
+ * This will remove all cached versions of the asset (different sizes)
+ */
+export const removeBlobFromCache = (assetId: string): void => {
+    try {
+        // Get all localStorage keys that match our cache pattern
+        const keysToRemove: string[] = [];
+        
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith(BLOB_CACHE_PREFIX) && key.includes(assetId)) {
+                keysToRemove.push(key);
+            }
+        }
+        
+        // Remove all matching cache entries
+        keysToRemove.forEach(key => {
+            localStorage.removeItem(key);
+        });
+        
+        console.log(`Removed ${keysToRemove.length} cached blobs for asset: ${assetId}`);
+    } catch (error) {
+        console.warn('Failed to remove cached blobs:', error);
+    }
 }; 

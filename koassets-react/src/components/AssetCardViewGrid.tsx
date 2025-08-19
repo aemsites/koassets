@@ -1,12 +1,14 @@
 import React from 'react';
+import { ORIGINAL_RENDITION } from '../dynamicmedia-client';
 import type { AssetCardProps } from '../types';
 import { formatCategory, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
+import ActionButton from './ActionButton';
 import './AssetCardViewGrid.css';
 import LazyImage from './LazyImage';
 
 const AssetCardViewGrid: React.FC<AssetCardProps> = ({
     image,
-    handleCardClick,
+    handleCardDetailClick,
     handlePreviewClick,
     handleAddToCart,
     handleRemoveFromCart,
@@ -20,7 +22,7 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
     const isInCart = cartItems.some(cartItem => cartItem.assetId === image.assetId);
 
     // Handle button click - either add or remove from cart
-    const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const handleAddRemoveCart = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation();
 
         if (isInCart) {
@@ -40,15 +42,31 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
         e.stopPropagation(); // Prevent card click when clicking checkbox
     };
 
+    // Handle action button click (download original asset)
+    const handleClickDownload = async () => {
+        if (!image || !dynamicMediaClient) {
+            console.warn('No asset or dynamic media client available for download');
+            return;
+        }
+
+        try {
+            console.log('Downloading original asset:', image.assetId);
+            await dynamicMediaClient.downloadAsset(
+                image,
+                ORIGINAL_RENDITION
+            );
+        } catch (error) {
+            console.error('Failed to download asset:', error);
+        }
+    };
+
     return (
         <div className="asset-card-view-grid">
-            <div
-                className="asset-card-view-grid-inner"
-                onClick={(e) => handleCardClick(image, e)}
-                style={{ cursor: 'pointer' }}
-            >
-                <div className="image-wrapper">
-                    {/* Checkbox in top left corner */}
+            <div className="asset-card-view-grid-inner">
+                <div className="image-wrapper"
+                    onClick={(e) => handleCardDetailClick(image, e)}
+                    style={{ cursor: 'pointer' }}
+                >
                     <input
                         type="checkbox"
                         className="asset-checkbox"
@@ -84,7 +102,11 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                                     <span className="product-tag tccc-tag">{removeHyphenTitleCase(image?.campaignName as string)}</span>
                                 )}
                             </div>
-                            <h3 className="product-title">
+                            <h3
+                                className="product-title"
+                                onClick={(e) => handleCardDetailClick(image, e)}
+                                style={{ cursor: 'pointer' }}
+                            >
                                 {image.title}
                             </h3>
                         </div>
@@ -114,14 +136,22 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                             </div>
                         )}
                     </div>
+                </div>
 
-                    <div className="product-actions">
+                <div className="product-actions">
+                    <div className="left-buttons-wrapper">
                         <button
                             className={`add-to-cart-btn${isInCart ? ' remove-from-cart' : ''}`}
-                            onClick={handleButtonClick}
+                            onClick={handleAddRemoveCart}
                         >
                             {isInCart ? 'Remove From Cart' : 'Add To Cart'}
                         </button>
+                    </div>
+                    <div className="right-buttons-wrapper">
+                        <ActionButton
+                            name="download"
+                            onClick={handleClickDownload}
+                        />
                     </div>
                 </div>
             </div>

@@ -112,7 +112,7 @@ function extractFromTcccTagIDs(hit: Record<string, unknown>, key: string): strin
  * @returns Asset object with populated properties
  */
 export function populateAssetFromHit(hit: Record<string, unknown>): Asset {
-    const repoName = safeStringFromCandidates(hit, ['tccc-fileName', 'repo-name']);
+    const name = safeStringFromCandidates(hit, ['tccc-fileName', 'repo-name']);
     const category = extractFromTcccValues(hit, 'tccc-assetCategoryAndType') || 'N/A';
     const marketCovered = extractFromTcccValues(hit, 'tccc-marketCovered') || 'N/A';
     const language = extractJoinedIfArrayElseSafe(hit, 'tccc-language');
@@ -242,7 +242,7 @@ export function populateAssetFromHit(hit: Record<string, unknown>): Asset {
         migrationId: safeStringField(hit, 'tccc-migrationID'),
         modifyBy: safeStringField(hit, 'tccc-lastModifiedBy'),
         modifyDate: safeDateField(hit, 'repo-modifyDate'),
-        name: repoName,
+        name: name,
         offTime: offTime,
         onTime: onTime,
         orientation: orientation,

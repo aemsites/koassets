@@ -15,7 +15,7 @@
 .container,
 .container * {
   font-family: "TCCC UnityText Regular","Helvetica Neue",Arial,Helvetica,sans-serif;
-  color: #1e1e1e;
+  color: var(--secondary-color);
 }
 
 .main-content {
@@ -77,11 +77,14 @@ button:disabled {
 
 .container .tccc-tag {
   background: #fff0da;
-  border-radius: 14px;
   color: #a46801;
   font-family: "TCCC UnityHeadline", sans-serif;
   font-size: 10px;
   font-weight: 600;
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  overflow-wrap: break-word;
 }
 
 .container h3 {
@@ -189,6 +192,58 @@ button:disabled {
   border: solid white;
   border-width: 0 3px 3px 0;
   transform: rotate(45deg) translateX(-1px) translateY(-1px);
+}
+
+.container .primary-button {
+  height: 42px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+}
+
+.container .primary-button:hover {
+  background-color: var(--primary-color);
+}
+
+.container .primary-button:active {
+  transform: translateY(1px);
+}
+
+.container .secondary-button {
+  height: 42px;
+  background-color: #fff;
+  border: 1.5px solid #9a9a9a;
+  color: #1e1e1e;
+  font-weight: 700;
+  font-family: "TCCC UnityHeadline", sans-serif;
+  font-size: .875rem;
+  line-height: 140%;
+  border-radius: 2.5rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  transition: border-color 0.1s ease, color 0.1s ease;
+}
+
+.container .secondary-button:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.container .secondary-button:active {
+  transform: translateY(1px);
 }
 
 /* Breadcrumb navigation styles */

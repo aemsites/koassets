@@ -28,53 +28,53 @@ const AssetDetailsOverview: React.FC<AssetDetailsOverviewProps> = ({ selectedIma
                 <div className="asset-details-content">
                     <div className="asset-details-grid">
                         <div className="asset-details-group">
-                            <h4 className="assets-details-metadata-label">Title</h4>
-                            <span className="assets-details-metadata-value">{selectedImage?.title as string}</span>
+                            <h4 className="asset-details-main-metadata-label">Title</h4>
+                            <span className="asset-details-main-metadata-value">{selectedImage?.title as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="assets-details-metadata-label">Japanese Title</h4>
-                            <span className="assets-details-metadata-value">{selectedImage?.japaneseTitle as string}</span>
+                            <h4 className="asset-details-main-metadata-label">Japanese Title</h4>
+                            <span className="asset-details-main-metadata-value">{selectedImage?.japaneseTitle as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="assets-details-metadata-label">Tags</h4>
-                            <span className="assets-details-metadata-value">{selectedImage?.tags as string}</span>
+                            <h4 className="asset-details-main-metadata-label">Tags</h4>
+                            <span className="asset-details-main-metadata-value">{selectedImage?.tags as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="assets-details-metadata-label">Japanese Description</h4>
-                            <span className="assets-details-metadata-value">{selectedImage?.japaneseDescription as string}</span>
+                            <h4 className="asset-details-main-metadata-label">Japanese Description</h4>
+                            <span className="asset-details-main-metadata-value">{selectedImage?.japaneseDescription as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="assets-details-metadata-label">Asset Description</h4>
-                            <span className="assets-details-metadata-value">{selectedImage?.description as string}</span>
+                            <h4 className="asset-details-main-metadata-label">Asset Description</h4>
+                            <span className="asset-details-main-metadata-value">{selectedImage?.description as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="assets-details-metadata-label">File Type</h4>
-                            <span className="assets-details-metadata-value">{selectedImage?.format as string}</span>
+                            <h4 className="asset-details-main-metadata-label">File Type</h4>
+                            <span className="asset-details-main-metadata-value">{selectedImage?.format as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="assets-details-metadata-label">Language</h4>
-                            <span className="assets-details-metadata-value">{selectedImage?.language as string}</span>
+                            <h4 className="asset-details-main-metadata-label">Language</h4>
+                            <span className="asset-details-main-metadata-value">{selectedImage?.language as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="assets-details-metadata-label">Asset Status</h4>
-                            <span className="assets-details-metadata-value">{selectedImage?.assetStatus as string}</span>
+                            <h4 className="asset-details-main-metadata-label">Asset Status</h4>
+                            <span className="asset-details-main-metadata-value">{selectedImage?.assetStatus as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="assets-details-metadata-label">Asset Expiry Date</h4>
-                            <span className="assets-details-metadata-value">{selectedImage?.expirationDate as string}</span>
+                            <h4 className="asset-details-main-metadata-label">Asset Expiry Date</h4>
+                            <span className="asset-details-main-metadata-value">{selectedImage?.expirationDate as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="assets-details-metadata-label">Asset Category and Asset Type Execution</h4>
-                            <span className="assets-details-metadata-value">{(selectedImage?.category as string) || (selectedImage?.categoryAndType as string)}</span>
+                            <h4 className="asset-details-main-metadata-label">Asset Category and Asset Type Execution</h4>
+                            <span className="asset-details-main-metadata-value">{(selectedImage?.category as string) || (selectedImage?.categoryAndType as string)}</span>
                         </div>
                     </div>
                 </div>

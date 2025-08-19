@@ -127,9 +127,13 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     };
 
     // Bulk actions handlers
-    const handleBulkAddToCartLocal = () => {
+    const handleBulkAddToCart = () => {
         onBulkAddToCart(selectedCards, images);
         setSelectedCards(new Set());
+    };
+
+    const handleBulkDownload = () => {
+        console.log('Bulk download:', Array.from(selectedCards));
     };
 
     const handleBulkShare = () => {
@@ -157,7 +161,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 onSelectAll={handleSelectAll}
                 onToggleMobileFilter={onToggleMobileFilter}
                 isMobileFilterOpen={isMobileFilterOpen}
-                onBulkAddToCart={handleBulkAddToCartLocal}
+                onBulkAddToCart={handleBulkAddToCart}
+                onBulkDownload={handleBulkDownload}
                 onBulkShare={handleBulkShare}
                 onBulkAddToCollection={handleBulkAddToCollection}
                 onSortByTopResults={onSortByTopResults}
@@ -199,7 +204,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                                 <CardComponent
                                     key={image.assetId}
                                     image={image}
-                                    handleCardClick={handleCardDetailClick}
+                                    handleCardDetailClick={handleCardDetailClick}
                                     handlePreviewClick={handleCardPreviewClick}
                                     handleAddToCart={handleAddToCart}
                                     handleRemoveFromCart={onRemoveFromCart}
