@@ -8,26 +8,57 @@
 }
 
 .cards > ul > li {
-  background-color: #f8f9fa; /* Light grey background */
+  background-color: #f6f6f6; /* Light grey background */
   border-radius: 12px; /* Rounded corners */
   overflow: hidden; /* Ensures image corners are also rounded */
   display: flex; /* Enable horizontal layout */
   align-items: stretch; /* Ensure both image and content have same height */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
-  transition: box-shadow 0.3s ease, transform 0.3s ease; /* Smooth hover effect */
+  height: 120px;
 }
 
 .cards > ul > li:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); /* Stronger shadow on hover */
-  transform: translateY(-2px); /* Slight lift effect on hover */
+  /* No visual effects on hover for the card */
+}
+
+.cards > ul > li:hover .cards-card-body {
+  background-color: white;
 }
 
 .cards .cards-card-body {
-  margin: 16px;
   flex: 1; /* Allow text content to take remaining space */
   display: flex;
   flex-direction: column;
-  justify-content: center; /* Center text content vertically */
+  justify-content: flex-start; /* Align text towards the top */
+  background-color: #e9ecef;
+  transition: background-color 0.3s ease; /* Smooth background transition */
+  padding: 16px;
+  padding-top: 20px;
+}
+
+.cards h2 {
+  font-family: "TCCC UnityHeadline", sans-serif;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 600;
+  margin: 0;
+}
+
+.cards h2::after {
+  display: none;
+}
+
+.cards a {
+  color: inherit;
+  text-decoration: none;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.cards a:hover {
+  color: inherit;
+  text-decoration: none;
 }
 
 .cards .cards-card-image {
@@ -53,16 +84,95 @@
   .cards > ul {
     grid-template-columns: 1fr; /* 1 column on mobile */
   }
-  
+
   .cards > ul > li {
     flex-direction: column; /* Stack vertically on mobile */
+    height: auto; /* Allow height to adjust on mobile */
   }
-  
+
   .cards .cards-card-image {
     flex: none; /* Reset flex on mobile */
   }
-  
+
   .cards > ul > li img {
     height: auto; /* Reset height on mobile */
   }
+}
+
+/* Highlights variant styling */
+.cards.highlights > ul > li {
+  background-color: #0d0000ce; /* Dark red background for highlights */
+  color: white; /* White text */
+  position: relative;
+  flex-direction: column; /* Stack image on top, text at bottom */
+  height: 213px; /* Fixed height */
+  border-radius: 8px; /* Smaller border radius for highlights */
+  transition: background-color 0.3s ease; /* Smooth background transition */
+}
+
+.cards.highlights > ul > li:hover {
+  background-color: #ED0000; /* Bright red on hover */
+}
+
+.cards.highlights .cards-card-body {
+  background-color: transparent; /* No separate background for text area */
+  width: 100%; /* Full width */
+  padding: 0 16px; /* Remove vertical padding, use only horizontal */
+  justify-content: center; /* Center text vertically in the area */
+  align-items: flex-start; /* Align text to the left */
+  flex: 0 0 48px;
+  box-sizing: border-box; /* Include padding in height calculation */
+  max-height: 48px; /* Enforce maximum height */
+  overflow: hidden;
+}
+
+.cards.highlights .cards-card-image {
+  flex: 1; /* Take remaining space after text */
+  width: 100%; /* Full width */
+  overflow: hidden; /* Hide overflow */
+  order: -1; /* Ensure image appears first (on top) */
+}
+
+.cards.highlights > ul > li img {
+  width: 100%;
+  height: 100%; /* Fill the image container */
+  object-fit: cover;
+  transition: transform 0.3s ease; /* Smooth zoom transition */
+}
+
+.cards.highlights > ul > li:hover img {
+  transform: scale(1.05); /* Slight zoom on hover */
+}
+
+/* Override general card body hover effect for highlights */
+.cards.highlights > ul > li:hover .cards-card-body {
+  background-color: transparent; /* Keep transparent background on hover */
+}
+
+.cards.highlights h2 {
+  color: white;
+  font-size: 16px;
+  margin: 0;
+  padding: 0;
+  line-height: 1.2;
+  font-weight: normal;
+}
+
+.cards.highlights a {
+  color: white;
+}
+
+/* Add arrow icon for highlights */
+.cards.highlights > ul > li::after {
+  content: '›';
+  position: absolute;
+  right: 16px;
+  bottom: 0; /* Start from bottom */
+  height: 48px; /* Match content area height */
+  display: flex;
+  align-items: center; /* Center arrow vertically within its container */
+  font-size: 24px;
+  color: white;
+  font-weight: bold;
+  line-height: 1; /* Remove line-height spacing */
 }
