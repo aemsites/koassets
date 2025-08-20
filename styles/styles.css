@@ -21,7 +21,7 @@
 
   /* fonts */
   --body-font-family: roboto, roboto-fallback, sans-serif;
-  --heading-font-family: roboto-condensed, roboto-condensed-fallback, sans-serif;
+  --heading-font-family: "TCCC UnityHeadline", roboto-condensed-fallback, sans-serif;
 
   /* body sizes */
   --body-font-size-m: 22px;
@@ -104,8 +104,10 @@ h3,
 h4,
 h5,
 h6 {
-  margin-top: 0.8em;
+  padding-top: 0.8em;
   margin-bottom: 0.25em;
+  margin-block-start: 0;
+  margin-block-end: 0.25em;
   font-family: var(--heading-font-family);
   font-weight: 600;
   line-height: 1.25;
