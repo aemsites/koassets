@@ -15,7 +15,7 @@
 .container,
 .container * {
   font-family: "TCCC UnityText Regular","Helvetica Neue",Arial,Helvetica,sans-serif;
-  color: #1e1e1e;
+  color: var(--secondary-color);
 }
 
 .main-content {
@@ -39,7 +39,7 @@ button {
 }
 
 button:hover {
-  background-color: #d11700;
+  background-color: var(--primary-color-hover);
 }
 
 button:active {
@@ -77,11 +77,14 @@ button:disabled {
 
 .container .tccc-tag {
   background: #fff0da;
-  border-radius: 14px;
   color: #a46801;
   font-family: "TCCC UnityHeadline", sans-serif;
   font-size: 10px;
   font-weight: 600;
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  overflow-wrap: break-word;
 }
 
 .container h3 {
@@ -191,6 +194,66 @@ button:disabled {
   transform: rotate(45deg) translateX(-1px) translateY(-1px);
 }
 
+.container .primary-button {
+  height: 42px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+}
+
+.container .primary-button:active {
+  transform: translateY(1px);
+}
+
+.container .primary-button:focus {
+  outline: none;
+}
+
+.container .primary-button:hover:not(:disabled) {
+  background-color: var(--primary-color-hover);
+}
+
+.container .secondary-button {
+  height: 42px;
+  background-color: #fff;
+  border: 1.5px solid #9a9a9a;
+  color: #1e1e1e;
+  font-weight: 700;
+  font-family: "TCCC UnityHeadline", sans-serif;
+  font-size: .875rem;
+  line-height: 140%;
+  border-radius: 2.5rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  transition: border-color 0.1s ease, color 0.1s ease;
+}
+
+.container .secondary-button:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.container .secondary-button:active {
+  transform: translateY(1px);
+}
+
+.container .secondary-button:focus {
+  outline: none;
+}
+
 /* Breadcrumb navigation styles */
 .breadcrumbs {
   padding: 10px;
@@ -205,4 +268,76 @@ button:disabled {
 
 .breadcrumb-separator {
   margin: 0 5px;
+}
+
+input[type="checkbox"].tccc-checkbox {
+  position: absolute;
+  top: 20px;
+  left: 10px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  z-index: 15;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: white;
+  border: 0px solid #ddd;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+input[type="checkbox"].tccc-checkbox:checked {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+input[type="checkbox"].tccc-checkbox::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  height: 13px;
+  width: 13px;
+  background-color: white;
+  border: 2px solid #6d6d6d;
+  border-radius: 3px;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+input[type="checkbox"].tccc-checkbox:hover::before {
+  border: 2px solid var(--primary-color);
+}
+
+input[type="checkbox"].tccc-checkbox:checked::before {
+  background-color: #f40000;
+  border-color: #f40000;
+}
+
+input[type="checkbox"].tccc-checkbox::after {
+  content: "";
+  display: none;
+}
+
+input[type="checkbox"].tccc-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  display: block;
+}
+
+input[type="checkbox"].tccc-checkbox:focus {
+  outline: none;
 }

@@ -21,7 +21,7 @@
     font-size: 13px;
     font-style: italic;
     font-family: "TCCC UnityText Regular", "Helvetica Neue", Arial, Helvetica, sans-serif;
-    color: #1e1e1e;
+    color: var(--secondary-color);
 }
 
 .date-range-filter .date-range-inputs {
@@ -116,7 +116,7 @@
 }
 
 .date-range-filter .date-range-input-wrapper.has-value [data-react-aria-textfield] input {
-    color: #1e1e1e;
+    color: var(--secondary-color);
 }
 
 /* Popover styling */
@@ -132,7 +132,7 @@
 
 .date-range-filter [data-react-aria-calendar] [data-react-aria-heading] {
     font-weight: 600;
-    color: #1e1e1e;
+    color: var(--secondary-color);
     font-size: 16px;
     margin: 0;
 }
@@ -163,7 +163,7 @@
     justify-content: center;
     border-radius: 4px;
     cursor: pointer;
-    color: #1e1e1e;
+    color: var(--secondary-color);
     font-size: 14px;
     margin: 2px auto;
 }

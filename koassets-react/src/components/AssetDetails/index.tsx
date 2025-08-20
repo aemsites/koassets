@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { ORIGINAL_RENDITION } from '../../dynamicmedia-client';
 import type { AssetDetailsProps } from '../../types';
 import { fetchOptimizedDeliveryBlob } from '../../utils/blobCache';
 import { removeHyphenTitleCase } from '../../utils/formatters';
+import ActionButton from '../ActionButton';
+import DownloadRenditions from '../DownloadRenditions';
 import './AssetDetails.css';
 import AssetDetailsDRM from './AssetDetailsDRM';
 import AssetDetailsGeneralInfo from './AssetDetailsGeneralInfo';
@@ -16,6 +19,12 @@ import AssetDetailsSystem from './AssetDetailsSystem';
 import AssetDetailsSystemInfoLegacy from './AssetDetailsSystemInfoLegacy';
 import AssetDetailsTechnicalInfo from './AssetDetailsTechnicalInfo';
 
+/* Displayed on the asset details modal header section
+campaignName 
+title
+description
+*/
+
 const AssetDetails: React.FC<AssetDetailsProps> = ({
     showModal,
     selectedImage,
@@ -28,6 +37,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
     const [imageLoading, setImageLoading] = useState<boolean>(false);
     const [collapseAll, setCollapseAll] = useState<boolean>(false);
+    const [showDownloadRenditionsModal, setShowDownloadRenditionsModal] = useState<boolean>(false);
 
     const handleToggleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setCollapseAll(e.target.checked);
@@ -37,7 +47,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     const isInCart = selectedImage ? cartItems.some(cartItem => cartItem.assetId === selectedImage.assetId) : false;
 
     // Handle button click - either add or remove from cart
-    const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const handleAddRemoveCart = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation();
 
         if (!selectedImage) return;
@@ -50,13 +60,39 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     };
 
     const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (e.target === e.currentTarget) {
+        if (e.target === e.currentTarget && !showDownloadRenditionsModal) {
             closeModal();
         }
     };
 
     const handleModalClick = (e: React.MouseEvent<HTMLDivElement>) => {
         e.stopPropagation();
+    };
+
+    // Handle action button click (download original asset)
+    const handleClickDownload = async () => {
+        if (!selectedImage || !dynamicMediaClient) {
+            console.warn('No asset or dynamic media client available for download');
+            return;
+        }
+
+        try {
+            console.log('Downloading original asset:', selectedImage.assetId);
+            await dynamicMediaClient.downloadAsset(
+                selectedImage,
+                ORIGINAL_RENDITION
+            );
+        } catch (error) {
+            console.error('Failed to download asset:', error);
+        }
+    };
+
+    const handleClickDownloadRenditions = async () => {
+        setShowDownloadRenditionsModal(true);
+    };
+
+    const handleDownloadRenditionsModalClose = () => {
+        setShowDownloadRenditionsModal(false);
     };
 
     useEffect(() => {
@@ -105,14 +141,14 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     return (
         <div className="asset-details-modal" onClick={handleOverlayClick}>
             <div className="asset-details-modal-inner" onClick={handleModalClick}>
-                <button className="assets-details-close-button" onClick={closeModal}>
+                <button className="asset-details-main-close-button" onClick={closeModal}>
                     ×
                 </button>
 
-                <div className="assets-details-main-section">
-                    <div className="assets-details-image-section">
+                <div className="asset-details-main-main-section">
+                    <div className="asset-details-main-image-section">
                         {imageLoading ? (
-                            <div className="assets-details-image-loading">
+                            <div className="asset-details-main-image-loading">
                                 <div className="loading-spinner"></div>
                                 <p>Loading high resolution image...</p>
                             </div>
@@ -120,24 +156,24 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                             <img
                                 src={blobUrl || selectedImage.url}
                                 alt={selectedImage.alt || selectedImage.name}
-                                className="assets-details-image"
+                                className="asset-details-main-image"
                             />
                         )}
                     </div>
 
-                    <div className="assets-details-info-section">
-                        <div className="assets-details-info-section-inner">
-                            <div className="assets-details-header">
-                                <div className="assets-details-tags">
+                    <div className="asset-details-main-info-section">
+                        <div className="asset-details-main-info-section-inner">
+                            <div className="asset-details-main-header">
+                                <div className="asset-details-main-tags">
                                     {selectedImage?.campaignName as string && (
-                                        <span className="assets-details-tag tccc-tag">{removeHyphenTitleCase(selectedImage?.campaignName as string)}</span>
+                                        <span className="asset-details-main-tag tccc-tag">{removeHyphenTitleCase(selectedImage?.campaignName as string)}</span>
                                     )}
                                 </div>
-                                <h2 className="assets-details-title">
+                                <h2 className="asset-details-main-title">
                                     {selectedImage.title}
                                 </h2>
                                 {selectedImage?.description && (
-                                    <p className="assets-details-description">{selectedImage?.description}</p>
+                                    <p className="asset-details-main-description">{selectedImage?.description}</p>
                                 )}
                             </div>
 
@@ -149,7 +185,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">TYPE</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.format}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.formatLabel}</span>
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">SIZE</span>
@@ -206,19 +242,35 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                 </div>
                             </div>
 
-                            <button
-                                className={`assets-details-add-to-cart-button${isInCart ? ' remove-from-cart' : ''}`}
-                                onClick={handleButtonClick}
-                            >
-                                {isInCart ? 'Remove From Cart' : 'Add To Cart'}
-                            </button>
+                            <div className="product-actions">
+                                <div className="left-buttons-wrapper">
+                                    <ActionButton
+                                        name="download"
+                                        onClick={handleClickDownload}
+                                    />
+                                </div>
+                                <div className="right-buttons-wrapper">
+                                    <button
+                                        className={`asset-details-main-download-renditions-button secondary-button`}
+                                        onClick={handleClickDownloadRenditions}
+                                    >
+                                        Download renditions
+                                    </button>
+                                    <button
+                                        className={`asset-details-main-add-to-cart-button${isInCart ? ' remove-from-cart' : ''} primary-button`}
+                                        onClick={handleAddRemoveCart}
+                                    >
+                                        {isInCart ? 'Remove From Cart' : 'Add To Cart'}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="assets-details-toggle-section"></div>
+                <div className="asset-details-main-toggle-section"></div>
 
-                <div className="assets-details-metadata-section">
+                <div className="asset-details-main-metadata-section">
                     <div className="cmp-title" id="showfulldetails">
                         <h1>
                             Collapse All
@@ -228,8 +280,8 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                             </label>
                         </h1>
                     </div>
-                    <div className="assets-details-metadata-grid">
-                        <div className="assets-details-metadata-left-container">
+                    <div className="asset-details-main-metadata-grid">
+                        <div className="asset-details-main-metadata-left-container">
                             <AssetDetailsSystem selectedImage={selectedImage} forceCollapse={collapseAll} />
                             <AssetDetailsDRM selectedImage={selectedImage} forceCollapse={collapseAll} />
                             <AssetDetailsOverview selectedImage={selectedImage} forceCollapse={collapseAll} />
@@ -241,13 +293,20 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                             <AssetDetailsProduction selectedImage={selectedImage} forceCollapse={collapseAll} />
                             <AssetDetailsLegacyFields selectedImage={selectedImage} forceCollapse={collapseAll} />
                         </div>
-                        <div className="assets-details-metadata-right-container">
+                        <div className="asset-details-main-metadata-right-container">
                             <AssetDetailsMarketing selectedImage={selectedImage} forceCollapse={collapseAll} />
                             <AssetDetailsMarketingPackageContainer selectedImage={selectedImage} forceCollapse={collapseAll} />
                         </div>
                     </div>
                 </div>
             </div>
+
+            <DownloadRenditions
+                isOpen={showDownloadRenditionsModal}
+                asset={selectedImage}
+                onClose={handleDownloadRenditionsModalClose}
+                dynamicMediaClient={dynamicMediaClient ?? null}
+            />
         </div>
     );
 };

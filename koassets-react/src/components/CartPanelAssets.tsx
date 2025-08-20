@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import type { DynamicMediaClient } from '../dynamicmedia-client';
 import type {
     Asset,
     AuthorizedCartItem,
@@ -8,75 +7,11 @@ import type {
     WorkflowStepIcons,
     WorkflowStepStatuses
 } from '../types';
-import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
+import { removeBlobFromCache } from '../utils/blobCache';
 import './CartPanelAssets.css';
+import ThumbnailImage from './ThumbnailImage';
 
-// Component to handle optimized image display with fallback to cache
-const OptimizedCartImage: React.FC<{
-    item: Asset;
-    dynamicMediaClient: DynamicMediaClient | null;
-}> = ({ item, dynamicMediaClient }) => {
-    const [imageUrl, setImageUrl] = useState<string | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<boolean>(false);
 
-    useEffect(() => {
-        const loadImage = async () => {
-            if (!item.assetId || !dynamicMediaClient) {
-                setLoading(false);
-                setError(true);
-                return;
-            }
-
-            try {
-                // Use the utility function with caching for 350px cart images
-                const blobUrl = await fetchOptimizedDeliveryBlob(
-                    dynamicMediaClient,
-                    item,
-                    350,
-                    {
-                        cache: true,
-                        cacheKey: `${item.assetId}-350`,
-                        fallbackUrl: item.url
-                    }
-                );
-
-                if (blobUrl) {
-                    setImageUrl(blobUrl);
-                    console.log(`Loaded cart image: ${item.assetId}`);
-                } else {
-                    setError(true);
-                }
-            } catch (error) {
-                console.error(`Failed to load cart image ${item.assetId}:`, error);
-                setError(true);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadImage();
-    }, [item, item.assetId, item.url, dynamicMediaClient]);
-
-    // Separate effect for cleanup
-    useEffect(() => {
-        return () => {
-            if (imageUrl && imageUrl.startsWith('blob:')) {
-                URL.revokeObjectURL(imageUrl);
-            }
-        };
-    }, [imageUrl]);
-
-    if (loading) {
-        return <div className="thumbnail-placeholder">Loading...</div>;
-    }
-
-    if (error || !imageUrl) {
-        return <div className="thumbnail-placeholder">📷 No preview</div>;
-    }
-
-    return <img src={imageUrl} alt={item.name || 'Asset'} />;
-};
 
 const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     cartItems,
@@ -111,28 +46,28 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                             console.log('Cart initialized - ready for items');
                             setStepIcon(prev => ({
                                 ...prev,
-                                cart: <img src="cart-stepper-icon-init.svg" alt="Cart" />
+                                cart: <img src="icons/cart-stepper-icon-init.svg" alt="Cart" />
                             }));
                             break;
                         case 'pending':
                             console.log('Cart processing...');
                             setStepIcon(prev => ({
                                 ...prev,
-                                cart: <img src="cart-stepper-icon-pending.svg" alt="Cart Pending" />
+                                cart: <img src="icons/cart-stepper-icon-pending.svg" alt="Cart Pending" />
                             }));
                             break;
                         case 'success':
                             console.log('Cart ready for download request');
                             setStepIcon(prev => ({
                                 ...prev,
-                                cart: <img src="cart-stepper-icon-success.svg" alt="Cart Success" />
+                                cart: <img src="icons/cart-stepper-icon-success.svg" alt="Cart Success" />
                             }));
                             break;
                         case 'failure':
                             console.log('Cart failed - items may be invalid or unavailable');
                             setStepIcon(prev => ({
                                 ...prev,
-                                cart: <img src="cart-stepper-icon-failure.svg" alt="Cart Failure" />
+                                cart: <img src="icons/cart-stepper-icon-failure.svg" alt="Cart Failure" />
                             }));
                             break;
                     }
@@ -144,28 +79,28 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                             console.log('Download request not started');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'request-download': <img src="request-download-stepper-icon-init.svg" alt="Request Download" />
+                                'request-download': <img src="icons/request-download-stepper-icon-init.svg" alt="Request Download" />
                             }));
                             break;
                         case 'pending':
                             console.log('Processing download request...');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'request-download': <img src="request-download-stepper-icon-pending.svg" alt="Request Download Pending" />
+                                'request-download': <img src="icons/request-download-stepper-icon-pending.svg" alt="Request Download Pending" />
                             }));
                             break;
                         case 'success':
                             console.log('Download request approved - proceeding to rights check');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'request-download': <img src="request-download-stepper-icon-success.svg" alt="Request Download Success" />
+                                'request-download': <img src="icons/request-download-stepper-icon-success.svg" alt="Request Download Success" />
                             }));
                             break;
                         case 'failure':
                             console.log('Download request failed - user can retry');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'request-download': <img src="request-download-stepper-icon-failure.svg" alt="Request Download Failure" />
+                                'request-download': <img src="icons/request-download-stepper-icon-failure.svg" alt="Request Download Failure" />
                             }));
                             break;
                     }
@@ -177,28 +112,28 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                             console.log('Rights check not started');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'rights-check': <img src="rights-check-stepper-icon-init.svg" alt="Rights Check" />
+                                'rights-check': <img src="icons/rights-check-stepper-icon-init.svg" alt="Rights Check" />
                             }));
                             break;
                         case 'pending':
                             console.log('Checking rights and permissions...');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'rights-check': <img src="rights-check-stepper-icon-pending.svg" alt="Rights Check Pending" />
+                                'rights-check': <img src="icons/rights-check-stepper-icon-pending.svg" alt="Rights Check Pending" />
                             }));
                             break;
                         case 'success':
                             console.log('Rights check passed - proceeding to download');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'rights-check': <img src="rights-check-stepper-icon-success.svg" alt="Rights Check Success" />
+                                'rights-check': <img src="icons/rights-check-stepper-icon-success.svg" alt="Rights Check Success" />
                             }));
                             break;
                         case 'failure':
                             console.log('Rights check failed - insufficient permissions');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'rights-check': <img src="rights-check-stepper-icon-failure.svg" alt="Rights Check Failure" />
+                                'rights-check': <img src="icons/rights-check-stepper-icon-failure.svg" alt="Rights Check Failure" />
                             }));
                             break;
                     }
@@ -210,14 +145,14 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                             console.log('Download not started');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'download': <img src="download-stepper-icon-init.svg" alt="Download" />
+                                'download': <img src="icons/download-stepper-icon-init.svg" alt="Download" />
                             }));
                             break;
                         case 'pending':
                             console.log('Downloading assets...');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'download': <img src="download-stepper-icon-pending.svg" alt="Download Pending" />
+                                'download': <img src="icons/download-stepper-icon-pending.svg" alt="Download Pending" />
                             }));
                             break;
                         case 'success':
@@ -225,14 +160,14 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                             // Could trigger success notification or auto-close
                             setStepIcon(prev => ({
                                 ...prev,
-                                'download': <img src="download-stepper-icon-success.svg" alt="Download Success" />
+                                'download': <img src="icons/download-stepper-icon-success.svg" alt="Download Success" />
                             }));
                             break;
                         case 'failure':
                             console.log('Download failed - connection or server error');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'download': <img src="download-stepper-icon-failure.svg" alt="Download Failure" />
+                                'download': <img src="icons/download-stepper-icon-failure.svg" alt="Download Failure" />
                             }));
                             break;
                     }
@@ -242,6 +177,13 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     }, [stepStatus]);
 
     const handleClearCart = (): void => {
+        // Remove cached blobs for each cart item
+        cartItems.forEach(item => {
+            if (item.assetId) {
+                removeBlobFromCache(item.assetId);
+            }
+        });
+
         setCartItems([]);
     };
 
@@ -424,17 +366,15 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                                 return (
                                     <div key={item.assetId} className={`cart-item-row ${authorizedItem.authorized === false ? 'disabled' : ''}`}>
                                         <div className="col-thumbnail">
-                                            <div className="item-thumbnail">
-                                                <OptimizedCartImage
-                                                    item={item}
-                                                    dynamicMediaClient={dynamicMediaClient ?? null}
-                                                />
-                                            </div>
+                                            <ThumbnailImage
+                                                item={item}
+                                                dynamicMediaClient={dynamicMediaClient ?? null}
+                                            />
                                         </div>
                                         <div className="col-title">
                                             <div className="item-title">{item.title || item.name}</div>
                                             <br />
-                                            <div className="item-type">TYPE: {item.format?.toUpperCase()}</div>
+                                            <div className="item-type">TYPE: {item.formatLabel?.toUpperCase()}</div>
                                         </div>
                                         <div className="col-rights">
                                             <span className="rights-badge">Fully-managed rights (FMR)</span>
@@ -463,16 +403,16 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                 <button className="action-btn secondary" onClick={handleClearCart}>
                     Clear Cart
                 </button>
-                <button className="action-btn secondary" onClick={handleShareCart}>
+                <button className="action-btn secondary disabled" onClick={(e) => e.preventDefault()}>
                     Share Cart
                 </button>
-                <button className="action-btn secondary" onClick={handleAddToCollection}>
+                <button className="action-btn secondary disabled" onClick={(e) => e.preventDefault()}>
                     Add To Collection
                 </button>
 
                 {/* Dynamic primary button based on step */}
                 {activeStep === 'cart' && (
-                    <button className="action-btn primary" onClick={handleRequestDownload}>
+                    <button className="action-btn primary disabled" onClick={(e) => e.preventDefault()}>
                         Request Download
                     </button>
                 )}

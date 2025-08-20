@@ -30,23 +30,23 @@ const AssetDetailsProduction: React.FC<AssetDetailsProductionProps> = ({ selecte
                 <div className="asset-details-content">
                     <div className="asset-details-grid">
                         <div className="asset-details-group">
-                            <h4 className="assets-details-metadata-label">Lead Operating Unit</h4>
-                            <span className="assets-details-metadata-value">{selectedImage?.leadOperatingUnit as string}</span>
+                            <h4 className="asset-details-main-metadata-label">Lead Operating Unit</h4>
+                            <span className="asset-details-main-metadata-value">{selectedImage?.leadOperatingUnit as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="assets-details-metadata-label">TCCC Lead Associate (Legacy)</h4>
-                            <span className="assets-details-metadata-value">{selectedImage?.tcccLeadAssociateLegacy as string}</span>
+                            <h4 className="asset-details-main-metadata-label">TCCC Lead Associate (Legacy)</h4>
+                            <span className="asset-details-main-metadata-value">{selectedImage?.tcccLeadAssociateLegacy as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="assets-details-metadata-label">TCCC Contact</h4>
-                            <span className="assets-details-metadata-value">{selectedImage?.tcccContact as string}</span>
+                            <h4 className="asset-details-main-metadata-label">TCCC Contact</h4>
+                            <span className="asset-details-main-metadata-value">{selectedImage?.tcccContact as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="assets-details-metadata-label">Fadel Job ID</h4>
-                            <span className="assets-details-metadata-value">{selectedImage?.fadelJobId as string}</span>
+                            <h4 className="asset-details-main-metadata-label">Fadel Job ID</h4>
+                            <span className="asset-details-main-metadata-value">{selectedImage?.fadelJobId as string}</span>
                         </div>
                     </div>
                 </div>
