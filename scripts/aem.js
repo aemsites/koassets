@@ -490,6 +490,11 @@ function decorateSections(main) {
             .filter((style) => style)
             .map((style) => toClassName(style.trim()));
           styles.forEach((style) => section.classList.add(style));
+        } else if (key === 'background-image') {
+          const backgroundImage = meta[key];
+          section.style.backgroundImage = `url(${backgroundImage})`;
+          section.style.backgroundSize = 'cover';
+          section.style.backgroundRepeat = 'no-repeat';
         } else {
           section.dataset[toCamelCase(key)] = meta[key];
         }
