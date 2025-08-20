@@ -46,7 +46,7 @@ const DownloadRenditions: React.FC<DownloadRenditionsProps> = ({
 
     // Helper function to format dimensions
     const formatDimensions = (dimensions?: { width: number; height: number }): string => {
-        if (!dimensions) return '';
+        if (!dimensions || dimensions.width === 0 || dimensions.height === 0) return '';
         return `W: ${dimensions.width}  H: ${dimensions.height}`;
     };
 
@@ -265,10 +265,14 @@ const DownloadRenditions: React.FC<DownloadRenditionsProps> = ({
                                                 <span className="rendition-name">
                                                     {rendition.name === 'original' ? 'Original' : rendition.name}
                                                 </span>
-                                                <span className="rendition-separator">|</span>
-                                                <span className="rendition-dimensions">
-                                                    {formatDimensions(rendition.dimensions)}
-                                                </span>
+                                                {formatDimensions(rendition.dimensions) && (
+                                                    <>
+                                                        <span className="rendition-separator">|</span>
+                                                        <span className="rendition-dimensions">
+                                                            {formatDimensions(rendition.dimensions)}
+                                                        </span>
+                                                    </>
+                                                )}
                                                 <span className="rendition-separator">|</span>
                                                 <span className="rendition-format">
                                                     {formatFormatName(rendition.format)}
