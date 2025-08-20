@@ -21,10 +21,15 @@ const isRUMRequest = (url) => /\/\.(rum|optel)\/.*/.test(url.pathname);
 
 
 const handleRequest = async (request, env, ctx) => {
+  console.log('handleRequest', request, env, ctx);
   const url = new URL(request.url);
-  if (url.port) {
+  if (url.hostname == 'localhost') {
+    // special handling for local development using 'wrangler dev'
+    url.protocol = 'https';
+    url.port = 443;
+  } else if (url.port) {
     // Cloudflare opens a couple more ports than 443, so we redirect visitors
-    // to the default port to avoid confusion. 
+    // to the default port to avoid confusion.
     // https://developers.cloudflare.com/fundamentals/reference/network-ports/#network-ports-compatible-with-cloudflares-proxy
     const redirectTo = new URL(request.url);
     redirectTo.port = '';
@@ -72,10 +77,12 @@ const handleRequest = async (request, env, ctx) => {
   }
   searchParams.sort();
 
-  url.hostname = env.ORIGIN_HOSTNAME;
-  if (!url.origin.match(/^https:\/\/main--.*--.*\.(?:aem|hlx)\.live/)) {
-    return new Response('Invalid ORIGIN_HOSTNAME', { status: 500 });
+  const helixOrigin = env.HELIX_ORIGIN_HOSTNAME;
+  if (!helixOrigin.match(/^.*--.*--.*\.(?:aem|hlx)\.live/)) {
+    return new Response('Invalid HELIX_ORIGIN_HOSTNAME', { status: 500 });
   }
+  url.hostname = helixOrigin;
+
   const req = new Request(url, request);
   req.headers.set('user-agent', req.headers.get('user-agent'));
   req.headers.set('x-forwarded-host', req.headers.get('host'));
@@ -83,8 +90,8 @@ const handleRequest = async (request, env, ctx) => {
   if (env.PUSH_INVALIDATION !== 'disabled') {
     req.headers.set('x-push-invalidation', 'enabled');
   }
-  if (env.ORIGIN_AUTHENTICATION) {
-    req.headers.set('authorization', `token ${env.ORIGIN_AUTHENTICATION}`);
+  if (env.HELIX_ORIGIN_AUTHENTICATION) {
+    req.headers.set('authorization', `token ${env.HELIX_ORIGIN_AUTHENTICATION}`);
   }
   let resp = await fetch(req, {
     method: req.method,

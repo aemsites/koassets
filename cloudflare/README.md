@@ -13,6 +13,14 @@ Worker URL: https://koassets.adobeaem.workers.dev
   - Deploying to the pilot at https://koassets.adobeaem.workers.dev requires access to the Cloudflare account `Franklin (Dev)`
 - Run `npm install` to install the dependencies
 
+## Develop locally
+
+```bash
+npm run dev
+```
+
+Runs [wrangler dev](https://developers.cloudflare.com/workers/development-testing/#local-development) which will start a local server with the worker at http://localhost:8787.
+
 ## Deploy
 
 By default the worker will deploy to the pilot https://koassets.adobeaem.workers.dev.
@@ -27,20 +35,55 @@ The `wrangler` cli will automatically open a browser window to log into a Cloudf
 # Make sure to run tests first
 npm test
 
-# Deploy the worker
+# Deploy current branch to preview URL
+# https://${branch}-koassets.adobeaem.workers.dev
 npm run deploy
 
-# Deploy and then tail logs
+# Deploy (branch) and then tail logs
 npm run deploy-tail
 
-# Just tail logs
-npm run log
+# Tail logs on current branch
+npm run tail
+
+# Deploy to production
+# https://koassets.adobeaem.workers.dev
+npm run deploy:prod
+
+# Tail logs on production
+npm run tail:prod
 ```
 You can also use the [wrangler](https://developers.cloudflare.com/workers/wrangler/) CLI directly:
 
 ```bash
 npx wrangler ...
 ```
+
+### Deployment options
+
+1. develop/run worker locally
+   - use helix origin: main--koassets--aemsites.aem.live
+     or a custom one, set with `npm run dev --var HELIX_ORIGIN_HOSTNAME:custom--koassets--aemsites.aem.live` or in `wrangler.toml`
+   - USE CASE: quickly develop locally
+   - IMPL: `npm run dev`
+2. deploy branch
+   - create version with tag: <branch> and message: <commit message> (or `<local changes>` if there are local changes)
+   - use helix origin: <branch>--koassets--aemsites.aem.live
+   - under preview-alias: <branch>
+   - USE CASE: CI on branch pushes
+   - IMPL: shell script with tee in github action yaml
+3. deploy prod
+   - create version with tag: <branch> and message: <commit message> (or `<local changes>` if there are local changes)
+   - standard helix origin: main--koassets--aemsites.aem.live (configured in `wrangler.toml`)
+   - deploy version to production
+   - USE CASE: CI on main pushes
+   - IMPL: shell script with tee in github action yaml
+4. deploy manually as developer
+   - allow control of --message and --tag
+   - allow control of helix origin
+   - either as --preview-alias or production
+   - USE CASE: manual deploy as developer to fix something or fine control
+   - IMPL: directly call `npx wrangler` or some helper `npm run deploy` with arguments
+
 
 
 ## Configuration

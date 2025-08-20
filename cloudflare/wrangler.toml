@@ -1,5 +1,5 @@
 name = "koassets"
-main = "index.js"
+main = "src/index.js"
 workers_dev = true
 account_id = "852dfa4ae1b0d579df29be65b986c101"
 compatibility_date = "2025-08-18"
@@ -7,18 +7,22 @@ compatibility_date = "2025-08-18"
 # no routes yet, using worker URL for now: koassets.adobeaem.workers.dev
 # route = "*.mydomain.com/*"
 
+[observability.logs]
+enabled = true
+
 [build]
-command = "npm install"
+# command = "npm install && npm test"
 
 [vars]
-ORIGIN_HOSTNAME = "main--koassets--aemsites.aem.live"
+HELIX_ORIGIN_HOSTNAME = "main--koassets--aemsites.aem.live"
+DM_ORIGIN_HOSTNAME = "delivery-p64403-e544653.adobeaemcloud.com"
+
+# Optional: enable origin authentication
+# see https://www.aem.live/docs/authentication-setup-site
+# HELIX_ORIGIN_AUTHENTICATION = "hlx_YOUR_TOKEN_HERE"
 
 # Optional and not recommended: disable push invalidation
 # Uncomment the following line if you need to opt-out of push-invalidation.
 # Keep in mind that this will increase origin traffic and reduce performance
 # so this should only be used on secondary lower environments.
 # PUSH_INVALIDATION = "disabled"
-
-# Optional: enable origin authentication
-# see https://www.aem.live/docs/authentication-setup-site
-# ORIGIN_AUTHENTICATION = "hlx_YOUR_TOKEN_HERE"

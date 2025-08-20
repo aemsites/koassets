@@ -3,13 +3,29 @@
   "version": "1.0.0",
   "private": true,
   "description": "Cloudflare Worker for KO Assets",
-  "main": "index.js",
+  "main": "src/index.js",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "deploy": "wrangler deploy",
-    "log": "wrangler tail",
-    "deploy-tail": "wrangler deploy && wrangler tail"
+    "dev": "wrangler dev",
+    "deploy": "node scripts.js deploy",
+    "deploy-and-tail": "node scripts.js deploy --tail",
+    "deploy-prod": "node scripts.js deployProd",
+    "tail-prod": "wrangler tail",
+
+    "deployX": "echo wrangler versions upload --tag \"$1\" --message \"$2\"",
+
+    "ci-deploy-branch": "node scripts.js deploy",
+    "ci-deploy-prod": "node scripts.js deployProd",
+
+    "tail": "wrangler tail --version-id $(git branch --show-current)",
+
+    "OLD-predeploy": "echo Deploying branch: $(git branch --show-current);",
+    "OLD-deploy": "branch=$(git branch --show-current); wrangler versions upload --tag ${branch} --preview-alias ${branch} --var HELIX_ORIGIN_HOSTNAME:${branch}--koassets--aemsites.aem.live --message \"$(if git diff --quiet .; then git log -1 --pretty=%B; else echo '<local changes>'; fi)\"",
+    "OLD-deploy-tail": "npm run deploy && npm run tail",
+    "OLD-deploy:prod": "wrangler versions upload --tag PRODUCTION --message \"$(git diff --quiet . && git log -1 --pretty=%B)\" && wrangler versions deploy -y $(wrangler versions list --json | jq -r '.[] | select (.annotations.\"workers/tag\" == \"MAIN\") | .id')",
+    "OLD2-deploy:prod": "wrangler deploy --message \"$(git diff --quiet . && git log -1 --pretty=%B)\""
+
   },
   "devDependencies": {
     "wrangler": "^4.31.0"
