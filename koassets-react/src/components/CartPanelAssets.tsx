@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import type { DynamicMediaClient } from '../dynamicmedia-client';
 import type {
     Asset,
     AuthorizedCartItem,
@@ -8,75 +7,11 @@ import type {
     WorkflowStepIcons,
     WorkflowStepStatuses
 } from '../types';
-import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
+import { removeBlobFromCache } from '../utils/blobCache';
 import './CartPanelAssets.css';
+import ThumbnailImage from './ThumbnailImage';
 
-// Component to handle optimized image display with fallback to cache
-const OptimizedCartImage: React.FC<{
-    item: Asset;
-    dynamicMediaClient: DynamicMediaClient | null;
-}> = ({ item, dynamicMediaClient }) => {
-    const [imageUrl, setImageUrl] = useState<string | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<boolean>(false);
 
-    useEffect(() => {
-        const loadImage = async () => {
-            if (!item.assetId || !dynamicMediaClient) {
-                setLoading(false);
-                setError(true);
-                return;
-            }
-
-            try {
-                // Use the utility function with caching for 350px cart images
-                const blobUrl = await fetchOptimizedDeliveryBlob(
-                    dynamicMediaClient,
-                    item,
-                    350,
-                    {
-                        cache: true,
-                        cacheKey: `${item.assetId}-350`,
-                        fallbackUrl: item.url
-                    }
-                );
-
-                if (blobUrl) {
-                    setImageUrl(blobUrl);
-                    console.log(`Loaded cart image: ${item.assetId}`);
-                } else {
-                    setError(true);
-                }
-            } catch (error) {
-                console.error(`Failed to load cart image ${item.assetId}:`, error);
-                setError(true);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadImage();
-    }, [item, item.assetId, item.url, dynamicMediaClient]);
-
-    // Separate effect for cleanup
-    useEffect(() => {
-        return () => {
-            if (imageUrl && imageUrl.startsWith('blob:')) {
-                URL.revokeObjectURL(imageUrl);
-            }
-        };
-    }, [imageUrl]);
-
-    if (loading) {
-        return <div className="thumbnail-placeholder">Loading...</div>;
-    }
-
-    if (error || !imageUrl) {
-        return <div className="thumbnail-placeholder">📷 No preview</div>;
-    }
-
-    return <img src={imageUrl} alt={item.name || 'Asset'} />;
-};
 
 const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     cartItems,
@@ -242,6 +177,13 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     }, [stepStatus]);
 
     const handleClearCart = (): void => {
+        // Remove cached blobs for each cart item
+        cartItems.forEach(item => {
+            if (item.assetId) {
+                removeBlobFromCache(item.assetId);
+            }
+        });
+
         setCartItems([]);
     };
 
@@ -424,17 +366,15 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                                 return (
                                     <div key={item.assetId} className={`cart-item-row ${authorizedItem.authorized === false ? 'disabled' : ''}`}>
                                         <div className="col-thumbnail">
-                                            <div className="item-thumbnail">
-                                                <OptimizedCartImage
-                                                    item={item}
-                                                    dynamicMediaClient={dynamicMediaClient ?? null}
-                                                />
-                                            </div>
+                                            <ThumbnailImage
+                                                item={item}
+                                                dynamicMediaClient={dynamicMediaClient ?? null}
+                                            />
                                         </div>
                                         <div className="col-title">
                                             <div className="item-title">{item.title || item.name}</div>
                                             <br />
-                                            <div className="item-type">TYPE: {item.format?.toUpperCase()}</div>
+                                            <div className="item-type">TYPE: {item.formatLabel?.toUpperCase()}</div>
                                         </div>
                                         <div className="col-rights">
                                             <span className="rights-badge">Fully-managed rights (FMR)</span>
@@ -463,16 +403,16 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                 <button className="action-btn secondary" onClick={handleClearCart}>
                     Clear Cart
                 </button>
-                <button className="action-btn secondary" onClick={handleShareCart}>
+                <button className="action-btn secondary disabled" onClick={(e) => e.preventDefault()}>
                     Share Cart
                 </button>
-                <button className="action-btn secondary" onClick={handleAddToCollection}>
+                <button className="action-btn secondary disabled" onClick={(e) => e.preventDefault()}>
                     Add To Collection
                 </button>
 
                 {/* Dynamic primary button based on step */}
                 {activeStep === 'cart' && (
-                    <button className="action-btn primary" onClick={handleRequestDownload}>
+                    <button className="action-btn primary disabled" onClick={(e) => e.preventDefault()}>
                         Request Download
                     </button>
                 )}

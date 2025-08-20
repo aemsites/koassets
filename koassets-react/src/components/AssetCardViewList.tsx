@@ -69,7 +69,7 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
                 >
                     <input
                         type="checkbox"
-                        className="asset-checkbox"
+                        className="tccc-checkbox"
                         checked={isSelected}
                         onChange={handleCheckboxClick}
                         onClick={handleCheckboxClickOnly}
@@ -119,7 +119,7 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
                                 </div>
                                 <div className="product-meta-item">
                                     <span className="product-meta-label tccc-metadata-label">TYPE</span>
-                                    <span className="product-meta-value tccc-metadata-value">{image.format}</span>
+                                    <span className="product-meta-value tccc-metadata-value">{image.formatLabel}</span>
                                 </div>
                                 <div className="product-meta-item">
                                     <span className="product-meta-label tccc-metadata-label">FILE EXT</span>

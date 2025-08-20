@@ -4,6 +4,7 @@ import type { AssetDetailsProps } from '../../types';
 import { fetchOptimizedDeliveryBlob } from '../../utils/blobCache';
 import { removeHyphenTitleCase } from '../../utils/formatters';
 import ActionButton from '../ActionButton';
+import DownloadRenditions from '../DownloadRenditions';
 import './AssetDetails.css';
 import AssetDetailsDRM from './AssetDetailsDRM';
 import AssetDetailsGeneralInfo from './AssetDetailsGeneralInfo';
@@ -30,6 +31,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
     const [imageLoading, setImageLoading] = useState<boolean>(false);
     const [collapseAll, setCollapseAll] = useState<boolean>(false);
+    const [showDownloadRenditionsModal, setShowDownloadRenditionsModal] = useState<boolean>(false);
 
     const handleToggleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setCollapseAll(e.target.checked);
@@ -52,7 +54,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     };
 
     const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (e.target === e.currentTarget) {
+        if (e.target === e.currentTarget && !showDownloadRenditionsModal) {
             closeModal();
         }
     };
@@ -80,17 +82,11 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     };
 
     const handleClickDownloadRenditions = async () => {
-        if (!selectedImage || !dynamicMediaClient) {
-            console.warn('No asset or dynamic media client available for download');
-            return;
-        }
+        setShowDownloadRenditionsModal(true);
+    };
 
-        try {
-            const renditions = await dynamicMediaClient.getAssetRenditions(selectedImage);
-            console.log('Renditions:', renditions);
-        } catch (error) {
-            console.error('Failed to get asset renditions:', error);
-        }
+    const handleDownloadRenditionsModalClose = () => {
+        setShowDownloadRenditionsModal(false);
     };
 
     useEffect(() => {
@@ -183,7 +179,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">TYPE</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.format}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.formatLabel}</span>
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">SIZE</span>
@@ -298,6 +294,13 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                     </div>
                 </div>
             </div>
+
+            <DownloadRenditions
+                isOpen={showDownloadRenditionsModal}
+                asset={selectedImage}
+                onClose={handleDownloadRenditionsModalClose}
+                dynamicMediaClient={dynamicMediaClient ?? null}
+            />
         </div>
     );
 };

@@ -26,6 +26,8 @@ export interface Asset {
     expirationDate?: string | number;
     fadelId?: string;
     format?: string;
+    formatType?: string;
+    formatLabel?: string;
     japaneseDescription?: string;
     japaneseKeywords?: string;
     japaneseTitle?: string;
