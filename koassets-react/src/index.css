@@ -58,4 +58,6 @@ code {
 
 :root {
   --primary-color: #ed0000;
+  --primary-color-hover: #d11700;
+  --secondary-color: #1e1e1e;
 }
