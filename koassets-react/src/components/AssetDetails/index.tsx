@@ -19,6 +19,12 @@ import AssetDetailsSystem from './AssetDetailsSystem';
 import AssetDetailsSystemInfoLegacy from './AssetDetailsSystemInfoLegacy';
 import AssetDetailsTechnicalInfo from './AssetDetailsTechnicalInfo';
 
+/* Displayed on the asset details modal header section
+campaignName 
+title
+description
+*/
+
 const AssetDetails: React.FC<AssetDetailsProps> = ({
     showModal,
     selectedImage,
@@ -248,7 +254,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                         className={`asset-details-main-download-renditions-button secondary-button`}
                                         onClick={handleClickDownloadRenditions}
                                     >
-                                        Download
+                                        Download renditions
                                     </button>
                                     <button
                                         className={`asset-details-main-add-to-cart-button${isInCart ? ' remove-from-cart' : ''} primary-button`}

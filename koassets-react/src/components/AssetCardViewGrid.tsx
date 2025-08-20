@@ -6,6 +6,11 @@ import ActionButton from './ActionButton';
 import './AssetCardViewGrid.css';
 import LazyImage from './LazyImage';
 
+/* Displayed on the card view title section
+campaignName
+title
+*/
+
 const AssetCardViewGrid: React.FC<AssetCardProps> = ({
     image,
     handleCardDetailClick,
