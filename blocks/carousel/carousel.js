@@ -1,73 +1,179 @@
 import { fetchPlaceholders } from '../../scripts/aem.js';
 
-function updateActiveSlide(slide) {
-    const block = slide.closest('.carousel');
-    const slideIndex = parseInt(slide.dataset.slideIndex, 10);
-    block.dataset.activeSlide = slideIndex;
-
+// Function to update aria attributes for accessibility based on current page
+function updateActiveSlide(block, currentPage) {
     const slides = block.querySelectorAll('.carousel-slide');
-
-    slides.forEach((aSlide, idx) => {
-        aSlide.setAttribute('aria-hidden', idx !== slideIndex);
-        aSlide.querySelectorAll('a').forEach((link) => {
-            if (idx !== slideIndex) {
+    const cardsPerScreen = getCardsPerScreen();
+    
+    slides.forEach((slide, idx) => {
+        const startIndex = currentPage * cardsPerScreen;
+        const endIndex = startIndex + cardsPerScreen - 1;
+        const isVisible = idx >= startIndex && idx <= endIndex;
+        
+        slide.setAttribute('aria-hidden', !isVisible);
+        slide.querySelectorAll('a').forEach((link) => {
+            if (!isVisible) {
                 link.setAttribute('tabindex', '-1');
             } else {
                 link.removeAttribute('tabindex');
             }
         });
     });
+}
 
-    const indicators = block.querySelectorAll('.carousel-slide-indicator');
-    indicators.forEach((indicator, idx) => {
-        if (idx !== slideIndex) {
-            indicator.querySelector('button').removeAttribute('disabled');
-        } else {
-            indicator.querySelector('button').setAttribute('disabled', 'true');
-        }
-    });
+function getCardsPerScreen() {
+    const width = window.innerWidth;
+    if (width <= 480) return 1;  // Mobile
+    if (width <= 768) return 2;  // Small tablet
+    if (width <= 1024) return 3; // Tablet
+    return 4; // Desktop
 }
 
 function showSlide(block, slideIndex = 0) {
     const slides = block.querySelectorAll('.carousel-slide');
-    let realSlideIndex = slideIndex < 0 ? slides.length - 1 : slideIndex;
-    if (slideIndex >= slides.length) realSlideIndex = 0;
+    const cardsPerScreen = getCardsPerScreen();
+    const totalPages = Math.ceil(slides.length / cardsPerScreen);
+    
+    let realSlideIndex = slideIndex < 0 ? totalPages - 1 : slideIndex;
+    if (slideIndex >= totalPages) realSlideIndex = 0;
     
     const container = block.querySelector('.carousel-slides');
-    const slideWidth = container.offsetWidth / 3; // Calculate for 3 visible slides
+    const containerWidth = container.offsetWidth;
+    const scrollDistance = (containerWidth / cardsPerScreen) * cardsPerScreen * realSlideIndex;
     
     container.scrollTo({
         top: 0,
-        left: slideWidth * realSlideIndex,
+        left: scrollDistance,
         behavior: 'smooth',
     });
+    
+    // Update active page indicator, navigation arrows, and accessibility attributes
+    updateActivePageIndicator(block, realSlideIndex);
+    updateNavigationArrows(block, realSlideIndex, totalPages);
+    updateActiveSlide(block, realSlideIndex);
+}
+
+function updateActivePageIndicator(block, pageIndex) {
+    const indicators = block.querySelectorAll('.carousel-slide-indicator');
+    indicators.forEach((indicator, idx) => {
+        const button = indicator.querySelector('button');
+        if (idx === pageIndex) {
+            button.setAttribute('disabled', 'true');
+        } else {
+            button.removeAttribute('disabled');
+        }
+    });
+}
+
+function updateNavigationArrows(block, currentPage, totalPages) {
+    const prevButton = block.querySelector('.slide-prev');
+    const nextButton = block.querySelector('.slide-next');
+    
+    if (prevButton && nextButton) {
+        // Disable previous arrow if on first page
+        if (currentPage <= 0) {
+            prevButton.setAttribute('disabled', 'true');
+        } else {
+            prevButton.removeAttribute('disabled');
+        }
+        
+        // Disable next arrow if on last page
+        if (currentPage >= totalPages - 1) {
+            nextButton.setAttribute('disabled', 'true');
+        } else {
+            nextButton.removeAttribute('disabled');
+        }
+        
+        // If only one page, disable both
+        if (totalPages <= 1) {
+            prevButton.setAttribute('disabled', 'true');
+            nextButton.setAttribute('disabled', 'true');
+        }
+    }
 }
 
 function bindEvents(block) {
     const slideIndicators = block.querySelector('.carousel-slide-indicators');
     if (!slideIndicators) return;
 
+    // Set initial active page
+    block.dataset.activePage = '0';
+
     slideIndicators.querySelectorAll('button').forEach((button) => {
         button.addEventListener('click', (e) => {
             const slideIndicator = e.currentTarget.parentElement;
-            showSlide(block, parseInt(slideIndicator.dataset.targetSlide, 10));
+            const pageIndex = parseInt(slideIndicator.dataset.targetSlide, 10);
+            showSlide(block, pageIndex);
+            block.dataset.activePage = pageIndex;
         });
     });
 
     block.querySelector('.slide-prev').addEventListener('click', () => {
-        showSlide(block, parseInt(block.dataset.activeSlide, 10) - 1);
+        const currentPage = parseInt(block.dataset.activePage || '0', 10);
+        const slides = block.querySelectorAll('.carousel-slide');
+        const cardsPerScreen = getCardsPerScreen();
+        const totalPages = Math.ceil(slides.length / cardsPerScreen);
+        const newPage = Math.max(0, currentPage - 1);
+        showSlide(block, newPage);
+        block.dataset.activePage = newPage;
     });
+    
     block.querySelector('.slide-next').addEventListener('click', () => {
-        showSlide(block, parseInt(block.dataset.activeSlide, 10) + 1);
+        const currentPage = parseInt(block.dataset.activePage || '0', 10);
+        const slides = block.querySelectorAll('.carousel-slide');
+        const cardsPerScreen = getCardsPerScreen();
+        const totalPages = Math.ceil(slides.length / cardsPerScreen);
+        const newPage = Math.min(totalPages - 1, currentPage + 1);
+        showSlide(block, newPage);
+        block.dataset.activePage = newPage;
     });
 
-    const slideObserver = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-            if (entry.isIntersecting) updateActiveSlide(entry.target);
-        });
-    }, { threshold: 0.5 });
-    block.querySelectorAll('.carousel-slide').forEach((slide) => {
-        slideObserver.observe(slide);
+    // Initialize first page as active
+    const slides = block.querySelectorAll('.carousel-slide');
+    const cardsPerScreen = getCardsPerScreen();
+    const totalPages = Math.ceil(slides.length / cardsPerScreen);
+    
+    updateActivePageIndicator(block, 0);
+    updateNavigationArrows(block, 0, totalPages);
+    updateActiveSlide(block, 0);
+
+    // Handle window resize to recalculate pages
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            const slides = block.querySelectorAll('.carousel-slide');
+            const slideIndicatorsContainer = block.querySelector('.carousel-slide-indicators');
+            const cardsPerScreen = getCardsPerScreen();
+            const totalPages = Math.ceil(slides.length / cardsPerScreen);
+            
+            // Clear existing indicators
+            slideIndicatorsContainer.innerHTML = '';
+            
+            // Recreate indicators based on new screen size
+            for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
+                const indicator = document.createElement('li');
+                indicator.classList.add('carousel-slide-indicator');
+                indicator.dataset.targetSlide = pageIdx;
+                indicator.innerHTML = `<button type="button" aria-label="Show Page ${pageIdx + 1} of ${totalPages}"></button>`;
+                slideIndicatorsContainer.append(indicator);
+                
+                // Add click handler
+                indicator.querySelector('button').addEventListener('click', (e) => {
+                    const slideIndicator = e.currentTarget.parentElement;
+                    const pageIndex = parseInt(slideIndicator.dataset.targetSlide, 10);
+                    showSlide(block, pageIndex);
+                    block.dataset.activePage = pageIndex;
+                });
+            }
+            
+            // Reset to first page and update indicators
+            block.dataset.activePage = '0';
+            updateActivePageIndicator(block, 0);
+            updateNavigationArrows(block, 0, totalPages);
+            updateActiveSlide(block, 0);
+            showSlide(block, 0);
+        }, 250);
     });
 }
 
@@ -77,10 +183,59 @@ function createSlide(row, slideIndex, carouselId) {
     slide.setAttribute('id', `carousel-${carouselId}-slide-${slideIndex}`);
     slide.classList.add('carousel-slide');
 
+    let cardLinkUrl = null;
+
     row.querySelectorAll(':scope > div').forEach((column, colIdx) => {
         column.classList.add(`carousel-slide-${colIdx === 0 ? 'image' : 'content'}`);
+        
+        // Check for links in content column
+        if (colIdx !== 0) {
+            const link = column.querySelector('a');
+            if (link) {
+                cardLinkUrl = link.href;
+                // Replace link with its text content while preserving structure
+                const linkText = link.textContent;
+                const parent = link.parentNode;
+                
+                // If the link is the only content in its parent, replace it with text
+                if (parent.children.length === 1 && parent.textContent.trim() === linkText.trim()) {
+                    parent.textContent = linkText;
+                } else {
+                    // Replace just the link with its text content
+                    link.replaceWith(document.createTextNode(linkText));
+                }
+            }
+        }
+        
         slide.append(column);
     });
+
+    // If we found a link, make the entire card clickable
+    if (cardLinkUrl) {
+        slide.style.cursor = 'pointer';
+        slide.setAttribute('role', 'link');
+        slide.setAttribute('tabindex', '0');
+        
+        // Add click handler
+        const handleCardClick = (e) => {
+            e.preventDefault();
+            window.open(cardLinkUrl, '_blank');
+        };
+        
+        // Add keyboard handler for accessibility
+        const handleCardKeydown = (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                window.open(cardLinkUrl, '_blank');
+            }
+        };
+        
+        slide.addEventListener('click', handleCardClick);
+        slide.addEventListener('keydown', handleCardKeydown);
+        
+        // Store the URL as data attribute for potential future use
+        slide.dataset.cardLink = cardLinkUrl;
+    }
 
     const labeledBy = slide.querySelector('h1, h2, h3, h4, h5, h6');
     if (labeledBy) {
@@ -131,16 +286,22 @@ export default async function decorate(block) {
     rows.forEach((row, idx) => {
         const slide = createSlide(row, idx, carouselId);
         slidesWrapper.append(slide);
-
-        if (slideIndicators) {
-            const indicator = document.createElement('li');
-            indicator.classList.add('carousel-slide-indicator');
-            indicator.dataset.targetSlide = idx;
-            indicator.innerHTML = `<button type="button" aria-label="${placeholders.showSlide || 'Show Slide'} ${idx + 1} ${placeholders.of || 'of'} ${rows.length}"></button>`;
-            slideIndicators.append(indicator);
-        }
         row.remove();
     });
+
+    // Create page indicators based on cards per screen
+    if (slideIndicators) {
+        const cardsPerScreen = getCardsPerScreen();
+        const totalPages = Math.ceil(rows.length / cardsPerScreen);
+        
+        for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
+            const indicator = document.createElement('li');
+            indicator.classList.add('carousel-slide-indicator');
+            indicator.dataset.targetSlide = pageIdx;
+            indicator.innerHTML = `<button type="button" aria-label="${placeholders.showSlide || 'Show Page'} ${pageIdx + 1} ${placeholders.of || 'of'} ${totalPages}"></button>`;
+            slideIndicators.append(indicator);
+        }
+    }
 
     container.append(slidesWrapper);
     block.prepend(container);
