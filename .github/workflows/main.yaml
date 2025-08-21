@@ -49,7 +49,6 @@ jobs:
         token: '${{ github.token }}'
         environment: 'Cloudflare Worker: ${{ steps.deploy.outputs.tag }}'
         environment-url: '${{ steps.deploy.outputs.url }}'
-        description: 'Worker version:${{ steps.deploy.outputs.version }}'
     - name: Update deployment status (success)
       uses: chrnorm/deployment-status@v2
       with:
