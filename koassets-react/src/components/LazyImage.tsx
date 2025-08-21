@@ -70,7 +70,6 @@ const LazyImage: React.FC<LazyImageProps> = ({
 
                 if (blobUrl) {
                     setImageUrl(blobUrl);
-                    console.log(`Lazy loaded: ${asset.assetId}`);
                 } else {
                     setIsError(true);
                 }

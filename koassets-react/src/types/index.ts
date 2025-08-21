@@ -246,15 +246,9 @@ export interface AssetDetailsProps extends AssetPreviewProps {
     // No additional properties needed - dynamicMediaClient is now in base AssetPreviewProps
 }
 
-// Facet Filter types
-export interface FacetCheckedState {
-    [facetGroup: string]: {
-        [facetName: string]: boolean;
-    };
-}
-
 export interface FacetsProps {
     searchResults?: SearchResults['results'] | null;
+    selectedFacetFilters?: string[][];
     setSelectedFacetFilters: (facetFilters: string[][]) => void;
     search: () => void;
     excFacets?: Record<string, unknown>;
@@ -401,12 +395,19 @@ export interface AlgoliaSearchQuery {
     requests: AlgoliaSearchRequest[];
 }
 
+// Facet Filter types
+export interface FacetCheckedState {
+    [facetTechId: string]: {
+        [facetName: string]: boolean;
+    };
+}
+
 export interface SearchResult {
     hits: Asset[];
     nbHits: number;
     nbPages: number;
     facets?: {
-        [facetGroup: string]: {
+        [facetTechId: string]: {
             [facetName: string]: number;
         };
     };

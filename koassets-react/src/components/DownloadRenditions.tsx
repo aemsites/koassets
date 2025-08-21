@@ -78,9 +78,7 @@ const DownloadRenditions: React.FC<DownloadRenditionsProps> = ({
             setRenditionsError(null);
 
             try {
-                console.log('Fetching renditions for asset:', asset.assetId);
                 const renditions = await dynamicMediaClient.getAssetRenditions(asset);
-                console.log('Fetched renditions:', JSON.stringify(renditions));
                 setAssetRenditions(renditions || {});
             } catch (error) {
                 console.error('Failed to fetch asset renditions:', error);

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FacetCheckedState, FacetsProps, SearchResult } from '../types';
 import DateRange, { DateRangeRef } from './DateRange';
 import './Facets.css';
@@ -11,6 +11,7 @@ const HIERARCHY_PREFIX = 'TCCC.#hierarchy.lvl';
 
 const Facets: React.FC<FacetsProps> = ({
     searchResults,
+    selectedFacetFilters,
     setSelectedFacetFilters,
     search,
     excFacets = {},
@@ -22,12 +23,96 @@ const Facets: React.FC<FacetsProps> = ({
     const [dateRanges, setDateRanges] = useState<{ [key: string]: [number | undefined, number | undefined] }>({});
     const dateRangeRef = useRef<DateRangeRef>(null);
 
-    const toggle = (key: string) => {
+    // Memoized combined facets computation - merges facets from all search results
+    const combinedFacets = useMemo((): SearchResult['facets'] => {
+        const combined: SearchResult['facets'] = {};
+
+        // Merge facets from all search results
+        searchResults?.forEach(searchResult => {
+            if (searchResult.facets) {
+                Object.entries(searchResult.facets).forEach(([key, facetData]) => {
+                    if (!combined[key]) {
+                        combined[key] = {};
+                    }
+                    Object.entries(facetData as { [key: string]: number }).forEach(([facetName, count]) => {
+                        combined[key]![facetName] = count;
+                    });
+                });
+            }
+        });
+
+        return combined;
+    }, [searchResults]);
+
+    // Clean up checked state when facets are no longer available or have zero counts
+    useEffect(() => {
+        setChecked(prevChecked => {
+            const updatedChecked = { ...prevChecked };
+            let hasChanges = false;
+
+            // For each entry of checked of (facetTechId, value)
+            Object.entries(prevChecked).forEach(([facetTechId, value]) => {
+                // For each entry of value of (facetName, isChecked)
+                Object.entries(value).forEach(([facetName, isChecked]) => {
+                    // If facetTechId not in combinedFacets.keys or facetName not in combinedFacets[facetTechId] or combinedFacets[facetTechId][facetName] === 0
+                    if (!combinedFacets ||
+                        !(facetTechId in combinedFacets) ||
+                        !(facetName in (combinedFacets[facetTechId] || {})) ||
+                        (combinedFacets[facetTechId] && combinedFacets[facetTechId][facetName] === 0)) {
+                        // Set checked[facetTechId][facetName] to false
+                        if (isChecked) {
+                            updatedChecked[facetTechId] = {
+                                ...updatedChecked[facetTechId],
+                                [facetName]: false
+                            };
+                            hasChanges = true;
+                        }
+                    }
+                });
+            });
+
+            return hasChanges ? updatedChecked : prevChecked;
+        });
+    }, [combinedFacets]);
+
+    // Memoized hierarchy data computation for all facets
+    const hierarchyDataByFacet = useMemo(() => {
+        const hierarchyMap: { [facetTechId: string]: { [level: number]: { [key: string]: number } } } = {};
+
+        Object.keys(excFacets).forEach(facetTechId => {
+            // Check if this is a hierarchy facet by looking for hierarchy keys in search results
+            const isHierarchyFacet = Object.keys(combinedFacets || {}).some(key =>
+                key.startsWith(`${facetTechId}.${HIERARCHY_PREFIX}`)
+            );
+
+            if (isHierarchyFacet) {
+                const hierarchyData: { [level: number]: { [key: string]: number } } = {};
+
+                // Collect all hierarchy levels for this facet
+                Object.keys(combinedFacets || {}).forEach(key => {
+                    if (key.startsWith(`${facetTechId}.${HIERARCHY_PREFIX}`)) {
+                        // Extract level number from key like "tccc-brand.TCCC.#hierarchy.lvl0"
+                        const levelMatch = key.match(/\.lvl(\d+)$/);
+                        if (levelMatch) {
+                            const level = parseInt(levelMatch[1]);
+                            hierarchyData[level] = (combinedFacets && combinedFacets[key]) as { [key: string]: number };
+                        }
+                    }
+                });
+
+                hierarchyMap[facetTechId] = hierarchyData;
+            }
+        });
+
+        return hierarchyMap;
+    }, [combinedFacets, excFacets]);
+
+    const toggle = useCallback((key: string) => {
         setExpandedFacets(prev => ({ ...prev, [key]: !prev[key] }));
-    };
+    }, []);
 
     // Handler for checkbox change
-    const handleCheckbox = (key: string, facet: string) => {
+    const handleCheckbox = useCallback((key: string, facet: string) => {
         setChecked(prev => ({
             ...prev,
             [key]: {
@@ -35,7 +120,7 @@ const Facets: React.FC<FacetsProps> = ({
                 [facet]: !prev[key]?.[facet]
             }
         }));
-    };
+    }, []);
 
     // Handler for date range change
     const handleDateRangeChange = useCallback((key: string, startDate: Date | undefined, endDate: Date | undefined) => {
@@ -47,12 +132,69 @@ const Facets: React.FC<FacetsProps> = ({
         }
     }, []);
 
+    // Memoized function to render hierarchy levels
+    const renderHierarchyLevel = useCallback((
+        hierarchyData: { [level: number]: { [key: string]: number } },
+        facetTechId: string,
+        level: number,
+        parentPath: string = ''
+    ): React.ReactNode[] => {
+        const levelData = hierarchyData[level];
+        if (!levelData) return [];
+
+        const items: React.ReactNode[] = [];
+
+        Object.entries(levelData).forEach(([facetName, count]) => {
+            // Extract the last part of the hierarchy path for display
+            const pathParts = facetName.split(' / ');
+            const displayName = pathParts[pathParts.length - 1].trim();
+
+            // Only show items that match the parent path or are at the starting level (level 1)
+            const currentPath = pathParts.slice(0, -1).join(' / ');
+            if (level === 1 || currentPath === parentPath) {
+                const fullPath = facetName;
+                const itemKey = `${facetTechId}-${facetName}`;
+
+                // Check if this item has sub-levels
+                const hasSubLevels = hierarchyData[level + 1] &&
+                    Object.keys(hierarchyData[level + 1]).some(subFacetName =>
+                        subFacetName.startsWith(fullPath + ' / ')
+                    );
+
+                // Apply CSS classes based on level and sub-levels
+                const containerClasses = [
+                    'facet-hierarchy-container',
+                    level > 1 ? 'facet-hierarchy-container-indented' : '',
+                    hasSubLevels ? 'facet-hierarchy-container-with-sublevel' : ''
+                ].filter(Boolean).join(' ');
+
+                const checkboxKey = `${facetTechId}.${HIERARCHY_PREFIX}${level}`;
+                items.push(
+                    <div key={itemKey} className={containerClasses}>
+                        <label className="facet-filter-checkbox-label">
+                            <input
+                                className="facet-filter-checkbox-input"
+                                type="checkbox"
+                                checked={!!checked[checkboxKey]?.[facetName]}
+                                onChange={() => handleCheckbox(checkboxKey, facetName)}
+                            /> {displayName}{count > 0 ? ` (${count})` : ''}
+                        </label>
+                        {/* Render child levels */}
+                        {renderHierarchyLevel(hierarchyData, facetTechId, level + 1, fullPath)}
+                    </div>
+                );
+            }
+        });
+
+        return items;
+    }, [checked, handleCheckbox]);
+
     /**
      * Renders the facet checkboxes from search results
      * @param facetTechId - The technical ID of the facet
      * @returns JSX element with facet checkboxes or null
      */
-    const renderFacetsFromSearchResult = (facetTechId: string) => {
+    const renderFacetsFromSearchResult = useCallback((facetTechId: string) => {
         if (!expandedFacets[facetTechId]) {
             return null;
         }
@@ -66,112 +208,30 @@ const Facets: React.FC<FacetsProps> = ({
             />;
         }
 
-        const combinedFacets: SearchResult['facets'] = {};
+        // Update checked state with new combined facets
 
-        // Merge facets from all search results
-        searchResults?.forEach(searchResult => {
-            if (searchResult.facets) {
-                Object.entries(searchResult.facets).forEach(([key, facetData]) => {
-                    if (!combinedFacets[key]) {
-                        combinedFacets[key] = {};
-                    }
-                    Object.entries(facetData as { [key: string]: number }).forEach(([facetName, count]) => {
-                        combinedFacets[key]![facetName] = count;
-                    });
-                });
-            }
-        });
 
-        // Check if this is a hierarchy facet by looking for hierarchy keys in search results
-        const isHierarchyFacet = Object.keys(combinedFacets || {}).some(key =>
-            key.startsWith(`${facetTechId}.${HIERARCHY_PREFIX}`)
-        );
+        // Get hierarchy data for this facet if it exists
+        const hierarchyData = hierarchyDataByFacet[facetTechId];
+        const isHierarchyFacet = !!hierarchyData;
 
-        // Render hierarchy facet
+        // Render hierarchy facets
         if (isHierarchyFacet) {
-            // For hierarchy facets, collect all levels that start with our facet pattern
-            const hierarchyData: { [level: number]: { [key: string]: number } } = {};
-
-            // Collect all hierarchy levels for this facet
-            Object.keys(combinedFacets || {}).forEach(key => {
-                if (key.startsWith(`${facetTechId}.${HIERARCHY_PREFIX}`)) {
-                    // Extract level number from key like "tccc-brand.TCCC.#hierarchy.lvl0"
-                    const levelMatch = key.match(/\.lvl(\d+)$/);
-                    if (levelMatch) {
-                        const level = parseInt(levelMatch[1]);
-                        hierarchyData[level] = combinedFacets[key] as { [key: string]: number };
-                    }
-                }
-            });
-
-            // Build hierarchical structure
-            const renderHierarchyLevel = (level: number, parentPath: string = ''): React.ReactNode[] => {
-                const levelData = hierarchyData[level];
-                if (!levelData) return [];
-
-                const items: React.ReactNode[] = [];
-
-                Object.entries(levelData).forEach(([facetName, count]) => {
-                    // Extract the last part of the hierarchy path for display
-                    const pathParts = facetName.split(' / ');
-                    const displayName = pathParts[pathParts.length - 1].trim();
-
-                    // Only show items that match the parent path or are at the starting level (level 1)
-                    const currentPath = pathParts.slice(0, -1).join(' / ');
-                    if (level === 1 || currentPath === parentPath) {
-                        const fullPath = facetName;
-                        const itemKey = `${facetTechId}-${facetName}`;
-
-                        // Check if this item has sub-levels
-                        const hasSubLevels = hierarchyData[level + 1] &&
-                            Object.keys(hierarchyData[level + 1]).some(subFacetName =>
-                                subFacetName.startsWith(fullPath + ' / ')
-                            );
-
-                        // Apply CSS classes based on level and sub-levels
-                        const containerClasses = [
-                            'facet-hierarchy-container',
-                            level > 1 ? 'facet-hierarchy-container-indented' : '',
-                            hasSubLevels ? 'facet-hierarchy-container-with-sublevel' : ''
-                        ].filter(Boolean).join(' ');
-
-                        const checkboxKey = `${facetTechId}.${HIERARCHY_PREFIX}${level}`;
-                        items.push(
-                            <div key={itemKey} className={containerClasses}>
-                                <label className="facet-filter-checkbox-label">
-                                    <input
-                                        className="facet-filter-checkbox-input"
-                                        type="checkbox"
-                                        checked={!!checked[checkboxKey]?.[facetName]}
-                                        onChange={() => handleCheckbox(checkboxKey, facetName)}
-                                    /> {displayName}{count > 0 ? ` (${count})` : ''}
-                                </label>
-                                {/* Render child levels */}
-                                {renderHierarchyLevel(level + 1, fullPath)}
-                            </div>
-                        );
-                    }
-                });
-
-                return items;
-            };
-
             return (
                 <div className="facet-filter-checkbox-list">
-                    {renderHierarchyLevel(1)}
+                    {renderHierarchyLevel(hierarchyData, facetTechId, 1)}
                 </div>
             );
         }
 
-        // Render non-hierarchy facet
-        if (!expandedFacets[facetTechId] || !combinedFacets[facetTechId] || Object.keys(combinedFacets[facetTechId] || {}).length === 0) {
+        // Render non-hierarchy facets
+        if (!expandedFacets[facetTechId] || !combinedFacets || !combinedFacets[facetTechId] || Object.keys(combinedFacets[facetTechId] || {}).length === 0) {
             return null;
         }
-
         const checkboxKey = `${facetTechId}`;
         return (
             <div className="facet-filter-checkbox-list">
-                {Object.entries(combinedFacets[facetTechId] || {}).map(([facetName, count]) => (
+                {Object.entries((combinedFacets && combinedFacets[facetTechId]) || {}).map(([facetName, count]) => (
                     <label key={facetName} className="facet-filter-checkbox-label">
                         <input
                             type="checkbox"
@@ -182,7 +242,7 @@ const Facets: React.FC<FacetsProps> = ({
                 ))}
             </div>
         );
-    };
+    }, [expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, checked, handleCheckbox]);
 
     // Transform the checked object into an array of facet filters
     useEffect(() => {
@@ -222,7 +282,7 @@ const Facets: React.FC<FacetsProps> = ({
     }, [dateRanges, setSelectedNumericFilters]);
 
     // Count checked facets for a specific facetTechId
-    const getCheckedCount = (facetTechId: string): number => {
+    const getCheckedCount = useCallback((facetTechId: string): number => {
         let count = 0;
         Object.entries(checked).forEach(([key, facetChecked]) => {
             if (key === facetTechId || key.startsWith(`${facetTechId}.`)) {
@@ -232,20 +292,20 @@ const Facets: React.FC<FacetsProps> = ({
             }
         });
         return count;
-    };
+    }, [checked]);
 
-    const handleClearAllChecks = () => {
+    const handleClearAllChecks = useCallback(() => {
         setChecked({});
         setSelectedFacetFilters([]);
         setDateRanges({});
         setExpandedFacets({}); // Collapse all facets
         setSelectedNumericFilters([]);
         dateRangeRef.current?.reset();
-    };
+    }, [setSelectedFacetFilters, setSelectedNumericFilters]);
 
-    const handleApplyFilters = () => {
+    const handleApplyFilters = useCallback(() => {
         search();
-    };
+    }, [search]);
 
     return (
         <>
