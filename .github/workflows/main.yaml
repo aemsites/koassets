@@ -32,6 +32,8 @@ jobs:
     defaults:
       run:
         working-directory: cloudflare
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
     - uses: actions/checkout@v4
     - run: npm ci
