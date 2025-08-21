@@ -564,6 +564,7 @@ function MainApp(): React.JSX.Element {
                             <div className={`facet-filter-panel ${isMobileFilterOpen ? 'mobile-open' : ''}`}>
                                 <Facets
                                     searchResults={searchResults}
+                                    selectedFacetFilters={selectedFacetFilters}
                                     setSelectedFacetFilters={setSelectedFacetFilters}
                                     search={search}
                                     excFacets={excFacets}

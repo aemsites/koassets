@@ -88,17 +88,19 @@
   line-height: normal;
   text-transform: uppercase;
   display: grid;
-  grid-template-columns: 120px 220px 1fr;
+  grid-template-columns: 120px 240px 1fr;
   padding: 16px 0;
   border-bottom: 2px solid #e0e0e0;
+  gap: 5px;
 }
 
 .download-renditions-row {
   display: grid;
-  grid-template-columns: 120px 220px 1fr;
+  grid-template-columns: 120px 240px 1fr;
   padding: 16px 0;
   align-items: flex-start;
   position: relative;
+  gap: 5px;
 }
 
 /* Thumbnail */
