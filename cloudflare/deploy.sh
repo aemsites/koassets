@@ -90,13 +90,9 @@ if [ "$ci" = "true" ] && [ "$branch" = "main" ]; then
 fi
 
 if [ -n "$GITHUB_OUTPUT" ]; then
-  echo "GITHUB_OUTPUT=$GITHUB_OUTPUT"
-
-  echo "env=$tag" >> "$GITHUB_OUTPUT"
+  echo "tag=$tag" >> "$GITHUB_OUTPUT"
   echo "url=$url" >> "$GITHUB_OUTPUT"
   echo "version=$version" >> "$GITHUB_OUTPUT"
-else
-  echo "No GITHUB_OUTPUT set"
 fi
 
 if [ "$tail" = "true" ]; then

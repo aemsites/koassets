@@ -47,7 +47,7 @@ jobs:
       id: deployment
       with:
         token: '${{ github.token }}'
-        environment: '${{ steps.deploy.outputs.env }}'
+        environment: 'worker: ${{ steps.deploy.outputs.tag }}'
         environment-url: '${{ steps.deploy.outputs.url }}'
     - name: Update deployment status (success)
       uses: chrnorm/deployment-status@v2
