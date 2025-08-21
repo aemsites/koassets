@@ -46,6 +46,7 @@ button[slot="next"]:hover {
   font-weight: 600 !important;
   color: #333 !important;
   margin: 0 !important;
+  font-family: 'TCCC UnityText Regular', system-ui, -apple-system, sans-serif !important;
 }
 
 [role="dialog"] table,
@@ -64,7 +65,8 @@ button[slot="next"]:hover {
   background: transparent !important;
 }
 
-[role="gridcell"] > div {
+/* All gridcell styles first for proper specificity */
+[role="gridcell"]>div {
   width: 28px !important;
   height: 28px !important;
   display: flex !important;
@@ -73,6 +75,7 @@ button[slot="next"]:hover {
   border-radius: 4px !important;
   cursor: pointer !important;
   font-size: 12px !important;
+  font-family: 'TCCC UnityText Regular', system-ui, -apple-system, sans-serif !important;
   color: #333 !important;
   margin: 1px auto !important;
   transition: all 0.2s !important;
@@ -80,27 +83,78 @@ button[slot="next"]:hover {
   background: transparent !important;
 }
 
-[role="gridcell"]:hover > div {
+[role="gridcell"]:hover>div {
   background: #f3f4f6 !important;
 }
 
-[role="gridcell"][data-selected] > div,
-[role="gridcell"][aria-selected="true"] > div {
+[role="gridcell"][data-selected]>div,
+[role="gridcell"][aria-selected="true"]>div {
   background: var(--primary-color) !important;
   color: white !important;
 }
 
-[role="gridcell"][data-today] > div {
+[role="gridcell"][data-today]>div {
   border: 2px solid var(--primary-color) !important;
   box-sizing: border-box !important;
 }
 
-[role="gridcell"][data-outside-month] > div {
+[role="gridcell"][data-outside-month]>div {
   color: #d1d5db !important;
 }
 
-[role="gridcell"][data-disabled] > div,
-[role="gridcell"][aria-disabled="true"] > div {
+[role="gridcell"][data-disabled]>div,
+[role="gridcell"][aria-disabled="true"]>div {
+  color: #d1d5db !important;
+  cursor: not-allowed !important;
+}
+
+/* All dialog table cell styles second */
+/* stylelint-disable no-descending-specificity */
+[role="dialog"] td {
+  text-align: center !important;
+  border: none !important;
+  padding: 1px !important;
+  background: transparent !important;
+}
+
+[role="dialog"] td>div {
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  font-size: 12px !important;
+  font-family: 'TCCC UnityText Regular', system-ui, -apple-system, sans-serif !important;
+  color: #333 !important;
+  margin: 1px auto !important;
+  transition: all 0.2s !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+[role="dialog"] td:hover>div {
+  background: #f3f4f6 !important;
+}
+
+[role="dialog"] td[data-selected]>div,
+[role="dialog"] td[aria-selected="true"]>div {
+  background: var(--primary-color) !important;
+  color: white !important;
+}
+
+[role="dialog"] td[data-today]>div {
+  border: 2px solid var(--primary-color) !important;
+  box-sizing: border-box !important;
+}
+
+[role="dialog"] td[data-outside-month]>div {
+  color: #d1d5db !important;
+}
+
+[role="dialog"] td[data-disabled]>div,
+[role="dialog"] td[aria-disabled="true"]>div {
   color: #d1d5db !important;
   cursor: not-allowed !important;
 }
@@ -110,6 +164,7 @@ button[slot="next"]:hover {
 [role="columnheader"] {
   font-size: 10px !important;
   font-weight: 600 !important;
+  font-family: 'TCCC UnityText Regular', system-ui, -apple-system, sans-serif !important;
   color: #666 !important;
   text-align: center !important;
   padding: 4px !important;
@@ -117,60 +172,22 @@ button[slot="next"]:hover {
   background: transparent !important;
 }
 
-/* Dialog table cells - fallback for non-gridcell elements */
-[role="dialog"] td {
-  text-align: center !important;
-  border: none !important;
-  padding: 1px !important;
-  background: transparent !important;
-}
 
-[role="dialog"] td > div {
-  width: 28px !important;
-  height: 28px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  border-radius: 4px !important;
-  cursor: pointer !important;
-  font-size: 12px !important;
-  color: #333 !important;
-  margin: 1px auto !important;
-  transition: all 0.2s !important;
-  border: none !important;
-  background: transparent !important;
-}
-
-[role="dialog"] td:hover > div {
-  background: #f3f4f6 !important;
-}
-
-[role="dialog"] td[data-selected] > div,
-[role="dialog"] td[aria-selected="true"] > div {
-  background: var(--primary-color) !important;
-  color: white !important;
-}
-
-[role="dialog"] td[data-today] > div {
-  border: 2px solid var(--primary-color) !important;
-  box-sizing: border-box !important;
-}
-
-[role="dialog"] td[data-outside-month] > div {
-  color: #d1d5db !important;
-}
-
-[role="dialog"] td[data-disabled] > div,
-[role="dialog"] td[aria-disabled="true"] > div {
-  color: #d1d5db !important;
-  cursor: not-allowed !important;
-}
 
 /* Component base styling */
 .my-date-picker {
   padding: 0 10px;
   color: #333;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'TCCC UnityText Regular', system-ui, -apple-system, sans-serif;
+}
+
+.my-date-picker .date-picker-wrapper {
+  position: relative;
+  display: block;
+}
+
+.my-date-picker .date-picker-wrapper>div[role="group"] {
+  width: 100%;
 }
 
 .my-date-picker label {
@@ -198,7 +215,7 @@ button[slot="next"]:hover {
   box-shadow: 0 0 0 2px rgb(99 102 241 / 10%) !important;
 }
 
-.my-date-picker div[role="group"] > div {
+.my-date-picker div[role="group"]>div {
   flex: 1 !important;
   padding: 6px 8px !important;
   display: flex !important;
@@ -215,6 +232,7 @@ button[slot="next"]:hover {
   outline: none !important;
   color: #333 !important;
   font-size: 13px !important;
+  font-family: 'TCCC UnityText Regular', system-ui, -apple-system, sans-serif !important;
   background: transparent !important;
   border: none !important;
 }
@@ -249,6 +267,32 @@ button[slot="next"]:hover {
 
 .my-date-picker div[role="group"] button[data-pressed] {
   background: var(--primary-color) !important;
+}
+
+.my-date-picker .clear-button {
+  position: absolute !important;
+  right: 36px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  background: transparent !important;
+  color: #999 !important;
+  border: none !important;
+  border-radius: 4px !important;
+  width: 24px !important;
+  height: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 14px !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  z-index: 10 !important;
+  font-family: inherit !important;
+}
+
+.my-date-picker .clear-button:hover {
+  color: #666 !important;
+  background: #f5f5f5 !important;
 }
 
 .my-date-picker[data-invalid] div[role="group"] {
