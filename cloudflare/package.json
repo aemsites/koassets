@@ -1,0 +1,21 @@
+{
+  "name": "@koassets/cloudflare-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloudflare Worker for KO Assets",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo SKIPPED: No tests specified. For Cloudflare workers we might want to look into https://developers.cloudflare.com/workers/testing/",
+    "dev": "wrangler dev",
+    "deploy": "./deploy.sh",
+    "tail": "wrangler tail",
+    "lint": "biome check",
+    "lint:fix": "biome check --write",
+    "lint-ci": "biome ci --reporter=github || biome check"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.0",
+    "wrangler": "^4.31.0"
+  }
+}
