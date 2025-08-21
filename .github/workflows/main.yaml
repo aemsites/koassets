@@ -33,4 +33,5 @@ jobs:
         working-directory: cloudflare
     steps:
     - uses: actions/checkout@v4
+    - run: npm ci
     - run: npm run deploy -- --ci ${{ github.ref_name }}

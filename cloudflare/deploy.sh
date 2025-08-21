@@ -58,6 +58,7 @@ echo "Message: $message"
 helixOrigin="$branch--koassets--aemsites.aem.live"
 
 export FORCE_COLOR=1
+set -o pipefail
 
 npx wrangler versions upload \
   --preview-alias "$tag" \
