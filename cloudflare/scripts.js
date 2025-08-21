@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execSync, spawn, spawnSync } from 'child_process';
+import { execSync, spawn, spawnSync } from 'node:child_process';
 
 function shell(cmd, args) {
   return spawnSync(cmd, args, {
@@ -21,7 +21,7 @@ function directoryHasLocalChanges() {
   try {
     execSync('git diff --quiet .');
     return false;
-  } catch (error) {
+  } catch (_e) {
     return true;
   }
 }
@@ -53,16 +53,16 @@ function uploadVersion(args) {
 }
 
 class Commands {
-
   async deploy(args) {
     const branch = getBranch();
     console.log('Deploying branch:', branch);
 
+    // biome-ignore format: the array should not be formatted
     const versionId = await uploadVersion([
       '--preview-alias', branch,
       '--tag', branch,
       '--message', directoryHasLocalChanges() ?  '<local changes>' : getLastCommitMessage(),
-      '--var', 'HELIX_ORIGIN_HOSTNAME:${branch}--koassets--aemsites.aem.live'
+      '--var', `HELIX_ORIGIN_HOSTNAME:${branch}--koassets--aemsites.aem.live`
     ]);
 
     if (args[0] === '--tail') {
@@ -74,6 +74,7 @@ class Commands {
     const branch = getBranch();
     console.log(`Deploying ${branch} to production worker`);
 
+    // biome-ignore format: the array should not be formatted
     const versionId = await uploadVersion([
       '--tag', branch,
       '--message', directoryHasLocalChanges() ?  '<local changes>' : getLastCommitMessage(),
@@ -81,7 +82,6 @@ class Commands {
 
     shell('npx', ['wrangler', 'versions', 'deploy', '-y', versionId]);
   }
-
 }
 
 const commands = new Commands();

@@ -13,17 +13,16 @@
 const getExtension = (path) => {
   const basename = path.split('/').pop();
   const pos = basename.lastIndexOf('.');
-  return (basename === '' || pos < 1) ? '' : basename.slice(pos + 1);
+  return basename === '' || pos < 1 ? '' : basename.slice(pos + 1);
 };
 
 const isMediaRequest = (url) => /\/media_[0-9a-f]{40,}[/a-zA-Z0-9_-]*\.[0-9a-z]+$/.test(url.pathname);
 const isRUMRequest = (url) => /\/\.(rum|optel)\/.*/.test(url.pathname);
 
-
 const handleRequest = async (request, env, ctx) => {
   console.log('handleRequest', request, env, ctx);
   const url = new URL(request.url);
-  if (url.hostname == 'localhost') {
+  if (url.hostname === 'localhost') {
     // special handling for local development using 'wrangler dev'
     url.protocol = 'https';
     url.port = 443;
@@ -33,11 +32,11 @@ const handleRequest = async (request, env, ctx) => {
     // https://developers.cloudflare.com/fundamentals/reference/network-ports/#network-ports-compatible-with-cloudflares-proxy
     const redirectTo = new URL(request.url);
     redirectTo.port = '';
-    return new Response('Moved permanently to ' + redirectTo.href, {
+    return new Response(`Moved permanently to ${redirectTo.href}`, {
       status: 301,
       headers: {
-        location: redirectTo.href
-      }
+        location: redirectTo.href,
+      },
     });
   }
 
@@ -45,9 +44,9 @@ const handleRequest = async (request, env, ctx) => {
     return new Response('Not Found', { status: 404 });
   }
 
-  if(isRUMRequest(url)) {
+  if (isRUMRequest(url)) {
     // only allow GET, POST, OPTIONS
-    if(!['GET', 'POST', 'OPTIONS'].includes(request.method)) {
+    if (!['GET', 'POST', 'OPTIONS'].includes(request.method)) {
       return new Response('Method Not Allowed', { status: 405 });
     }
   }
