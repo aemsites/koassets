@@ -2,7 +2,8 @@
 
 A Cloudflare Worker that acts as outermost CDN for the KO Assets project with some additional features. It provides authentication, authorization, edge caching, and request routing to the various AEM backends (Helix/EDS, Dynamic Media OpenAPI and more).
 
-Worker URL: https://koassets.adobeaem.workers.dev
+Production Worker URL: https://koassets.adobeaem.workers.dev
+Branch URLs: `https://{branch}-koassets.adobeaem.workers.dev`
 
 [Worker in Cloudflare Dashboard](https://dash.cloudflare.com/852dfa4ae1b0d579df29be65b986c101/workers/services/view/koassets/production/metrics)
 
@@ -10,88 +11,103 @@ Worker URL: https://koassets.adobeaem.workers.dev
 
 - Node.js and npm installed
 - Cloudflare account with Workers enabled
-  - Deploying to the pilot at https://koassets.adobeaem.workers.dev requires access to the Cloudflare account `Franklin (Dev)`
+  - Deploying to the pilot at https://koassets.adobeaem.workers.dev requires access to the Cloudflare account `Franklin (Dev)`, id: `852dfa4ae1b0d579df29be65b986c101`
+  - The `wrangler` cli used by the various command below will automatically open a browser window to log into Cloudflare.
 - Run `npm install` to install the dependencies
 
-## Develop locally
+## Develop
+
+### Local server
+To develop and debug locally, run:
 
 ```bash
 npm run dev
 ```
 
-Runs [wrangler dev](https://developers.cloudflare.com/workers/development-testing/#local-development) which will start a local server with the worker at http://localhost:8787.
+This runs [wrangler dev](https://developers.cloudflare.com/workers/development-testing/#local-development) which will start a local server with the worker at http://localhost:8787.
 
-## Deploy
-
-By default the worker will deploy to the pilot https://koassets.adobeaem.workers.dev.
-
-Deploying to a different account and/or worker requires changes in the `wrangler.toml` file:
- - `name` - The worker name
- - `account_id` - The Cloudflare account ID
-
-The `wrangler` cli will automatically open a browser window to log into a Cloudflare account when running commands below.
+### Tests
 
 ```bash
-# Make sure to run tests first
 npm test
+```
 
-# Deploy current branch to preview URL
-# https://${branch}-koassets.adobeaem.workers.dev
+### Linting
+
+We use [Biome](https://biomejs.dev/) for linting and formatting.
+
+```bash
+npm run lint
+```
+
+To automatically fix linting errors and format files, run:
+
+```bash
+npm run lint:fix
+```
+
+### Tail production logs
+
+To see the logs for the production worker (or all deployed workers), run:
+
+```bash
+npm run tail
+```
+
+then make test requests to the worker.
+
+
+## Deploying
+
+### CI branch
+
+On each branch/PR push, the Github Actions CI will automatically deploy the worker under a preview URL for the `branch`:
+
+```bash
+https://{branch}-koassets.adobeaem.workers.dev
+```
+
+This will use the same branch for the Helix origin: `{branch}--koassets--aemsites.aem.live`
+
+### CI production
+
+On each `main` branch push, the Github ActionsCI will do the same as above and additionally deploy that same worker version to production at https://koassets.adobeaem.workers.dev.
+
+
+### Manual deploy
+
+To deploy local work manually, you can run
+
+```bash
 npm run deploy
 
-# Deploy (branch) and then tail logs
-npm run deploy-tail
-
-# Tail logs on current branch
-npm run tail
-
-# Deploy to production
-# https://koassets.adobeaem.workers.dev
-npm run deploy:prod
-
-# Tail logs on production
-npm run tail:prod
+# alternatively
+./deploy.sh
 ```
-You can also use the [wrangler](https://developers.cloudflare.com/workers/wrangler/) CLI directly:
+
+This will deploy the worker to the preview URL using the `user` id (git email address without the domain) and `branch` name:
 
 ```bash
-npx wrangler ...
+https://{user}-{branch}-koassets.adobeaem.workers.dev
 ```
 
-### Deployment options
+This will use the same `branch` for the Helix origin: `{branch}--koassets--aemsites.aem.live`
 
-1. develop/run worker locally
-   - use helix origin: main--koassets--aemsites.aem.live
-     or a custom one, set with `npm run dev --var HELIX_ORIGIN_HOSTNAME:custom--koassets--aemsites.aem.live` or in `wrangler.toml`
-   - USE CASE: quickly develop locally
-   - IMPL: `npm run dev`
-2. deploy branch
-   - create version with tag: <branch> and message: <commit message> (or `<local changes>` if there are local changes)
-   - use helix origin: <branch>--koassets--aemsites.aem.live
-   - under preview-alias: <branch>
-   - USE CASE: CI on branch pushes
-   - IMPL: shell script with tee in github action yaml
-3. deploy prod
-   - create version with tag: <branch> and message: <commit message> (or `<local changes>` if there are local changes)
-   - standard helix origin: main--koassets--aemsites.aem.live (configured in `wrangler.toml`)
-   - deploy version to production
-   - USE CASE: CI on main pushes
-   - IMPL: shell script with tee in github action yaml
-4. deploy manually as developer
-   - allow control of --message and --tag
-   - allow control of helix origin
-   - either as --preview-alias or production
-   - USE CASE: manual deploy as developer to fix something or fine control
-   - IMPL: directly call `npx wrangler` or some helper `npm run deploy` with arguments
+Options (use with `./deploy.sh`):
 
+- `./deploy.sh "my change"`: add custom message for the worker version in Cloudflare
+- `./deploy.sh --tail`: tail logs after deployment (Note: seems to not work well for specific worker versions)
 
 
 ## Configuration
 
-Most configuration is done via environment variables in the `wrangler.toml` file.
+Most configuration is done via environment variables in the `wrangler.toml` file. Important variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ORIGIN_HOSTNAME` | `main--koassets--aemsites.aem.live` | The EDS origin server (`*.aem.live`) |
-| `ORIGIN_AUTHENTICATION` | - | Optional authentication token (if EDS site authentication is enabled). Since this is a credential it is provided via environment variables and not checked into git. |
+| `name` | `koassets` | The worker name |
+| `account_id` | `852dfa4ae1b0d579df29be65b986c101` | The Cloudflare account ID |
+| `HELIX_ORIGIN_HOSTNAME` | `main--koassets--aemsites.aem.live` | The EDS origin server (`*.aem.live`) |
+| `DM_ORIGIN_HOSTNAME` | `delivery-p64403-e544653.adobeaemcloud.com` | The Content Hub/Dynamic Media environment. |
+| `HELIX_ORIGIN_AUTHENTICATION` | - | Optional EDS authentication token. Since this is a credential it is provided via environment variables and not checked into git. |
 
