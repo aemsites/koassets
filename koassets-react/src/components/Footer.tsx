@@ -6,26 +6,26 @@ const Footer: React.FC = () => {
         <footer className="footer">
             <div className="footer-content">
                 <div className="footer-left">
-                    <img src="transparent-logo.png" alt="Coca-Cola Logo" className="footer-logo" />
+                    <img src="transparent-logo.png" alt="Logo" className="footer-logo" />
                 </div>
                 <div className="footer-right">
                     <p>
-                        <a href="https://assets.coke.com/content/share/us/en/help/meet-the-team.html" className="footer-link meet-team">
+                        <a href="/meet-the-team" className="footer-link meet-team">
                             Meet the Team
                         </a>
                     </p>
                     <p>
-                        <a href="mailto:assetmanagers@coca-cola.com" className="footer-link contact-us">
+                        <a href="mailto:assetmanagers@companydomain.com" className="footer-link contact-us">
                             Contact Us
                         </a>
                     </p>
                     <p>
-                        <a href="https://assets.coke.com/content/share/us/en/help/support-portal.html" className="footer-link support-training">
+                        <a href="/support-portal" className="footer-link support-training">
                             Support & Training
                         </a>
                     </p>
                     <p>
-                        <a href="https://assets.coke.com/content/share/us/en/help/faqs.html" className="footer-link faqs">
+                        <a href="/faqs.html" className="footer-link faqs">
                             FAQs
                         </a>
                     </p>
@@ -35,4 +35,4 @@ const Footer: React.FC = () => {
     );
 };
 
-export default Footer; 
+export default Footer;
