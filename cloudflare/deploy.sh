@@ -67,7 +67,7 @@ npx wrangler versions upload \
   --tag "$tag" \
   --message "$message" \
   --var "HELIX_ORIGIN_HOSTNAME:$helixOrigin" \
-  | tee >(grep "Worker Version ID:" | cut -w -f 4 > version.id)
+  | tee >(grep "Worker Version ID:" | cut -d " " 4 > version.id)
 
 version=$(cat version.id)
 rm version.id
