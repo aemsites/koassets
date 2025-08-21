@@ -17,6 +17,9 @@
 # - uses tag = <user>-<branch>
 # - points Helix origin to <branch> aem.live
 
+set -e
+set -o pipefail
+
 # parse arguments
 while [[ "$#" -gt 0 ]]; do
   case $1 in
@@ -58,7 +61,6 @@ echo "Message: $message"
 helixOrigin="$branch--koassets--aemsites.aem.live"
 
 export FORCE_COLOR=1
-set -o pipefail
 
 npx wrangler versions upload \
   --preview-alias "$tag" \
