@@ -33,7 +33,12 @@ if [ "$ci" = "true" ]; then
   # remove any refs/heads/ prefix
   branch="${branch#refs/heads/}"
 
-  echo "CI deployment"
+  if [ "$branch" = "main" ]; then
+    echo "CI deployment (production)"
+  else
+    echo "CI deployment (branch)"
+  fi
+
   tag="$branch"
   # last commit message
   message=$(git log -1 --pretty=%B)
