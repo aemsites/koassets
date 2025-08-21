@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
 
-npm run build-and-copy:koassets-react
+cd koassets-react && npm run build-and-copy:koassets-react
 
-git add tools/assets-browser/ 
+git add ../tools/assets-browser/ 
