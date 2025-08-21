@@ -16,7 +16,7 @@ const DateRange = forwardRef<DateRangeRef, DateRangeProps>(({ onDateRangeChange,
     const [startDate, setStartDate] = useState<DateValue | null>(null);
     const [endDate, setEndDate] = useState<DateValue | null>(null);
 
-    const handleStartDateChange = (date: DateValue | null) => {
+    const handleChangeStartDate = (date: DateValue | null) => {
         setStartDate(date);
 
         // Convert DateValue to Date and call callback
@@ -27,7 +27,7 @@ const DateRange = forwardRef<DateRangeRef, DateRangeProps>(({ onDateRangeChange,
         }
     };
 
-    const handleEndDateChange = (date: DateValue | null) => {
+    const handleChangeEndDate = (date: DateValue | null) => {
         setEndDate(date);
 
         // Convert DateValue to Date and call callback
@@ -35,6 +35,22 @@ const DateRange = forwardRef<DateRangeRef, DateRangeProps>(({ onDateRangeChange,
             const startJSDate = startDate ? new Date(startDate.year, startDate.month - 1, startDate.day) : undefined;
             const endJSDate = date ? new Date(date.year, date.month - 1, date.day) : undefined;
             onDateRangeChange(startJSDate, endJSDate);
+        }
+    };
+
+    const handleClearStartDate = () => {
+        setStartDate(null);
+        if (onDateRangeChange) {
+            const endJSDate = endDate ? new Date(endDate.year, endDate.month - 1, endDate.day) : undefined;
+            onDateRangeChange(undefined, endJSDate);
+        }
+    };
+
+    const handleClearEndDate = () => {
+        setEndDate(null);
+        if (onDateRangeChange) {
+            const startJSDate = startDate ? new Date(startDate.year, startDate.month - 1, startDate.day) : undefined;
+            onDateRangeChange(startJSDate, undefined);
         }
     };
 
@@ -52,18 +68,22 @@ const DateRange = forwardRef<DateRangeRef, DateRangeProps>(({ onDateRangeChange,
                     <div className={`date-range-input-wrapper ${selectedNumericFilters.length > 0 && startDate ? 'has-value' : ''}`}>
                         <MyDatePicker<DateValue>
                             value={startDate}
-                            onChange={handleStartDateChange}
+                            onChange={handleChangeStartDate}
                             label="From"
                             aria-label="From date"
+                            showClearButton={!!startDate}
+                            onClear={handleClearStartDate}
                         />
                     </div>
 
                     <div className={`date-range-input-wrapper ${selectedNumericFilters.length > 0 && endDate ? 'has-value' : ''}`}>
                         <MyDatePicker<DateValue>
                             value={endDate}
-                            onChange={handleEndDateChange}
+                            onChange={handleChangeEndDate}
                             label="To"
                             aria-label="To date"
+                            showClearButton={!!endDate}
+                            onClear={handleClearEndDate}
                         />
                     </div>
                 </div>

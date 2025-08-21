@@ -124,12 +124,10 @@ const Facets: React.FC<FacetsProps> = ({
 
     // Handler for date range change
     const handleDateRangeChange = useCallback((key: string, startDate: Date | undefined, endDate: Date | undefined) => {
-        if (startDate || endDate) {
-            setDateRanges(prev => ({
-                ...prev,
-                [key]: [startDate ? startDate.getTime() / 1000 : undefined, endDate ? endDate.getTime() / 1000 : undefined]
-            }));
-        }
+        setDateRanges(prev => ({
+            ...prev,
+            [key]: [startDate ? startDate.getTime() / 1000 : undefined, endDate ? endDate.getTime() / 1000 : undefined]
+        }));
     }, []);
 
     // Memoized function to render hierarchy levels
@@ -262,7 +260,6 @@ const Facets: React.FC<FacetsProps> = ({
     // Convert date ranges to numeric filters for search
     useEffect(() => {
         if (Object.keys(dateRanges).length > 0) {
-            console.log('Date ranges updated:', dateRanges);
             // Use setTimeout to defer the numeric filters update
             setTimeout(() => {
                 setSelectedNumericFilters(Object.entries(dateRanges).flatMap(([key, value]) => {

@@ -6,23 +6,45 @@ interface MyDatePickerProps<T extends DateValue> extends DatePickerProps<T> {
     label?: string;
     description?: string;
     errorMessage?: string | ((validation: ValidationResult) => string);
+    showClearButton?: boolean;
+    onClear?: () => void;
 }
 
 export default function MyDatePicker<T extends DateValue>(
-    { label, description, errorMessage, ...props }:
+    { description, errorMessage, showClearButton = false, onClear, ...props }:
         MyDatePickerProps<T>
 ) {
     return (
         <DatePicker {...props} className="my-date-picker">
             {/* <Label>{label}</Label> */}
-            <Group>
-                <DateInput>
-                    {(segment) => <DateSegment segment={segment} />}
-                </DateInput>
-                <Button>
-                    ▼
-                </Button>
-            </Group>
+            <div className="date-picker-wrapper">
+                <Group>
+                    <DateInput>
+                        {(segment) => <DateSegment segment={segment} />}
+                    </DateInput>
+                    <Button>
+                        ▼
+                    </Button>
+                </Group>
+                {showClearButton && (
+                    <button
+                        type="button"
+                        className="clear-button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            onClear?.();
+                        }}
+                        onMouseDown={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                        }}
+                        aria-label="Clear date"
+                    >
+                        ✕
+                    </button>
+                )}
+            </div>
             {description && <Text slot="description">{description}</Text>}
             <FieldError>{errorMessage}</FieldError>
             <Popover>
