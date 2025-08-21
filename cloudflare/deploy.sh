@@ -79,12 +79,24 @@ rm version.id
 
 echo "Helix Origin : $helixOrigin"
 echo "Worker URL   : https://$tag-koassets.adobeaem.workers.dev"
+url="https://$tag-koassets.adobeaem.workers.dev"
 
 # on CI and main branch, deploy to production
 if [ "$ci" = "true" ] && [ "$branch" = "main" ]; then
   npx wrangler versions deploy -y "$version"
   echo
   echo "Production URL: https://koassets.adobeaem.workers.dev"
+  url="https://koassets.adobeaem.workers.dev"
+fi
+
+if [ -n "$GITHUB_OUTPUT" ]; then
+  echo "GITHUB_OUTPUT=$GITHUB_OUTPUT"
+
+  echo "env=$tag" >> "$GITHUB_OUTPUT"
+  echo "url=$url" >> "$GITHUB_OUTPUT"
+  echo "version=$version" >> "$GITHUB_OUTPUT"
+else
+  echo "No GITHUB_OUTPUT set"
 fi
 
 if [ "$tail" = "true" ]; then
