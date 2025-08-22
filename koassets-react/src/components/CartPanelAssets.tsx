@@ -187,22 +187,22 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         setCartItems([]);
     };
 
-    const handleShareCart = (): void => {
-        // TODO: Implement share cart functionality
-        console.log('Share cart clicked');
-    };
+    // const handleShareCart = (): void => {
+    //     // TODO: Implement share cart functionality
+    //     console.log('Share cart clicked');
+    // };
 
-    const handleAddToCollection = (): void => {
-        // TODO: Implement add to collection functionality
-        console.log('Add to collection clicked');
-    };
+    // const handleAddToCollection = (): void => {
+    //     // TODO: Implement add to collection functionality
+    //     console.log('Add to collection clicked');
+    // };
 
-    const handleRequestDownload = (): void => {
-        // setStepStatus(prev => ({ ...prev, cart: 'success' }));
-        // setActiveStep('request-download');
-        // setStepStatus(prev => ({ ...prev, 'request-download': 'pending' }));
-        console.log('Request download clicked - moved to request-download step');
-    };
+    // const handleRequestDownload = (): void => {
+    //     // setStepStatus(prev => ({ ...prev, cart: 'success' }));
+    //     // setActiveStep('request-download');
+    //     // setStepStatus(prev => ({ ...prev, 'request-download': 'pending' }));
+    //     console.log('Request download clicked - moved to request-download step');
+    // };
 
     const handleRightsCheck = async (): Promise<void> => {
         setStepStatus(prev => ({ ...prev, 'request-download': 'success' }));

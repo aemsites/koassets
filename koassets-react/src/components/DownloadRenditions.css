@@ -355,8 +355,8 @@
 }
 
 .download-renditions-button.disabled {
-  background-color: #ccc;
-  color: #999;
+  background-color: #ff8c80;
+  color: #f8f8f8;
   cursor: not-allowed;
 }
 
