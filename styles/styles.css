@@ -29,12 +29,12 @@
   --body-font-size-xs: 17px;
 
   /* heading sizes */
-  --heading-font-size-xxl: 55px;
-  --heading-font-size-xl: 44px;
-  --heading-font-size-l: 34px;
-  --heading-font-size-m: 27px;
-  --heading-font-size-s: 24px;
-  --heading-font-size-xs: 22px;
+  --heading-font-size-xxl: 2.25rem;
+  --heading-font-size-xl: 1.80rem;
+  --heading-font-size-l: 1.39rem;
+  --heading-font-size-m: 1.11rem;
+  --heading-font-size-s: 0.98rem;
+  --heading-font-size-xs: 0.90rem;
 
   /* nav height */
   --nav-height: 64px;
@@ -120,6 +120,16 @@ h3 { font-size: var(--heading-font-size-l); }
 h4 { font-size: var(--heading-font-size-m); }
 h5 { font-size: var(--heading-font-size-s); }
 h6 { font-size: var(--heading-font-size-xs); }
+
+:is(h1, h2, h3, h4, h5, h6)::after {
+    content:'';
+    display:block;
+    width: 6rem;
+    height: .1875rem;
+    margin-top: 10px;
+    margin-bottom: 30px;
+    background-color: red;
+}
 
 p,
 dl,
@@ -298,14 +308,4 @@ main .section.highlight {
 .contentstore-formbutton button:hover,
 .contentstore-formbutton a.button:hover {
   background-color: #d11700;
-}
-
-main h2::after {
-  content:'';
-  display:block;
-  width: 70px;
-  height: 2px;
-  margin-top: 10px;
-  margin-bottom: 30px;
-  background-color: red;
 }

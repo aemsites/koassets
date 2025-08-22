@@ -33,3 +33,99 @@
     order: unset;
   }
 }
+
+/* LoginPage specific styles */
+.columns.loginpage {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.columns.loginpage > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 60px;
+  min-height: 500px;
+}
+
+.columns.loginpage > div > div:first-child {
+  flex: 1;
+  max-width: 500px;
+}
+
+.columns.loginpage > div > .columns-img-col {
+  flex: 1;
+}
+
+.columns.loginpage h1 {
+  padding-top: 0;
+}
+
+.columns.loginpage p {
+  font-family: "TCCC UnityText Regular", sans-serif;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.columns.loginpage .button-container {
+  margin-bottom: 40px;
+}
+
+.columns.loginpage .button {
+  font-family: "TCCC UnityText Regular", sans-serif;
+  display: inline-block;
+  padding: 15px 40px;
+  font-size: 1rem;
+  font-weight: bold;
+  text-decoration: none;
+  border-radius: 50px;
+  text-align: center;
+  min-width: 200px;
+  transition: all 0.3s ease;
+}
+
+.columns.loginpage .button:not(.secondary) {
+  background-color: #e60000;
+  color: white;
+  border: 2px solid #e60000;
+}
+
+.columns.loginpage .button:not(.secondary):hover {
+  background-color: #cc0000;
+  border-color: #cc0000;
+}
+
+.columns.loginpage .button.secondary {
+  background-color: white;
+  color: #333;
+  border: 2px solid #ddd;
+}
+
+.columns.loginpage .button.secondary:hover {
+  background-color: #f5f5f5;
+  border-color: #bbb;
+}
+
+.columns.loginpage .columns-img-col img {
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .columns.loginpage > div {
+    flex-direction: column;
+    gap: 40px;
+    text-align: center;
+  }
+
+  .columns.loginpage > div > .columns-img-col {
+    order: 1;
+  }
+
+  .columns.loginpage .button {
+    display: block;
+    margin: 0 auto;
+  }
+}
