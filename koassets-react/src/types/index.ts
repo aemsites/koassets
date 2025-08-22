@@ -239,11 +239,27 @@ export interface AssetPreviewProps {
     handleRemoveFromCart?: (image: Asset) => void;
     cartItems?: CartItem[];
     dynamicMediaClient?: DynamicMediaClient | null;
+    renditions?: {
+        assetId?: string;
+        items?: any[];
+        'repo:name'?: string;
+    };
+    fetchAssetRenditions?: (asset: Asset) => Promise<void>;
 }
 
 // Asset Details types (extends AssetPreview)
 export interface AssetDetailsProps extends AssetPreviewProps {
-    // No additional properties needed - dynamicMediaClient is now in base AssetPreviewProps
+    imagePresets?: {
+        assetId?: string;
+        items?: any[];
+        'repo:name'?: string;
+    };
+    renditions?: {
+        assetId?: string;
+        items?: any[];
+        'repo:name'?: string;
+    };
+    fetchAssetRenditions?: (asset: Asset) => Promise<void>;
 }
 
 export interface FacetsProps {
@@ -290,6 +306,19 @@ export interface ImageGalleryProps {
     onLoadMoreResults?: () => void;
     hasMorePages?: boolean;
     isLoadingMore?: boolean;
+    imagePresets?: {
+        assetId?: string;
+        items?: any[];
+        'repo:name'?: string;
+    };
+    assetRenditionsCache?: {
+        [assetId: string]: {
+            assetId?: string;
+            items?: any[];
+            'repo:name'?: string;
+        }
+    };
+    fetchAssetRenditions?: (asset: Asset) => Promise<void>;
 }
 
 // Main App types (for the most complex component)

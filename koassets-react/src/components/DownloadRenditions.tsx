@@ -18,27 +18,29 @@ interface DownloadRenditionsProps {
     asset: Asset | null;
     onClose: () => void;
     dynamicMediaClient: DynamicMediaClient | null;
+    renditions: {
+        assetId?: string;
+        items?: Rendition[];
+        'repo:name'?: string;
+    };
+    imagePresets: {
+        assetId?: string;
+        items?: Rendition[];
+        'repo:name'?: string;
+    };
 }
 
 const DownloadRenditions: React.FC<DownloadRenditionsProps> = ({
     isOpen,
     asset,
     onClose,
-    dynamicMediaClient
+    dynamicMediaClient,
+    renditions,
+    imagePresets
 }) => {
     const [selectedRenditions, setSelectedRenditions] = useState<Set<Rendition>>(new Set());
     const [acceptTerms, setAcceptTerms] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
-    const [staticRenditions, setStaticRenditions] = useState<{
-        assetId?: string;
-        items?: Rendition[];
-        'repo:name'?: string;
-    }>({});
-    const [imagePresets, setImagePresets] = useState<{
-        assetId?: string;
-        items?: Rendition[];
-        'repo:name'?: string;
-    }>({});
     const [renditionsLoading, setRenditionsLoading] = useState(false);
     const [renditionsError, setRenditionsError] = useState<string | null>(null);
 
@@ -48,40 +50,12 @@ const DownloadRenditions: React.FC<DownloadRenditionsProps> = ({
             setSelectedRenditions(new Set());
             setAcceptTerms(false);
             setIsDownloading(false);
-            setStaticRenditions({});
-            setImagePresets({});
             setRenditionsLoading(false);
             setRenditionsError(null);
         }
     }, [isOpen]);
 
-    // Fetch asset all renditions when modal opens
-    useEffect(() => {
-        const fetchRenditions = async () => {
-            if (!isOpen || !asset || !dynamicMediaClient) {
-                return;
-            }
 
-            setRenditionsLoading(true);
-            setRenditionsError(null);
-
-            try {
-                const staticRenditions = await dynamicMediaClient.getAssetRenditions(asset);
-                setStaticRenditions(staticRenditions);
-                const imagePresets = await dynamicMediaClient.getAssetImagePresets(asset);
-                setImagePresets(imagePresets);
-            } catch (error) {
-                console.error('Failed to fetch asset renditions:', error);
-                setRenditionsError('Failed to load asset renditions');
-                setStaticRenditions({});
-                setImagePresets({});
-            } finally {
-                setRenditionsLoading(false);
-            }
-        };
-
-        fetchRenditions();
-    }, [isOpen, asset, dynamicMediaClient]);
 
     // Handle escape key with capture to intercept before parent modals
     useEffect(() => {
@@ -122,7 +96,7 @@ const DownloadRenditions: React.FC<DownloadRenditionsProps> = ({
     };
 
     const handleSelectAllToggle = () => {
-        const allRenditionItems = [...(staticRenditions.items || []), ...(imagePresets?.items || [])];
+        const allRenditionItems = [...(renditions.items || []), ...(imagePresets?.items || [])];
 
         if (selectedRenditions.size === allRenditionItems.length) {
             // If all are selected, deselect all
@@ -134,7 +108,7 @@ const DownloadRenditions: React.FC<DownloadRenditionsProps> = ({
     };
 
     const isAllSelected = () => {
-        const allRenditionItems = [...(staticRenditions.items || []), ...(imagePresets?.items || [])];
+        const allRenditionItems = [...(renditions.items || []), ...(imagePresets?.items || [])];
         return allRenditionItems.length > 0 && selectedRenditions.size === allRenditionItems.length;
     };
 
@@ -143,7 +117,7 @@ const DownloadRenditions: React.FC<DownloadRenditionsProps> = ({
     };
 
     const getSortedRenditions = () => {
-        return [...(staticRenditions.items || []).sort((a, b) => {
+        return [...(renditions.items || []).sort((a, b) => {
             // Put 'original' first
             if (a.name === 'original') return -1;
             if (b.name === 'original') return 1;
@@ -257,7 +231,7 @@ const DownloadRenditions: React.FC<DownloadRenditionsProps> = ({
                                 )}
 
                                 {/* Individual rendition checkboxes */}
-                                {!renditionsLoading && !renditionsError && (staticRenditions.items && staticRenditions.items.length > 0 || imagePresets.items && imagePresets.items.length > 0) && (
+                                {!renditionsLoading && !renditionsError && (renditions.items && renditions.items.length > 0 || imagePresets.items && imagePresets.items.length > 0) && (
                                     <div className="renditions-list">
                                         {/* Select All checkbox */}
                                         <label className="select-all-item">

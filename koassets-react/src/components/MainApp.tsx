@@ -18,6 +18,7 @@ import { getBucket } from '../utils/config';
 
 // Components
 import CollectionGallery from './CollectionGallery';
+import { Rendition } from './DownloadRenditions';
 import Facets from './Facets';
 import Footer from './Footer';
 import HeaderBar from './HeaderBar';
@@ -82,6 +83,21 @@ function MainApp(): React.JSX.Element {
     const [selectedFacetFilters, setSelectedFacetFilters] = useState<string[][]>([]);
     const [selectedNumericFilters, setSelectedNumericFilters] = useState<string[]>([]);
     const [excFacets, setExcFacets] = useState<Record<string, unknown> | undefined>(undefined);
+    const [imagePresets, setImagePresets] = useState<{
+        assetId?: string;
+        items?: Rendition[];
+        'repo:name'?: string;
+    }>({});
+    const [assetRenditionsCache, setAssetRenditionsCache] = useState<{
+        [assetId: string]: {
+            assetId?: string;
+            items?: Rendition[];
+            'repo:name'?: string;
+        }
+    }>({});
+
+    // Track which assets are currently being fetched to prevent duplicates
+    const fetchingAssetsRef = useRef<Set<string>>(new Set());
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState<number>(0);
@@ -319,6 +335,64 @@ function MainApp(): React.JSX.Element {
         }
     }, [accessToken]);
 
+    // Fetch image presets once on app load
+    useEffect(() => {
+        if (dynamicMediaClient && !imagePresets.items) {
+            // Fetch image presets globally (not per asset since they're the same for all)
+            dynamicMediaClient.getImagePresets().then(presets => {
+                setImagePresets(presets);
+            }).catch(error => {
+                console.error('Failed to fetch image presets:', error);
+                setImagePresets({});
+            });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dynamicMediaClient]);
+
+    // Function to fetch and cache static renditions for a specific asset
+    const fetchAssetRenditions = useCallback(async (asset: Asset): Promise<void> => {
+        if (!dynamicMediaClient || !asset.assetId) return;
+
+        // Check cache first - use functional state update to get current state
+        let shouldFetch = false;
+        setAssetRenditionsCache(prevCache => {
+            // If already cached, don't fetch
+            if (prevCache[asset.assetId!]) {
+                return prevCache; // No state change
+            }
+
+            // If currently being fetched, don't fetch again
+            if (fetchingAssetsRef.current.has(asset.assetId!)) {
+                return prevCache; // No state change
+            }
+
+            // Mark as fetching and proceed
+            fetchingAssetsRef.current.add(asset.assetId!);
+            shouldFetch = true;
+            return prevCache; // No state change yet
+        });
+
+        if (!shouldFetch) return;
+
+        try {
+            const renditions = await dynamicMediaClient.getAssetRenditions(asset);
+            setAssetRenditionsCache(prev => ({
+                ...prev,
+                [asset.assetId!]: renditions
+            }));
+        } catch (error) {
+            console.error('Failed to fetch asset static renditions:', error);
+            // Set empty object on error to prevent retry loops
+            setAssetRenditionsCache(prev => ({
+                ...prev,
+                [asset.assetId!]: {}
+            }));
+        } finally {
+            // Remove from fetching set when done (success or error)
+            fetchingAssetsRef.current.delete(asset.assetId!);
+        }
+    }, [dynamicMediaClient]);
+
     // Add useEffect to trigger search when selectedCollection changes
     useEffect(() => {
         if (selectedCollection && dynamicMediaClient && excFacets !== undefined) {
@@ -338,7 +412,7 @@ function MainApp(): React.JSX.Element {
                         image,
                         350,
                         {
-                            cache: true,
+                            cache: false,
                             cacheKey: cacheKey,
                             fallbackUrl: image.url
                         }
@@ -377,7 +451,7 @@ function MainApp(): React.JSX.Element {
                             image,
                             350,
                             {
-                                cache: true,
+                                cache: false,
                                 cacheKey: cacheKey,
                                 fallbackUrl: image.url
                             }
@@ -524,6 +598,9 @@ function MainApp(): React.JSX.Element {
                     onLoadMoreResults={handleLoadMoreResults}
                     hasMorePages={currentPage + 1 < totalPages}
                     isLoadingMore={isLoadingMore}
+                    imagePresets={imagePresets}
+                    assetRenditionsCache={assetRenditionsCache}
+                    fetchAssetRenditions={fetchAssetRenditions}
                 />
             ) : (
                 <></>

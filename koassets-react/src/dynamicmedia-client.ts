@@ -635,6 +635,22 @@ export class DynamicMediaClient {
         }
     }
 
+    async getImagePresets(): Promise<{items: Rendition[]}> {
+        try {
+            const response = await this.client.request({
+                url: `/adobe/assets/imagePresets`,
+                method: 'GET'
+            });
+
+            return response.data;
+        } catch (error) {
+            if (axios.isAxiosError(error)) {
+                throw new Error(`Failed to fetch image presets: ${error.message}`);
+            }
+            throw error;
+        }
+    }
+
     async downloadAssetsArchive(assetRenditionPairs: AssetRenditionPair[]): Promise<boolean> {
         try {
             const payload = {

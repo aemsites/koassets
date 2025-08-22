@@ -3,7 +3,9 @@ import type { AssetPreviewProps } from '../types';
 import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
 import { formatCategory, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
 import ActionButton from './ActionButton';
+import { BUTTON_CONFIGS } from './ActionButtonConfigs';
 import './AssetPreview.css';
+import { Rendition } from './DownloadRenditions';
 
 const AssetPreview: React.FC<AssetPreviewProps> = ({
     showModal,
@@ -12,10 +14,14 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
     handleAddToCart,
     handleRemoveFromCart,
     cartItems = [],
-    dynamicMediaClient
+    dynamicMediaClient,
+    renditions = {},
+    fetchAssetRenditions
 }) => {
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
     const [imageLoading, setImageLoading] = useState<boolean>(false);
+    const [actionButtonEnable, setActionButtonEnable] = useState<boolean>(false);
+    const [watermarkRendition, setWatermarkRendition] = useState<Rendition | undefined>(undefined);
 
     // Check if this item is already in the cart
     const isInCart = selectedImage ? cartItems.some(cartItem => cartItem.assetId === selectedImage.assetId) : false;
@@ -47,6 +53,8 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
         if (showModal && selectedImage && dynamicMediaClient) {
             setImageLoading(true);
             setBlobUrl(null);
+            setActionButtonEnable(false);
+            setWatermarkRendition(undefined);
 
             const fetchOptimizedImage = async () => {
                 try {
@@ -56,7 +64,7 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                         selectedImage,
                         350,
                         {
-                            cache: true,
+                            cache: false,
                             cacheKey: `${selectedImage.assetId}-350`,
                             fallbackUrl: selectedImage.url
                         }
@@ -84,17 +92,42 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
         };
     }, [blobUrl]);
 
+    // Fetch renditions when modal opens
+    useEffect(() => {
+        if (showModal && selectedImage && fetchAssetRenditions) {
+            fetchAssetRenditions(selectedImage);
+        }
+    }, [showModal, selectedImage, fetchAssetRenditions]);
+
+    // Update watermarkRendition state based on renditions
+    useEffect(() => {
+        const foundWatermarkRendition = renditions.items?.find(rendition =>
+            rendition.name?.toLowerCase().startsWith('watermark')
+        );
+        setWatermarkRendition(foundWatermarkRendition);
+    }, [renditions]);
+
+    // Update action button display based on watermarkRendition
+    useEffect(() => {
+        setActionButtonEnable(watermarkRendition ? true : false);
+    }, [watermarkRendition]);
+
     if (!showModal || !selectedImage) return null;
 
-    const handleClickDownload = async (): Promise<void> => {
+    const handleDownloadPreview = async (): Promise<void> => {
         if (!selectedImage || !dynamicMediaClient) {
             console.warn('No asset or dynamic media client available for download');
             return;
         }
 
+        if (!watermarkRendition) {
+            console.warn('Download not available - no watermark rendition found');
+            return;
+        }
+
         try {
-            console.log('Downloading original asset:', selectedImage.assetId);
-            await dynamicMediaClient.downloadAsset(selectedImage);
+            console.log('Downloading watermark rendition:', watermarkRendition.name);
+            await dynamicMediaClient.downloadAsset(selectedImage, watermarkRendition);
         } catch (error) {
             console.error('Failed to download asset:', error);
         }
@@ -170,8 +203,10 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                         </div>
                         <div className="right-buttons-wrapper">
                             <ActionButton
-                                name="download"
-                                onClick={handleClickDownload}
+                                disabled={!actionButtonEnable}
+                                config={BUTTON_CONFIGS.download}
+                                hasLoadingState={true}
+                                onClick={handleDownloadPreview}
                             />
                         </div>
                     </div>

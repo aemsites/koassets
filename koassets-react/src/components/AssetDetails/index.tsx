@@ -3,7 +3,8 @@ import type { AssetDetailsProps } from '../../types';
 import { fetchOptimizedDeliveryBlob } from '../../utils/blobCache';
 import { removeHyphenTitleCase } from '../../utils/formatters';
 import ActionButton from '../ActionButton';
-import DownloadRenditions from '../DownloadRenditions';
+import { BUTTON_CONFIGS } from '../ActionButtonConfigs';
+import DownloadRenditions, { Rendition } from '../DownloadRenditions';
 import './AssetDetails.css';
 import AssetDetailsDRM from './AssetDetailsDRM';
 import AssetDetailsGeneralInfo from './AssetDetailsGeneralInfo';
@@ -31,12 +32,17 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     handleAddToCart,
     handleRemoveFromCart,
     cartItems = [],
-    dynamicMediaClient
+    dynamicMediaClient,
+    imagePresets = {},
+    renditions = {},
+    fetchAssetRenditions
 }) => {
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
     const [imageLoading, setImageLoading] = useState<boolean>(false);
     const [collapseAll, setCollapseAll] = useState<boolean>(false);
     const [showDownloadRenditionsModal, setShowDownloadRenditionsModal] = useState<boolean>(false);
+    const [actionButtonEnable, setActionButtonEnable] = useState<boolean>(false);
+    const [watermarkRendition, setWatermarkRendition] = useState<Rendition | undefined>(undefined);
 
     const rightsFree: boolean = selectedImage?.rightsFree?.toLowerCase() === 'yes' ? true : false;
 
@@ -71,15 +77,20 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     };
 
     // Handle action button click
-    const handleClickDownload = async () => {
+    const handleDownloadPreview = async () => {
         if (!selectedImage || !dynamicMediaClient) {
             console.warn('No asset or dynamic media client available for download');
             return;
         }
 
+        if (!watermarkRendition) {
+            console.warn('Download not available - no watermark rendition found');
+            return;
+        }
+
         try {
-            console.log('Downloading original asset:', selectedImage.assetId);
-            await dynamicMediaClient.downloadAsset(selectedImage);
+            console.log('Downloading watermark rendition:', watermarkRendition.name);
+            await dynamicMediaClient.downloadAsset(selectedImage, watermarkRendition);
         } catch (error) {
             console.error('Failed to download asset:', error);
         }
@@ -97,6 +108,8 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
         if (showModal && selectedImage && dynamicMediaClient) {
             setImageLoading(true);
             setBlobUrl(null);
+            setActionButtonEnable(false);
+            setWatermarkRendition(undefined);
 
             const fetchHighResImage = async () => {
                 try {
@@ -106,7 +119,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                         selectedImage,
                         1200,
                         {
-                            cache: true,
+                            cache: false,
                             cacheKey: `${selectedImage.assetId}-1200`,
                             fallbackUrl: selectedImage.url
                         }
@@ -124,6 +137,26 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
             fetchHighResImage();
         }
     }, [showModal, selectedImage, dynamicMediaClient]);
+
+    // Fetch static renditions when modal opens
+    useEffect(() => {
+        if (showModal && selectedImage && fetchAssetRenditions) {
+            fetchAssetRenditions(selectedImage);
+        }
+    }, [showModal, selectedImage, fetchAssetRenditions]);
+
+    // Update watermarkRendition state based on renditions
+    useEffect(() => {
+        const foundWatermarkRendition = renditions.items?.find(rendition =>
+            rendition.name?.toLowerCase().startsWith('watermark')
+        );
+        setWatermarkRendition(foundWatermarkRendition);
+    }, [renditions]);
+
+    // Update action button display based on watermarkRendition
+    useEffect(() => {
+        setActionButtonEnable(watermarkRendition ? true : false);
+    }, [watermarkRendition]);
 
     // Separate effect for cleanup
     useEffect(() => {
@@ -243,8 +276,10 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                             <div className="product-actions">
                                 <div className="left-buttons-wrapper">
                                     <ActionButton
-                                        name="download"
-                                        onClick={handleClickDownload}
+                                        disabled={!actionButtonEnable}
+                                        config={BUTTON_CONFIGS.download}
+                                        hasLoadingState={true}
+                                        onClick={handleDownloadPreview}
                                     />
                                 </div>
                                 <div className="right-buttons-wrapper">
@@ -305,6 +340,8 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                 asset={selectedImage}
                 onClose={handleDownloadRenditionsModalClose}
                 dynamicMediaClient={dynamicMediaClient ?? null}
+                renditions={renditions}
+                imagePresets={imagePresets}
             />
         </div>
     );
