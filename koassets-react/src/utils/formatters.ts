@@ -152,4 +152,15 @@ export const removeHyphenTitleCase = (text: string | undefined): string => {
         .split('-')
         .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
         .join(' ');
+};
+
+// Helper function to format dimensions
+export const formatDimensions = (dimensions?: { width: number; height: number }): string => {
+    if (!dimensions || dimensions.width === 0 || dimensions.height === 0) return '';
+    return `W: ${dimensions.width}  H: ${dimensions.height}`;
+};
+
+// Helper function to format format name
+export const formatFormatName = (format: string): string => {
+    return format.toUpperCase().replace('IMAGE/', '').replace('VND.ADOBE.', '');
 }; 

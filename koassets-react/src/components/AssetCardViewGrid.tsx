@@ -1,5 +1,4 @@
 import React from 'react';
-import { ORIGINAL_RENDITION } from '../dynamicmedia-client';
 import type { AssetCardProps } from '../types';
 import { formatCategory, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
 import ActionButton from './ActionButton';
@@ -47,7 +46,7 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
         e.stopPropagation(); // Prevent card click when clicking checkbox
     };
 
-    // Handle action button click (download original asset)
+    // Handle action button click
     const handleClickDownload = async () => {
         if (!image || !dynamicMediaClient) {
             console.warn('No asset or dynamic media client available for download');
@@ -56,10 +55,7 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
 
         try {
             console.log('Downloading original asset:', image.assetId);
-            await dynamicMediaClient.downloadAsset(
-                image,
-                ORIGINAL_RENDITION
-            );
+            await dynamicMediaClient.downloadAsset(image);
         } catch (error) {
             console.error('Failed to download asset:', error);
         }

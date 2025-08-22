@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { ORIGINAL_RENDITION } from '../../dynamicmedia-client';
 import type { AssetDetailsProps } from '../../types';
 import { fetchOptimizedDeliveryBlob } from '../../utils/blobCache';
 import { removeHyphenTitleCase } from '../../utils/formatters';
@@ -39,6 +38,8 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     const [collapseAll, setCollapseAll] = useState<boolean>(false);
     const [showDownloadRenditionsModal, setShowDownloadRenditionsModal] = useState<boolean>(false);
 
+    const rightsFree: boolean = selectedImage?.rightsFree?.toLowerCase() === 'yes' ? true : false;
+
     const handleToggleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setCollapseAll(e.target.checked);
     };
@@ -69,7 +70,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
         e.stopPropagation();
     };
 
-    // Handle action button click (download original asset)
+    // Handle action button click
     const handleClickDownload = async () => {
         if (!selectedImage || !dynamicMediaClient) {
             console.warn('No asset or dynamic media client available for download');
@@ -78,10 +79,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 
         try {
             console.log('Downloading original asset:', selectedImage.assetId);
-            await dynamicMediaClient.downloadAsset(
-                selectedImage,
-                ORIGINAL_RENDITION
-            );
+            await dynamicMediaClient.downloadAsset(selectedImage);
         } catch (error) {
             console.error('Failed to download asset:', error);
         }
@@ -251,10 +249,11 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                 </div>
                                 <div className="right-buttons-wrapper">
                                     <button
-                                        className={`asset-details-main-download-renditions-button secondary-button`}
+                                        disabled={!rightsFree}
+                                        className={`secondary-button`}
                                         onClick={handleClickDownloadRenditions}
                                     >
-                                        Download renditions
+                                        Download
                                     </button>
                                     <button
                                         className={`asset-details-main-add-to-cart-button${isInCart ? ' remove-from-cart' : ''} primary-button`}

@@ -25,6 +25,11 @@
   background-repeat: no-repeat;
   background-position: center;
   background-size: 16px 16px;
+
+  /* TODO: This is to download asset with preview rendition. 
+  Need to make /rendition API to determine this,
+  causing too many requests. Disabled for now. */
+  display: none;
 }
 
 .action-button.downloading {
