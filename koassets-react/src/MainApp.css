@@ -14,7 +14,7 @@
 
 .container,
 .container * {
-  font-family: "TCCC UnityText Regular","Helvetica Neue",Arial,Helvetica,sans-serif;
+  font-family: "TCCC UnityText Regular", "Helvetica Neue", Arial, Helvetica, sans-serif;
   color: var(--secondary-color);
 }
 
@@ -109,7 +109,11 @@ button:disabled {
   color: var(--primary-color);
 }
 
-.container h1, .container h2, .container h3, .container h4, .container h5 {
+.container h1,
+.container h2,
+.container h3,
+.container h4,
+.container h5 {
   font-weight: 700;
   line-height: 1.2857em;
 }
@@ -252,6 +256,13 @@ button:disabled {
 
 .container .secondary-button:focus {
   outline: none;
+}
+
+.container .secondary-button:disabled {
+  background-color: #ccc;
+  color: #999;
+  cursor: not-allowed;
+  border: none;
 }
 
 /* Breadcrumb navigation styles */

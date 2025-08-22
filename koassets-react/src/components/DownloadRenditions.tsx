@@ -1,13 +1,15 @@
+import { ToastQueue } from '@react-spectrum/toast';
 import React, { useEffect, useState } from 'react';
 import type { DynamicMediaClient } from '../dynamicmedia-client';
 import { Asset } from '../types';
+import { formatDimensions, formatFileSize, formatFormatName } from '../utils/formatters';
 import './DownloadRenditions.css';
 import ThumbnailImage from './ThumbnailImage';
 
-interface Rendition {
-    name: string;
-    format: string;
-    size: number;
+export interface Rendition {
+    name?: string;
+    format?: string;
+    size?: number;
     dimensions?: { width: number; height: number };
 }
 
@@ -27,7 +29,12 @@ const DownloadRenditions: React.FC<DownloadRenditionsProps> = ({
     const [selectedRenditions, setSelectedRenditions] = useState<Set<Rendition>>(new Set());
     const [acceptTerms, setAcceptTerms] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
-    const [assetRenditions, setAssetRenditions] = useState<{
+    const [staticRenditions, setStaticRenditions] = useState<{
+        assetId?: string;
+        items?: Rendition[];
+        'repo:name'?: string;
+    }>({});
+    const [imagePresets, setImagePresets] = useState<{
         assetId?: string;
         items?: Rendition[];
         'repo:name'?: string;
@@ -35,39 +42,20 @@ const DownloadRenditions: React.FC<DownloadRenditionsProps> = ({
     const [renditionsLoading, setRenditionsLoading] = useState(false);
     const [renditionsError, setRenditionsError] = useState<string | null>(null);
 
-    // Helper function to format file size
-    const formatFileSize = (bytes: number): string => {
-        if (bytes === 0) return '0 B';
-        const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-    };
-
-    // Helper function to format dimensions
-    const formatDimensions = (dimensions?: { width: number; height: number }): string => {
-        if (!dimensions || dimensions.width === 0 || dimensions.height === 0) return '';
-        return `W: ${dimensions.width}  H: ${dimensions.height}`;
-    };
-
-    // Helper function to format format name
-    const formatFormatName = (format: string): string => {
-        return format.toUpperCase().replace('IMAGE/', '').replace('VND.ADOBE.', '');
-    };
-
     // Reset state when modal opens
     useEffect(() => {
         if (isOpen) {
             setSelectedRenditions(new Set());
             setAcceptTerms(false);
             setIsDownloading(false);
-            setAssetRenditions({});
+            setStaticRenditions({});
+            setImagePresets({});
             setRenditionsLoading(false);
             setRenditionsError(null);
         }
     }, [isOpen]);
 
-    // Fetch asset renditions when modal opens
+    // Fetch asset all renditions when modal opens
     useEffect(() => {
         const fetchRenditions = async () => {
             if (!isOpen || !asset || !dynamicMediaClient) {
@@ -78,12 +66,15 @@ const DownloadRenditions: React.FC<DownloadRenditionsProps> = ({
             setRenditionsError(null);
 
             try {
-                const renditions = await dynamicMediaClient.getAssetRenditions(asset);
-                setAssetRenditions(renditions || {});
+                const staticRenditions = await dynamicMediaClient.getAssetRenditions(asset);
+                setStaticRenditions(staticRenditions);
+                const imagePresets = await dynamicMediaClient.getAssetImagePresets(asset);
+                setImagePresets(imagePresets);
             } catch (error) {
                 console.error('Failed to fetch asset renditions:', error);
                 setRenditionsError('Failed to load asset renditions');
-                setAssetRenditions({});
+                setStaticRenditions({});
+                setImagePresets({});
             } finally {
                 setRenditionsLoading(false);
             }
@@ -131,20 +122,20 @@ const DownloadRenditions: React.FC<DownloadRenditionsProps> = ({
     };
 
     const handleSelectAllToggle = () => {
-        const renditionItems = assetRenditions.items || [];
+        const allRenditionItems = [...(staticRenditions.items || []), ...(imagePresets?.items || [])];
 
-        if (selectedRenditions.size === renditionItems.length) {
+        if (selectedRenditions.size === allRenditionItems.length) {
             // If all are selected, deselect all
             setSelectedRenditions(new Set());
         } else {
             // If not all are selected, select all
-            setSelectedRenditions(new Set(renditionItems));
+            setSelectedRenditions(new Set(allRenditionItems));
         }
     };
 
     const isAllSelected = () => {
-        const renditionItems = assetRenditions.items || [];
-        return renditionItems.length > 0 && selectedRenditions.size === renditionItems.length;
+        const allRenditionItems = [...(staticRenditions.items || []), ...(imagePresets?.items || [])];
+        return allRenditionItems.length > 0 && selectedRenditions.size === allRenditionItems.length;
     };
 
     const isRenditionSelected = (rendition: Rendition) => {
@@ -152,43 +143,71 @@ const DownloadRenditions: React.FC<DownloadRenditionsProps> = ({
     };
 
     const getSortedRenditions = () => {
-        const renditionItems = assetRenditions.items || [];
-        return renditionItems.sort((a, b) => {
+        return [...(staticRenditions.items || []).sort((a, b) => {
             // Put 'original' first
             if (a.name === 'original') return -1;
             if (b.name === 'original') return 1;
             // Sort others alphabetically
-            return a.name.localeCompare(b.name);
-        });
+            return (a.name || '').localeCompare(b.name || '');
+        }), ...(imagePresets?.items || [])];
     };
 
-    const handleDownloadRendition = async () => {
+    const handleDownloadRenditions = async () => {
         if (!asset || !dynamicMediaClient || (!acceptTerms) || isDownloading || selectedRenditions.size === 0) {
             console.warn('Cannot download: missing requirements, already downloading, or no renditions selected');
             return;
         }
 
+        if (!asset.rightsFree) {
+            ToastQueue.negative(`This asset is not rights free.`, { timeout: 1000 });
+            return;
+        }
+
+
+        const count = selectedRenditions.size;
         setIsDownloading(true);
+        let closeProcessingToast;
 
         try {
-            // Download all selected renditions in parallel
-            const downloadPromises = Array.from(selectedRenditions).map(async (rendition: Rendition) => {
-                console.log('Downloading rendition:', rendition.name);
+            if (count === 1) {
+                const rendition = selectedRenditions.values().next().value;
+                const isImagePreset = rendition && imagePresets?.items?.some(preset => preset.name === rendition.name);
+                await dynamicMediaClient.downloadAsset(asset, rendition, isImagePreset);
+                onClose();
+            } else {
+                // Create renditionsToDownload with preset prefix for image presets
+                const renditionsToDownload = new Set(
+                    Array.from(selectedRenditions).map(rendition => {
+                        const isImagePreset = rendition && imagePresets?.items?.some(preset => preset.name === rendition.name);
+                        if (isImagePreset) {
+                            return {
+                                ...rendition,
+                                name: `preset_${rendition.name}`
+                            };
+                        }
+                        return rendition;
+                    })
+                );
 
-                const resolution = rendition.dimensions && rendition.dimensions.width > 0 && rendition.dimensions.height > 0
-                    ? `${rendition.dimensions.width}x${rendition.dimensions.height}`
-                    : '';
-                await dynamicMediaClient.downloadAsset(asset, rendition.name, rendition.format, resolution);
-                console.log(`Downloaded ${rendition.name} successfully`);
-                return rendition.name;
-            });
+                // Multiple assets archive download - show toast notifications
+                closeProcessingToast = ToastQueue.info(`Processing download request for ${count} renditions. Refreshing the page will cancel the download.`);
 
-            await Promise.all(downloadPromises);
+                const success = await dynamicMediaClient.downloadAssetsArchive(
+                    [{ asset, renditions: Array.from(renditionsToDownload).map(rendition => ({ name: rendition.name })) }]);
 
-            // Close modal on successful download
-            onClose();
+                if (success) {
+                    closeProcessingToast?.();
+                    ToastQueue.positive(`Successfully started downloading ${count} renditions.`, { timeout: 1000 });
+                    onClose();
+                } else {
+                    closeProcessingToast?.();
+                    ToastQueue.negative(`Failed to create archive for ${count} renditions.`, { timeout: 1000 });
+                }
+            }
         } catch (error) {
             console.error('Failed to download asset:', error);
+            closeProcessingToast?.();
+            ToastQueue.negative(`Unexpected error occurred while downloading ${count} renditions.`, { timeout: 1000 });
         } finally {
             setIsDownloading(false);
         }
@@ -238,7 +257,7 @@ const DownloadRenditions: React.FC<DownloadRenditionsProps> = ({
                                 )}
 
                                 {/* Individual rendition checkboxes */}
-                                {!renditionsLoading && !renditionsError && assetRenditions.items && assetRenditions.items.length > 0 && (
+                                {!renditionsLoading && !renditionsError && (staticRenditions.items && staticRenditions.items.length > 0 || imagePresets.items && imagePresets.items.length > 0) && (
                                     <div className="renditions-list">
                                         {/* Select All checkbox */}
                                         <label className="select-all-item">
@@ -273,12 +292,16 @@ const DownloadRenditions: React.FC<DownloadRenditionsProps> = ({
                                                 )}
                                                 <span className="rendition-separator">|</span>
                                                 <span className="rendition-format">
-                                                    {formatFormatName(rendition.format)}
+                                                    {formatFormatName(rendition.format || '')}
                                                 </span>
-                                                <span className="rendition-separator">|</span>
-                                                <span className="rendition-size">
-                                                    {formatFileSize(rendition.size)}
-                                                </span>
+                                                {rendition?.size && rendition?.size > 0 && (
+                                                    <>
+                                                        <span className="rendition-separator">|</span>
+                                                        <span className="rendition-size">
+                                                            {formatFileSize(rendition.size || 0)}
+                                                        </span>
+                                                    </>
+                                                )}
                                             </label>
                                         ))}
                                     </div>
@@ -309,7 +332,7 @@ const DownloadRenditions: React.FC<DownloadRenditionsProps> = ({
                         </button>
                         <button
                             className={`download-renditions-button primary-button ${(!acceptTerms || isDownloading || selectedRenditions.size === 0) ? 'disabled' : ''}`}
-                            onClick={handleDownloadRendition}
+                            onClick={handleDownloadRenditions}
                             disabled={!acceptTerms || isDownloading || selectedRenditions.size === 0}
                         >
                             {isDownloading ? 'Downloading...' : 'Download'}

@@ -25,7 +25,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({ onClick, name, tooltip = ''
             return tooltip;
         }
         if (name === 'download') {
-            return 'Download original';
+            return 'Download preview';
         }
         return "";
     };

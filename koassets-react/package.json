@@ -17,14 +17,21 @@
     "preview:staging": "npx cross-env NODE_ENV=staging vite preview",
     "preview:prod": "npx cross-env NODE_ENV=production vite preview",
     "lint": "eslint src --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:koassets-react": "npm install && VITE_ADOBE_CLIENT_ID=ko-assets-ims VITE_BUCKET=delivery-p64403-e544653 VITE_EXC_BASE_URL=https://exc-unifiedcontent.experience.adobe.net npm run build:embed",
+    "copy-to-eds": "cp -r dist/* ../tools/assets-browser/",
+    "build-and-copy:koassets-react": "npm run build:koassets-react && npm run copy-to-eds"
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@babel/runtime": "^7.28.3",
     "@identity/imslib": "^0.48.0",
     "@internationalized/date": "^3.8.2",
+    "@react-spectrum/provider": "^3.10.8",
+    "@react-spectrum/theme-default": "^3.5.20",
+    "@react-spectrum/toast": "^3.1.0",
     "@types/node": "^24.2.1",
     "axios": "^1.11.0",
     "react": "^19.1.0",

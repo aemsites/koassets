@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { ORIGINAL_RENDITION } from '../dynamicmedia-client';
 import type { AssetPreviewProps } from '../types';
 import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
 import { formatCategory, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
@@ -95,10 +94,7 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
 
         try {
             console.log('Downloading original asset:', selectedImage.assetId);
-            await dynamicMediaClient.downloadAsset(
-                selectedImage,
-                ORIGINAL_RENDITION
-            );
+            await dynamicMediaClient.downloadAsset(selectedImage);
         } catch (error) {
             console.error('Failed to download asset:', error);
         }

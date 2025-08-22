@@ -11,7 +11,7 @@ const HIERARCHY_PREFIX = 'TCCC.#hierarchy.lvl';
 
 const Facets: React.FC<FacetsProps> = ({
     searchResults,
-    selectedFacetFilters,
+    // selectedFacetFilters,
     setSelectedFacetFilters,
     search,
     excFacets = {},
