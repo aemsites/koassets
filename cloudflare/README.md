@@ -10,10 +10,20 @@ Branch URLs: `https://{branch}-koassets.adobeaem.workers.dev`
 ## Setup
 
 - Node.js and npm installed
-- Cloudflare account with Workers enabled
-  - Deploying to the pilot at https://koassets.adobeaem.workers.dev requires access to the Cloudflare account `Franklin (Dev)`, id: `852dfa4ae1b0d579df29be65b986c101`
-  - The `wrangler` cli used by the various command below will automatically open a browser window to log into Cloudflare.
 - Run `npm install` to install the dependencies
+- (Only for manual deployments or log tailing) Access to deploy workers on the `Franklin (Dev)` account, id: `852dfa4ae1b0d579df29be65b986c101`
+  - The `wrangler` cli used by the various command below will automatically open a browser window to log into Cloudflare.
+
+### Change Cloudflare account
+
+If you need to deploy to a different Cloudflare account:
+
+- Requires a Cloudflare account with Workers enabled (free tier is sufficient)
+- Change the `account_id` in the `wrangler.toml` file to the new account id
+- Set `CLOUDFLARE_API_TOKEN` for Github Actions to a Cloudflare api token (ideally account api token) that can deploy workers on the account
+- Ensure preview aliases are enabled on the worker (to support branch deployments)
+- As necessary, update this README.md with the new worker URLs and configuration values
+
 
 ## Develop
 

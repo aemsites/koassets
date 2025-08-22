@@ -1,5 +1,5 @@
 {
-  "name": "@koassets/koassets",
+  "name": "koassets",
   "private": true,
   "version": "1.0.0",
   "description": "KO Assets Portal",
@@ -12,7 +12,6 @@
   },
   "devDependencies": {
     "@babel/eslint-parser": "7.27.1",
-    "@biomejs/biome": "^2.2.0",
     "eslint": "8.57.1",
     "eslint-config-airbnb-base": "15.0.0",
     "eslint-plugin-import": "2.31.0",
