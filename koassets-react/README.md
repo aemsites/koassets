@@ -11,6 +11,9 @@ This application provides a modern interface for interacting with Adobe Dynamic 
 ### 🚀 **Get Started Fast**
 
 ```bash
+# for the proprietary@identity/imslib package
+npm login --registry https://artifactory-uw2.adobeitc.com/artifactory/api/npm/npm-adobe-release
+
 npm install
 # Set up environment variables using .env.development or .env.production
 npm run dev
