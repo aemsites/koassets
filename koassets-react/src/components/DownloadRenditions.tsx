@@ -1,17 +1,10 @@
 import { ToastQueue } from '@react-spectrum/toast';
 import React, { useEffect, useState } from 'react';
 import type { DynamicMediaClient } from '../dynamicmedia-client';
-import { Asset } from '../types';
+import { Asset, Rendition } from '../types';
 import { formatDimensions, formatFileSize, formatFormatName } from '../utils/formatters';
 import './DownloadRenditions.css';
 import ThumbnailImage from './ThumbnailImage';
-
-export interface Rendition {
-    name?: string;
-    format?: string;
-    size?: number;
-    dimensions?: { width: number; height: number };
-}
 
 interface DownloadRenditionsProps {
     isOpen: boolean;

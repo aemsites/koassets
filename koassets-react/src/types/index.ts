@@ -2,6 +2,13 @@
 import React from 'react';
 import type { DynamicMediaClient } from '../dynamicmedia-client';
 
+export interface Rendition {
+    name?: string;
+    format?: string;
+    size?: number;
+    dimensions?: { width: number; height: number };
+}
+
 export interface Asset {
     agencyName?: string;
     ageDemographic?: string;
@@ -241,7 +248,7 @@ export interface AssetPreviewProps {
     dynamicMediaClient?: DynamicMediaClient | null;
     renditions?: {
         assetId?: string;
-        items?: any[];
+        items?: Rendition[];
         'repo:name'?: string;
     };
     fetchAssetRenditions?: (asset: Asset) => Promise<void>;
@@ -251,12 +258,12 @@ export interface AssetPreviewProps {
 export interface AssetDetailsProps extends AssetPreviewProps {
     imagePresets?: {
         assetId?: string;
-        items?: any[];
+        items?: Rendition[];
         'repo:name'?: string;
     };
     renditions?: {
         assetId?: string;
-        items?: any[];
+        items?: Rendition[];
         'repo:name'?: string;
     };
     fetchAssetRenditions?: (asset: Asset) => Promise<void>;
@@ -308,13 +315,13 @@ export interface ImageGalleryProps {
     isLoadingMore?: boolean;
     imagePresets?: {
         assetId?: string;
-        items?: any[];
+        items?: Rendition[];
         'repo:name'?: string;
     };
     assetRenditionsCache?: {
         [assetId: string]: {
             assetId?: string;
-            items?: any[];
+            items?: Rendition[];
             'repo:name'?: string;
         }
     };
