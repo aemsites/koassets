@@ -35,7 +35,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     isLoadingMore = false,
     imagePresets = {},
     assetRenditionsCache = {},
-    fetchAssetRenditions
+    fetchAssetRenditions,
+    setImagePresets
 }) => {
     // Modal state management for asset preview
     const [selectedCard, setSelectedCard] = useState<Asset | null>(null);
@@ -268,6 +269,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 imagePresets={imagePresets}
                 renditions={selectedCard?.assetId ? assetRenditionsCache[selectedCard.assetId] : undefined}
                 fetchAssetRenditions={fetchAssetRenditions}
+                setImagePresets={setImagePresets}
             />
         </div>
     );

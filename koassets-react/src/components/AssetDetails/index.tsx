@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { AssetDetailsProps, Rendition } from '../../types';
+import { retryWithDelay } from '../../utils';
 import { fetchOptimizedDeliveryBlob } from '../../utils/blobCache';
 import { removeHyphenTitleCase } from '../../utils/formatters';
 import ActionButton from '../ActionButton';
@@ -35,7 +36,8 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     dynamicMediaClient,
     imagePresets = {},
     renditions = {},
-    fetchAssetRenditions
+    fetchAssetRenditions,
+    setImagePresets
 }) => {
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
     const [imageLoading, setImageLoading] = useState<boolean>(false);
@@ -157,6 +159,30 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     useEffect(() => {
         setActionButtonEnable(watermarkRendition ? true : false);
     }, [watermarkRendition]);
+
+    // Fetch image presets when modal opens with retry mechanism
+    useEffect(() => {
+        if (showModal && dynamicMediaClient && !imagePresets.items && setImagePresets) {
+            retryWithDelay(
+                () => dynamicMediaClient.getImagePresets(),
+                {
+                    maxRetries: 3,
+                    delayMs: 1000,
+                    onSuccess: () => {
+                        console.log('Successfully fetched image presets');
+                    },
+                    onFailure: (error) => {
+                        console.error('Failed to fetch image presets after 3 retries:', error);
+                    }
+                }
+            ).then(presets => {
+                setImagePresets(presets);
+            }).catch(() => {
+                // Error already logged in onFailure callback
+                setImagePresets({});
+            });
+        }
+    }, [showModal, dynamicMediaClient, imagePresets.items, setImagePresets]);
 
     // Separate effect for cleanup
     useEffect(() => {

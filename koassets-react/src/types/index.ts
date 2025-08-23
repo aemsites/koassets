@@ -267,6 +267,7 @@ export interface AssetDetailsProps extends AssetPreviewProps {
         'repo:name'?: string;
     };
     fetchAssetRenditions?: (asset: Asset) => Promise<void>;
+    setImagePresets?: (presets: { assetId?: string; items?: Rendition[]; 'repo:name'?: string; }) => void;
 }
 
 export interface FacetsProps {
@@ -326,6 +327,7 @@ export interface ImageGalleryProps {
         }
     };
     fetchAssetRenditions?: (asset: Asset) => Promise<void>;
+    setImagePresets?: (presets: { assetId?: string; items?: Rendition[]; 'repo:name'?: string; }) => void;
 }
 
 // Main App types (for the most complex component)
