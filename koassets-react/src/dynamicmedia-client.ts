@@ -283,10 +283,10 @@ export class DynamicMediaClient {
         // Create a sub-request for each facet group
         for (let i = 0; i < facetFilters.length; i++) {
             const subFacetFilters = facetFilters[i];
-            
+
             // Get all other groups (excluding current one) for facetFilters
             const otherGroups = facetFilters.filter((_, index) => index !== i);
-            
+
             // Extract facet name from the first item in current group (part before ':')
             const facetName = subFacetFilters[0]?.split(':')[0] || '';
 
@@ -433,28 +433,26 @@ export class DynamicMediaClient {
     }
 
     /**
-     * Convert video file extensions to avif for optimal delivery
+     * Change file extension to supported preview format
      * @private
      */
-    private convertVideoExtensionToAvif(fileName: string): string {
-        const videoExtensions = ['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v', '3gp'];
+    private changeToSupportedPreview(fileName: string): string {
         const lastDotIndex = fileName.lastIndexOf('.');
 
         if (lastDotIndex === -1) return fileName;
 
-        const extension = fileName.substring(lastDotIndex + 1).toLowerCase();
+        const extension = fileName.substring(lastDotIndex + 1).toLowerCase()
+            .replace(/(png)/, 'webp')
+            .replace(/(mov|m3u8|mp4|mpeg|avi|asf|flv|m4v)/, 'jpg')
+            .replace(/(tif)/, 'avif');
         const baseName = fileName.substring(0, lastDotIndex);
 
-        if (videoExtensions.includes(extension)) {
-            return `${baseName}.avif`;
-        }
-
-        return fileName;
+        return `${baseName}.${extension}`;
     }
 
-    async getOptimizedDeliveryBlob(assetId: string, repoName: string, width: number = 350) {
+    async getOptimizedDeliveryPreviewBlob(assetId: string, repoName: string, width: number = 350) {
         // Convert video extensions to avif for optimal delivery
-        const processedRepoName = this.convertVideoExtensionToAvif(repoName);
+        const processedRepoName = this.changeToSupportedPreview(repoName);
 
         try {
             const response = await this.client.request({
@@ -479,9 +477,9 @@ export class DynamicMediaClient {
         }
     }
 
-    async getOptimizedDeliveryUrl(assetId: string, repoName: string, width: number = 350) {
+    async getOptimizedDeliveryPreviewUrl(assetId: string, repoName: string, width: number = 350) {
         // Convert video extensions to avif for optimal delivery
-        const processedRepoName = this.convertVideoExtensionToAvif(repoName);
+        const processedRepoName = this.changeToSupportedPreview(repoName);
 
         return `https://${this.bucket}.adobeaemcloud.com/adobe/assets/${assetId}/as/preview-${processedRepoName}?width=${width}&preferwebp=true`;
     }
@@ -548,13 +546,13 @@ export class DynamicMediaClient {
                 }
             }
             */
-            const extension = (rendition?.format?.split(',')[0] ? `.${rendition?.format?.split(',')[0]}` : '') 
-                            || (asset?.name?.lastIndexOf('.') !== -1 ? `.${asset?.name?.substring(asset?.name?.lastIndexOf('.') + 1)}` : '');
+            const extension = (rendition?.format?.split(',')[0] ? `.${rendition?.format?.split(',')[0]}` : '')
+                || (asset?.name?.lastIndexOf('.') !== -1 ? `.${asset?.name?.substring(asset?.name?.lastIndexOf('.') + 1)}` : '');
             finalFilename = `${nameWithoutExtension}_${renditionNameWithoutExtension}${extension}`;
             url = `/adobe/assets/${asset?.assetId}/as/${finalFilename}`;
             queryParams = {
-              preset: rendition?.name || '',
-              attachment: 'true'
+                preset: rendition?.name || '',
+                attachment: 'true'
             };
         } else {
             /* Sample regular rendition
@@ -568,8 +566,8 @@ export class DynamicMediaClient {
                 }
             }
             */
-            const extension = (rendition?.name?.lastIndexOf('.') !== -1 ? `.${rendition?.name?.substring(rendition?.name?.lastIndexOf('.') + 1)}` : '') 
-                            || (asset?.name?.lastIndexOf('.') !== -1 ? `.${asset?.name?.substring(asset?.name?.lastIndexOf('.') + 1)}` : '');
+            const extension = (rendition?.name?.lastIndexOf('.') !== -1 ? `.${rendition?.name?.substring(rendition?.name?.lastIndexOf('.') + 1)}` : '')
+                || (asset?.name?.lastIndexOf('.') !== -1 ? `.${asset?.name?.substring(asset?.name?.lastIndexOf('.') + 1)}` : '');
             finalFilename = `${nameWithoutExtension}_${renditionNameWithoutExtension}${extension}`;
             url = `/adobe/assets/${asset?.assetId}/renditions/${rendition?.name}/as/${finalFilename}`;
         }
@@ -596,14 +594,14 @@ export class DynamicMediaClient {
             }
             throw error;
         }
-        
+
         // Trigger download using reusable method
         this.downloadFromBlob(blob, finalFilename);
-        
+
         return blob;
     }
 
-    async getAssetRenditions(asset: Asset): Promise<{items?: Rendition[]}> {
+    async getAssetRenditions(asset: Asset): Promise<{ items?: Rendition[] }> {
         try {
             const response = await this.client.request({
                 url: `/adobe/assets/${asset?.assetId}/renditions`,
@@ -619,7 +617,7 @@ export class DynamicMediaClient {
         }
     }
 
-    async getAssetImagePresets(asset: Asset): Promise<{items: Rendition[]}> {
+    async getAssetImagePresets(asset: Asset): Promise<{ items: Rendition[] }> {
         try {
             const response = await this.client.request({
                 url: `/adobe/assets/imagePresets`,
@@ -635,7 +633,7 @@ export class DynamicMediaClient {
         }
     }
 
-    async getImagePresets(): Promise<{items: Rendition[]}> {
+    async getImagePresets(): Promise<{ items: Rendition[] }> {
         try {
             const response = await this.client.request({
                 url: `/adobe/assets/imagePresets`,
@@ -659,7 +657,7 @@ export class DynamicMediaClient {
                     includeRenditions: pair.renditions.map(rendition => rendition.name)
                 }))
             };
-            
+
             const response = await this.client.request({
                 url: `/adobe/assets/archives`,
                 method: 'POST',
@@ -667,15 +665,15 @@ export class DynamicMediaClient {
             });
 
             const archiveId = response.data.id;
-            
+
             // Poll for status until no longer processing
             let archiveStatus: ArchiveStatus | undefined;
             const maxRetries = 60; // Maximum 5 minutes (60 * 5s intervals)
             let retryCount = 0;
-            
+
             do {
                 archiveStatus = await this.getAssetsArchiveStatus(archiveId);
-                
+
                 if (archiveStatus?.data?.status === 'FAILED') {
                     return false;
                 } else if (archiveStatus?.data?.status === 'COMPLETED') {
@@ -685,13 +683,13 @@ export class DynamicMediaClient {
                     });
                     return true;
                 }
-                
+
                 // Wait 5 seconds before next poll
                 await new Promise(resolve => setTimeout(resolve, 5000));
                 retryCount++;
-                
+
             } while (retryCount < maxRetries && archiveStatus?.data?.status === 'PROCESSING');
- 
+
             return false;
         } catch (error) {
             if (axios.isAxiosError(error) && error.response?.status !== 200) {
@@ -727,11 +725,11 @@ export class DynamicMediaClient {
             link.href = href;
             link.download = filename;
             link.style.display = 'none';
-            
+
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             // Call cleanup function if provided
             cleanup?.();
         } catch (error) {
@@ -750,7 +748,7 @@ export class DynamicMediaClient {
             // Extract filename from URL or use default
             const urlParts = url.split('/');
             const filename = urlParts[urlParts.length - 1]?.split('?')[0] || 'archive.zip';
-            
+
             this.triggerDownload(url, filename);
         } catch (error) {
             console.error('Failed to download file from URL:', url, error);
@@ -766,7 +764,7 @@ export class DynamicMediaClient {
         try {
             // Create download URL and trigger download
             downloadUrl = URL.createObjectURL(blob);
-            
+
             this.triggerDownload(downloadUrl, filename, () => {
                 if (downloadUrl) {
                     URL.revokeObjectURL(downloadUrl);
@@ -781,5 +779,5 @@ export class DynamicMediaClient {
         }
     }
 
-    
+
 } 
