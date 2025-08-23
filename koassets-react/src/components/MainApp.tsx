@@ -8,6 +8,7 @@ import type {
     Collection,
     CurrentView,
     LoadingState,
+    Rendition,
     SearchResult,
     SearchResults
 } from '../types';
@@ -18,7 +19,6 @@ import { getBucket } from '../utils/config';
 
 // Components
 import CollectionGallery from './CollectionGallery';
-import { Rendition } from './DownloadRenditions';
 import Facets from './Facets';
 import Footer from './Footer';
 import HeaderBar from './HeaderBar';

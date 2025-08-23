@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import type { AssetDetailsProps } from '../../types';
+import type { AssetDetailsProps, Rendition } from '../../types';
 import { fetchOptimizedDeliveryBlob } from '../../utils/blobCache';
 import { removeHyphenTitleCase } from '../../utils/formatters';
 import ActionButton from '../ActionButton';
 import { BUTTON_CONFIGS } from '../ActionButtonConfigs';
-import DownloadRenditions, { Rendition } from '../DownloadRenditions';
+import DownloadRenditions from '../DownloadRenditions';
 import './AssetDetails.css';
 import AssetDetailsDRM from './AssetDetailsDRM';
 import AssetDetailsGeneralInfo from './AssetDetailsGeneralInfo';

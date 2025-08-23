@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import type { AssetPreviewProps } from '../types';
+import type { AssetPreviewProps, Rendition } from '../types';
 import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
 import { formatCategory, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
 import ActionButton from './ActionButton';
 import { BUTTON_CONFIGS } from './ActionButtonConfigs';
 import './AssetPreview.css';
-import { Rendition } from './DownloadRenditions';
 
 const AssetPreview: React.FC<AssetPreviewProps> = ({
     showModal,

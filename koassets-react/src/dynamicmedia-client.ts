@@ -1,6 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import { Rendition } from './components/DownloadRenditions';
-import { AlgoliaSearchQuery, AlgoliaSearchRequest, Asset } from './types';
+import { AlgoliaSearchQuery, AlgoliaSearchRequest, Asset, Rendition } from './types';
 import { mimeTypeToExtension } from './utils/mimeTypeConverter';
 
 export const ORIGINAL_RENDITION = 'original';
