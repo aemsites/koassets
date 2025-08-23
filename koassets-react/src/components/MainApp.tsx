@@ -335,19 +335,7 @@ function MainApp(): React.JSX.Element {
         }
     }, [accessToken]);
 
-    // Fetch image presets once on app load
-    useEffect(() => {
-        if (dynamicMediaClient && !imagePresets.items) {
-            // Fetch image presets globally (not per asset since they're the same for all)
-            dynamicMediaClient.getImagePresets().then(presets => {
-                setImagePresets(presets);
-            }).catch(error => {
-                console.error('Failed to fetch image presets:', error);
-                setImagePresets({});
-            });
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dynamicMediaClient]);
+
 
     // Function to fetch and cache static renditions for a specific asset
     const fetchAssetRenditions = useCallback(async (asset: Asset): Promise<void> => {
@@ -601,6 +589,7 @@ function MainApp(): React.JSX.Element {
                     imagePresets={imagePresets}
                     assetRenditionsCache={assetRenditionsCache}
                     fetchAssetRenditions={fetchAssetRenditions}
+                    setImagePresets={setImagePresets}
                 />
             ) : (
                 <></>
