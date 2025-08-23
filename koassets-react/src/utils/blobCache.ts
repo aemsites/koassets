@@ -37,7 +37,7 @@ export async function fetchOptimizedDeliveryBlob(
         }
 
         // Fetch optimized delivery blob
-        const blob = await dynamicMediaClient.getOptimizedDeliveryBlob(asset.assetId || '', asset.name || '', width);
+        const blob = await dynamicMediaClient.getOptimizedDeliveryPreviewBlob(asset.assetId || '', asset.name || '', width);
 
         // Cache if requested
         if (options.cache && options.cacheKey) {

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AdobeSignInButtonProps } from '../types';
 import { getAdobeClientId } from '../utils/config';
 
@@ -22,13 +22,13 @@ const AdobeSignInButton: React.FC<AdobeSignInButtonProps> = ({ onAuthenticated, 
     const [error, setError] = useState<string | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
-    // IMS config for implicit flow
-    const imsConfig: IMSConfig = {
+    // IMS config for implicit flow - memoized to prevent unnecessary re-renders
+    const imsConfig: IMSConfig = useMemo(() => ({
         clientId: getAdobeClientId(),
         redirectUri: window.location.href,
         scope: 'AdobeID,openid,read_organizations,additional_info.projectedProductContext',
         responseType: 'token', // Implicit flow - returns token directly
-    };
+    }), []);
 
     // Silent refresh using hidden iframe
     const performSilentRefresh = useCallback(async (): Promise<string | null> => {

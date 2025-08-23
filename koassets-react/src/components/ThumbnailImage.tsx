@@ -29,7 +29,7 @@ const ThumbnailImage: React.FC<ThumbnailImageProps> = ({ item, dynamicMediaClien
                     item,
                     350,
                     {
-                        cache: true,
+                        cache: false,
                         cacheKey: `${item.assetId}-350`,
                         fallbackUrl: item.url
                     }
