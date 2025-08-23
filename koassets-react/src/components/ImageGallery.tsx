@@ -32,7 +32,10 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     onSortDirectionChange,
     onLoadMoreResults,
     hasMorePages = false,
-    isLoadingMore = false
+    isLoadingMore = false,
+    imagePresets = {},
+    assetRenditionsCache = {},
+    fetchAssetRenditions
 }) => {
     // Modal state management for asset preview
     const [selectedCard, setSelectedCard] = useState<Asset | null>(null);
@@ -249,6 +252,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 handleRemoveFromCart={onRemoveFromCart}
                 cartItems={cartItems}
                 dynamicMediaClient={dynamicMediaClient}
+                renditions={selectedCard?.assetId ? assetRenditionsCache[selectedCard.assetId] : undefined}
+                fetchAssetRenditions={fetchAssetRenditions}
             />
 
             {/* Asset Details Modal */}
@@ -260,6 +265,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 handleRemoveFromCart={onRemoveFromCart}
                 cartItems={cartItems}
                 dynamicMediaClient={dynamicMediaClient}
+                imagePresets={imagePresets}
+                renditions={selectedCard?.assetId ? assetRenditionsCache[selectedCard.assetId] : undefined}
+                fetchAssetRenditions={fetchAssetRenditions}
             />
         </div>
     );

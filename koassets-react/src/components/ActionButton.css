@@ -1,3 +1,4 @@
+/* Base button styles - applied to all action buttons */
 .action-button {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -18,26 +19,13 @@
   width: 34px;
   padding: 0;
   background-color: transparent;
-}
-
-.action-button.download {
-  background-image: url('/icons/download-asset.svg');
   background-repeat: no-repeat;
   background-position: center;
   background-size: 16px 16px;
-
-  /* TODO: This is to download asset with preview rendition. 
-  Need to make /rendition API to determine this,
-  causing too many requests. Disabled for now. */
-  display: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.action-button.downloading {
-  background-image: url('/icons/downloading-asset.svg');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 16px 16px;
-}
 
 .action-button:hover {
   background-color: transparent;
@@ -45,10 +33,24 @@
   filter: invert(24%) sepia(94%) saturate(6498%) hue-rotate(356deg) brightness(105%) contrast(97%);
 }
 
+button.action-button:disabled {
+  background-color: #ccc;
+  color: #999;
+  cursor: not-allowed;
+  border: none;
+}
+
+button.action-button:disabled:hover {
+  background-color: #ccc;
+  color: #999;
+  cursor: not-allowed;
+  border: none;
+  filter: none;
+}
+
 /* Tooltip container */
 .action-button-container {
   position: relative;
-  display: inline-block;
 
   /* Ensure tooltip doesn't get clipped by parent containers */
   overflow: visible;
@@ -62,7 +64,7 @@
   color: #fff;
   text-align: center;
   border-radius: 4px;
-  padding: 6px;
+  padding: 8px 12px;
   position: fixed;
   z-index: 99999;
 
@@ -70,10 +72,9 @@
   top: 0;
   right: 0;
 
-  /* Simple width constraints */
-  max-width: 120px;
-  min-width: 80px;
+  /* Fit content width */
   width: max-content;
+  max-width: 200px;
 
   /* Typography and behavior */
   font-size: .6875rem;

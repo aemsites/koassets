@@ -2,6 +2,7 @@ import React from 'react';
 import type { AssetCardProps } from '../types';
 import { formatCategory, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
 import ActionButton from './ActionButton';
+import { BUTTON_CONFIGS } from './ActionButtonConfigs';
 import './AssetCardViewGrid.css';
 import LazyImage from './LazyImage';
 
@@ -150,8 +151,12 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                     </div>
                     <div className="right-buttons-wrapper">
                         <ActionButton
-                            name="download"
+                            config={BUTTON_CONFIGS.download}
+                            hasLoadingState={true}
                             onClick={handleClickDownload}
+                            style={{
+                                display: 'none'
+                            }}
                         />
                     </div>
                 </div>

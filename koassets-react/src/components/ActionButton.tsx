@@ -1,37 +1,48 @@
 import React, { useRef, useState } from 'react';
 import './ActionButton.css';
+import type { ButtonConfig, ButtonState } from './ActionButtonConfigs';
 
 interface ActionButtonProps {
+    disabled?: boolean;
     onClick: () => void | Promise<void>;
-    name?: string;
-    tooltip?: string;
+    config: ButtonConfig;
+    hasLoadingState?: boolean;
+    style?: React.CSSProperties;
 }
 
-const ActionButton: React.FC<ActionButtonProps> = ({ onClick, name, tooltip = '' }) => {
+const ActionButton: React.FC<ActionButtonProps> = ({ disabled, onClick, config, hasLoadingState = false, style }) => {
     const [loading, setLoading] = useState<boolean>(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const tooltipRef = useRef<HTMLSpanElement>(null);
 
-    // Determine the actual background URL to use
-    const getClassName = (): string => {
-        if (name === 'download') {
-            return loading ? "downloading" : "download";
+    // Get current button state based on disabled, loading, or idle status
+    const getCurrentState = (): ButtonState => {
+        if (disabled && config.disabled) {
+            return config.disabled;
         }
-        return "";
+        if (loading && config.downloading) {
+            return config.downloading;
+        }
+        return config.idle;
     };
 
-    const getTooltip = (): string => {
-        if (tooltip) {
-            return tooltip;
+    // Dynamically resolve image path based on current URL context
+    const resolveImagePath = (imagePath: string): string => {
+        const currentUrl = window.location.href;
+        const lastSlashIndex = currentUrl.lastIndexOf('/');
+
+        // If we're in a subdirectory (not at domain root)
+        if (lastSlashIndex > currentUrl.indexOf('://') + 2) {
+            const basePath = currentUrl.substring(0, lastSlashIndex + 1);
+            const cleanImagePath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
+            return `${basePath}${cleanImagePath}`;
         }
-        if (name === 'download') {
-            return 'Download preview';
-        }
-        return "";
+
+        return imagePath;
     };
 
     const handleClick = async () => {
-        if (name === 'download') {
+        if (hasLoadingState) {
             setLoading(true);
             try {
                 await onClick();
@@ -58,26 +69,33 @@ const ActionButton: React.FC<ActionButtonProps> = ({ onClick, name, tooltip = ''
         positionTooltip();
     };
 
+    const currentState = getCurrentState();
 
     return (
         <div
             className="action-button-container"
             ref={containerRef}
             onMouseEnter={handleMouseEnter}
+            style={style}
         >
             <button
-                className={`action-button ${getClassName()}`}
+                disabled={disabled}
+                className={`action-button ${currentState.className}`}
                 onClick={handleClick}
+                style={currentState.backgroundImage ? {
+                    backgroundImage: `url(${resolveImagePath(currentState.backgroundImage)})`
+                } : undefined}
             >
             </button>
-            {getTooltip() && (
+            {currentState.tooltip && (
                 <span
                     className="action-button-tooltip"
                     ref={tooltipRef}
-                >{getTooltip()}</span>
+                >{currentState.tooltip}</span>
             )}
         </div>
     );
 };
 
+export type { ActionButtonProps };
 export default ActionButton;
