@@ -38,6 +38,10 @@
 
   /* nav height */
   --nav-height: 64px;
+
+  /* button color */
+  --primary-color: #ed0000;
+  --primary-color-hover: #d11700;
 }
 
 /* fallback fonts */

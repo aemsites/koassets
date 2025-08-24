@@ -1,7 +1,4 @@
 /* CSS Variables */
-:root {
-  --button-color: #f81c04;
-}
 
 /* Main layout */
 .container {
@@ -38,12 +35,18 @@ button {
   transition: background-color 0.3s;
 }
 
+a.button:any-link,
+button {
+  margin: 0;
+  background-color: transparent;
+}
+
 button:hover {
   background-color: var(--primary-color-hover);
 }
 
 button:active {
-  background-color: #bd1500;
+  background-color: var(--primary-color-active);
 }
 
 button:disabled {
@@ -351,4 +354,26 @@ input[type="checkbox"].tccc-checkbox:checked::after {
 
 input[type="checkbox"].tccc-checkbox:focus {
   outline: none;
+}
+
+a.button:hover,
+a.button:focus,
+button:hover,
+button:focus {
+  background-color: transparent;
+}
+
+button:disabled,
+button:disabled:hover {
+  background-color: transparent;
+}
+
+:is(h1, h2, h3, h4, h5, h6)::after {
+  content: inherit;
+  display: inherit;
+  width: inherit;
+  height: inherit;
+  margin-top: inherit;
+  margin-bottom: inherit;
+  background-color: inherit;
 }

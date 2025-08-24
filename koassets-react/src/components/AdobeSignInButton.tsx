@@ -149,6 +149,8 @@ const AdobeSignInButton: React.FC<AdobeSignInButtonProps> = ({ onAuthenticated, 
 
             const authUrl = `https://ims-na1.adobelogin.com/ims/authorize/v2?${params.toString()}`;
 
+
+
             // Direct redirect to Adobe IMS
             window.location.href = authUrl;
 
@@ -174,14 +176,19 @@ const AdobeSignInButton: React.FC<AdobeSignInButtonProps> = ({ onAuthenticated, 
 
     // On mount, check for token in URL hash or localStorage
     useEffect(() => {
+
+
         // Check for access token in URL hash (from Adobe IMS redirect)
         if (window.location.hash) {
+
             try {
                 const params = new URLSearchParams(window.location.hash.substring(1));
                 const accessToken = params.get('access_token');
                 const expiresIn = params.get('expires_in');
                 const error = params.get('error');
                 const errorDescription = params.get('error_description');
+
+
 
                 if (error) {
                     setError(`OAuth error: ${error} - ${errorDescription || 'No description'}`);
@@ -224,6 +231,72 @@ const AdobeSignInButton: React.FC<AdobeSignInButtonProps> = ({ onAuthenticated, 
             }
         }
 
+        // WORKAROUND: Check if access_token appears in pathname instead of hash
+        // This handles cases where the OAuth redirect incorrectly puts tokens in the path
+        if (window.location.pathname.includes('access_token')) {
+            try {
+                // Extract the token part from the pathname (everything after the first 'access_token=')
+                const pathString = window.location.pathname;
+                const tokenStartIndex = pathString.indexOf('access_token=');
+
+                if (tokenStartIndex !== -1) {
+                    // Get everything from 'access_token=' onwards
+                    const tokenString = pathString.substring(tokenStartIndex);
+
+
+                    const params = new URLSearchParams(tokenString);
+                    const accessToken = params.get('access_token');
+                    const expiresIn = params.get('expires_in');
+                    const error = params.get('error');
+                    const errorDescription = params.get('error_description');
+
+
+
+                    if (error) {
+                        setError(`OAuth error: ${error} - ${errorDescription || 'No description'}`);
+                        setLoading(false);
+                        return;
+                    }
+
+                    if (accessToken) {
+                        const token = `Bearer ${accessToken}`;
+
+                        setIsAuthenticated(true);
+                        localStorage.setItem('accessToken', token);
+
+                        // Handle token expiration
+                        if (expiresIn) {
+                            const expiresAt = Date.now() + (parseInt(expiresIn) * 1000);
+                            localStorage.setItem('tokenExpiresAt', expiresAt.toString());
+                        } else {
+                            // Default 1 hour expiration if not provided
+                            const expiresAt = Date.now() + (60 * 60 * 1000);
+                            localStorage.setItem('tokenExpiresAt', expiresAt.toString());
+                        }
+
+                        if (onAuthenticated) {
+                            onAuthenticated(token);
+                        }
+
+                        // Clean up URL by redirecting to clean path
+                        // Since pathname is '/access_token=...', we want to remove everything from '/access_token' onwards
+                        const cleanPath = tokenStartIndex === 1 ? '/' : window.location.pathname.substring(0, tokenStartIndex - 1);
+                        const cleanUrl = `${window.location.origin}${cleanPath}${window.location.search}`;
+                        window.history.replaceState({}, document.title, cleanUrl);
+
+                        // Setup auto-refresh
+                        setupTokenRefresh();
+                        setLoading(false);
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.error('Error parsing access_token from pathname:', error);
+                setError('Error parsing authentication response from URL');
+                setLoading(false);
+            }
+        }
+
         // Check for existing token in localStorage
         const checkExistingToken = async () => {
             const storedToken = localStorage.getItem('accessToken');
@@ -231,7 +304,6 @@ const AdobeSignInButton: React.FC<AdobeSignInButtonProps> = ({ onAuthenticated, 
 
             if (storedToken && storedExpiresAt) {
                 if (isTokenExpired()) {
-                    console.log('⚠️ Stored token expired, attempting silent refresh...');
                     const refreshedToken = await performSilentRefresh();
 
                     if (refreshedToken) {

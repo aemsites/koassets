@@ -611,14 +611,16 @@ function MainApp(): React.JSX.Element {
                 handleSignOut={handleSignOut}
                 dynamicMediaClient={dynamicMediaClient}
             />
-            <SearchBar
-                query={query}
-                setQuery={setQuery}
-                sendQuery={search}
-                selectedQueryType={selectedQueryType}
-                setSelectedQueryType={handleSetSelectedQueryType}
-                inputRef={searchBarRef}
-            />
+            {/* TODO: Update this once finalized */}
+            {window.location.pathname !== '/assets-search/' && (
+                <SearchBar
+                    query={query}
+                    setQuery={setQuery}
+                    sendQuery={search}
+                    selectedQueryType={selectedQueryType}
+                    setSelectedQueryType={handleSetSelectedQueryType}
+                    inputRef={searchBarRef}
+                />)}
             <div className="main-content">
                 <div className="images-container">
                     <div className="images-content-wrapper">

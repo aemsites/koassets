@@ -63,10 +63,14 @@
   justify-content: space-between;
   padding: 5px 20px;
   box-sizing: border-box;
+  margin: 0;
+  background-color: transparent;
 }
 
-.facet-filter-button:hover {
+.facet-filter-button:hover,
+.facet-filter-button:focus {
   background: none;
+  background-color: transparent;
 }
 
 .facet-filter-arrow {

@@ -27,10 +27,25 @@ if (!rootElement) {
     throw new Error('Root element not found');
 }
 
+// Detect if we're running in block integration context
+const isBlockIntegration = rootElement.classList.contains('koassets-search-root') ||
+    !window.location.pathname.startsWith('/tools/assets-browser');
+
+// Choose the appropriate router based on context
+const AppWithRouter = isBlockIntegration ? (
+    // For block integration: BrowserRouter without basename to work with any URL
+    <BrowserRouter>
+        <App />
+    </BrowserRouter>
+) : (
+    // For standalone app: BrowserRouter with basename
+    <BrowserRouter basename="/tools/assets-browser">
+        <App />
+    </BrowserRouter>
+);
+
 createRoot(rootElement).render(
     <StrictMode>
-        <BrowserRouter basename="/tools/assets-browser">
-            <App />
-        </BrowserRouter>
+        {AppWithRouter}
     </StrictMode>
 ); 

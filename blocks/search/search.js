@@ -17,17 +17,12 @@ export default function decorate(block) {
   queryDropdown.className = 'query-dropdown';
 
   const select = document.createElement('select');
-  select.className = 'query-type-select';
-  // You will need to set the value and handle change events as needed
+  // Match React SearchBar - only show Assets option
   const optionAssets = document.createElement('option');
   optionAssets.value = QUERY_TYPES.ASSETS;
   optionAssets.textContent = QUERY_TYPES.ASSETS;
 
-  const optionCollections = document.createElement('option');
-  optionCollections.value = QUERY_TYPES.COLLECTIONS;
-  optionCollections.textContent = QUERY_TYPES.COLLECTIONS;
-
-  select.append(optionAssets, optionCollections);
+  select.append(optionAssets);
   queryDropdown.append(select);
 
   // Input wrapper
@@ -68,15 +63,16 @@ export default function decorate(block) {
   input.type = 'text';
   input.className = 'query-input';
   input.placeholder = 'What are you looking for?';
-  // Set value, event listeners, and autofocus as needed
+  input.autofocus = true;
 
   queryInputWrapper.append(querySearchIcon, input);
 
   const performSearch = () => {
     const query = input.value;
     const selectedQueryType = select.value;
-    const url = `/tools/assets-browser/index.html?query=${query}&selectedQueryType=${selectedQueryType}`;
-    window.location.href = url; // Open URL in the same tab
+    // Redirect to assets browser with search parameters
+    // window.location.href = `/tools/assets-browser/index.html?query=${encodeURIComponent(query)}&selectedQueryType=${encodeURIComponent(selectedQueryType)}`;
+    window.location.href = `/assets-search/?query=${encodeURIComponent(query)}&selectedQueryType=${encodeURIComponent(selectedQueryType)}`; // TODO: Update this once finalized
   }
 
   // Search button
@@ -86,9 +82,11 @@ export default function decorate(block) {
   searchBtn.textContent = 'Search';
   // Add event listener to log input and selected option
   searchBtn.addEventListener('click', performSearch);
-  // Add event listener to input for Enter key
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') performSearch(); // Perform search on Enter key
+  // Add event listeners to match React SearchBar behavior
+  input.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      performSearch();
+    }
   });
 
   // Assemble everything
