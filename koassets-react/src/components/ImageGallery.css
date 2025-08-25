@@ -40,18 +40,77 @@
 
 .gallery-title {
   background-color: rgba(106, 201, 206, .102);
-  border-bottom: 1px solid #ddd;
   padding: 16px 16px 16px 0;
   margin: 32px 16px 0px 0;
   border-radius: .5rem;
   height: 30px;
   display: flex;
   align-items: center;
-  justify-content: left;
+  justify-content: space-between;
+}
+
+.gallery-title.expanded {
+  border-radius: .5rem .5rem 0 0;
 }
 
 .gallery-title h3 {
   padding: 16px;
+}
+
+.gallery-title-toggle {
+  width: 20px;
+  height: 20px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  padding: 0;
+}
+
+.gallery-title-toggle.collapsed {
+  background: url("/icons/Arrow_Down.svg");
+}
+
+.gallery-title-toggle.expanded {
+  background: url("/icons/Arrow_up.svg");
+}
+
+.gallery-title-toggle:hover {
+  opacity: 0.7;
+}
+
+.gallery-title-expanded {
+  background-color: rgba(106, 201, 206, .102);
+  border-top: none;
+  border-radius: 0 0 .5rem .5rem;
+  padding: 16px;
+  margin: 0 16px 0 0;
+  margin-top: -1px;
+  animation: expandDown 0.3s ease-out;
+}
+
+.gallery-title-expanded p {
+  margin: 0;
+  color: #333;
+  font-size: 14px;
+}
+
+@keyframes expandDown {
+  from {
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  to {
+    max-height: 100px;
+    opacity: 1;
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
 }
 
 .image-grid-wrapper {

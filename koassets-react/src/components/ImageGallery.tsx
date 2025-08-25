@@ -49,6 +49,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     const [showFullDetails, setShowFullDetails] = useState<boolean>(true);
     // View type state (grid or list)
     const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
+    // Title expansion state
+    const [isTitleExpanded, setIsTitleExpanded] = useState<boolean>(false);
 
     const displayedCount = images.length;
     const selectedCount = selectedCards.size;
@@ -148,14 +150,28 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         console.log('Bulk add to collection:', Array.from(selectedCards));
     };
 
+    // Handle title expansion toggle
+    const handleTitleToggle = () => {
+        setIsTitleExpanded(!isTitleExpanded);
+    };
+
     // Calculate statistics
     const totalCount = searchResult && searchResult.nbHits ? searchResult.nbHits.toString() : '0';
 
     return (
         <div className="image-gallery">
-            <div className="gallery-title">
+            <div className={`gallery-title ${isTitleExpanded ? 'expanded' : ''}`}>
                 <h3>{title}</h3>
+                <button
+                    className={`gallery-title-toggle ${isTitleExpanded ? 'expanded' : 'collapsed'}`}
+                    onClick={handleTitleToggle}
+                />
             </div>
+            {isTitleExpanded && (
+                <div className="gallery-title-expanded">
+                    <p>abc</p>
+                </div>
+            )}
 
             {/* Search Panels */}
             <SearchPanel

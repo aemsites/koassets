@@ -6,6 +6,15 @@
     min-height: 90px;
 }
 
+/* Force search elements behind cart overlay */
+body:has(.cart-panel-overlay) .query-input-container,
+body:has(.cart-panel-overlay) .query-input-bar,
+body:has(.cart-panel-overlay) .query-input-wrapper,
+body:has(.cart-panel-overlay) .query-search-btn {
+    position: relative;
+    z-index: -1 !important;
+}
+
 .query-dropdown,
 .query-input-wrapper,
 .query-search-btn {
@@ -43,6 +52,7 @@
     flex: 1;
     display: flex;
     align-items: center;
+    z-index: 1;
 }
 
 .query-input-bar {
@@ -63,7 +73,6 @@
     top: 20%;
     color: #888;
     pointer-events: none;
-    z-index: 1;
 }
 
 .query-input {
@@ -104,7 +113,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1;
+    position: relative;
+    z-index: 2;
+}
+
+.query-search-btn:focus,
+.query-search-btn:active,
+.query-search-btn:hover {
+    background-color: var(--primary-color-hover);
 }
 
 @media (max-width: 600px) {

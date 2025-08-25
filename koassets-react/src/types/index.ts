@@ -332,13 +332,11 @@ export interface ImageGalleryProps {
 
 // Main App types (for the most complex component)
 export interface MainAppState {
-    // TODO: Define comprehensive state interface
     images: Asset[];
     collections: Collection[];
     cartItems: CartItem[];
     loading: boolean;
     selectedFacets: string[][];
-    // ... many more state properties
 }
 
 // Adobe Sign In types

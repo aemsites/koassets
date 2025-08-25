@@ -59,5 +59,6 @@ code {
 :root {
   --primary-color: #ed0000;
   --primary-color-hover: #d11700;
+  --primary-color-active: #bd1500;
   --secondary-color: #1e1e1e;
 }

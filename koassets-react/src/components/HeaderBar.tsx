@@ -25,7 +25,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
         <div className="app-header">
             <img
                 className="app-logo"
-                src="ko-assets-logo.png"
+                src={`${import.meta.env.BASE_URL}ko-assets-logo.png`}
                 alt="KO Assets Logo"
                 onClick={handleLogoClick}
             />
