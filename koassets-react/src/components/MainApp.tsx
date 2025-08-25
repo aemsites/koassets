@@ -19,7 +19,6 @@ import { getBucket } from '../utils/config';
 
 // Components
 import Facets from './Facets';
-import Footer from './Footer';
 import HeaderBar from './HeaderBar';
 import ImageGallery from './ImageGallery';
 import SearchBar from './SearchBar';
@@ -596,7 +595,7 @@ function MainApp(): React.JSX.Element {
                                 />
                             </div>
                         </div>
-                        <Footer />
+                        {/* <Footer /> */}
                     </div>
                 </div>
             </div>

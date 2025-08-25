@@ -71,8 +71,8 @@ export default function decorate(block) {
     const query = input.value;
     const selectedQueryType = select.value;
     // Redirect to assets browser with search parameters
-    // window.location.href = `/tools/assets-browser/index.html?query=${encodeURIComponent(query)}&selectedQueryType=${encodeURIComponent(selectedQueryType)}`;
-    window.location.href = `/assets-search/?query=${encodeURIComponent(query)}&selectedQueryType=${encodeURIComponent(selectedQueryType)}`; // TODO: Update this once finalized
+    window.location.href = `/tools/assets-browser/index.html?query=${encodeURIComponent(query)}&selectedQueryType=${encodeURIComponent(selectedQueryType)}`;
+    // window.location.href = `/assets-search/?query=${encodeURIComponent(query)}&selectedQueryType=${encodeURIComponent(selectedQueryType)}`; // TODO: Update this once finalized
   }
 
   // Search button

@@ -58,7 +58,6 @@
   flex: 1;
   display: flex;
   align-items: center;
-  z-index: 1;
 }
 
 .query-input-bar {
@@ -120,7 +119,6 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  z-index: 2;
 }
 
 @media (max-width: 600px) {

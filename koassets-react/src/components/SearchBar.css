@@ -6,15 +6,6 @@
     min-height: 90px;
 }
 
-/* Force search elements behind cart overlay */
-body:has(.cart-panel-overlay) .query-input-container,
-body:has(.cart-panel-overlay) .query-input-bar,
-body:has(.cart-panel-overlay) .query-input-wrapper,
-body:has(.cart-panel-overlay) .query-search-btn {
-    position: relative;
-    z-index: -1 !important;
-}
-
 .query-dropdown,
 .query-input-wrapper,
 .query-search-btn {
@@ -52,7 +43,6 @@ body:has(.cart-panel-overlay) .query-search-btn {
     flex: 1;
     display: flex;
     align-items: center;
-    z-index: 1;
 }
 
 .query-input-bar {
@@ -114,7 +104,6 @@ body:has(.cart-panel-overlay) .query-search-btn {
     align-items: center;
     justify-content: center;
     position: relative;
-    z-index: 2;
 }
 
 .query-search-btn:focus,
