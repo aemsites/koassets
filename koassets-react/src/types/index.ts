@@ -204,12 +204,7 @@ export interface Collection {
     collectionMetadata: CollectionMetadata;
 }
 
-export interface CollectionGalleryProps {
-    title: string;
-    collections: Collection[];
-    loading: boolean;
-    onSelectCollection?: (collection: Collection) => void;
-}
+
 
 // Cart Panel types
 export interface CartPanelProps {

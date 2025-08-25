@@ -17,7 +17,6 @@ import { fetchOptimizedDeliveryBlob, removeBlobFromCache } from '../utils/blobCa
 import { getBucket } from '../utils/config';
 
 // Components
-import CollectionGallery from './CollectionGallery';
 import Facets from './Facets';
 import Footer from './Footer';
 import HeaderBar from './HeaderBar';
@@ -25,7 +24,6 @@ import ImageGallery from './ImageGallery';
 import SearchBar from './SearchBar';
 
 const searchAssetsTitle = 'Search Assets - where you can discover the company\'s latest and greatest content!';
-const searchCollectionsTitle = 'My Collections';
 const HITS_PER_PAGE = 24;
 
 /**
@@ -73,7 +71,7 @@ function MainApp(): React.JSX.Element {
     const [dynamicMediaClient, setDynamicMediaClient] = useState<DynamicMediaClient | null>(null);
     const [query, setQuery] = useState<string>('');
     const [dmImages, setDmImages] = useState<Asset[]>([]);
-    const [collections, setCollections] = useState<Collection[]>([]);
+
     const [searchResults, setSearchResults] = useState<SearchResults['results'] | null>(null);
     const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
     const [loading, setLoading] = useState<LoadingState>({ [LOADING.dmImages]: false, [LOADING.collections]: false });
@@ -202,25 +200,7 @@ function MainApp(): React.JSX.Element {
         setIsLoadingMore(false);
     }, []);
 
-    // Process and display collections
-    const processCollections = useCallback(async (content: { results?: Array<{ hits?: Array<{ objectID: string; collectionMetadata?: unknown; thumbnail?: string }> }> }): Promise<void> => {
-        setCollections([]);
-        try {
-            if (content.results && content.results[0]?.hits) {
-                const processedCollections: Collection[] = content.results[0].hits.map((hit) => ({
-                    collectionId: hit.objectID as string,
-                    collectionMetadata: (hit.collectionMetadata as Collection['collectionMetadata']) || { title: '', description: '' },
-                    thumbnail: hit.thumbnail as string,
-                }));
-                setCollections(processedCollections);
-            } else {
-                console.log('No collections in response');
-            }
-        } catch (error) {
-            console.error('Error processing collections:', error);
-        }
-        setLoading(prev => ({ ...prev, [LOADING.collections]: false }));
-    }, []);
+
 
     // Search assets (images, videos, etc.)
     const performSearchImages = useCallback((query: string, page: number = 0): void => {
@@ -254,28 +234,9 @@ function MainApp(): React.JSX.Element {
     }, [dynamicMediaClient, processDMImages, selectedCollection, selectedFacetFilters, selectedNumericFilters, excFacets]);
 
 
-    // Search collections
-    const performSearchCollections = useCallback((query: string): void => {
-        if (!dynamicMediaClient) return;
-        setLoading(prev => ({ ...prev, [LOADING.collections]: true }));
-        setCurrentView(CURRENT_VIEW.collections);
 
-        dynamicMediaClient.searchCollections(query.trim(), {
-            hitsPerPage: HITS_PER_PAGE
-        }).then(processCollections);
 
-        setQuery('');
-    }, [dynamicMediaClient, processCollections]);
 
-    // Select a collection and load all assets in the collection (no query & no facet filters)
-    const handleSelectCollection = useCallback((collection: Collection): void => {
-        setSelectedCollection(collection);
-        setSelectedFacetFilters([]);
-        setCurrentPage(0);
-        setQuery('');
-        handleSetSelectedQueryType(QUERY_TYPES.ASSETS);
-        // performSearchImages will be triggered by useEffect when selectedCollection changes
-    }, [handleSetSelectedQueryType]);
 
     // Handler for loading more results (pagination)
     const handleLoadMoreResults = useCallback((): void => {
@@ -289,14 +250,9 @@ function MainApp(): React.JSX.Element {
     // Handler for searching
     const search = useCallback((): void => {
         setCurrentPage(0);
-        if (selectedQueryType === QUERY_TYPES.COLLECTIONS) {
-            // Search for collections
-            performSearchCollections(query);
-        } else {
-            // Search for assets or assets in a collection
-            performSearchImages(query, 0);
-        }
-    }, [selectedQueryType, performSearchCollections, performSearchImages, query]);
+        // Search for assets or assets in a collection
+        performSearchImages(query, 0);
+    }, [performSearchImages, query]);
 
     // Read query and selectedQueryType from URL on mount
     useEffect(() => {
@@ -553,14 +509,7 @@ function MainApp(): React.JSX.Element {
     // Gallery logic
     const enhancedGallery = (
         <>
-            {currentView === CURRENT_VIEW.collections ? (
-                <CollectionGallery
-                    title={searchCollectionsTitle}
-                    collections={collections}
-                    loading={loading[LOADING.collections]}
-                    onSelectCollection={handleSelectCollection}
-                />
-            ) : currentView === CURRENT_VIEW.images ? (
+            {currentView === CURRENT_VIEW.images ? (
                 <ImageGallery
                     title={selectedCollection ? `${selectedCollection.collectionMetadata?.title} Collection` : searchAssetsTitle}
                     images={dmImages}
