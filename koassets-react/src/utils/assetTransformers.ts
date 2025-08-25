@@ -87,7 +87,7 @@ function extractFromTcccValues(hit: Record<string, unknown>, key: string): strin
 }
 
 // Extract last tokens from xcm keywords object: uses _tagIDs strings, splitting by '/' or ':' and joining with commas
-function extractFromTcccTagIDs(hit: Record<string, unknown>, key: string): string {
+function extractFromTcccTagIDs(hit: Record<string, unknown>, key: string, fallback: string = 'N/A'): string {
     const raw = (hit as Record<string, unknown>)[key] as unknown;
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
         const tagIds = (raw as Record<string, unknown>)['_tagIDs'] as unknown;
@@ -101,9 +101,9 @@ function extractFromTcccTagIDs(hit: Record<string, unknown>, key: string): strin
                 });
             return tokens.join(', ');
         }
-        return 'N/A';
+        return fallback;
     }
-    return 'N/A';
+    return fallback;
 }
 
 /**
@@ -283,7 +283,7 @@ export function populateAssetFromHit(hit: Record<string, unknown>): Asset {
         url: '', // Loaded lazily
         usage: safeStringField(hit, 'tccc-usage'), //TODO: missing metadata
         workfrontId: safeStringField(hit, 'tccc-workfrontID'),
-        xcmKeywords: extractFromTcccTagIDs(hit, 'xcm-keywords'),
+        xcmKeywords: extractFromTcccTagIDs(hit, 'xcm-keywords', ''),
         ...hit
     } satisfies Asset;
 }
