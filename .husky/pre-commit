@@ -1,5 +1,29 @@
 #!/usr/bin/env sh
 
-cd koassets-react && npm run build-and-copy:koassets-react
+# check we don't add internal artifactory dependencies to the repo
+if grep "artifactory" package-lock.json; then
+  echo
+  echo "Error: Adobe internal Artifactory detected in package-lock.json ^^^^"
+  echo "       Please use public npm as your main registry (https://registry.npmjs.org/)"
+  echo "       and avoid adding Adobe internal dependencies to the repo."
+  exit 1
+fi
+if grep "artifactory" koassets-react/package-lock.json | grep -v "@identity/imslib"; then
+  # imslib is currently the only internal dependency that we allow in the repo
+  echo
+  echo "Error: Adobe internal Artifactory detected in koassets-react/package-lock.json ^^^^"
+  echo "       Please use public npm as your main registry (https://registry.npmjs.org/)"
+  echo "       and avoid adding Adobe internal dependencies to the repo."
+  exit 1
+fi
+if grep "artifactory" cloudflare/package-lock.json; then
+  echo
+  echo "Error: Adobe internal Artifactory detected in cloudflare/package-lock.json ^^^^"
+  echo "       Please use public npm as your main registry (https://registry.npmjs.org/)"
+  echo "       and avoid adding Adobe internal dependencies to the repo."
+  exit 1
+fi
 
-git add ../tools/assets-browser/ 
+# react build and add output (if changed) to git commit
+cd koassets-react && npm run build-and-copy:koassets-react
+git add ../tools/assets-browser/
