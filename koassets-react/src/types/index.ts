@@ -283,9 +283,14 @@ export interface SearchHits {
     [key: string]: unknown;
 }
 
+// External Parameters interface
+export interface ExternalParams {
+    accordionTitle?: string;
+    accordionContent?: string;
+}
+
 // Image Gallery types
 export interface ImageGalleryProps {
-    title: string;
     images: Asset[];
     loading: boolean;
     onAddToCart?: (image: Asset) => void;
@@ -309,6 +314,7 @@ export interface ImageGalleryProps {
     onLoadMoreResults?: () => void;
     hasMorePages?: boolean;
     isLoadingMore?: boolean;
+    externalParams?: ExternalParams;
     imagePresets?: {
         assetId?: string;
         items?: Rendition[];

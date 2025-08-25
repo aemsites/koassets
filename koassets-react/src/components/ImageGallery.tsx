@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { DEFAULT_ACCORDION_CONFIG } from '../constants/accordion';
 import type { Asset, ImageGalleryProps } from '../types';
 import AssetCardViewGrid from './AssetCardViewGrid';
 import AssetCardViewList from './AssetCardViewList';
@@ -9,7 +10,6 @@ import SearchPanel from './SearchPanel';
 
 // Display list of images
 const ImageGallery: React.FC<ImageGalleryProps> = ({
-    title,
     images,
     loading,
     onAddToCart,
@@ -36,8 +36,13 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     imagePresets = {},
     assetRenditionsCache = {},
     fetchAssetRenditions,
-    setImagePresets
-}) => {
+    setImagePresets,
+    externalParams
+}: ImageGalleryProps) => {
+    // Extract accordion parameters from external params with fallbacks
+    const accordionTitle = externalParams?.accordionTitle || DEFAULT_ACCORDION_CONFIG.accordionTitle;
+    const accordionContent = externalParams?.accordionContent || DEFAULT_ACCORDION_CONFIG.accordionContent;
+
     // Modal state management for asset preview
     const [selectedCard, setSelectedCard] = useState<Asset | null>(null);
     const [showPreviewModal, setShowPreviewModal] = useState<boolean>(false);
@@ -161,16 +166,20 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     return (
         <div className="image-gallery">
             <div className={`gallery-title ${isTitleExpanded ? 'expanded' : ''}`}>
-                <h3>{title}</h3>
+                <div className="gallery-title-content">
+                    <div className="gallery-title-icon" aria-label="Info"></div>
+                    <h3>{accordionTitle}</h3>
+                </div>
                 <button
                     className={`gallery-title-toggle ${isTitleExpanded ? 'expanded' : 'collapsed'}`}
                     onClick={handleTitleToggle}
                 />
             </div>
             {isTitleExpanded && (
-                <div className="gallery-title-expanded">
-                    <p>abc</p>
-                </div>
+                <div
+                    className="gallery-title-expanded"
+                    dangerouslySetInnerHTML={{ __html: accordionContent }}
+                />
             )}
 
             {/* Search Panels */}

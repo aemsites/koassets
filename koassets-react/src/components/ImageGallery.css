@@ -53,8 +53,29 @@
   border-radius: .5rem .5rem 0 0;
 }
 
-.gallery-title h3 {
+.gallery-title-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 16px;
+}
+
+.gallery-title-icon {
+  width: 18px;
+  height: 20px;
+  flex-shrink: 0;
+  background-image: url('/icons/info.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center center;
+}
+
+.gallery-title h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #1e1e1e;
+  font-family: "TCCC UnityHeadline", "Helvetica Neue", Arial, Helvetica, sans-serif;
+  line-height: 1.4285em;
 }
 
 .gallery-title-toggle {
@@ -62,19 +83,21 @@
   height: 20px;
   border: none;
   cursor: pointer;
-  transition: all 0.3s ease;
-  background-size: contain;
+  transition: none;
   background-repeat: no-repeat;
-  background-position: center;
+  background-position: center center;
   padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .gallery-title-toggle.collapsed {
-  background: url("/icons/Arrow_Down.svg");
+  background-image: url("/icons/Arrow_Down.svg");
 }
 
 .gallery-title-toggle.expanded {
-  background: url("/icons/Arrow_up.svg");
+  background-image: url("/icons/Arrow_up.svg");
 }
 
 .gallery-title-toggle:hover {
@@ -86,13 +109,53 @@
   border-radius: 0 0 .5rem .5rem;
   padding: 16px;
   margin: 0 16px 0 0;
-  animation: expandDown 0.3s ease-out;
+  animation: expandDown 0s ease-out;
+}
+
+/* Common typography for all gallery-title-expanded content */
+.gallery-title-expanded p,
+.gallery-title-expanded li,
+.gallery-title-expanded b,
+.gallery-title-expanded a {
+  font-size: 16px;
+  color: #1e1e1e;
+  font-family: "TCCC UnityHeadline", "Helvetica Neue", Arial, Helvetica, sans-serif;
+  line-height: 1.4285em;
 }
 
 .gallery-title-expanded p {
+  margin: 0 0 8px;
+}
+
+.gallery-title-expanded li p {
   margin: 0;
-  color: #333;
-  font-size: 14px;
+}
+
+.gallery-title-expanded p:last-child {
+  margin-bottom: 0;
+}
+
+.gallery-title-expanded b {
+  font-weight: 600;
+}
+
+.gallery-title-expanded ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.gallery-title-expanded li {
+  margin: 4px 0;
+}
+
+.gallery-title-expanded a {
+  color: #ed0000;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.gallery-title-expanded a:hover {
+  text-decoration: underline;
 }
 
 @keyframes expandDown {

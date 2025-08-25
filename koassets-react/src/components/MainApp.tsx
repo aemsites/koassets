@@ -6,6 +6,7 @@ import type {
     CartItem,
     Collection,
     CurrentView,
+    ExternalParams,
     LoadingState,
     Rendition,
     SearchResult,
@@ -23,7 +24,6 @@ import HeaderBar from './HeaderBar';
 import ImageGallery from './ImageGallery';
 import SearchBar from './SearchBar';
 
-const searchAssetsTitle = 'Search Assets - where you can discover the company\'s latest and greatest content!';
 const HITS_PER_PAGE = 24;
 
 /**
@@ -53,6 +53,17 @@ function transformExcFacetsToHierarchyArray(excFacets: Record<string, unknown>):
 }
 
 function MainApp(): React.JSX.Element {
+    // External parameters from plain JavaScript
+    const [externalParams] = useState<ExternalParams>(() => {
+        try {
+            const params = (window as { KOAssetsConfig?: { externalParams?: ExternalParams } }).KOAssetsConfig?.externalParams || {};
+            console.log('External parameters received:', params);
+            return params;
+        } catch {
+            return {};
+        }
+    });
+
     // Local state
     const [accessToken, setAccessToken] = useState<string>(() => {
         try {
@@ -232,11 +243,6 @@ function MainApp(): React.JSX.Element {
         });
 
     }, [dynamicMediaClient, processDMImages, selectedCollection, selectedFacetFilters, selectedNumericFilters, excFacets]);
-
-
-
-
-
 
     // Handler for loading more results (pagination)
     const handleLoadMoreResults = useCallback((): void => {
@@ -511,7 +517,6 @@ function MainApp(): React.JSX.Element {
         <>
             {currentView === CURRENT_VIEW.images ? (
                 <ImageGallery
-                    title={selectedCollection ? `${selectedCollection.collectionMetadata?.title} Collection` : searchAssetsTitle}
                     images={dmImages}
                     loading={loading[LOADING.dmImages]}
                     onAddToCart={handleAddToCart}
@@ -539,6 +544,7 @@ function MainApp(): React.JSX.Element {
                     assetRenditionsCache={assetRenditionsCache}
                     fetchAssetRenditions={fetchAssetRenditions}
                     setImagePresets={setImagePresets}
+                    externalParams={externalParams}
                 />
             ) : (
                 <></>
