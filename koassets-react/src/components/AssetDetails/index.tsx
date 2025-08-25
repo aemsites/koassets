@@ -222,8 +222,12 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                         <div className="asset-details-main-info-section-inner">
                             <div className="asset-details-main-header">
                                 <div className="asset-details-main-tags">
-                                    {selectedImage?.campaignName as string && (
-                                        <span className="asset-details-main-tag tccc-tag">{removeHyphenTitleCase(selectedImage?.campaignName as string)}</span>
+                                    {selectedImage?.xcmKeywords && (
+                                        selectedImage.xcmKeywords.split(',').map((keyword, index) => (
+                                            <span key={index} className="asset-details-main-tag tccc-tag">
+                                                {removeHyphenTitleCase(keyword.trim())}
+                                            </span>
+                                        ))
                                     )}
                                 </div>
                                 <h2 className="asset-details-main-title">
