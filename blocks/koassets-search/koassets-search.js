@@ -37,6 +37,13 @@ export default function decorate(block) {
 
 function loadReactApp(rootElement, loadingElement) {
     try {
+        // Configure external parameters for block integration
+        window.KOAssetsConfig = window.KOAssetsConfig || {};
+        window.KOAssetsConfig.externalParams = {
+            isBlockIntegration: true,
+            ...(window.KOAssetsConfig.externalParams || {})
+        };
+
         // Check if we already have the built assets
         const basePath = '/tools/assets-browser';
 

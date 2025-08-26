@@ -21,15 +21,19 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './index.css';
+import { getExternalParams } from './utils/config';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
     throw new Error('Root element not found');
 }
 
-// Detect if we're running in block integration context
-const isBlockIntegration = rootElement.classList.contains('koassets-search-root') ||
-    !window.location.pathname.startsWith('/tools/assets-browser');
+// Get external parameters using utility function
+const externalParams = getExternalParams();
+
+// Get isBlockIntegration from externalParams with fallback to false
+const isBlockIntegration = externalParams.isBlockIntegration || false;
+console.log('isBlockIntegration', isBlockIntegration);
 
 // Choose the appropriate router based on context
 const AppWithRouter = isBlockIntegration ? (

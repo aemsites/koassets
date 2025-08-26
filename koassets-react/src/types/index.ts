@@ -230,6 +230,7 @@ export interface HeaderBarProps {
     handleAuthenticated: (userData: string) => void;
     handleSignOut: () => void;
     dynamicMediaClient?: DynamicMediaClient | null;
+    isBlockIntegration?: boolean;
 }
 
 // Asset Preview types  
@@ -270,7 +271,7 @@ export interface FacetsProps {
     selectedFacetFilters?: string[][];
     setSelectedFacetFilters: (facetFilters: string[][]) => void;
     search: () => void;
-    excFacets?: Record<string, unknown>;
+    excFacets?: ExcFacets;
     selectedNumericFilters?: string[];
     setSelectedNumericFilters: (filters: string[]) => void;
 }
@@ -283,10 +284,14 @@ export interface SearchHits {
     [key: string]: unknown;
 }
 
+import type { ExcFacets } from '../constants/facets';
+
 // External Parameters interface
 export interface ExternalParams {
     accordionTitle?: string;
     accordionContent?: string;
+    excFacets?: ExcFacets;
+    isBlockIntegration?: boolean;
 }
 
 // Image Gallery types

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import '../MainApp.css';
+import { DEFAULT_FACETS, type ExcFacets } from '../constants/facets';
 import { DynamicMediaClient } from '../dynamicmedia-client';
 import type {
     Asset,
@@ -15,7 +16,7 @@ import type {
 import { CURRENT_VIEW, LOADING, QUERY_TYPES } from '../types';
 import { populateAssetFromHit } from '../utils/assetTransformers';
 import { fetchOptimizedDeliveryBlob, removeBlobFromCache } from '../utils/blobCache';
-import { getBucket } from '../utils/config';
+import { getBucket, getExternalParams } from '../utils/config';
 
 // Components
 import Facets from './Facets';
@@ -30,13 +31,11 @@ const HITS_PER_PAGE = 24;
  * @param excFacets - The facets object from EXC
  * @returns Array of facet keys for search
  */
-function transformExcFacetsToHierarchyArray(excFacets: Record<string, unknown>): string[] {
+function transformExcFacetsToHierarchyArray(excFacets: ExcFacets): string[] {
     const facetKeys: string[] = [];
 
-    Object.entries(excFacets).forEach(([key, value]) => {
-        const facetValue = value as { type?: string };
-
-        if (facetValue?.type !== 'tags') {
+    Object.entries(excFacets).forEach(([key, facet]) => {
+        if (facet.type !== 'tags') {
             // For non-tags types, append the entry key
             facetKeys.push(key);
         } else {
@@ -54,13 +53,9 @@ function transformExcFacetsToHierarchyArray(excFacets: Record<string, unknown>):
 function MainApp(): React.JSX.Element {
     // External parameters from plain JavaScript
     const [externalParams] = useState<ExternalParams>(() => {
-        try {
-            const params = (window as { KOAssetsConfig?: { externalParams?: ExternalParams } }).KOAssetsConfig?.externalParams || {};
-            console.log('External parameters received:', params);
-            return params;
-        } catch {
-            return {};
-        }
+        const params = getExternalParams();
+        console.log('External parameters received:', params);
+        return params;
     });
 
     // Local state
@@ -89,7 +84,7 @@ function MainApp(): React.JSX.Element {
     const [selectedQueryType, setSelectedQueryType] = useState<string>(QUERY_TYPES.ASSETS);
     const [selectedFacetFilters, setSelectedFacetFilters] = useState<string[][]>([]);
     const [selectedNumericFilters, setSelectedNumericFilters] = useState<string[]>([]);
-    const [excFacets, setExcFacets] = useState<Record<string, unknown> | undefined>(undefined);
+    const [excFacets, setExcFacets] = useState<ExcFacets | undefined>(undefined);
     const [imagePresets, setImagePresets] = useState<{
         assetId?: string;
         items?: Rendition[];
@@ -284,7 +279,7 @@ function MainApp(): React.JSX.Element {
 
     useEffect(() => {
         if (accessToken && !settingsLoadedRef.current) {
-            setExcFacets(JSON.parse('{"tccc-brand":{"label":"Brand","type":"tags","displayOrder":1,"rootPaths":{"TCCC : Brand":{"label":"Brand"}}},"tccc-campaignName":{"label":"Campaign","type":"string","displayOrder":2},"tccc-assetCategoryAndType":{"type":"tags","label":"Asset Category & Asset Type Execution","displayOrder":3,"rootPaths":{"TCCC : Asset Category and Asset Type Execution":{"label":"Asset Category & Asset Type Execution"}}},"tccc-masterOrAdaptation":{"label":"Master or Adaptation","type":"string","displayOrder":4},"tccc-readyToUse":{"label":"Rights Free","type":"string","displayOrder":5},"tccc-intendedBusinessUnitOrMarket":{"label":"Intended Market","type":"tags","displayOrder":6,"rootPaths":{"TCCC : Intended Market":{"label":"Intended Market"}}},"tccc-intendedChannel":{"label":"Intended Channel","type":"string","displayOrder":7,"rootPaths":{"TCCC : Intended Channel":{"label":"Intended Channel"}}},"tccc-intendedBottlerCountry":{"label":"Bottler Content by Country","type":"string","displayOrder":8},"tccc-packageContainerSize":{"label":"Package Size","type":"string","displayOrder":9},"tccc-agencyName":{"label":"Agency Name","type":"string","displayOrder":10},"repo-createDate":{"label":"Date created","type":"date","displayOrder":11},"tccc-marketCovered":{"label":"Market Rights Covered","type":"string","displayOrder":12},"tccc-mediaCovered":{"label":"Media Rights Covered","type":"string","displayOrder":13}}'));
+            setExcFacets(externalParams.excFacets || DEFAULT_FACETS);
             settingsLoadedRef.current = true;
             // const excClient = new ExcClient({ accessToken });
             // // Get facets from EXC
@@ -294,7 +289,7 @@ function MainApp(): React.JSX.Element {
             //     console.error('Error fetching facets:', error);
             // });
         }
-    }, [accessToken]);
+    }, [accessToken, externalParams.excFacets]);
 
 
 
@@ -564,6 +559,7 @@ function MainApp(): React.JSX.Element {
                 handleAuthenticated={handleAuthenticated}
                 handleSignOut={handleSignOut}
                 dynamicMediaClient={dynamicMediaClient}
+                isBlockIntegration={externalParams.isBlockIntegration}
             />
             {/* TODO: Update this once finalized */}
             {window.location.pathname !== '/assets-search/' && (
