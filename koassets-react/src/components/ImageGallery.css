@@ -1,28 +1,3 @@
-/* Image layout containers */
-.images-container {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  overflow: auto;
-}
-
-.images-content-wrapper {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.images-content-wrapper .footer {
-  width: 100%;
-  flex-shrink: 0;
-  margin-top: 20px;
-}
-
-.images-content-row {
-  display: flex;
-  flex-direction: row;
-}
-
 .images-main {
   flex: 3 1 0;
   min-width: 0;
@@ -184,7 +159,7 @@
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   grid-auto-rows: minmax(50px, auto);
   gap: 26px;
-  padding: 20px 20px 50px 16px;
+  padding: 20px 20px 20px 16px;
 }
 
 .image-grid-list {
@@ -203,14 +178,10 @@
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  height: calc(100vh - 590px);
-  /* 590px breakdown: 
-     HeaderBar(65px) + SearchBar(90px) + SearchPanel-Primary(71px) + SearchPanel-Secondary(31px) + 
-     Gallery-Title(94px) + Footer(98px) + Main-content-gap(20px) + Other-margins/paddings(121px) = 590px */
+
+  /* Use natural height instead of viewport-based calculation for normal page flow */
   min-height: 400px;
-  /* Ensure minimum height for content */
   position: relative;
-  /* Allow for better positioning */
 }
 
 .loading-container p {
@@ -250,9 +221,8 @@
 
 /* Load More Button */
 .load-more-button-container {
-  position: relative;
-  height: 100px;
-  margin-top: 40px;
+  padding-bottom: 50px;
+  padding-top: 30px;
 }
 
 .load-more-button {

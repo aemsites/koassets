@@ -91,7 +91,7 @@
   grid-template-columns: 120px 240px 1fr;
   padding: 16px 0;
   border-bottom: 2px solid #e0e0e0;
-  gap: 5px;
+  gap: 10px;
 }
 
 .download-renditions-row {
@@ -100,7 +100,7 @@
   padding: 16px 0;
   align-items: flex-start;
   position: relative;
-  gap: 5px;
+  gap: 10px;
 }
 
 /* Thumbnail */
@@ -122,6 +122,8 @@
   color: #333;
   font-weight: 500;
   line-height: 1.4;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 /* Options */

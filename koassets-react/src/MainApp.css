@@ -4,9 +4,10 @@
 .container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
   margin: 0 auto;
   box-sizing: border-box;
+
+  /* No height constraints - let content flow naturally */
 }
 
 .container,
@@ -18,9 +19,9 @@
 .main-content {
   display: flex;
   flex-direction: column;
-  flex: 1;
   gap: 20px;
-  min-height: 0;
+
+  /* No flex: 1 or height constraints - natural content flow */
 }
 
 /* Global button styling */
@@ -376,4 +377,30 @@ button:disabled:hover {
   margin-top: inherit;
   margin-bottom: inherit;
   background-color: inherit;
+}
+
+/* Image layout containers */
+.images-container {
+  display: flex;
+  flex-direction: column;
+
+  /* No flex or height constraints - content flows naturally like normal HTML */
+}
+
+.images-content-wrapper {
+  display: flex;
+  flex-direction: column;
+
+  /* Natural content height - no constraints */
+}
+
+.images-content-wrapper .footer {
+  width: 100%;
+  flex-shrink: 0;
+  margin-top: 20px;
+}
+
+.images-content-row {
+  display: flex;
+  flex-direction: row;
 }

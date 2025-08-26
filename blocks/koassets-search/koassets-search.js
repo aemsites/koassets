@@ -7,9 +7,9 @@ export default function decorate(block) {
     reactContainer.id = 'koassets-search-container';
     reactContainer.className = 'koassets-search-container';
 
-    // Set container styles for full integration
+    // Set container styles for natural page integration  
     reactContainer.style.width = '100%';
-    reactContainer.style.height = '100vh';
+    // Remove height: 100vh to allow natural scrolling
     reactContainer.style.minHeight = '600px';
     reactContainer.style.position = 'relative';
 
