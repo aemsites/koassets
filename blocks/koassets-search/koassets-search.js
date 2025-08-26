@@ -1,9 +1,8 @@
-import { getBlockKeyValues } from '../../scripts/scripts.js';
+import { getBlockKeyValues, stripHtmlAndNewlines } from '../../scripts/scripts.js';
 
 export default function decorate(block) {
     // Get the block key-value pairs
     const blockObj = getBlockKeyValues(block);
-    console.log('blockObj', blockObj);
 
     // Clear the block content
     block.textContent = '';
@@ -44,7 +43,7 @@ export default function decorate(block) {
         isBlockIntegration: true,
         accordionTitle: blockObj.accordionTitle,
         accordionContent: blockObj.accordionContent,
-        excFacets: blockObj.excFacets,
+        excFacets: JSON.parse(stripHtmlAndNewlines(blockObj.excFacets)),
         ...(window.KOAssetsConfig.externalParams || {})
     };
 

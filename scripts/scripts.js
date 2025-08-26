@@ -127,7 +127,25 @@ async function loadPage() {
 }
 
 /**
+ * Strips HTML tags and newlines from text
+ * @param {string} text - The text to clean
+ * @returns {string} Cleaned text without HTML tags or newlines
+ */
+export function stripHtmlAndNewlines(text) {
+  if (!text) return text;
+
+  // Create a temporary div to strip HTML tags
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = text;
+
+  // Get text content and remove newlines
+  return tempDiv.textContent.trim().replace(/\n/g, '');
+}
+
+/**
  * Extracts all key-value pairs from a block.
+ * If the first line of a value contains "{{html}}", it returns the HTML content with the marker removed.
+ * Otherwise, it returns plain text content (no HTML tags, no newlines).
  * @param {Element} block The block element containing rows
  * @returns {Object} An object containing all key-value pairs from the block
  */
@@ -136,7 +154,6 @@ export function getBlockKeyValues(block) {
 
   [...block.children].forEach((row) => {
     const divs = row.children;
-    console.log('divs', divs);
     if (divs.length >= 2) {
       const keyDiv = divs[0];
       const valueDiv = divs[1];
@@ -145,9 +162,7 @@ export function getBlockKeyValues(block) {
 
       if (keyP) {
         const rowKey = keyP.textContent.trim();
-        const rowValue = valueDiv.innerHTML.trim();
-
-        result[rowKey] = rowValue;
+        result[rowKey] = valueDiv.innerHTML.trim();
       }
     }
   });

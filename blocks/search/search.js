@@ -1,6 +1,7 @@
+import { getBlockKeyValues, stripHtmlAndNewlines } from '../../scripts/scripts.js';
+
 const QUERY_TYPES = {
   ASSETS: 'Assets',
-  COLLECTIONS: 'Collections',
 }
 
 export default function decorate(block) {
@@ -19,8 +20,8 @@ export default function decorate(block) {
   const select = document.createElement('select');
   // Match React SearchBar - only show Assets option
   const optionAssets = document.createElement('option');
-  optionAssets.value = QUERY_TYPES.ASSETS;
-  optionAssets.textContent = QUERY_TYPES.ASSETS;
+  optionAssets.value = window.KOAssetsConfig?.externalParams?.queryType || QUERY_TYPES.ASSETS;
+  optionAssets.textContent = window.KOAssetsConfig?.externalParams?.queryType || QUERY_TYPES.ASSETS;
 
   select.append(optionAssets);
   queryDropdown.append(select);
@@ -67,11 +68,21 @@ export default function decorate(block) {
 
   queryInputWrapper.append(querySearchIcon, input);
 
+  const searchObj = getBlockKeyValues(block);
+  const searchPath = searchObj?.path ? `${stripHtmlAndNewlines(searchObj.path)}` : '/assets-search/';
+
+  // Set default query from external parameter if provided
+  const initialQuery = window.KOAssetsConfig?.externalParams?.queryInput || '';
+  if (initialQuery) {
+    input.value = initialQuery;
+  }
+
   const performSearch = () => {
     const query = input.value;
     const selectedQueryType = select.value;
     // Redirect to assets browser with search parameters
-    window.location.href = `/tools/assets-browser/index.html?query=${encodeURIComponent(query)}&selectedQueryType=${encodeURIComponent(selectedQueryType)}`;
+    window.location.href = `${searchPath}?query=${encodeURIComponent(query)}&selectedQueryType=${encodeURIComponent(selectedQueryType)}`;
+    // window.location.href = `/tools/assets-browser/index.html?query=${encodeURIComponent(query)}&selectedQueryType=${encodeURIComponent(selectedQueryType)}`;
     // window.location.href = `/assets-search/?query=${encodeURIComponent(query)}&selectedQueryType=${encodeURIComponent(selectedQueryType)}`; // TODO: Update this once finalized
   }
 

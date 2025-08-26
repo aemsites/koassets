@@ -270,6 +270,8 @@ export interface ExternalParams {
     accordionContent?: string;
     excFacets?: ExcFacets;
     isBlockIntegration?: boolean;
+    queryInput?: string;
+    queryType?: string;
 }
 
 // Image Gallery types

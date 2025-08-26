@@ -40,6 +40,7 @@ a.button:any-link,
 button {
   margin: 0;
   background-color: transparent;
+  white-space: unset;
 }
 
 button:hover {
