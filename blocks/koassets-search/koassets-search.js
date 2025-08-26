@@ -1,4 +1,10 @@
+import { getBlockKeyValues } from '../../scripts/scripts.js';
+
 export default function decorate(block) {
+    // Get the block key-value pairs
+    const blockObj = getBlockKeyValues(block);
+    console.log('blockObj', blockObj);
+
     // Clear the block content
     block.textContent = '';
 
@@ -31,19 +37,23 @@ export default function decorate(block) {
     // Append container to block
     block.append(reactContainer);
 
+    // Configure external parameters for block integration
+    window.KOAssetsConfig = window.KOAssetsConfig || {};
+    /** @type {import('../../koassets-react/src/types/index.js').ExternalParams} */
+    window.KOAssetsConfig.externalParams = {
+        isBlockIntegration: true,
+        accordionTitle: blockObj.accordionTitle,
+        accordionContent: blockObj.accordionContent,
+        excFacets: blockObj.excFacets,
+        ...(window.KOAssetsConfig.externalParams || {})
+    };
+
     // Load the built React app
     loadReactApp(reactRoot, loadingIndicator);
 }
 
 function loadReactApp(rootElement, loadingElement) {
     try {
-        // Configure external parameters for block integration
-        window.KOAssetsConfig = window.KOAssetsConfig || {};
-        window.KOAssetsConfig.externalParams = {
-            isBlockIntegration: true,
-            ...(window.KOAssetsConfig.externalParams || {})
-        };
-
         // Check if we already have the built assets
         const basePath = '/tools/assets-browser';
 

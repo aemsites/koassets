@@ -168,7 +168,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
             <div className={`gallery-title ${isTitleExpanded ? 'expanded' : ''}`}>
                 <div className="gallery-title-content">
                     <div className="gallery-title-icon" aria-label="Info"></div>
-                    <h3>{accordionTitle}</h3>
+                    <h3 dangerouslySetInnerHTML={{ __html: accordionTitle }}></h3>
                 </div>
                 <button
                     className={`gallery-title-toggle ${isTitleExpanded ? 'expanded' : 'collapsed'}`}

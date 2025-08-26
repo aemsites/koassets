@@ -1,16 +1,16 @@
 import {
   buildBlock,
-  loadHeader,
-  loadFooter,
+  decorateBlocks,
   decorateButtons,
   decorateIcons,
   decorateSections,
-  decorateBlocks,
   decorateTemplateAndTheme,
-  waitForFirstImage,
+  loadCSS,
+  loadFooter,
+  loadHeader,
   loadSection,
   loadSections,
-  loadCSS,
+  waitForFirstImage,
 } from './aem.js';
 
 /**
@@ -124,6 +124,35 @@ async function loadPage() {
   await loadEager(document);
   await loadLazy(document);
   loadDelayed();
+}
+
+/**
+ * Extracts all key-value pairs from a block.
+ * @param {Element} block The block element containing rows
+ * @returns {Object} An object containing all key-value pairs from the block
+ */
+export function getBlockKeyValues(block) {
+  const result = {};
+
+  [...block.children].forEach((row) => {
+    const divs = row.children;
+    console.log('divs', divs);
+    if (divs.length >= 2) {
+      const keyDiv = divs[0];
+      const valueDiv = divs[1];
+
+      const keyP = keyDiv.querySelector('p');
+
+      if (keyP) {
+        const rowKey = keyP.textContent.trim();
+        const rowValue = valueDiv.innerHTML.trim();
+
+        result[rowKey] = rowValue;
+      }
+    }
+  });
+
+  return result;
 }
 
 loadPage();

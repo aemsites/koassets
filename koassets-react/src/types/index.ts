@@ -159,28 +159,6 @@ export interface StepStatuses {
 
 // Phase 1 Component Types
 
-// Query-related types
-export interface QueryMessage {
-    type: string;
-    sender?: string;
-    text: string;
-}
-
-export interface LoadingStates {
-    chat?: boolean;
-    [key: string]: boolean | undefined;
-}
-
-// Component prop interfaces
-export interface QueryProps {
-    query: QueryMessage;
-}
-
-export interface QueryListProps {
-    querys: QueryMessage[];
-    loading: LoadingStates;
-}
-
 export interface SearchBarProps {
     query: string;
     setQuery: (query: string) => void;
