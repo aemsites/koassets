@@ -52,7 +52,7 @@ button:active {
 }
 
 button:disabled {
-  background-color: #ff8c80;
+  background-color: var(--primary-color-disabled);
   color: #f8f8f8;
   cursor: not-allowed;
 }
@@ -362,12 +362,14 @@ a.button:hover,
 a.button:focus,
 button:hover,
 button:focus {
-  background-color: transparent;
+  cursor: pointer;
+  background-color: var(--primary-color-hover);
 }
 
 button:disabled,
 button:disabled:hover {
-  background-color: transparent;
+  cursor: not-allowed;
+  background-color: var(--primary-color-disabled);
 }
 
 :is(h1, h2, h3, h4, h5, h6)::after {
