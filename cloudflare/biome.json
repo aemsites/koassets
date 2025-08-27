@@ -32,7 +32,7 @@
     "formatter": {
       "quoteStyle": "single"
     },
-    "globals": ["os"]
+    "globals": []
   },
   "overrides": [
     {
@@ -51,7 +51,9 @@
   ],
   "vcs": {
     "enabled": true,
+    "root": "../",
     "clientKind": "git",
-    "defaultBranch": "main"
+    "defaultBranch": "main",
+    "useIgnoreFile": true
   }
 }
