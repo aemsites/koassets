@@ -6,8 +6,7 @@
   flex-direction: column;
   margin: 0 auto;
   box-sizing: border-box;
-
-  /* No height constraints - let content flow naturally */
+  min-height: 100vh;
 }
 
 .container,
@@ -20,8 +19,8 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-
-  /* No flex: 1 or height constraints - natural content flow */
+  flex: 1;
+  min-height: 0;
 }
 
 /* Global button styling */
@@ -386,15 +385,15 @@ button:disabled:hover {
 .images-container {
   display: flex;
   flex-direction: column;
-
-  /* No flex or height constraints - content flows naturally like normal HTML */
+  flex: 1;
+  min-height: 0;
 }
 
 .images-content-wrapper {
   display: flex;
   flex-direction: column;
-
-  /* Natural content height - no constraints */
+  flex: 1;
+  min-height: 0;
 }
 
 .images-content-wrapper .footer {
@@ -406,4 +405,6 @@ button:disabled:hover {
 .images-content-row {
   display: flex;
   flex-direction: row;
+  flex: 1;
+  min-height: 0;
 }

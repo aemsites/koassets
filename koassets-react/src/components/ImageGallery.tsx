@@ -213,61 +213,61 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 totalPages={(searchResult?.nbPages as number) || 0}
             />
 
-            {loading ? (
-                <div className="image-grid-wrapper">
+            <div className="image-grid-wrapper">
+                {loading ? (
                     <div className="loading-container">
                         <div className="loading-spinner"></div>
                         <p>Loading images...</p>
                     </div>
-                </div>
-            ) : images.length === 0 ? (
-                <div className="no-images">
-                    <p>No images to display</p>
-                </div>
-            ) : (
-                <div className="image-grid-wrapper">
-                    <div className={viewType === 'grid' ? 'image-grid' : 'image-grid-list'}>
-                        {images.map((image) => {
-                            const CardComponent = viewType === 'grid' ? AssetCardViewGrid : AssetCardViewList;
-                            return (
-                                <CardComponent
-                                    key={image.assetId}
-                                    image={image}
-                                    handleCardDetailClick={handleCardDetailClick}
-                                    handlePreviewClick={handleCardPreviewClick}
-                                    handleAddToCart={handleAddToCart}
-                                    handleRemoveFromCart={onRemoveFromCart}
-                                    cartItems={cartItems}
-                                    isSelected={selectedCards.has(image.assetId || '')}
-                                    onCheckboxChange={handleCheckboxChange}
-                                    dynamicMediaClient={dynamicMediaClient}
-                                    showFullDetails={showFullDetails}
-                                />
-                            );
-                        })}
+                ) : images.length === 0 ? (
+                    <div className="no-images">
+                        <p>No images to display</p>
                     </div>
-
-                    {/* Loading more indicator */}
-                    {isLoadingMore && (
-                        <div className="loading-more-container">
-                            <div className="loading-spinner"></div>
-                            <p>Loading more results...</p>
+                ) : (
+                    <>
+                        <div className={viewType === 'grid' ? 'image-grid' : 'image-grid-list'}>
+                            {images.map((image) => {
+                                const CardComponent = viewType === 'grid' ? AssetCardViewGrid : AssetCardViewList;
+                                return (
+                                    <CardComponent
+                                        key={image.assetId}
+                                        image={image}
+                                        handleCardDetailClick={handleCardDetailClick}
+                                        handlePreviewClick={handleCardPreviewClick}
+                                        handleAddToCart={handleAddToCart}
+                                        handleRemoveFromCart={onRemoveFromCart}
+                                        cartItems={cartItems}
+                                        isSelected={selectedCards.has(image.assetId || '')}
+                                        onCheckboxChange={handleCheckboxChange}
+                                        dynamicMediaClient={dynamicMediaClient}
+                                        showFullDetails={showFullDetails}
+                                    />
+                                );
+                            })}
                         </div>
-                    )}
 
-                    {/* Load More Button */}
-                    {hasMorePages && !isLoadingMore && (
-                        <div className="load-more-button-container">
-                            <button
-                                className="load-more-button"
-                                onClick={onLoadMoreResults}
-                            >
-                                Load more
-                            </button>
-                        </div>
-                    )}
-                </div>
-            )}
+                        {/* Loading more indicator */}
+                        {isLoadingMore && (
+                            <div className="loading-more-container">
+                                <div className="loading-spinner"></div>
+                                <p>Loading more results...</p>
+                            </div>
+                        )}
+
+                        {/* Load More Button */}
+                        {hasMorePages && !isLoadingMore && (
+                            <div className="load-more-button-container">
+                                <button
+                                    className="load-more-button"
+                                    onClick={onLoadMoreResults}
+                                >
+                                    Load more
+                                </button>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
 
             {/* Asset Preview Modal */}
             <AssetPreview
