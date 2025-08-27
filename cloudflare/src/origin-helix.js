@@ -1,0 +1,111 @@
+const getExtension = (path) => {
+  const basename = path.split('/').pop();
+  const pos = basename.lastIndexOf('.');
+  return basename === '' || pos < 1 ? '' : basename.slice(pos + 1);
+};
+
+const isMediaRequest = (url) => /\/media_[0-9a-f]{40,}[/a-zA-Z0-9_-]*\.[0-9a-z]+$/.test(url.pathname);
+const isRUMRequest = (url) => /\/\.(rum|optel)\/.*/.test(url.pathname);
+
+export async function originHelix(request, env) {
+  const url = new URL(request.url);
+  if (url.hostname === 'localhost') {
+    // special handling for local development using 'wrangler dev'
+    url.protocol = 'https';
+    url.port = 443;
+  } else if (url.port) {
+    // Cloudflare opens a couple more ports than 443, so we redirect visitors
+    // to the default port to avoid confusion.
+    // https://developers.cloudflare.com/fundamentals/reference/network-ports/#network-ports-compatible-with-cloudflares-proxy
+    const redirectTo = new URL(request.url);
+    redirectTo.port = '';
+    return new Response(`Moved permanently to ${redirectTo.href}`, {
+      status: 301,
+      headers: {
+        location: redirectTo.href,
+      },
+    });
+  }
+
+  if (url.pathname.startsWith('/drafts/')) {
+    return new Response('Not Found', { status: 404 });
+  }
+
+  if (isRUMRequest(url)) {
+    // only allow GET, POST, OPTIONS
+    if (!['GET', 'POST', 'OPTIONS'].includes(request.method)) {
+      return new Response('Method Not Allowed', { status: 405 });
+    }
+  }
+
+  const extension = getExtension(url.pathname);
+
+  // remember original search params
+  const savedSearch = url.search;
+
+  // sanitize search params
+  const { searchParams } = url;
+  if (isMediaRequest(url)) {
+    for (const [key] of searchParams.entries()) {
+      if (!['format', 'height', 'optimize', 'width'].includes(key)) {
+        searchParams.delete(key);
+      }
+    }
+  } else if (extension === 'json') {
+    for (const [key] of searchParams.entries()) {
+      if (!['limit', 'offset', 'sheet'].includes(key)) {
+        searchParams.delete(key);
+      }
+    }
+  } else {
+    // neither media nor json request: strip search params
+    url.search = '';
+  }
+  searchParams.sort();
+
+  const helixOrigin = env.HELIX_ORIGIN_HOSTNAME;
+  if (!helixOrigin.match(/^.*--.*--.*\.(?:aem|hlx)\.live/)) {
+    return new Response('Invalid HELIX_ORIGIN_HOSTNAME', { status: 500 });
+  }
+  url.hostname = helixOrigin;
+
+  // console.log('request', request);
+
+  // const req = new Request(url, request);
+  const req = new Request(url, {
+    method: request.method,
+    headers: request.headers,
+    body: request.body,
+  });
+
+  req.headers.set('user-agent', req.headers.get('user-agent'));
+  req.headers.set('x-forwarded-host', req.headers.get('host'));
+  req.headers.set('x-byo-cdn-type', 'cloudflare');
+  if (env.HELIX_PUSH_INVALIDATION !== 'disabled') {
+    req.headers.set('x-push-invalidation', 'enabled');
+  }
+  if (env.HELIX_ORIGIN_AUTHENTICATION) {
+    req.headers.set('authorization', `token ${env.HELIX_ORIGIN_AUTHENTICATION}`);
+  }
+  let resp = await fetch(req, {
+    method: req.method,
+    cf: {
+      // cf doesn't cache html by default: need to override the default behavior
+      cacheEverything: true,
+    },
+  });
+  resp = new Response(resp.body, resp);
+  if (resp.status === 301 && savedSearch) {
+    const location = resp.headers.get('location');
+    if (location && !location.match(/\?.*$/)) {
+      resp.headers.set('location', `${location}${savedSearch}`);
+    }
+  }
+  if (resp.status === 304) {
+    // 304 Not Modified - remove CSP header
+    resp.headers.delete('Content-Security-Policy');
+  }
+  resp.headers.delete('age');
+  resp.headers.delete('x-robots-tag');
+  return resp;
+};
