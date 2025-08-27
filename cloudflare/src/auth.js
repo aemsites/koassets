@@ -240,8 +240,7 @@ authRouter
 
     const formData = await validateMicrosoftSignInCallback(request, state);
     if (!formData) {
-      const fd = await request.formData();
-      return new Response('Unauthorized - ' + fd ? fd.get('error') : ' (maybe incorrect state?)', { status: 401 });
+      return new Response('Unauthorized - error from Microsoft callback', { status: 401 });
     }
 
     const idToken = await validateIdToken(formData.get('id_token'), env, state.nonce);
