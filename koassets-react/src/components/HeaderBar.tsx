@@ -15,7 +15,8 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
     handleDownloadAssets,
     handleAuthenticated,
     handleSignOut,
-    dynamicMediaClient
+    dynamicMediaClient,
+    isBlockIntegration
 }) => {
     const handleLogoClick = () => {
         window.location.assign('/');
@@ -23,12 +24,14 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
 
     return (
         <div className="app-header">
-            <img
-                className="app-logo"
-                src="ko-assets-logo.png"
-                alt="KO Assets Logo"
-                onClick={handleLogoClick}
-            />
+            {!isBlockIntegration && (
+                <img
+                    className="app-logo"
+                    src={`${import.meta.env.BASE_URL}ko-assets-logo.png`}
+                    alt="KO Assets Logo"
+                    onClick={handleLogoClick}
+                />
+            )}
 
             {/* Header right controls: Cart and Sign In */}
             <div className="header-controls">

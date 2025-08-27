@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { DEFAULT_ACCORDION_CONFIG } from '../constants/accordion';
 import type { Asset, ImageGalleryProps } from '../types';
 import AssetCardViewGrid from './AssetCardViewGrid';
 import AssetCardViewList from './AssetCardViewList';
@@ -9,7 +10,6 @@ import SearchPanel from './SearchPanel';
 
 // Display list of images
 const ImageGallery: React.FC<ImageGalleryProps> = ({
-    title,
     images,
     loading,
     onAddToCart,
@@ -36,8 +36,13 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     imagePresets = {},
     assetRenditionsCache = {},
     fetchAssetRenditions,
-    setImagePresets
-}) => {
+    setImagePresets,
+    externalParams
+}: ImageGalleryProps) => {
+    // Extract accordion parameters from external params with fallbacks
+    const accordionTitle = externalParams?.accordionTitle || DEFAULT_ACCORDION_CONFIG.accordionTitle;
+    const accordionContent = externalParams?.accordionContent || DEFAULT_ACCORDION_CONFIG.accordionContent;
+
     // Modal state management for asset preview
     const [selectedCard, setSelectedCard] = useState<Asset | null>(null);
     const [showPreviewModal, setShowPreviewModal] = useState<boolean>(false);
@@ -49,6 +54,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     const [showFullDetails, setShowFullDetails] = useState<boolean>(true);
     // View type state (grid or list)
     const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
+    // Title expansion state
+    const [isTitleExpanded, setIsTitleExpanded] = useState<boolean>(false);
 
     const displayedCount = images.length;
     const selectedCount = selectedCards.size;
@@ -148,14 +155,32 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         console.log('Bulk add to collection:', Array.from(selectedCards));
     };
 
+    // Handle title expansion toggle
+    const handleTitleToggle = () => {
+        setIsTitleExpanded(!isTitleExpanded);
+    };
+
     // Calculate statistics
     const totalCount = searchResult && searchResult.nbHits ? searchResult.nbHits.toString() : '0';
 
     return (
         <div className="image-gallery">
-            <div className="gallery-title">
-                <h3>{title}</h3>
+            <div className={`gallery-title ${isTitleExpanded ? 'expanded' : ''}`}>
+                <div className="gallery-title-content">
+                    <div className="gallery-title-icon" aria-label="Info"></div>
+                    <h3 dangerouslySetInnerHTML={{ __html: accordionTitle }}></h3>
+                </div>
+                <button
+                    className={`gallery-title-toggle ${isTitleExpanded ? 'expanded' : 'collapsed'}`}
+                    onClick={handleTitleToggle}
+                />
             </div>
+            {isTitleExpanded && (
+                <div
+                    className="gallery-title-expanded"
+                    dangerouslySetInnerHTML={{ __html: accordionContent }}
+                />
+            )}
 
             {/* Search Panels */}
             <SearchPanel
@@ -188,61 +213,61 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 totalPages={(searchResult?.nbPages as number) || 0}
             />
 
-            {loading ? (
-                <div className="image-grid-wrapper">
+            <div className="image-grid-wrapper">
+                {loading ? (
                     <div className="loading-container">
                         <div className="loading-spinner"></div>
                         <p>Loading images...</p>
                     </div>
-                </div>
-            ) : images.length === 0 ? (
-                <div className="no-images">
-                    <p>No images to display</p>
-                </div>
-            ) : (
-                <div className="image-grid-wrapper">
-                    <div className={viewType === 'grid' ? 'image-grid' : 'image-grid-list'}>
-                        {images.map((image) => {
-                            const CardComponent = viewType === 'grid' ? AssetCardViewGrid : AssetCardViewList;
-                            return (
-                                <CardComponent
-                                    key={image.assetId}
-                                    image={image}
-                                    handleCardDetailClick={handleCardDetailClick}
-                                    handlePreviewClick={handleCardPreviewClick}
-                                    handleAddToCart={handleAddToCart}
-                                    handleRemoveFromCart={onRemoveFromCart}
-                                    cartItems={cartItems}
-                                    isSelected={selectedCards.has(image.assetId || '')}
-                                    onCheckboxChange={handleCheckboxChange}
-                                    dynamicMediaClient={dynamicMediaClient}
-                                    showFullDetails={showFullDetails}
-                                />
-                            );
-                        })}
+                ) : images.length === 0 ? (
+                    <div className="no-images">
+                        <p>No images to display</p>
                     </div>
-
-                    {/* Loading more indicator */}
-                    {isLoadingMore && (
-                        <div className="loading-more-container">
-                            <div className="loading-spinner"></div>
-                            <p>Loading more results...</p>
+                ) : (
+                    <>
+                        <div className={viewType === 'grid' ? 'image-grid' : 'image-grid-list'}>
+                            {images.map((image) => {
+                                const CardComponent = viewType === 'grid' ? AssetCardViewGrid : AssetCardViewList;
+                                return (
+                                    <CardComponent
+                                        key={image.assetId}
+                                        image={image}
+                                        handleCardDetailClick={handleCardDetailClick}
+                                        handlePreviewClick={handleCardPreviewClick}
+                                        handleAddToCart={handleAddToCart}
+                                        handleRemoveFromCart={onRemoveFromCart}
+                                        cartItems={cartItems}
+                                        isSelected={selectedCards.has(image.assetId || '')}
+                                        onCheckboxChange={handleCheckboxChange}
+                                        dynamicMediaClient={dynamicMediaClient}
+                                        showFullDetails={showFullDetails}
+                                    />
+                                );
+                            })}
                         </div>
-                    )}
 
-                    {/* Load More Button */}
-                    {hasMorePages && !isLoadingMore && (
-                        <div className="load-more-button-container">
-                            <button
-                                className="load-more-button"
-                                onClick={onLoadMoreResults}
-                            >
-                                Load more
-                            </button>
-                        </div>
-                    )}
-                </div>
-            )}
+                        {/* Loading more indicator */}
+                        {isLoadingMore && (
+                            <div className="loading-more-container">
+                                <div className="loading-spinner"></div>
+                                <p>Loading more results...</p>
+                            </div>
+                        )}
+
+                        {/* Load More Button */}
+                        {hasMorePages && !isLoadingMore && (
+                            <div className="load-more-button-container">
+                                <button
+                                    className="load-more-button"
+                                    onClick={onLoadMoreResults}
+                                >
+                                    Load more
+                                </button>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
 
             {/* Asset Preview Modal */}
             <AssetPreview

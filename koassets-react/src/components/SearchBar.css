@@ -63,7 +63,6 @@
     top: 20%;
     color: #888;
     pointer-events: none;
-    z-index: 1;
 }
 
 .query-input {
@@ -104,7 +103,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1;
+    position: relative;
+}
+
+.query-search-btn:focus,
+.query-search-btn:active,
+.query-search-btn:hover {
+    background-color: var(--primary-color-hover);
 }
 
 @media (max-width: 600px) {
