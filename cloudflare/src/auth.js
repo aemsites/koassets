@@ -235,17 +235,18 @@ authRouter
   .post('/auth/callback', async (request, env) => {
     const state = await validateSignedCookie(request, env.COOKIE_SECRET, COOKIE_STATE);
     if (!state) {
-      return new Response('Unauthorized', { status: 401 });
+      return new Response('Unauthorized - missing or invalid state cookie', { status: 401 });
     }
 
     const formData = await validateMicrosoftSignInCallback(request, state);
     if (!formData) {
-      return new Response('Unauthorized', { status: 401 });
+      const fd = await request.formData();
+      return new Response('Unauthorized - ' + fd ? fd.get('error') : ' (maybe incorrect state?)', { status: 401 });
     }
 
     const idToken = await validateIdToken(formData.get('id_token'), env, state.nonce);
     if (!idToken) {
-      return new Response('Unauthorized', { status: 401 });
+      return new Response('Unauthorized - invalid id_token', { status: 401 });
     }
 
     const sessionJWT = await createSessionJWT(request, idToken, env);
