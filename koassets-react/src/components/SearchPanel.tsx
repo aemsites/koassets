@@ -82,7 +82,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
                                 title="Grid View"
                                 onClick={handleGridViewClick}
                             >
-                                <img src="icons/gridview.svg" alt="Grid View" />
+                                <img src={`${import.meta.env.BASE_URL}icons/gridview.svg`} alt="Grid View" />
                             </button>
                             <button
                                 className={`list-view-btn ${viewType === 'list' ? 'active' : ''}`}
@@ -90,7 +90,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
                                 title="List View"
                                 onClick={handleListViewClick}
                             >
-                                <img src="icons/listview.svg" alt="List View" />
+                                <img src={`${import.meta.env.BASE_URL}icons/listview.svg`} alt="List View" />
                             </button>
                         </div>
 
@@ -100,7 +100,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
                             onClick={onToggleMobileFilter}
                         >
                             <img
-                                src="icons/Filter-search.svg"
+                                src={`${import.meta.env.BASE_URL}icons/Filter-search.svg`}
                                 alt="Filter"
                                 className="filter-icon"
                             />

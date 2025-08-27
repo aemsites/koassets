@@ -3,6 +3,11 @@
   margin: 0 !important;
 }
 
+.search-wrapper,
+.search-wrapper * {
+  font-family: "TCCC UnityText Regular", "Helvetica Neue", Arial, Helvetica, sans-serif !important;
+}
+
 .search-wrapper {
   max-width: none !important;
   padding: 0 !important;
@@ -73,7 +78,6 @@
   top: 20%;
   color: #888;
   pointer-events: none;
-  z-index: 1;
 }
 
 .query-input {
@@ -100,7 +104,7 @@
 }
 
 .query-search-btn {
-  background: #ed0000 !important;
+  background: var(--primary-color);
   color: #fff;
   border: none;
   border-radius: 999px;
@@ -114,7 +118,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1;
+  position: relative;
 }
 
 @media (max-width: 600px) {

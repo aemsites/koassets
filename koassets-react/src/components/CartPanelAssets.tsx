@@ -46,28 +46,28 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                             console.log('Cart initialized - ready for items');
                             setStepIcon(prev => ({
                                 ...prev,
-                                cart: <img src="icons/cart-stepper-icon-init.svg" alt="Cart" />
+                                cart: <img src={`${import.meta.env.BASE_URL}icons/cart-stepper-icon-init.svg`} alt="Cart" />
                             }));
                             break;
                         case 'pending':
                             console.log('Cart processing...');
                             setStepIcon(prev => ({
                                 ...prev,
-                                cart: <img src="icons/cart-stepper-icon-pending.svg" alt="Cart Pending" />
+                                cart: <img src={`${import.meta.env.BASE_URL}icons/cart-stepper-icon-pending.svg`} alt="Cart Pending" />
                             }));
                             break;
                         case 'success':
                             console.log('Cart ready for download request');
                             setStepIcon(prev => ({
                                 ...prev,
-                                cart: <img src="icons/cart-stepper-icon-success.svg" alt="Cart Success" />
+                                cart: <img src={`${import.meta.env.BASE_URL}icons/cart-stepper-icon-success.svg`} alt="Cart Success" />
                             }));
                             break;
                         case 'failure':
                             console.log('Cart failed - items may be invalid or unavailable');
                             setStepIcon(prev => ({
                                 ...prev,
-                                cart: <img src="icons/cart-stepper-icon-failure.svg" alt="Cart Failure" />
+                                cart: <img src={`${import.meta.env.BASE_URL}icons/cart-stepper-icon-failure.svg`} alt="Cart Failure" />
                             }));
                             break;
                     }
@@ -79,28 +79,28 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                             console.log('Download request not started');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'request-download': <img src="icons/request-download-stepper-icon-init.svg" alt="Request Download" />
+                                'request-download': <img src={`${import.meta.env.BASE_URL}icons/request-download-stepper-icon-init.svg`} alt="Request Download" />
                             }));
                             break;
                         case 'pending':
                             console.log('Processing download request...');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'request-download': <img src="icons/request-download-stepper-icon-pending.svg" alt="Request Download Pending" />
+                                'request-download': <img src={`${import.meta.env.BASE_URL}icons/request-download-stepper-icon-pending.svg`} alt="Request Download Pending" />
                             }));
                             break;
                         case 'success':
                             console.log('Download request approved - proceeding to rights check');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'request-download': <img src="icons/request-download-stepper-icon-success.svg" alt="Request Download Success" />
+                                'request-download': <img src={`${import.meta.env.BASE_URL}icons/request-download-stepper-icon-success.svg`} alt="Request Download Success" />
                             }));
                             break;
                         case 'failure':
                             console.log('Download request failed - user can retry');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'request-download': <img src="icons/request-download-stepper-icon-failure.svg" alt="Request Download Failure" />
+                                'request-download': <img src={`${import.meta.env.BASE_URL}icons/request-download-stepper-icon-failure.svg`} alt="Request Download Failure" />
                             }));
                             break;
                     }
@@ -112,28 +112,28 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                             console.log('Rights check not started');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'rights-check': <img src="icons/rights-check-stepper-icon-init.svg" alt="Rights Check" />
+                                'rights-check': <img src={`${import.meta.env.BASE_URL}icons/rights-check-stepper-icon-init.svg`} alt="Rights Check" />
                             }));
                             break;
                         case 'pending':
                             console.log('Checking rights and permissions...');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'rights-check': <img src="icons/rights-check-stepper-icon-pending.svg" alt="Rights Check Pending" />
+                                'rights-check': <img src={`${import.meta.env.BASE_URL}icons/rights-check-stepper-icon-pending.svg`} alt="Rights Check Pending" />
                             }));
                             break;
                         case 'success':
                             console.log('Rights check passed - proceeding to download');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'rights-check': <img src="icons/rights-check-stepper-icon-success.svg" alt="Rights Check Success" />
+                                'rights-check': <img src={`${import.meta.env.BASE_URL}icons/rights-check-stepper-icon-success.svg`} alt="Rights Check Success" />
                             }));
                             break;
                         case 'failure':
                             console.log('Rights check failed - insufficient permissions');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'rights-check': <img src="icons/rights-check-stepper-icon-failure.svg" alt="Rights Check Failure" />
+                                'rights-check': <img src={`${import.meta.env.BASE_URL}icons/rights-check-stepper-icon-failure.svg`} alt="Rights Check Failure" />
                             }));
                             break;
                     }
@@ -145,14 +145,14 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                             console.log('Download not started');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'download': <img src="icons/download-stepper-icon-init.svg" alt="Download" />
+                                'download': <img src={`${import.meta.env.BASE_URL}icons/download-stepper-icon-init.svg`} alt="Download" />
                             }));
                             break;
                         case 'pending':
                             console.log('Downloading assets...');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'download': <img src="icons/download-stepper-icon-pending.svg" alt="Download Pending" />
+                                'download': <img src={`${import.meta.env.BASE_URL}icons/download-stepper-icon-pending.svg`} alt="Download Pending" />
                             }));
                             break;
                         case 'success':
@@ -160,14 +160,14 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                             // Could trigger success notification or auto-close
                             setStepIcon(prev => ({
                                 ...prev,
-                                'download': <img src="icons/download-stepper-icon-success.svg" alt="Download Success" />
+                                'download': <img src={`${import.meta.env.BASE_URL}icons/download-stepper-icon-success.svg`} alt="Download Success" />
                             }));
                             break;
                         case 'failure':
                             console.log('Download failed - connection or server error');
                             setStepIcon(prev => ({
                                 ...prev,
-                                'download': <img src="icons/download-stepper-icon-failure.svg" alt="Download Failure" />
+                                'download': <img src={`${import.meta.env.BASE_URL}icons/download-stepper-icon-failure.svg`} alt="Download Failure" />
                             }));
                             break;
                     }

@@ -26,21 +26,6 @@ const ActionButton: React.FC<ActionButtonProps> = ({ disabled, onClick, config, 
         return config.idle;
     };
 
-    // Dynamically resolve image path based on current URL context
-    const resolveImagePath = (imagePath: string): string => {
-        const currentUrl = window.location.href;
-        const lastSlashIndex = currentUrl.lastIndexOf('/');
-
-        // If we're in a subdirectory (not at domain root)
-        if (lastSlashIndex > currentUrl.indexOf('://') + 2) {
-            const basePath = currentUrl.substring(0, lastSlashIndex + 1);
-            const cleanImagePath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
-            return `${basePath}${cleanImagePath}`;
-        }
-
-        return imagePath;
-    };
-
     const handleClick = async () => {
         if (hasLoadingState) {
             setLoading(true);
@@ -83,7 +68,7 @@ const ActionButton: React.FC<ActionButtonProps> = ({ disabled, onClick, config, 
                 className={`action-button ${currentState.className}`}
                 onClick={handleClick}
                 style={currentState.backgroundImage ? {
-                    backgroundImage: `url(${resolveImagePath(currentState.backgroundImage)})`
+                    backgroundImage: `url(${currentState.backgroundImage})`
                 } : undefined}
             >
             </button>

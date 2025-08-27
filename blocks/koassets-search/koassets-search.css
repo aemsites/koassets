@@ -1,0 +1,147 @@
+/* KO Assets Search Block Styles */
+.koassets-search {
+    width: 100%;
+    position: relative;
+}
+
+.koassets-search-container {
+    width: 100%;
+    /* Remove height: 100vh constraint for natural page flow */
+    min-height: 600px;
+    position: relative;
+    background: #ffffff;
+    /* Remove overflow: hidden to allow scrolling */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.koassets-search-container .koassets-search-wrapper {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0;
+}
+
+.koassets-search-container .koassets-search-wrapper .koassets-search-root {
+    width: 100%;
+    /* Remove height: 100% to allow natural content height */
+    position: relative;
+}
+
+/* Loading indicator styles */
+.koassets-search-container .koassets-search-wrapper .koassets-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+}
+
+.koassets-search-container .koassets-search-wrapper .koassets-loading p {
+    margin: 16px 0 0 0;
+    font-size: 16px;
+    color: #666;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.koassets-search-container .koassets-search-wrapper .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #0066cc;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Error message styles */
+.koassets-search-container .koassets-search-wrapper .error-message {
+    padding: 24px;
+    background: #fff5f5;
+    border: 1px solid #fed7d7;
+    border-radius: 8px;
+    color: #742a2a;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.koassets-search-container .koassets-search-wrapper .error-message h3 {
+    margin: 0 0 12px 0;
+    color: #c53030;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.koassets-search-container .koassets-search-wrapper .error-message p {
+    margin: 8px 0;
+    line-height: 1.5;
+}
+
+.koassets-search-container .koassets-search-wrapper .error-message ol {
+    margin: 12px 0;
+    padding-left: 20px;
+}
+
+.koassets-search-container .koassets-search-wrapper .error-message li {
+    margin: 4px 0;
+}
+
+.koassets-search-container .koassets-search-wrapper .error-message code {
+    background: #edf2f7;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    color: #2d3748;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .koassets-search-container {
+        /* Remove height: 100vh for natural scrolling */
+        min-height: 500px;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .koassets-search-container .koassets-search-wrapper .error-message {
+        margin: 16px;
+        padding: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .koassets-search-container .koassets-search-wrapper .koassets-loading p {
+        font-size: 14px;
+    }
+
+    .koassets-search-container .koassets-search-wrapper .loading-spinner {
+        width: 32px;
+        height: 32px;
+        border-width: 2px;
+    }
+
+    .koassets-search-container .koassets-search-wrapper .error-message {
+        margin: 8px;
+        padding: 16px;
+    }
+
+    .koassets-search-container .koassets-search-wrapper .error-message h3 {
+        font-size: 16px;
+    }
+}
