@@ -198,10 +198,6 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     return (
         <div className="asset-details-modal" onClick={handleOverlayClick}>
             <div className="asset-details-modal-inner" onClick={handleModalClick}>
-                <button className="asset-details-main-close-button" onClick={closeModal}>
-                    ×
-                </button>
-
                 <div className="asset-details-main-main-section">
                     <div className="asset-details-main-image-section">
                         {imageLoading ? (
@@ -221,18 +217,21 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                     <div className="asset-details-main-info-section">
                         <div className="asset-details-main-info-section-inner">
                             <div className="asset-details-main-header">
-                                <div className="asset-details-main-tags">
-                                    {selectedImage?.xcmKeywords && (
-                                        selectedImage.xcmKeywords.split(',').map((keyword, index) => (
+                                <button className="asset-details-main-close-button" onClick={closeModal}>
+                                    ×
+                                </button>
+                                {selectedImage?.xcmKeywords && (
+                                    <div className="asset-details-main-tags">
+                                        {selectedImage.xcmKeywords.split(',').map((keyword, index) => (
                                             <span key={index} className="asset-details-main-tag tccc-tag">
                                                 {removeHyphenTitleCase(keyword.trim())}
                                             </span>
-                                        ))
-                                    )}
-                                </div>
-                                <h2 className="asset-details-main-title">
+                                        ))}
+                                    </div>
+                                )}
+                                <div className="asset-details-main-title">
                                     {selectedImage.title}
-                                </h2>
+                                </div>
                                 {selectedImage?.description && (
                                     <p className="asset-details-main-description">{selectedImage?.description}</p>
                                 )}

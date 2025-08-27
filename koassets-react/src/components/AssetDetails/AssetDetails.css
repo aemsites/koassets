@@ -25,9 +25,6 @@
 }
 
 .asset-details-main-close-button {
-    position: absolute;
-    top: 20px;
-    right: 20px;
     width: 40px;
     height: 40px;
     border: none;
@@ -38,7 +35,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10;
     color: white;
     transition: background-color 0.2s;
 }
@@ -52,6 +48,7 @@
     flex: 1;
     min-height: 70vh;
     overflow: visible;
+    padding-top: 50px;
 }
 
 /* Metadata Grouping Section */
@@ -226,6 +223,38 @@
 .asset-details-main-header {
     border-bottom: 1px solid #e1e1e1;
     padding-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+}
+
+/* Close button always positioned top-right */
+.asset-details-main-header .asset-details-main-close-button {
+    position: absolute;
+    top: -20px;
+    right: 0;
+    margin: 0;
+}
+
+/* Tags and content flow naturally, with space reserved for close button */
+.asset-details-main-header .asset-details-main-tags {
+    margin-right: 56px;
+    /* Space for close button (40px + 16px gap) */
+}
+
+.asset-details-main-header .asset-details-main-title {
+    margin-top: 0;
+    font-family: "TCCC UnityText Regular", "Helvetica Neue", Arial, Helvetica, sans-serif;
+    color: var(--secondary-color);
+    color: #1e1e1e;
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.575rem;
+}
+
+.asset-details-main-header .asset-details-main-description {
+    /* No specific styling needed, flows naturally */
 }
 
 .asset-details-main-tags {
@@ -408,11 +437,11 @@
     }
 
     .asset-details-main-close-button {
-        top: 15px;
-        right: 15px;
         width: 35px;
         height: 35px;
         font-size: 20px;
+        position: static;
+        margin: 0;
     }
 
     /* Shared collapsible section header responsive */
