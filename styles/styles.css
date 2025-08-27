@@ -20,7 +20,7 @@
   --link-hover-color: #1d3ecf;
 
   /* fonts */
-  --body-font-family: roboto, roboto-fallback, sans-serif;
+  --body-font-family: "TCCC UnityText Regular", roboto-fallback, sans-serif;
   --heading-font-family: "TCCC UnityHeadline", roboto-condensed-fallback, sans-serif;
 
   /* body sizes */
@@ -236,6 +236,8 @@ main img {
   display: inline-block;
   height: 24px;
   width: 24px;
+  vertical-align: bottom;
+  margin-right: 8px;
 }
 
 .icon img {
@@ -270,6 +272,12 @@ main .section.highlight {
   background-color: var(--light-color);
   margin: 0;
   padding: 40px 0;
+}
+
+main .section.light-blue {
+    background-color: #f0f9fa;
+    padding-top: 16px;
+    padding-bottom: 16px;
 }
 
 .homepage-bg {
