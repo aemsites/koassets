@@ -562,7 +562,7 @@ function MainApp(): React.JSX.Element {
                 isBlockIntegration={externalParams.isBlockIntegration}
             />
             {/* TODO: Update this once finalized */}
-            {window.location.pathname !== '/assets-search/' && (
+            {window.location.pathname.includes('/tools/assets-browser/index.html') && (
                 <SearchBar
                     query={query}
                     setQuery={setQuery}
