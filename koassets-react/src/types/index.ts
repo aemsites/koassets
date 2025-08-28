@@ -244,28 +244,14 @@ export interface AssetDetailsProps extends AssetPreviewProps {
     setImagePresets?: (presets: { assetId?: string; items?: Rendition[]; 'repo:name'?: string; }) => void;
 }
 
-export interface SavedSearch {
-    id: string;
-    name: string;
-    searchTerm: string;
-    facetFilters: string[][];
-    numericFilters: string[];
-    dateCreated: number;
-    dateLastModified: number;
-    dateLastUsed?: number;
-    favorite: boolean;
-}
-
 export interface FacetsProps {
     searchResults?: SearchResults['results'] | null;
     selectedFacetFilters?: string[][];
     setSelectedFacetFilters: (facetFilters: string[][]) => void;
-    search: (query?: string) => void;
-    excFacets?: Record<string, unknown>;
+    search: () => void;
+    excFacets?: ExcFacets;
     selectedNumericFilters?: string[];
     setSelectedNumericFilters: (filters: string[]) => void;
-    query: string;
-    setQuery: (query: string) => void;
 }
 
 // Phase 3 Component Types

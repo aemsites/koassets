@@ -13,5 +13,4 @@ const App: React.FC = (): React.JSX.Element => {
     );
 };
 
-
-export default App;
+export default App; 
