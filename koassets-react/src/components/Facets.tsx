@@ -418,7 +418,7 @@ const Facets: React.FC<FacetsProps> = ({
         setDateRanges({});
         setExpandedFacets({});
         
-        // Load saved facet filters
+        // Load saved facet filters for UI display
         const newChecked: FacetCheckedState = {};
         savedSearch.facetFilters.forEach((filterGroup: string[]) => {
             filterGroup.forEach((filter: string) => {
@@ -434,8 +434,9 @@ const Facets: React.FC<FacetsProps> = ({
         isUpdatingFromExternalRef.current = true;
         setChecked(newChecked);
         
-        // Load saved numeric filters
-        setSelectedNumericFilters(savedSearch.numericFilters);
+        // Directly set the filters to ensure they're immediately available for search
+        setSelectedFacetFilters([...savedSearch.facetFilters]);
+        setSelectedNumericFilters([...savedSearch.numericFilters]);
         
         // Load saved search term
         const searchTerm = savedSearch.searchTerm || '';
@@ -450,10 +451,10 @@ const Facets: React.FC<FacetsProps> = ({
         setSavedSearches(usedUpdated);
         saveSavedSearches(usedUpdated);
 
-        // Apply the loaded search - ensure the search term is passed explicitly
+        // Apply the loaded search with proper timing to ensure state updates complete
         setTimeout(() => {
             search(searchTerm);
-        }, 200); // Increased timeout to ensure state updates complete
+        }, 150); // Slightly reduced timeout since we're setting filters directly
     };
 
     const handleDeleteSavedSearch = (searchId: string) => {
