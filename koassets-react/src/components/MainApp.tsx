@@ -248,10 +248,11 @@ function MainApp(): React.JSX.Element {
     }, [currentPage, totalPages, isLoadingMore, performSearchImages, query]);
 
     // Handler for searching
-    const search = useCallback((): void => {
+    const search = useCallback((searchQuery?: string): void => {
         setCurrentPage(0);
         // Search for assets or assets in a collection
-        performSearchImages(query, 0);
+        const queryToUse = searchQuery !== undefined ? searchQuery : query;
+        performSearchImages(queryToUse, 0);
     }, [performSearchImages, query]);
 
     // Read query and selectedQueryType from URL on mount
@@ -259,11 +260,42 @@ function MainApp(): React.JSX.Element {
         const params = new URLSearchParams(window.location.search);
         const urlQuery = params.get('query');
         const queryType = params.get('selectedQueryType');
+        
+        // Check for saved search parameters
+        const fulltext = params.get('fulltext');
+        const facetFiltersParam = params.get('facetFilters');
+        const numericFiltersParam = params.get('numericFilters');
+        
         if (urlQuery !== null) setQuery(urlQuery);
         if (queryType !== null && (queryType === QUERY_TYPES.ASSETS || queryType === QUERY_TYPES.COLLECTIONS)) {
             setSelectedQueryType(queryType);
         }
-    }, [dynamicMediaClient]);
+        
+        // Apply saved search parameters if present
+        if (fulltext || facetFiltersParam || numericFiltersParam) {
+            try {
+                if (fulltext) setQuery(fulltext);
+                
+                if (facetFiltersParam) {
+                    const facetFilters = JSON.parse(decodeURIComponent(facetFiltersParam));
+                    setSelectedFacetFilters(facetFilters);
+                }
+                
+                if (numericFiltersParam) {
+                    const numericFilters = JSON.parse(decodeURIComponent(numericFiltersParam));
+                    setSelectedNumericFilters(numericFilters);
+                }
+                
+                // Trigger search after a brief delay to ensure all state is updated
+                setTimeout(() => {
+                    setCurrentPage(0);
+                    performSearchImages(fulltext || '', 0);
+                }, 100);
+            } catch (error) {
+                console.warn('Error parsing URL search parameters:', error);
+            }
+        }
+    }, [dynamicMediaClient, setSelectedFacetFilters, setSelectedNumericFilters, performSearchImages]);
 
     useEffect(() => {
         dynamicMediaClient && window.history.replaceState({}, '', `${window.location.pathname}`);
@@ -588,6 +620,8 @@ function MainApp(): React.JSX.Element {
                                     excFacets={excFacets}
                                     selectedNumericFilters={selectedNumericFilters}
                                     setSelectedNumericFilters={setSelectedNumericFilters}
+                                    query={query}
+                                    setQuery={setQuery}
                                 />
                             </div>
                         </div>
