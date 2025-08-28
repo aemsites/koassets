@@ -743,7 +743,7 @@ const Facets: React.FC<FacetsProps> = ({
                                                     }}
                                                     type="button"
                                                 >
-                                                    <img src={savedSearch.favorite ? 'icons/star-yellow.svg' : 'icons/star-grey.svg'} alt="Favorite" />
+                                                    <img src={savedSearch.favorite ? `${import.meta.env.BASE_URL}icons/star-yellow.svg` : `${import.meta.env.BASE_URL}icons/star-grey.svg`} alt="Favorite" />
                                                 </button>
                                             </div>
                                             <div className="saved-search-actions-left">
@@ -756,7 +756,7 @@ const Facets: React.FC<FacetsProps> = ({
                                                     }}
                                                     type="button"
                                                 >
-                                                    <img src="icons/copy-circle.svg" alt="Copy" />
+                                                    <img src={`${import.meta.env.BASE_URL}icons/copy-circle.svg`} alt="Copy" />
                                                 </button>
                                                 <button
                                                     className="saved-search-icon-btn"
@@ -767,7 +767,7 @@ const Facets: React.FC<FacetsProps> = ({
                                                     }}
                                                     type="button"
                                                 >
-                                                    <img src="icons/edit-circle.svg" alt="Edit" />
+                                                    <img src={`${import.meta.env.BASE_URL}icons/edit-circle.svg`} alt="Edit" />
                                                 </button>
                                                 <button
                                                     className="saved-search-delete-btn"
@@ -778,7 +778,7 @@ const Facets: React.FC<FacetsProps> = ({
                                                     type="button"
                                                     title="Delete"
                                                 >
-                                                    <img src="icons/delete-circle.svg" alt="Delete" />
+                                                    <img src={`${import.meta.env.BASE_URL}icons/delete-circle.svg`} alt="Delete" />
                                                 </button>
                                             </div>
                                         </div>
@@ -957,7 +957,7 @@ const Facets: React.FC<FacetsProps> = ({
                         onClick={showSaveModal ? handleSaveSearchCancel : handleSaveSearch}
                     >
                         <span className="facet-filter-save-icon">
-                            <img src="icons/save-icon.svg" alt="Save" />
+                            <img src={`${import.meta.env.BASE_URL}icons/save-icon.svg`} alt="Save" />
                         </span>
                         <span className="facet-filter-save-text">{showSaveModal ? 'Cancel' : 'Save Search'}</span>
                     </button>
