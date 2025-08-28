@@ -11,7 +11,7 @@
     transition: transform 0.2s, box-shadow 0.2s;
     padding: 0;
     position: relative;
-    /* Remove height: 100% to allow natural content height */
+    height: 100%;
 }
 
 .asset-card-view-grid:hover {
@@ -23,7 +23,7 @@
     flex-direction: column;
     padding: 0;
     position: relative;
-    /* Remove height: 100% to allow natural content height */
+    height: 100%;
 }
 
 .asset-card-view-grid .image-preview-button {
@@ -90,6 +90,7 @@
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
+    margin-top: auto;
 }
 
 .asset-card-view-grid .product-tags {
