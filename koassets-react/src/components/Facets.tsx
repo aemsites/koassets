@@ -956,7 +956,7 @@ const Facets: React.FC<FacetsProps> = ({
                         onClick={showSaveModal ? handleSaveSearchCancel : handleSaveSearch}
                     >
                         <span className="facet-filter-save-icon">
-                            <img src={`${import.meta.env.BASE_URL}icons/info.svg`} alt="Save" />
+                            <img src={`${import.meta.env.BASE_URL}icons/save-icon.svg`} alt="Save" />
                         </span>
                         <span className="facet-filter-save-text">{showSaveModal ? 'Cancel' : 'Save Search'}</span>
                     </button>
