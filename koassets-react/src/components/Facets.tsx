@@ -558,7 +558,6 @@ const Facets: React.FC<FacetsProps> = ({
         } catch (e) {
             console.warn('[SavedSearch] clipboard copy failed, falling back to prompt');
             // Fallback
-            // eslint-disable-next-line no-alert
             window.prompt('Copy this link', buildSavedSearchLink(savedSearch));
             const now = Date.now();
             const updated = savedSearches.map(s => s.id === savedSearch.id ? { ...s, dateLastUsed: now } : s);
