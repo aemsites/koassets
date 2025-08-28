@@ -82,7 +82,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
                                 title="Grid View"
                                 onClick={handleGridViewClick}
                             >
-                                <img src={`${import.meta.env.BASE_URL}icons/gridview.svg`} alt="Grid View" />
+                                <img src={`${import.meta.env.BASE_URL}icons/save-icon.svg`} alt="Grid View" />
                             </button>
                             <button
                                 className={`list-view-btn ${viewType === 'list' ? 'active' : ''}`}
