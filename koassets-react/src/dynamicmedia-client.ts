@@ -201,7 +201,7 @@ export class DynamicMediaClient {
                         "tagFilters": ""
                     }
                 },
-                // ...this.generateSubRequest(facetFilters, numericFilters)
+                ...this.generateSubRequest(query, facetFilters, numericFilters)
             ]
         };
     }
@@ -274,7 +274,7 @@ export class DynamicMediaClient {
      * @param facetFilters - Array of facet filter groups
      * @returns Array of sub-request objects
      */
-    generateSubRequest(facetFilters: string[][], numericFilters: string[]): Array<AlgoliaSearchRequest> {
+    generateSubRequest(query: string, facetFilters: string[][], numericFilters: string[]): Array<AlgoliaSearchRequest> {
         const indexName = this.getIndexName();
         const nonExpiredAssetsFilter = this.getNonExpiredAssetsFilter();
         const requests = [];
@@ -303,7 +303,7 @@ export class DynamicMediaClient {
                     hitsPerPage: 0,
                     maxValuesPerFacet: 1000,
                     page: 0,
-                    query: ""
+                    query: query
                 }
             };
 
