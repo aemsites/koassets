@@ -248,10 +248,11 @@ function MainApp(): React.JSX.Element {
     }, [currentPage, totalPages, isLoadingMore, performSearchImages, query]);
 
     // Handler for searching
-    const search = useCallback((): void => {
+    const search = useCallback((searchQuery?: string): void => {
         setCurrentPage(0);
         // Search for assets or assets in a collection
-        performSearchImages(query, 0);
+        const queryToUse = searchQuery !== undefined ? searchQuery : query;
+        performSearchImages(queryToUse, 0);
     }, [performSearchImages, query]);
 
     // Read query and selectedQueryType from URL on mount
