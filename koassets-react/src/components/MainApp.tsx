@@ -381,34 +381,46 @@ function MainApp(): React.JSX.Element {
     };
 
     const handleBulkAddToCart = async (selectedCardIds: Set<string>, images: Asset[]): Promise<void> => {
-        const newItems: Asset[] = [];
-
-        for (const imageId of selectedCardIds) {
+        // Process all selected images in parallel
+        const processCartImages = async (imageId: string): Promise<Asset | null> => {
             const image = images.find(img => img.assetId === imageId);
-            if (image && !cartItems.some(item => item.assetId === image.assetId)) {
-                // Cache each image when adding to cart
-                if (dynamicMediaClient && image.assetId) {
-                    try {
-                        const cacheKey = `${image.assetId}-350`;
-                        await fetchOptimizedDeliveryBlob(
-                            dynamicMediaClient,
-                            image,
-                            350,
-                            {
-                                cache: false,
-                                cacheKey: cacheKey,
-                                fallbackUrl: image.url
-                            }
-                        );
-                        console.log(`Cached bulk image for cart: ${image.assetId}`);
-                    } catch (error) {
-                        console.warn(`Failed to cache bulk image for cart ${image.assetId}:`, error);
-                    }
-                }
-
-                newItems.push(image);
+            if (!image || cartItems.some(item => item.assetId === image.assetId)) {
+                return null;
             }
-        }
+
+            // Cache the image in parallel
+            if (dynamicMediaClient && image.assetId) {
+                try {
+                    const cacheKey = `${image.assetId}-350`;
+                    await fetchOptimizedDeliveryBlob(
+                        dynamicMediaClient,
+                        image,
+                        350,
+                        {
+                            cache: false,
+                            cacheKey: cacheKey,
+                            fallbackUrl: image.url
+                        }
+                    );
+                    console.log(`Cached bulk image for cart: ${image.assetId}`);
+                } catch (error) {
+                    console.warn(`Failed to cache bulk image for cart ${image.assetId}:`, error);
+                }
+            }
+
+            return image;
+        };
+
+        // Process all images in parallel using Promise.allSettled for better error handling
+        const results = await Promise.allSettled(
+            Array.from(selectedCardIds).map(processCartImages)
+        );
+
+        // Filter successful results and extract the assets
+        const newItems: Asset[] = results
+            .filter((result): result is PromiseFulfilledResult<Asset | null> =>
+                result.status === 'fulfilled' && result.value !== null)
+            .map(result => result.value!);
 
         if (newItems.length > 0) {
             setCartItems(prev => [...prev, ...newItems]);
