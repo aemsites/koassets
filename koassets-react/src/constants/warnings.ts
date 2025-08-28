@@ -1,0 +1,1 @@
+export const smrWarnings = "Self-managed rights (SMR) - Please note that the accuracy of usage rights for these assets has not been verified. Be sure to consult with your legal counsel to confirm that your proposed use conforms to legally permissible use, as well as to the applicable policies of TCCC. By downloading these assets, you assume liability of misuse." as const;

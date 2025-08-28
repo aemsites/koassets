@@ -266,7 +266,7 @@ export function populateAssetFromHit(hit: Record<string, unknown>): Asset {
         rightsProfileTitle: safeStringField(hit, 'tccc-rightsProfileTitle'),
         rightsStartDate: safeDateField(hit, 'tccc-rightsStartDate'),
         rightsStatus: safeStringField(hit, 'tccc-rightsStatus'),
-        riskTypeManagement: safeStringField(hit, 'tccc-riskTypeMgmt'),
+        riskTypeManagement: safeStringField(hit, 'tccc-riskTypeMgmt'), // TODO: what's default value?
         secondaryPackaging: secondaryPackaging,
         sourceAsset: safeStringField(hit, 'tccc-sourceAsset'), //TODO: missing metadata
         sourceId: safeStringField(hit, 'tccc-sourceId'), //TODO: missing metadata

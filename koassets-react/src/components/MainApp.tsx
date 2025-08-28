@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import '../MainApp.css';
+import { DynamicMediaClient } from '../clients/dynamicmedia-client';
 import { DEFAULT_FACETS, type ExcFacets } from '../constants/facets';
-import { DynamicMediaClient } from '../dynamicmedia-client';
 import type {
     Asset,
     CartItem,

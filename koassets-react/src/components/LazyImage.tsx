@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { DynamicMediaClient } from '../dynamicmedia-client';
+import { DynamicMediaClient } from '../clients/dynamicmedia-client';
 import type { Asset } from '../types';
 import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
 import './LazyImage.css';

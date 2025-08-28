@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import type { DynamicMediaClient } from '../dynamicmedia-client';
+import type { DynamicMediaClient } from '../clients/dynamicmedia-client';
 import type { Asset } from '../types';
 import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
 import './ThumbnailImage.css';

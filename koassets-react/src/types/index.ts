@@ -1,6 +1,6 @@
 // Asset-related types
 import React from 'react';
-import type { DynamicMediaClient } from '../dynamicmedia-client';
+import type { DynamicMediaClient } from '../clients/dynamicmedia-client';
 
 export interface Rendition {
     name?: string;

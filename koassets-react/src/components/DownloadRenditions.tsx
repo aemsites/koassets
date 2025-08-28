@@ -1,6 +1,6 @@
 import { ToastQueue } from '@react-spectrum/toast';
 import React, { useEffect, useState } from 'react';
-import type { DynamicMediaClient } from '../dynamicmedia-client';
+import type { DynamicMediaClient } from '../clients/dynamicmedia-client';
 import { Asset, Rendition } from '../types';
 import { formatDimensions, formatFileSize, formatFormatName } from '../utils/formatters';
 import './DownloadRenditions.css';
