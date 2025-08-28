@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ToastQueue } from '@react-spectrum/toast';
-import type { FacetCheckedState, FacetsProps, SearchResult, SavedSearch } from '../types';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { FacetCheckedState, FacetsProps, SavedSearch, SearchResult } from '../types';
 import DateRange, { DateRangeRef } from './DateRange';
 import './Facets.css';
 
@@ -45,7 +45,7 @@ const Facets: React.FC<FacetsProps> = ({
     const [dateRanges, setDateRanges] = useState<{ [key: string]: [number | undefined, number | undefined] }>({});
     const dateRangeRef = useRef<DateRangeRef>(null);
     const isUpdatingFromExternalRef = useRef(false);
-    
+
     // Saved search functionality state
     const [activeView, setActiveView] = useState<'filters' | 'saved'>('filters');
     const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(loadSavedSearches());
@@ -278,7 +278,7 @@ const Facets: React.FC<FacetsProps> = ({
             isUpdatingFromExternalRef.current = false;
             return;
         }
-        
+
         const newSelectedFacetFilters: string[][] = [];
         Object.keys(checked).forEach(key => {
             const facetFilter: string[] = [];
@@ -317,7 +317,7 @@ const Facets: React.FC<FacetsProps> = ({
     useEffect(() => {
         if (selectedFacetFilters !== undefined) {
             const newChecked: FacetCheckedState = {};
-            
+
             if (selectedFacetFilters.length > 0) {
                 selectedFacetFilters.forEach((filterGroup: string[]) => {
                     filterGroup.forEach((filter: string) => {
@@ -331,7 +331,7 @@ const Facets: React.FC<FacetsProps> = ({
                     });
                 });
             }
-            
+
             // Set flag to indicate we're updating from external source
             isUpdatingFromExternalRef.current = true;
             setChecked(newChecked);
@@ -398,10 +398,10 @@ const Facets: React.FC<FacetsProps> = ({
             const updatedSearches = [...savedSearches, newSearch];
             setSavedSearches(updatedSearches);
             saveSavedSearches(updatedSearches);
-            
+
             // Show success toast notification
             ToastQueue.positive('SEARCH SAVED SUCCESSFULLY', { timeout: 3000 });
-            
+
             setSaveSearchName('');
             setShowSaveModal(false);
         }
@@ -417,7 +417,7 @@ const Facets: React.FC<FacetsProps> = ({
         setChecked({});
         setDateRanges({});
         setExpandedFacets({});
-        
+
         // Load saved facet filters
         const newChecked: FacetCheckedState = {};
         savedSearch.facetFilters.forEach((filterGroup: string[]) => {
@@ -429,21 +429,21 @@ const Facets: React.FC<FacetsProps> = ({
                 newChecked[key][value] = true;
             });
         });
-        
+
         // Set flag to indicate we're updating from saved search loading
         isUpdatingFromExternalRef.current = true;
         setChecked(newChecked);
-        
+
         // Load saved numeric filters
         setSelectedNumericFilters(savedSearch.numericFilters);
-        
+
         // Load saved search term
         const searchTerm = savedSearch.searchTerm || '';
         setQuery(searchTerm);
-        
+
         // Switch back to filters view
         setActiveView('filters');
-        
+
         // Update last used timestamp
         const now = Date.now();
         const usedUpdated = savedSearches.map(s => s.id === savedSearch.id ? { ...s, dateLastUsed: now } : s);
@@ -459,7 +459,7 @@ const Facets: React.FC<FacetsProps> = ({
     const handleDeleteSavedSearch = (searchId: string) => {
         const searchToDelete = savedSearches.find(s => s.id === searchId);
         const searchName = searchToDelete?.name || 'this saved search';
-        
+
         setDeleteSearchId(searchId);
         setDeleteSearchName(searchName);
         setShowDeleteModal(true);
@@ -470,7 +470,7 @@ const Facets: React.FC<FacetsProps> = ({
             const updatedSearches = savedSearches.filter(s => s.id !== deleteSearchId);
             setSavedSearches(updatedSearches);
             saveSavedSearches(updatedSearches);
-            
+
             // Show success toast notification
             ToastQueue.positive('SAVED SEARCH DELETED SUCCESSFULLY', { timeout: 3000 });
         }
@@ -506,7 +506,7 @@ const Facets: React.FC<FacetsProps> = ({
         const now = new Date();
         const diffMs = now.getTime() - date.getTime();
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        
+
         if (diffDays === 0) {
             return 'Today';
         } else if (diffDays === 1) {
@@ -537,7 +537,7 @@ const Facets: React.FC<FacetsProps> = ({
         if (savedSearch.numericFilters?.length) {
             params.set('numericFilters', encodeURIComponent(JSON.stringify(savedSearch.numericFilters)));
         }
-        
+
         // Build complete URL with current host and path
         const currentUrl = new URL(window.location.href);
         const baseUrl = `${currentUrl.protocol}//${currentUrl.host}${currentUrl.pathname}`;
@@ -552,7 +552,7 @@ const Facets: React.FC<FacetsProps> = ({
             const updated = savedSearches.map(s => s.id === savedSearch.id ? { ...s, dateLastUsed: now } : s);
             setSavedSearches(updated);
             saveSavedSearches(updated);
-            
+
             // Show success toast notification
             ToastQueue.positive('SAVED SEARCH COPIED SUCCESSFULLY', { timeout: 3000 });
         } catch (e) {
@@ -563,7 +563,7 @@ const Facets: React.FC<FacetsProps> = ({
             const updated = savedSearches.map(s => s.id === savedSearch.id ? { ...s, dateLastUsed: now } : s);
             setSavedSearches(updated);
             saveSavedSearches(updated);
-            
+
             // Show success toast notification for fallback as well
             ToastQueue.positive('SAVED SEARCH COPIED SUCCESSFULLY', { timeout: 3000 });
         }
@@ -573,12 +573,12 @@ const Facets: React.FC<FacetsProps> = ({
     const [editLinkText, setEditLinkText] = useState('');
     const [editingSearchName, setEditingSearchName] = useState('');
     const [editingSearchId, setEditingSearchId] = useState<string | null>(null);
-    
+
     // Delete confirmation modal state
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteSearchId, setDeleteSearchId] = useState<string | null>(null);
     const [deleteSearchName, setDeleteSearchName] = useState('');
-    
+
     // Tooltip state
     const [hoveredSearchId, setHoveredSearchId] = useState<string | null>(null);
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -630,10 +630,10 @@ const Facets: React.FC<FacetsProps> = ({
 
         setSavedSearches(updated);
         saveSavedSearches(updated);
-        
+
         // Show success toast notification
         ToastQueue.positive('SAVED SEARCH UPDATED SUCCESSFULLY', { timeout: 3000 });
-        
+
         setShowEditLinkModal(false);
         setEditLinkText('');
         setEditingSearchName('');
@@ -646,7 +646,7 @@ const Facets: React.FC<FacetsProps> = ({
                 <div className="facet-filter">
                     <div className="facet-filter-header">
                         <div className="facet-filter-tabs">
-                            <button 
+                            <button
                                 className={`facet-filter-tab ${activeView === 'filters' ? 'active' : ''}`}
                                 onClick={() => setActiveView('filters')}
                                 type="button"
@@ -658,7 +658,7 @@ const Facets: React.FC<FacetsProps> = ({
                                     CLEAR ALL
                                 </button>
                             )}
-                            <button 
+                            <button
                                 className={`facet-filter-tab ${activeView === 'saved' ? 'active' : ''}`}
                                 onClick={() => setActiveView('saved')}
                                 type="button"
@@ -712,83 +712,83 @@ const Facets: React.FC<FacetsProps> = ({
                                         return usedB - usedA; // most recently used first
                                     })
                                     .map((savedSearch) => (
-                                    <div 
-                                        key={savedSearch.id} 
-                                        className="saved-search-item"
-                                        onMouseEnter={(e) => handleShowTooltip(savedSearch.id, e)}
-                                        onMouseLeave={handleHideTooltip}
-                                    >
-                                        <div className="saved-search-info">
-                                            <div className="saved-search-title">
-                                                <button
-                                                    className="saved-search-name-link"
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        handleLoadSavedSearch(savedSearch);
-                                                        (e.currentTarget as HTMLButtonElement).blur();
-                                                    }}
-                                                    title="Load this saved search"
-                                                >
-                                                    {savedSearch.name}
-                                                </button>
-                                                <button
-                                                    className={`saved-search-fav-btn ${savedSearch.favorite ? 'favorite' : ''}`}
-                                                    title="Favorite"
-                                                    onClick={(e) => {
-                                                        const updated = savedSearches.map(s => s.id === savedSearch.id ? { ...s, favorite: !s.favorite } : s);
-                                                        setSavedSearches(updated);
-                                                        saveSavedSearches(updated);
-                                                        (e.currentTarget as HTMLButtonElement).blur();
-                                                    }}
-                                                    type="button"
-                                                >
-                                                    <img src={savedSearch.favorite ? `${import.meta.env.BASE_URL}icons/star-yellow.svg` : `${import.meta.env.BASE_URL}icons/star-grey.svg`} alt="Favorite" />
-                                                </button>
-                                            </div>
-                                            <div className="saved-search-actions-left">
-                                                <button
-                                                    className="saved-search-icon-btn"
-                                                    title="Copy"
-                                                    onClick={(e) => {
-                                                        handleCopySavedSearch(savedSearch);
-                                                        (e.currentTarget as HTMLButtonElement).blur();
-                                                    }}
-                                                    type="button"
-                                                >
-                                                    <img src={`${import.meta.env.BASE_URL}icons/copy-circle.svg`} alt="Copy" />
-                                                </button>
-                                                <button
-                                                    className="saved-search-icon-btn"
-                                                    title="Edit"
-                                                    onClick={(e) => {
-                                                        handleOpenEditLink(savedSearch);
-                                                        (e.currentTarget as HTMLButtonElement).blur();
-                                                    }}
-                                                    type="button"
-                                                >
-                                                    <img src={`${import.meta.env.BASE_URL}icons/edit-circle.svg`} alt="Edit" />
-                                                </button>
-                                                <button
-                                                    className="saved-search-delete-btn"
-                                                    onClick={(e) => {
-                                                        handleDeleteSavedSearch(savedSearch.id);
-                                                        (e.currentTarget as HTMLButtonElement).blur();
-                                                    }}
-                                                    type="button"
-                                                    title="Delete"
-                                                >
-                                                    <img src={`${import.meta.env.BASE_URL}icons/delete-circle.svg`} alt="Delete" />
-                                                </button>
+                                        <div
+                                            key={savedSearch.id}
+                                            className="saved-search-item"
+                                            onMouseEnter={(e) => handleShowTooltip(savedSearch.id, e)}
+                                            onMouseLeave={handleHideTooltip}
+                                        >
+                                            <div className="saved-search-info">
+                                                <div className="saved-search-title">
+                                                    <button
+                                                        className="saved-search-name-link"
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            handleLoadSavedSearch(savedSearch);
+                                                            (e.currentTarget as HTMLButtonElement).blur();
+                                                        }}
+                                                        title="Load this saved search"
+                                                    >
+                                                        {savedSearch.name}
+                                                    </button>
+                                                    <button
+                                                        className={`saved-search-fav-btn ${savedSearch.favorite ? 'favorite' : ''}`}
+                                                        title="Favorite"
+                                                        onClick={(e) => {
+                                                            const updated = savedSearches.map(s => s.id === savedSearch.id ? { ...s, favorite: !s.favorite } : s);
+                                                            setSavedSearches(updated);
+                                                            saveSavedSearches(updated);
+                                                            (e.currentTarget as HTMLButtonElement).blur();
+                                                        }}
+                                                        type="button"
+                                                    >
+                                                        <img src={savedSearch.favorite ? `${import.meta.env.BASE_URL}icons/star-yellow.svg` : `${import.meta.env.BASE_URL}icons/star-grey.svg`} alt="Favorite" />
+                                                    </button>
+                                                </div>
+                                                <div className="saved-search-actions-left">
+                                                    <button
+                                                        className="saved-search-icon-btn"
+                                                        title="Copy"
+                                                        onClick={(e) => {
+                                                            handleCopySavedSearch(savedSearch);
+                                                            (e.currentTarget as HTMLButtonElement).blur();
+                                                        }}
+                                                        type="button"
+                                                    >
+                                                        <img src={`${import.meta.env.BASE_URL}icons/copy-circle.svg`} alt="Copy" />
+                                                    </button>
+                                                    <button
+                                                        className="saved-search-icon-btn"
+                                                        title="Edit"
+                                                        onClick={(e) => {
+                                                            handleOpenEditLink(savedSearch);
+                                                            (e.currentTarget as HTMLButtonElement).blur();
+                                                        }}
+                                                        type="button"
+                                                    >
+                                                        <img src={`${import.meta.env.BASE_URL}icons/edit-circle.svg`} alt="Edit" />
+                                                    </button>
+                                                    <button
+                                                        className="saved-search-delete-btn"
+                                                        onClick={(e) => {
+                                                            handleDeleteSavedSearch(savedSearch.id);
+                                                            (e.currentTarget as HTMLButtonElement).blur();
+                                                        }}
+                                                        type="button"
+                                                        title="Delete"
+                                                    >
+                                                        <img src={`${import.meta.env.BASE_URL}icons/delete-circle.svg`} alt="Delete" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))
+                                    ))
                             )}
                         </div>
                     )}
                 </div>
             </div>
-            
+
             {/* Edit Saved Search Modal */}
             {showEditLinkModal && (
                 <div className="save-search-modal">
@@ -821,9 +821,9 @@ const Facets: React.FC<FacetsProps> = ({
                         </div>
                         <div className="save-search-modal-footer">
                             <button className="save-search-cancel-btn" onClick={handleCloseEditLink} type="button">Cancel</button>
-                            <button 
-                                className="save-search-confirm-btn" 
-                                onClick={handleConfirmEditLink} 
+                            <button
+                                className="save-search-confirm-btn"
+                                onClick={handleConfirmEditLink}
                                 type="button"
                                 disabled={!editingSearchName.trim()}
                             >
@@ -868,7 +868,7 @@ const Facets: React.FC<FacetsProps> = ({
 
             {/* Tooltip */}
             {hoveredSearchId && (
-                <div 
+                <div
                     className="saved-search-tooltip"
                     style={{
                         position: 'fixed',
@@ -903,7 +903,7 @@ const Facets: React.FC<FacetsProps> = ({
                     })()}
                 </div>
             )}
-            
+
             {/* Inline Save Form */}
             {activeView === 'filters' && showSaveModal && (
                 <div className="save-search-inline-form">
@@ -923,9 +923,9 @@ const Facets: React.FC<FacetsProps> = ({
                                 }
                             }}
                         />
-                        <button 
-                            className="save-search-inline-save-btn" 
-                            type="button" 
+                        <button
+                            className="save-search-inline-save-btn"
+                            type="button"
                             onClick={handleSaveSearchConfirm}
                             disabled={!saveSearchName.trim()}
                         >
@@ -934,13 +934,13 @@ const Facets: React.FC<FacetsProps> = ({
                     </div>
                 </div>
             )}
-            
+
             {/* Action Buttons */}
             {activeView === 'filters' && (
                 <div className="facet-filter-buttons">
-                    <button 
-                        className="facet-filter-apply-btn" 
-                        type="button" 
+                    <button
+                        className="facet-filter-apply-btn"
+                        type="button"
                         onClick={showSaveModal ? handleSaveSearchCancel : handleApplyFilters}
                     >
                         <span className="facet-filter-apply-icon">
@@ -950,13 +950,13 @@ const Facets: React.FC<FacetsProps> = ({
                         </span>
                         <span className="facet-filter-apply-text">Apply</span>
                     </button>
-                    <button 
+                    <button
                         className={`facet-filter-save-btn ${showSaveModal ? 'cancel-mode' : ''}`}
-                        type="button" 
+                        type="button"
                         onClick={showSaveModal ? handleSaveSearchCancel : handleSaveSearch}
                     >
                         <span className="facet-filter-save-icon">
-                            <img src={`${import.meta.env.BASE_URL}icons/save-icon.svg`} alt="Save" />
+                            <img src={`${import.meta.env.BASE_URL}icons/info.svg`} alt="Save" />
                         </span>
                         <span className="facet-filter-save-text">{showSaveModal ? 'Cancel' : 'Save Search'}</span>
                     </button>

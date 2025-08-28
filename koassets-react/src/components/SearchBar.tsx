@@ -21,12 +21,12 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
     const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
-            sendQuery();
+            sendQuery(query);
         }
     };
 
     const handleSearchClick = () => {
-        sendQuery();
+        sendQuery(query);
     };
 
     return (
