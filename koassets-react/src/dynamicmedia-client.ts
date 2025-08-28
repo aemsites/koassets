@@ -201,7 +201,7 @@ export class DynamicMediaClient {
                         "tagFilters": ""
                     }
                 },
-                ...this.generateSubRequest(facetFilters, numericFilters)
+                // ...this.generateSubRequest(facetFilters, numericFilters)
             ]
         };
     }
@@ -779,4 +779,4 @@ export class DynamicMediaClient {
     }
 
 
-} 
+}
