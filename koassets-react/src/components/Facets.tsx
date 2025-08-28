@@ -430,16 +430,18 @@ const Facets: React.FC<FacetsProps> = ({
             });
         });
 
+        // Load saved search term FIRST
+        const searchTerm = savedSearch.searchTerm || '';
+        setQuery(searchTerm);
+
         // Set flag to indicate we're updating from saved search loading
         isUpdatingFromExternalRef.current = true;
         setChecked(newChecked);
-
-        // Load saved numeric filters
+        
+        // Then update filters - this will trigger the auto-search useEffect in MainApp
+        // which will use the updated query state
+        setSelectedFacetFilters(savedSearch.facetFilters);
         setSelectedNumericFilters(savedSearch.numericFilters);
-
-        // Load saved search term
-        const searchTerm = savedSearch.searchTerm || '';
-        setQuery(searchTerm);
 
         // Switch back to filters view
         setActiveView('filters');
@@ -449,11 +451,6 @@ const Facets: React.FC<FacetsProps> = ({
         const usedUpdated = savedSearches.map(s => s.id === savedSearch.id ? { ...s, dateLastUsed: now } : s);
         setSavedSearches(usedUpdated);
         saveSavedSearches(usedUpdated);
-
-        // Apply the loaded search - ensure the search term is passed explicitly
-        setTimeout(() => {
-            search(searchTerm);
-        }, 200); // Increased timeout to ensure state updates complete
     };
 
     const handleDeleteSavedSearch = (searchId: string) => {
