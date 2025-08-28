@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ToastQueue } from '@react-spectrum/toast';
-import type { FacetCheckedState, FacetsProps, SearchResult, SavedSearch } from '../types';
+import type { FacetCheckedState, FacetsProps, SearchResult } from '../types';
 import DateRange, { DateRangeRef } from './DateRange';
 import './Facets.css';
 
@@ -10,47 +9,19 @@ interface ExpandedFacetsState {
 
 const HIERARCHY_PREFIX = 'TCCC.#hierarchy.lvl';
 
-// Local storage functions for saved searches
-const loadSavedSearches = (): SavedSearch[] => {
-    try {
-        const saved = localStorage.getItem('koassets-saved-searches');
-        return saved ? JSON.parse(saved) : [];
-    } catch (error) {
-        console.error('Error loading saved searches:', error);
-        return [];
-    }
-};
-
-const saveSavedSearches = (searches: SavedSearch[]): void => {
-    try {
-        localStorage.setItem('koassets-saved-searches', JSON.stringify(searches));
-    } catch (error) {
-        console.error('Error saving searches:', error);
-    }
-};
-
 const Facets: React.FC<FacetsProps> = ({
     searchResults,
-    selectedFacetFilters,
+    // selectedFacetFilters,
     setSelectedFacetFilters,
     search,
     excFacets = {},
     selectedNumericFilters = [],
-    setSelectedNumericFilters,
-    query,
-    setQuery
+    setSelectedNumericFilters
 }) => {
     const [expandedFacets, setExpandedFacets] = useState<ExpandedFacetsState>({}); // Keep track of expanded facets (from EXC)
     const [checked, setChecked] = useState<FacetCheckedState>({}); // Keep track of checked state of facets and nested facets if any
     const [dateRanges, setDateRanges] = useState<{ [key: string]: [number | undefined, number | undefined] }>({});
     const dateRangeRef = useRef<DateRangeRef>(null);
-    const isUpdatingFromExternalRef = useRef(false);
-    
-    // Saved search functionality state
-    const [activeView, setActiveView] = useState<'filters' | 'saved'>('filters');
-    const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(loadSavedSearches());
-    const [showSaveModal, setShowSaveModal] = useState(false);
-    const [saveSearchName, setSaveSearchName] = useState('');
 
     // Memoized combined facets computation - merges facets from all search results
     const combinedFacets = useMemo((): SearchResult['facets'] => {
@@ -273,12 +244,6 @@ const Facets: React.FC<FacetsProps> = ({
 
     // Transform the checked object into an array of facet filters
     useEffect(() => {
-        // Skip if we're currently updating from external source (like URL params)
-        if (isUpdatingFromExternalRef.current) {
-            isUpdatingFromExternalRef.current = false;
-            return;
-        }
-        
         const newSelectedFacetFilters: string[][] = [];
         Object.keys(checked).forEach(key => {
             const facetFilter: string[] = [];
@@ -313,31 +278,6 @@ const Facets: React.FC<FacetsProps> = ({
         // because handleClearAllChecks handles this directly to avoid double searches
     }, [dateRanges, setSelectedNumericFilters]);
 
-    // Sync internal checked state when selectedFacetFilters changes (e.g., from URL parameters)
-    useEffect(() => {
-        if (selectedFacetFilters !== undefined) {
-            const newChecked: FacetCheckedState = {};
-            
-            if (selectedFacetFilters.length > 0) {
-                selectedFacetFilters.forEach((filterGroup: string[]) => {
-                    filterGroup.forEach((filter: string) => {
-                        const [key, value] = filter.split(':');
-                        if (key && value) {
-                            if (!newChecked[key]) {
-                                newChecked[key] = {};
-                            }
-                            newChecked[key][value] = true;
-                        }
-                    });
-                });
-            }
-            
-            // Set flag to indicate we're updating from external source
-            isUpdatingFromExternalRef.current = true;
-            setChecked(newChecked);
-        }
-    }, [selectedFacetFilters]);
-
     // Count checked facets for a specific facetTechId
     const getCheckedCount = useCallback((facetTechId: string): number => {
         let count = 0;
@@ -352,7 +292,6 @@ const Facets: React.FC<FacetsProps> = ({
     }, [checked]);
 
     const handleClearAllChecks = useCallback(() => {
-        isUpdatingFromExternalRef.current = true;
         setChecked({});
         setSelectedFacetFilters([]);
         setDateRanges({});
@@ -365,603 +304,52 @@ const Facets: React.FC<FacetsProps> = ({
         search();
     }, [search]);
 
-    // Save search functionality
-    const handleSaveSearch = () => {
-        setShowSaveModal(true);
-    };
-
-    const handleSaveSearchConfirm = () => {
-        if (saveSearchName.trim()) {
-            const facetFilterGroups = Object.keys(checked).map(key => {
-                const facetFilter: string[] = [];
-                Object.entries(checked[key]).forEach(([facet, isChecked]) => {
-                    if (isChecked) {
-                        facetFilter.push(`${key}:${facet}`);
-                    }
-                });
-                return facetFilter;
-            }).filter(filter => filter.length > 0);
-
-            const now = Date.now();
-            const newSearch: SavedSearch = {
-                id: now.toString(),
-                name: saveSearchName.trim(),
-                searchTerm: query,
-                facetFilters: [...facetFilterGroups],
-                numericFilters: [...selectedNumericFilters],
-                dateCreated: now,
-                dateLastModified: now,
-                dateLastUsed: now,
-                favorite: false
-            };
-
-            const updatedSearches = [...savedSearches, newSearch];
-            setSavedSearches(updatedSearches);
-            saveSavedSearches(updatedSearches);
-            
-            // Show success toast notification
-            ToastQueue.positive('SEARCH SAVED SUCCESSFULLY', { timeout: 3000 });
-            
-            setSaveSearchName('');
-            setShowSaveModal(false);
-        }
-    };
-
-    const handleSaveSearchCancel = () => {
-        setSaveSearchName('');
-        setShowSaveModal(false);
-    };
-
-    const handleLoadSavedSearch = (savedSearch: SavedSearch) => {
-        // Reset current filters
-        setChecked({});
-        setDateRanges({});
-        setExpandedFacets({});
-        
-        // Load saved facet filters
-        const newChecked: FacetCheckedState = {};
-        savedSearch.facetFilters.forEach((filterGroup: string[]) => {
-            filterGroup.forEach((filter: string) => {
-                const [key, value] = filter.split(':');
-                if (!newChecked[key]) {
-                    newChecked[key] = {};
-                }
-                newChecked[key][value] = true;
-            });
-        });
-        
-        // Set flag to indicate we're updating from saved search loading
-        isUpdatingFromExternalRef.current = true;
-        setChecked(newChecked);
-        
-        // Load saved numeric filters
-        setSelectedNumericFilters(savedSearch.numericFilters);
-        
-        // Load saved search term
-        const searchTerm = savedSearch.searchTerm || '';
-        setQuery(searchTerm);
-        
-        // Switch back to filters view
-        setActiveView('filters');
-        
-        // Update last used timestamp
-        const now = Date.now();
-        const usedUpdated = savedSearches.map(s => s.id === savedSearch.id ? { ...s, dateLastUsed: now } : s);
-        setSavedSearches(usedUpdated);
-        saveSavedSearches(usedUpdated);
-
-        // Apply the loaded search - ensure the search term is passed explicitly
-        setTimeout(() => {
-            search(searchTerm);
-        }, 200); // Increased timeout to ensure state updates complete
-    };
-
-    const handleDeleteSavedSearch = (searchId: string) => {
-        const searchToDelete = savedSearches.find(s => s.id === searchId);
-        const searchName = searchToDelete?.name || 'this saved search';
-        
-        setDeleteSearchId(searchId);
-        setDeleteSearchName(searchName);
-        setShowDeleteModal(true);
-    };
-
-    const handleConfirmDelete = () => {
-        if (deleteSearchId) {
-            const updatedSearches = savedSearches.filter(s => s.id !== deleteSearchId);
-            setSavedSearches(updatedSearches);
-            saveSavedSearches(updatedSearches);
-            
-            // Show success toast notification
-            ToastQueue.positive('SAVED SEARCH DELETED SUCCESSFULLY', { timeout: 3000 });
-        }
-        setShowDeleteModal(false);
-        setDeleteSearchId(null);
-        setDeleteSearchName('');
-    };
-
-    const handleCancelDelete = () => {
-        setShowDeleteModal(false);
-        setDeleteSearchId(null);
-        setDeleteSearchName('');
-    };
-
-    // Tooltip handlers
-    const handleShowTooltip = (searchId: string, event: React.MouseEvent) => {
-        setHoveredSearchId(searchId);
-        const rect = event.currentTarget.getBoundingClientRect();
-        setTooltipPosition({
-            x: rect.left + rect.width / 2,
-            y: rect.top - 10
-        });
-    };
-
-    const handleHideTooltip = () => {
-        setHoveredSearchId(null);
-    };
-
-    // Format last used date
-    const formatLastUsed = (timestamp?: number): string => {
-        if (!timestamp) return 'Never used';
-        const date = new Date(timestamp);
-        const now = new Date();
-        const diffMs = now.getTime() - date.getTime();
-        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        
-        if (diffDays === 0) {
-            return 'Today';
-        } else if (diffDays === 1) {
-            return 'Yesterday';
-        } else if (diffDays < 7) {
-            return `${diffDays} days ago`;
-        } else {
-            return date.toLocaleDateString();
-        }
-    };
-
-    // Count total filters in saved search
-    const countFilters = (savedSearch: SavedSearch): number => {
-        const facetFilterCount = savedSearch.facetFilters.reduce((total, filterGroup) => total + filterGroup.length, 0);
-        const numericFilterCount = savedSearch.numericFilters.length;
-        return facetFilterCount + numericFilterCount;
-    };
-
-    // Helpers to generate a shareable link-like string for a saved search
-    const buildSavedSearchLink = (savedSearch: SavedSearch): string => {
-        const params = new URLSearchParams();
-        if (savedSearch.searchTerm) {
-            params.set('fulltext', savedSearch.searchTerm);
-        }
-        if (savedSearch.facetFilters?.length) {
-            params.set('facetFilters', encodeURIComponent(JSON.stringify(savedSearch.facetFilters)));
-        }
-        if (savedSearch.numericFilters?.length) {
-            params.set('numericFilters', encodeURIComponent(JSON.stringify(savedSearch.numericFilters)));
-        }
-        
-        // Build complete URL with current host and path
-        const currentUrl = new URL(window.location.href);
-        const baseUrl = `${currentUrl.protocol}//${currentUrl.host}${currentUrl.pathname}`;
-        return `${baseUrl}?${params.toString()}`;
-    };
-
-    const handleCopySavedSearch = async (savedSearch: SavedSearch) => {
-        try {
-            const link = buildSavedSearchLink(savedSearch);
-            await navigator.clipboard.writeText(link);
-            const now = Date.now();
-            const updated = savedSearches.map(s => s.id === savedSearch.id ? { ...s, dateLastUsed: now } : s);
-            setSavedSearches(updated);
-            saveSavedSearches(updated);
-            
-            // Show success toast notification
-            ToastQueue.positive('SAVED SEARCH COPIED SUCCESSFULLY', { timeout: 3000 });
-        } catch (e) {
-            console.warn('[SavedSearch] clipboard copy failed, falling back to prompt');
-            // Fallback
-            window.prompt('Copy this link', buildSavedSearchLink(savedSearch));
-            const now = Date.now();
-            const updated = savedSearches.map(s => s.id === savedSearch.id ? { ...s, dateLastUsed: now } : s);
-            setSavedSearches(updated);
-            saveSavedSearches(updated);
-            
-            // Show success toast notification for fallback as well
-            ToastQueue.positive('SAVED SEARCH COPIED SUCCESSFULLY', { timeout: 3000 });
-        }
-    };
-
-    const [showEditLinkModal, setShowEditLinkModal] = useState(false);
-    const [editLinkText, setEditLinkText] = useState('');
-    const [editingSearchName, setEditingSearchName] = useState('');
-    const [editingSearchId, setEditingSearchId] = useState<string | null>(null);
-    
-    // Delete confirmation modal state
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [deleteSearchId, setDeleteSearchId] = useState<string | null>(null);
-    const [deleteSearchName, setDeleteSearchName] = useState('');
-    
-    // Tooltip state
-    const [hoveredSearchId, setHoveredSearchId] = useState<string | null>(null);
-    const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-
-    const handleOpenEditLink = (savedSearch: SavedSearch) => {
-        const link = buildSavedSearchLink(savedSearch);
-        setEditLinkText(link);
-        setEditingSearchName(savedSearch.name);
-        setEditingSearchId(savedSearch.id);
-        setShowEditLinkModal(true);
-    };
-
-    const handleCloseEditLink = () => {
-        setShowEditLinkModal(false);
-        setEditLinkText('');
-        setEditingSearchName('');
-        setEditingSearchId(null);
-    };
-
-    const handleConfirmEditLink = () => {
-        if (!editingSearchId) {
-            setShowEditLinkModal(false);
-            return;
-        }
-        // Build current search details from state
-        const facetFilterGroups = Object.keys(checked).map(key => {
-            const facetFilter: string[] = [];
-            Object.entries(checked[key]).forEach(([facet, isChecked]) => {
-                if (isChecked) {
-                    facetFilter.push(`${key}:${facet}`);
-                }
-            });
-            return facetFilter;
-        }).filter(group => group.length > 0);
-
-        const now = Date.now();
-        const updated = savedSearches.map(s => (
-            s.id === editingSearchId
-                ? {
-                    ...s,
-                    name: editingSearchName.trim() || s.name, // Use new name or keep existing if empty
-                    searchTerm: query,
-                    facetFilters: [...facetFilterGroups],
-                    numericFilters: [...selectedNumericFilters],
-                    dateLastModified: now
-                }
-                : s
-        ));
-
-        setSavedSearches(updated);
-        saveSavedSearches(updated);
-        
-        // Show success toast notification
-        ToastQueue.positive('SAVED SEARCH UPDATED SUCCESSFULLY', { timeout: 3000 });
-        
-        setShowEditLinkModal(false);
-        setEditLinkText('');
-        setEditingSearchName('');
-        setEditingSearchId(null);
-    };
-
     return (
         <>
             <div className="facet-filter-container">
                 <div className="facet-filter">
                     <div className="facet-filter-header">
-                        <div className="facet-filter-tabs">
-                            <button 
-                                className={`facet-filter-tab ${activeView === 'filters' ? 'active' : ''}`}
-                                onClick={() => setActiveView('filters')}
-                                type="button"
-                            >
-                                Filters
-                            </button>
-                            {activeView === 'filters' && (
-                                <button className="facet-filter-header-clear" onClick={handleClearAllChecks} type="button">
-                                    CLEAR ALL
-                                </button>
-                            )}
-                            <button 
-                                className={`facet-filter-tab ${activeView === 'saved' ? 'active' : ''}`}
-                                onClick={() => setActiveView('saved')}
-                                type="button"
-                            >
-                                My Saved Searches
-                            </button>
-                        </div>
-                    </div>
-                    {activeView === 'filters' ? (
-                        <div className="facet-filter-list">
-                            {/* Render facets that retrieved from EXC */}
-                            {Object.entries(excFacets).map(([facetTechId, facet]) => {
-                                const label = (facet as { label: string }).label || facetTechId;
-                                const checkedCount = getCheckedCount(facetTechId);
-
-                                return (
-                                    <div key={facetTechId} className="facet-filter-section">
-                                        <button
-                                            className="facet-filter-button"
-                                            tabIndex={0}
-                                            onClick={() => toggle(facetTechId)}
-                                            aria-expanded={!!expandedFacets[facetTechId]}
-                                        >
-                                            <span className="facet-filter-label">{label}</span>
-                                            {checkedCount > 0 && (
-                                                <div className="assets-details-tag tccc-tag facet-filter-count-tag">{checkedCount}</div>
-                                            )}
-                                            <span className="facet-filter-arrow">{expandedFacets[facetTechId] ? '\u25B2' : '\u25BC'}</span>
-                                        </button>
-                                        {/* For each facet retrieved from EXC, render the appropriate checkboxes and hierarchy if needed */}
-                                        {renderFacetsFromSearchResult(facetTechId)}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <div className="saved-searches-list">
-                            {savedSearches.length === 0 ? (
-                                <div className="saved-searches-empty">
-                                    <p>No saved searches yet.</p>
-                                    <p>Switch to Filters tab and click "Save Search" to save your first search.</p>
-                                </div>
-                            ) : (
-                                [...savedSearches]
-                                    .sort((a, b) => {
-                                        const favA = a.favorite ? 1 : 0;
-                                        const favB = b.favorite ? 1 : 0;
-                                        if (favB !== favA) return favB - favA; // favorites first
-                                        const usedA = a.dateLastUsed ?? 0;
-                                        const usedB = b.dateLastUsed ?? 0;
-                                        return usedB - usedA; // most recently used first
-                                    })
-                                    .map((savedSearch) => (
-                                    <div 
-                                        key={savedSearch.id} 
-                                        className="saved-search-item"
-                                        onMouseEnter={(e) => handleShowTooltip(savedSearch.id, e)}
-                                        onMouseLeave={handleHideTooltip}
-                                    >
-                                        <div className="saved-search-info">
-                                            <div className="saved-search-title">
-                                                <button
-                                                    className="saved-search-name-link"
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        handleLoadSavedSearch(savedSearch);
-                                                        (e.currentTarget as HTMLButtonElement).blur();
-                                                    }}
-                                                    title="Load this saved search"
-                                                >
-                                                    {savedSearch.name}
-                                                </button>
-                                                <button
-                                                    className={`saved-search-fav-btn ${savedSearch.favorite ? 'favorite' : ''}`}
-                                                    title="Favorite"
-                                                    onClick={(e) => {
-                                                        const updated = savedSearches.map(s => s.id === savedSearch.id ? { ...s, favorite: !s.favorite } : s);
-                                                        setSavedSearches(updated);
-                                                        saveSavedSearches(updated);
-                                                        (e.currentTarget as HTMLButtonElement).blur();
-                                                    }}
-                                                    type="button"
-                                                >
-                                                    <img src={savedSearch.favorite ? `${import.meta.env.BASE_URL}icons/star-yellow.svg` : `${import.meta.env.BASE_URL}icons/star-grey.svg`} alt="Favorite" />
-                                                </button>
-                                            </div>
-                                            <div className="saved-search-actions-left">
-                                                <button
-                                                    className="saved-search-icon-btn"
-                                                    title="Copy"
-                                                    onClick={(e) => {
-                                                        handleCopySavedSearch(savedSearch);
-                                                        (e.currentTarget as HTMLButtonElement).blur();
-                                                    }}
-                                                    type="button"
-                                                >
-                                                    <img src={`${import.meta.env.BASE_URL}icons/copy-circle.svg`} alt="Copy" />
-                                                </button>
-                                                <button
-                                                    className="saved-search-icon-btn"
-                                                    title="Edit"
-                                                    onClick={(e) => {
-                                                        handleOpenEditLink(savedSearch);
-                                                        (e.currentTarget as HTMLButtonElement).blur();
-                                                    }}
-                                                    type="button"
-                                                >
-                                                    <img src={`${import.meta.env.BASE_URL}icons/edit-circle.svg`} alt="Edit" />
-                                                </button>
-                                                <button
-                                                    className="saved-search-delete-btn"
-                                                    onClick={(e) => {
-                                                        handleDeleteSavedSearch(savedSearch.id);
-                                                        (e.currentTarget as HTMLButtonElement).blur();
-                                                    }}
-                                                    type="button"
-                                                    title="Delete"
-                                                >
-                                                    <img src={`${import.meta.env.BASE_URL}icons/delete-circle.svg`} alt="Delete" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
-            
-            {/* Edit Saved Search Modal */}
-            {showEditLinkModal && (
-                <div className="save-search-modal">
-                    <div className="save-search-modal-content">
-                        <div className="save-search-modal-header">
-                            <h3>Edit Saved Search</h3>
-                        </div>
-                        <div className="save-search-modal-body">
-                            <div className="save-search-field">
-                                <label htmlFor="edit-search-name" className="save-search-field-label">Search Name:</label>
-                                <input
-                                    id="edit-search-name"
-                                    type="text"
-                                    value={editingSearchName}
-                                    onChange={(e) => setEditingSearchName(e.target.value)}
-                                    className="save-search-input"
-                                    placeholder="Enter search name"
-                                    autoFocus
-                                />
-                            </div>
-                            <div className="save-search-field">
-                                <label className="save-search-field-label">Generated Link:</label>
-                                <textarea
-                                    className="save-search-input save-search-link-display"
-                                    value={editLinkText}
-                                    readOnly
-                                    rows={4}
-                                />
-                            </div>
-                        </div>
-                        <div className="save-search-modal-footer">
-                            <button className="save-search-cancel-btn" onClick={handleCloseEditLink} type="button">Cancel</button>
-                            <button 
-                                className="save-search-confirm-btn" 
-                                onClick={handleConfirmEditLink} 
-                                type="button"
-                                disabled={!editingSearchName.trim()}
-                            >
-                                Update
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-
-
-            {/* Delete Confirmation Modal */}
-            {showDeleteModal && (
-                <div className="save-search-modal">
-                    <div className="save-search-modal-content">
-                        <div className="save-search-modal-header">
-                            <h3>Delete Saved Search</h3>
-                        </div>
-                        <div className="save-search-modal-body">
-                            <p>Are you sure you want to delete "<strong>{deleteSearchName}</strong>"?</p>
-                        </div>
-                        <div className="save-search-modal-footer">
-                            <button
-                                className="save-search-cancel-btn"
-                                onClick={handleCancelDelete}
-                                type="button"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className="delete-search-confirm-btn"
-                                onClick={handleConfirmDelete}
-                                type="button"
-                            >
-                                Delete
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Tooltip */}
-            {hoveredSearchId && (
-                <div 
-                    className="saved-search-tooltip"
-                    style={{
-                        position: 'fixed',
-                        left: `${tooltipPosition.x}px`,
-                        top: `${tooltipPosition.y}px`,
-                        transform: 'translate(-50%, -100%)',
-                        pointerEvents: 'none',
-                        zIndex: 1001
-                    }}
-                >
-                    {(() => {
-                        const search = savedSearches.find(s => s.id === hoveredSearchId);
-                        if (!search) return null;
-                        return (
-                            <div className="tooltip-content">
-                                <div className="tooltip-search-terms">
-                                    {search.searchTerm || 'No search terms'}
-                                </div>
-                                <div className="tooltip-filter-count">
-                                    {(() => {
-                                        const filterCount = countFilters(search);
-                                        if (filterCount === 0) return 'No filters';
-                                        if (filterCount === 1) return '1 filter';
-                                        return `${filterCount} filters`;
-                                    })()}
-                                </div>
-                                <div className="tooltip-last-used">
-                                    Last used: {formatLastUsed(search.dateLastUsed)}
-                                </div>
-                            </div>
-                        );
-                    })()}
-                </div>
-            )}
-            
-            {/* Inline Save Form */}
-            {activeView === 'filters' && showSaveModal && (
-                <div className="save-search-inline-form">
-                    <div className="save-search-inline-input-container">
-                        <input
-                            type="text"
-                            placeholder="name for your saved search"
-                            value={saveSearchName}
-                            onChange={(e) => setSaveSearchName(e.target.value)}
-                            className="save-search-inline-input"
-                            autoFocus
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    handleSaveSearchConfirm();
-                                } else if (e.key === 'Escape') {
-                                    handleSaveSearchCancel();
-                                }
-                            }}
-                        />
-                        <button 
-                            className="save-search-inline-save-btn" 
-                            type="button" 
-                            onClick={handleSaveSearchConfirm}
-                            disabled={!saveSearchName.trim()}
-                        >
-                            Save
+                        <span className="facet-filter-header-title">Filters</span>
+                        <button className="facet-filter-header-clear" onClick={handleClearAllChecks} type="button">
+                            CLEAR ALL
                         </button>
                     </div>
+                    <div className="facet-filter-list">
+                        {/* Render facets that retrieved from EXC */}
+                        {Object.entries(excFacets).map(([facetTechId, facet]) => {
+                            const label = (facet as { label: string }).label || facetTechId;
+                            const checkedCount = getCheckedCount(facetTechId);
+
+                            return (
+                                <div key={facetTechId} className="facet-filter-section">
+                                    <button
+                                        className="facet-filter-button"
+                                        tabIndex={0}
+                                        onClick={() => toggle(facetTechId)}
+                                        aria-expanded={!!expandedFacets[facetTechId]}
+                                    >
+                                        <span className="facet-filter-label">{label}</span>
+                                        {checkedCount > 0 && (
+                                            <div className="tccc-tag facet-filter-count-tag">{checkedCount}</div>
+                                        )}
+                                        <span className="facet-filter-arrow">{expandedFacets[facetTechId] ? '\u25B2' : '\u25BC'}</span>
+                                    </button>
+                                    {/* For each facet retrieved from EXC, render the appropriate checkboxes and hierarchy if needed */}
+                                    {renderFacetsFromSearchResult(facetTechId)}
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
-            )}
-            
-            {/* Action Buttons */}
-            {activeView === 'filters' && (
-                <div className="facet-filter-buttons">
-                    <button 
-                        className="facet-filter-apply-btn" 
-                        type="button" 
-                        onClick={showSaveModal ? handleSaveSearchCancel : handleApplyFilters}
-                    >
-                        <span className="facet-filter-apply-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <polygon points="3 4 21 4 14 14 14 21 10 21 10 14 3 4" />
-                            </svg>
-                        </span>
-                        <span className="facet-filter-apply-text">Apply</span>
-                    </button>
-                    <button 
-                        className={`facet-filter-save-btn ${showSaveModal ? 'cancel-mode' : ''}`}
-                        type="button" 
-                        onClick={showSaveModal ? handleSaveSearchCancel : handleSaveSearch}
-                    >
-                        <span className="facet-filter-save-icon">
-                            <img src={`${import.meta.env.BASE_URL}icons/save-icon.svg`} alt="Save" />
-                        </span>
-                        <span className="facet-filter-save-text">{showSaveModal ? 'Cancel' : 'Save Search'}</span>
-                    </button>
-                </div>
-            )}
+            </div>
+            <button className="facet-filter-apply-btn" type="button" onClick={handleApplyFilters}>
+                <span className="facet-filter-apply-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="3 4 21 4 14 14 14 21 10 21 10 14 3 4" />
+                    </svg>
+                </span>
+                <span className="facet-filter-apply-text">Apply</span>
+            </button>
         </>
     );
 };
