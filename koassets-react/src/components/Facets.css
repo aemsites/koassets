@@ -27,11 +27,8 @@
   flex-direction: column;
   gap: 12px;
   flex: 1;
-  /* overflow-y: auto; */
-  /* overflow-x: hidden; */
   padding-right: 4px;
   min-height: 0;
-  /* max-height: calc(100vh - 343px); */
 }
 
 .facet-filter-section {
@@ -40,12 +37,12 @@
   background: #fff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   border: 1px solid #eee;
-  /* overflow: hidden; */
+  overflow: hidden auto;
   transition: box-shadow 0.2s;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  padding: 8px 0;
+  max-height: 350px;
 }
 
 .facet-filter-button {
@@ -61,16 +58,19 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 5px 20px;
+  padding: 15px 20px;
   box-sizing: border-box;
   margin: 0;
-  background-color: transparent;
+  background-color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .facet-filter-button:hover,
 .facet-filter-button:focus {
   background: none;
-  background-color: transparent;
+  background-color: #fff;
 }
 
 .facet-filter-arrow {
@@ -117,6 +117,12 @@
 
 .facet-filter-header-clear:hover {
   background: none;
+  outline: none;
+}
+
+.facet-filter-header-clear:focus {
+  background: none;
+  outline: none;
 }
 
 .facet-filter-values {
@@ -148,7 +154,7 @@
   gap: 8px;
   margin-top: 8px;
   box-sizing: border-box;
-  /* overflow: hidden; */
+  flex: 1;
 }
 
 .facet-filter-checkbox-label {
@@ -230,13 +236,15 @@
   border-left: 1px solid #e0e0e0;
   background: #fafbfc;
   padding: 30px;
-  /* overflow: hidden; */
-  /* height: calc(100vh - 200px); */
-  /* max-height: calc(100vh - 200px); */
+  overflow-y: auto;
+  height: -webkit-fill-available;
+  /* height: calc(100vh - 200px);
+  max-height: calc(100vh - 200px); */
   width: 330px;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  background-color: #f8f8f8;
 }
 
 /* Responsive: Hide Facets on smaller screens where filter button should appear */
