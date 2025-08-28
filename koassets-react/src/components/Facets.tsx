@@ -413,6 +413,9 @@ const Facets: React.FC<FacetsProps> = ({
     };
 
     const handleLoadSavedSearch = (savedSearch: SavedSearch) => {
+        // Dismiss any open tooltip
+        handleHideTooltip();
+        
         // Reset current filters
         setChecked({});
         setDateRanges({});
