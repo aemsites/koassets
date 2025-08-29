@@ -211,7 +211,7 @@ export interface HeaderBarProps {
     isBlockIntegration?: boolean;
 }
 
-// Asset Preview types  
+// Asset Preview types
 export interface AssetPreviewProps {
     showModal: boolean;
     selectedImage: Asset | null;
@@ -284,6 +284,7 @@ export interface ExternalParams {
     accordionContent?: string;
     excFacets?: ExcFacets;
     isBlockIntegration?: boolean;
+    presetFilters?: string[];
 }
 
 // Image Gallery types
@@ -491,4 +492,4 @@ export interface SearchPanelProps {
     currentPage?: number;
     totalPages?: number;
     hasMorePages?: boolean;
-} 
+}

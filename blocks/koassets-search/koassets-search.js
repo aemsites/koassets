@@ -1,4 +1,4 @@
-import { getBlockKeyValues, stripHtmlAndNewlines } from '../../scripts/scripts.js';
+import { getBlockKeyValues, stripHtmlAndNewlines, convertHtmlListToArray } from '../../scripts/scripts.js';
 
 export default function decorate(block) {
     // Get the block key-value pairs
@@ -12,7 +12,7 @@ export default function decorate(block) {
     reactContainer.id = 'koassets-search-container';
     reactContainer.className = 'koassets-search-container';
 
-    // Set container styles for natural page integration  
+    // Set container styles for natural page integration
     reactContainer.style.width = '100%';
     // Remove height: 100vh to allow natural scrolling
     reactContainer.style.minHeight = '600px';
@@ -44,6 +44,7 @@ export default function decorate(block) {
         accordionTitle: blockObj.accordionTitle,
         accordionContent: blockObj.accordionContent,
         excFacets: JSON.parse(stripHtmlAndNewlines(blockObj.excFacets)),
+        presetFilters: convertHtmlListToArray(blockObj.presetFilters),
         ...(window.KOAssetsConfig.externalParams || {})
     };
 

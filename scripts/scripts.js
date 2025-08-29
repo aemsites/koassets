@@ -143,6 +143,51 @@ export function stripHtmlAndNewlines(text) {
 }
 
 /**
+ * Converts HTML list elements to a nested array structure
+ * @param {string} htmlString - HTML string containing ul or ol elements
+ * @returns {Array} Array of list items with nested structure preserved
+ */
+export function convertHtmlListToArray(htmlString) {
+  if (!htmlString?.trim()) return [];
+
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = htmlString.trim();
+
+  function processListItems(listElement) {
+    return Array.from(listElement.children, li => {
+      if (li.tagName !== 'LI') return null;
+
+      // Extract direct text content efficiently
+      const textContent = Array.from(li.childNodes)
+        .filter(node => 
+          node.nodeType === Node.TEXT_NODE || 
+          (node.nodeType === Node.ELEMENT_NODE && node.tagName !== 'UL' && node.tagName !== 'OL')
+        )
+        .map(node => node.textContent)
+        .join('')
+        .trim();
+
+      // Get direct child lists only
+      const nestedLists = Array.from(li.children).filter(child => 
+        child.tagName === 'UL' || child.tagName === 'OL'
+      );
+
+      if (nestedLists.length === 0) {
+        return textContent || null;
+      }
+
+      return {
+        text: textContent,
+        items: nestedLists.flatMap(processListItems)
+      };
+    }).filter(Boolean);
+  }
+
+  return Array.from(tempDiv.querySelectorAll('ul, ol'))
+    .flatMap(processListItems);
+}
+
+/**
  * Extracts all key-value pairs from a block.
  * If the first line of a value contains "{{html}}", it returns the HTML content with the marker removed.
  * Otherwise, it returns plain text content (no HTML tags, no newlines).

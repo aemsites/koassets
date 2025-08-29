@@ -37,6 +37,7 @@ export interface SearchAssetsOptions {
     facets?: string[];
     facetFilters?: string[][];
     numericFilters?: string[];
+    filters?: string[];
     hitsPerPage?: number;
     page?: number;
 }
@@ -175,6 +176,7 @@ export class DynamicMediaClient {
             facets = [],
             facetFilters = [[]],
             numericFilters = [],
+            filters = [],
             hitsPerPage = 24,
             page = 0
         } = options;
@@ -182,6 +184,11 @@ export class DynamicMediaClient {
         const combinedSelectedFacetFilters = [...facetFilters, ...(collectionId ? [[`collectionIds:${collectionId.split(':')[3]}`]] : [])];
         const indexName = this.getIndexName();
         const nonExpiredAssetsFilter = this.getNonExpiredAssetsFilter();
+        const filtersList = [`${nonExpiredAssetsFilter}`, ...filters]
+          .filter(Boolean)                         // remove null/undefined/empty strings
+          .map(f => `(${f})`)                      // wrap each condition in parentheses
+          .join(" AND ")
+
 
         return {
             "requests": [
@@ -191,7 +198,7 @@ export class DynamicMediaClient {
                         "facets": facets,
                         "facetFilters": combinedSelectedFacetFilters,
                         "numericFilters": numericFilters,
-                        "filters": `(${nonExpiredAssetsFilter})`,
+                        "filters": filtersList,
                         "highlightPostTag": "__/ais-highlight__",
                         "highlightPreTag": "__ais-highlight__",
                         "hitsPerPage": hitsPerPage,
