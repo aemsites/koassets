@@ -159,28 +159,6 @@ export interface StepStatuses {
 
 // Phase 1 Component Types
 
-// Query-related types
-export interface QueryMessage {
-    type: string;
-    sender?: string;
-    text: string;
-}
-
-export interface LoadingStates {
-    chat?: boolean;
-    [key: string]: boolean | undefined;
-}
-
-// Component prop interfaces
-export interface QueryProps {
-    query: QueryMessage;
-}
-
-export interface QueryListProps {
-    querys: QueryMessage[];
-    loading: LoadingStates;
-}
-
 export interface SearchBarProps {
     query: string;
     setQuery: (query: string) => void;
@@ -204,12 +182,7 @@ export interface Collection {
     collectionMetadata: CollectionMetadata;
 }
 
-export interface CollectionGalleryProps {
-    title: string;
-    collections: Collection[];
-    loading: boolean;
-    onSelectCollection?: (collection: Collection) => void;
-}
+
 
 // Cart Panel types
 export interface CartPanelProps {
@@ -235,6 +208,7 @@ export interface HeaderBarProps {
     handleAuthenticated: (userData: string) => void;
     handleSignOut: () => void;
     dynamicMediaClient?: DynamicMediaClient | null;
+    isBlockIntegration?: boolean;
 }
 
 // Asset Preview types  
@@ -275,7 +249,7 @@ export interface FacetsProps {
     selectedFacetFilters?: string[][];
     setSelectedFacetFilters: (facetFilters: string[][]) => void;
     search: () => void;
-    excFacets?: Record<string, unknown>;
+    excFacets?: ExcFacets;
     selectedNumericFilters?: string[];
     setSelectedNumericFilters: (filters: string[]) => void;
 }
@@ -288,9 +262,18 @@ export interface SearchHits {
     [key: string]: unknown;
 }
 
+import type { ExcFacets } from '../constants/facets';
+
+// External Parameters interface
+export interface ExternalParams {
+    accordionTitle?: string;
+    accordionContent?: string;
+    excFacets?: ExcFacets;
+    isBlockIntegration?: boolean;
+}
+
 // Image Gallery types
 export interface ImageGalleryProps {
-    title: string;
     images: Asset[];
     loading: boolean;
     onAddToCart?: (image: Asset) => void;
@@ -314,6 +297,7 @@ export interface ImageGalleryProps {
     onLoadMoreResults?: () => void;
     hasMorePages?: boolean;
     isLoadingMore?: boolean;
+    externalParams?: ExternalParams;
     imagePresets?: {
         assetId?: string;
         items?: Rendition[];
@@ -332,13 +316,11 @@ export interface ImageGalleryProps {
 
 // Main App types (for the most complex component)
 export interface MainAppState {
-    // TODO: Define comprehensive state interface
     images: Asset[];
     collections: Collection[];
     cartItems: CartItem[];
     loading: boolean;
     selectedFacets: string[][];
-    // ... many more state properties
 }
 
 // Adobe Sign In types

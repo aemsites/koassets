@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import '../MainApp.css';
+import { DEFAULT_FACETS, type ExcFacets } from '../constants/facets';
 import { DynamicMediaClient } from '../dynamicmedia-client';
-import { ExcClient } from '../exc-client';
 import type {
     Asset,
     CartItem,
     Collection,
     CurrentView,
+    ExternalParams,
     LoadingState,
     Rendition,
     SearchResult,
@@ -15,18 +16,14 @@ import type {
 import { CURRENT_VIEW, LOADING, QUERY_TYPES } from '../types';
 import { populateAssetFromHit } from '../utils/assetTransformers';
 import { fetchOptimizedDeliveryBlob, removeBlobFromCache } from '../utils/blobCache';
-import { getBucket } from '../utils/config';
+import { getBucket, getExternalParams } from '../utils/config';
 
 // Components
-import CollectionGallery from './CollectionGallery';
 import Facets from './Facets';
-import Footer from './Footer';
 import HeaderBar from './HeaderBar';
 import ImageGallery from './ImageGallery';
 import SearchBar from './SearchBar';
 
-const searchAssetsTitle = 'Search Assets - where you can discover the company\'s latest and greatest content!';
-const searchCollectionsTitle = 'My Collections';
 const HITS_PER_PAGE = 24;
 
 /**
@@ -34,13 +31,11 @@ const HITS_PER_PAGE = 24;
  * @param excFacets - The facets object from EXC
  * @returns Array of facet keys for search
  */
-function transformExcFacetsToHierarchyArray(excFacets: Record<string, unknown>): string[] {
+function transformExcFacetsToHierarchyArray(excFacets: ExcFacets): string[] {
     const facetKeys: string[] = [];
 
-    Object.entries(excFacets).forEach(([key, value]) => {
-        const facetValue = value as { type?: string };
-
-        if (facetValue?.type !== 'tags') {
+    Object.entries(excFacets).forEach(([key, facet]) => {
+        if (facet.type !== 'tags') {
             // For non-tags types, append the entry key
             facetKeys.push(key);
         } else {
@@ -56,6 +51,13 @@ function transformExcFacetsToHierarchyArray(excFacets: Record<string, unknown>):
 }
 
 function MainApp(): React.JSX.Element {
+    // External parameters from plain JavaScript
+    const [externalParams] = useState<ExternalParams>(() => {
+        const params = getExternalParams();
+        console.log('External parameters received:', params);
+        return params;
+    });
+
     // Local state
     const [accessToken, setAccessToken] = useState<string>(() => {
         try {
@@ -74,7 +76,7 @@ function MainApp(): React.JSX.Element {
     const [dynamicMediaClient, setDynamicMediaClient] = useState<DynamicMediaClient | null>(null);
     const [query, setQuery] = useState<string>('');
     const [dmImages, setDmImages] = useState<Asset[]>([]);
-    const [collections, setCollections] = useState<Collection[]>([]);
+
     const [searchResults, setSearchResults] = useState<SearchResults['results'] | null>(null);
     const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
     const [loading, setLoading] = useState<LoadingState>({ [LOADING.dmImages]: false, [LOADING.collections]: false });
@@ -82,7 +84,7 @@ function MainApp(): React.JSX.Element {
     const [selectedQueryType, setSelectedQueryType] = useState<string>(QUERY_TYPES.ASSETS);
     const [selectedFacetFilters, setSelectedFacetFilters] = useState<string[][]>([]);
     const [selectedNumericFilters, setSelectedNumericFilters] = useState<string[]>([]);
-    const [excFacets, setExcFacets] = useState<Record<string, unknown> | undefined>(undefined);
+    const [excFacets, setExcFacets] = useState<ExcFacets | undefined>(undefined);
     const [imagePresets, setImagePresets] = useState<{
         assetId?: string;
         items?: Rendition[];
@@ -203,25 +205,7 @@ function MainApp(): React.JSX.Element {
         setIsLoadingMore(false);
     }, []);
 
-    // Process and display collections
-    const processCollections = useCallback(async (content: { results?: Array<{ hits?: Array<{ objectID: string; collectionMetadata?: unknown; thumbnail?: string }> }> }): Promise<void> => {
-        setCollections([]);
-        try {
-            if (content.results && content.results[0]?.hits) {
-                const processedCollections: Collection[] = content.results[0].hits.map((hit) => ({
-                    collectionId: hit.objectID as string,
-                    collectionMetadata: (hit.collectionMetadata as Collection['collectionMetadata']) || { title: '', description: '' },
-                    thumbnail: hit.thumbnail as string,
-                }));
-                setCollections(processedCollections);
-            } else {
-                console.log('No collections in response');
-            }
-        } catch (error) {
-            console.error('Error processing collections:', error);
-        }
-        setLoading(prev => ({ ...prev, [LOADING.collections]: false }));
-    }, []);
+
 
     // Search assets (images, videos, etc.)
     const performSearchImages = useCallback((query: string, page: number = 0): void => {
@@ -254,30 +238,6 @@ function MainApp(): React.JSX.Element {
 
     }, [dynamicMediaClient, processDMImages, selectedCollection, selectedFacetFilters, selectedNumericFilters, excFacets]);
 
-
-    // Search collections
-    const performSearchCollections = useCallback((query: string): void => {
-        if (!dynamicMediaClient) return;
-        setLoading(prev => ({ ...prev, [LOADING.collections]: true }));
-        setCurrentView(CURRENT_VIEW.collections);
-
-        dynamicMediaClient.searchCollections(query.trim(), {
-            hitsPerPage: HITS_PER_PAGE
-        }).then(processCollections);
-
-        setQuery('');
-    }, [dynamicMediaClient, processCollections]);
-
-    // Select a collection and load all assets in the collection (no query & no facet filters)
-    const handleSelectCollection = useCallback((collection: Collection): void => {
-        setSelectedCollection(collection);
-        setSelectedFacetFilters([]);
-        setCurrentPage(0);
-        setQuery('');
-        handleSetSelectedQueryType(QUERY_TYPES.ASSETS);
-        // performSearchImages will be triggered by useEffect when selectedCollection changes
-    }, [handleSetSelectedQueryType]);
-
     // Handler for loading more results (pagination)
     const handleLoadMoreResults = useCallback((): void => {
         if (currentPage + 1 < totalPages && !isLoadingMore) {
@@ -290,14 +250,9 @@ function MainApp(): React.JSX.Element {
     // Handler for searching
     const search = useCallback((): void => {
         setCurrentPage(0);
-        if (selectedQueryType === QUERY_TYPES.COLLECTIONS) {
-            // Search for collections
-            performSearchCollections(query);
-        } else {
-            // Search for assets or assets in a collection
-            performSearchImages(query, 0);
-        }
-    }, [selectedQueryType, performSearchCollections, performSearchImages, query]);
+        // Search for assets or assets in a collection
+        performSearchImages(query, 0);
+    }, [performSearchImages, query]);
 
     // Read query and selectedQueryType from URL on mount
     useEffect(() => {
@@ -324,16 +279,17 @@ function MainApp(): React.JSX.Element {
 
     useEffect(() => {
         if (accessToken && !settingsLoadedRef.current) {
+            setExcFacets(externalParams.excFacets || DEFAULT_FACETS);
             settingsLoadedRef.current = true;
-            const excClient = new ExcClient({ accessToken });
-            // Get facets from EXC
-            excClient.getExcFacets({}).then(facets => {
-                setExcFacets(facets);
-            }).catch(error => {
-                console.error('Error fetching facets:', error);
-            });
+            // const excClient = new ExcClient({ accessToken });
+            // // Get facets from EXC
+            // excClient.getExcFacets({}).then(facets => {
+            //     setExcFacets(facets);
+            // }).catch(error => {
+            //     console.error('Error fetching facets:', error);
+            // });
         }
-    }, [accessToken]);
+    }, [accessToken, externalParams.excFacets]);
 
 
 
@@ -553,16 +509,8 @@ function MainApp(): React.JSX.Element {
     // Gallery logic
     const enhancedGallery = (
         <>
-            {currentView === CURRENT_VIEW.collections ? (
-                <CollectionGallery
-                    title={searchCollectionsTitle}
-                    collections={collections}
-                    loading={loading[LOADING.collections]}
-                    onSelectCollection={handleSelectCollection}
-                />
-            ) : currentView === CURRENT_VIEW.images ? (
+            {currentView === CURRENT_VIEW.images ? (
                 <ImageGallery
-                    title={selectedCollection ? `${selectedCollection.collectionMetadata?.title} Collection` : searchAssetsTitle}
                     images={dmImages}
                     loading={loading[LOADING.dmImages]}
                     onAddToCart={handleAddToCart}
@@ -590,6 +538,7 @@ function MainApp(): React.JSX.Element {
                     assetRenditionsCache={assetRenditionsCache}
                     fetchAssetRenditions={fetchAssetRenditions}
                     setImagePresets={setImagePresets}
+                    externalParams={externalParams}
                 />
             ) : (
                 <></>
@@ -610,15 +559,18 @@ function MainApp(): React.JSX.Element {
                 handleAuthenticated={handleAuthenticated}
                 handleSignOut={handleSignOut}
                 dynamicMediaClient={dynamicMediaClient}
+                isBlockIntegration={externalParams.isBlockIntegration}
             />
-            <SearchBar
-                query={query}
-                setQuery={setQuery}
-                sendQuery={search}
-                selectedQueryType={selectedQueryType}
-                setSelectedQueryType={handleSetSelectedQueryType}
-                inputRef={searchBarRef}
-            />
+            {/* TODO: Update this once finalized */}
+            {window.location.pathname.includes('/tools/assets-browser/index.html') && (
+                <SearchBar
+                    query={query}
+                    setQuery={setQuery}
+                    sendQuery={search}
+                    selectedQueryType={selectedQueryType}
+                    setSelectedQueryType={handleSetSelectedQueryType}
+                    inputRef={searchBarRef}
+                />)}
             <div className="main-content">
                 <div className="images-container">
                     <div className="images-content-wrapper">
@@ -639,7 +591,7 @@ function MainApp(): React.JSX.Element {
                                 />
                             </div>
                         </div>
-                        <Footer />
+                        {/* <Footer /> */}
                     </div>
                 </div>
             </div>

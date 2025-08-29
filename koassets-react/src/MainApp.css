@@ -1,15 +1,12 @@
 /* CSS Variables */
-:root {
-  --button-color: #f81c04;
-}
 
 /* Main layout */
 .container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
   margin: 0 auto;
   box-sizing: border-box;
+  min-height: 100vh;
 }
 
 .container,
@@ -21,8 +18,8 @@
 .main-content {
   display: flex;
   flex-direction: column;
-  flex: 1;
   gap: 20px;
+  flex: 1;
   min-height: 0;
 }
 
@@ -38,16 +35,23 @@ button {
   transition: background-color 0.3s;
 }
 
+a.button:any-link,
+button {
+  margin: 0;
+  background-color: transparent;
+  white-space: unset;
+}
+
 button:hover {
   background-color: var(--primary-color-hover);
 }
 
 button:active {
-  background-color: #bd1500;
+  background-color: var(--primary-color-active);
 }
 
 button:disabled {
-  background-color: #ff8c80;
+  background-color: var(--primary-color-disabled);
   color: #f8f8f8;
   cursor: not-allowed;
 }
@@ -351,4 +355,56 @@ input[type="checkbox"].tccc-checkbox:checked::after {
 
 input[type="checkbox"].tccc-checkbox:focus {
   outline: none;
+}
+
+a.button:hover,
+a.button:focus,
+button:hover,
+button:focus {
+  cursor: pointer;
+}
+
+button:disabled,
+button:disabled:hover {
+  cursor: not-allowed;
+  background-color: var(--primary-color-disabled);
+}
+
+:is(h1, h2, h3, h4, h5, h6)::after {
+  content: inherit;
+  display: inherit;
+  width: inherit;
+  height: inherit;
+  margin-top: inherit;
+  margin-bottom: inherit;
+  background-color: inherit;
+}
+
+/* Image layout containers */
+.images-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.images-content-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.images-content-wrapper .footer {
+  width: 100%;
+  flex-shrink: 0;
+  margin-top: 20px;
+}
+
+.images-content-row {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  min-height: 0;
+  align-items: flex-start;
 }

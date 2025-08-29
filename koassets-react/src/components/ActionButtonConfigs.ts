@@ -11,22 +11,23 @@ export interface ButtonConfig {
     disabled?: ButtonState;
 }
 
+
 // Predefined button configurations
 export const BUTTON_CONFIGS = {
     download: {
         idle: {
             className: 'download',
-            backgroundImage: '/icons/download-asset.svg',
+            backgroundImage: `${import.meta.env.BASE_URL}icons/download-asset.svg`,
             tooltip: 'Download preview'
         },
         downloading: {
             className: 'downloading',
-            backgroundImage: '/icons/downloading-asset.svg',
+            backgroundImage: `${import.meta.env.BASE_URL}icons/downloading-asset.svg`,
             tooltip: 'Downloading...'
         },
         disabled: {
             className: 'download',
-            backgroundImage: '/icons/download-asset.svg',
+            backgroundImage: `${import.meta.env.BASE_URL}icons/download-asset.svg`,
             tooltip: 'Preview not available'
         }
     } as ButtonConfig

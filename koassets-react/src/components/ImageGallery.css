@@ -1,28 +1,3 @@
-/* Image layout containers */
-.images-container {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  overflow: auto;
-}
-
-.images-content-wrapper {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.images-content-wrapper .footer {
-  width: 100%;
-  flex-shrink: 0;
-  margin-top: 20px;
-}
-
-.images-content-row {
-  display: flex;
-  flex-direction: row;
-}
-
 .images-main {
   flex: 3 1 0;
   min-width: 0;
@@ -36,35 +11,162 @@
   flex-direction: column;
   margin: 0 16px;
   min-height: 0;
+  flex: 1;
+
+  /* Fill available height in images-main */
 }
 
 .gallery-title {
   background-color: rgba(106, 201, 206, .102);
-  border-bottom: 1px solid #ddd;
   padding: 16px 16px 16px 0;
   margin: 32px 16px 0px 0;
   border-radius: .5rem;
   height: 30px;
   display: flex;
   align-items: center;
-  justify-content: left;
+  justify-content: space-between;
+}
+
+.gallery-title.expanded {
+  border-radius: .5rem .5rem 0 0;
+}
+
+.gallery-title-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+}
+
+.gallery-title-icon {
+  width: 18px;
+  height: 20px;
+  flex-shrink: 0;
+  background-image: url('/icons/info.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center center;
 }
 
 .gallery-title h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #1e1e1e;
+  font-family: "TCCC UnityHeadline", "Helvetica Neue", Arial, Helvetica, sans-serif;
+  line-height: 1.4285em;
+}
+
+.gallery-title-toggle {
+  width: 20px;
+  height: 20px;
+  border: none;
+  cursor: pointer;
+  transition: none;
+  background-repeat: no-repeat;
+  background-position: center center;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gallery-title-toggle.collapsed {
+  background-image: url("/icons/Arrow_Down.svg");
+}
+
+.gallery-title-toggle.expanded {
+  background-image: url("/icons/Arrow_up.svg");
+}
+
+.gallery-title-toggle:hover {
+  opacity: 0.7;
+}
+
+.gallery-title-expanded {
+  background-color: rgba(106, 201, 206, .102);
+  border-radius: 0 0 .5rem .5rem;
   padding: 16px;
+  margin: 0 16px 0 0;
+  animation: expandDown 0s ease-out;
+}
+
+/* Common typography for all gallery-title-expanded content */
+.gallery-title-expanded p,
+.gallery-title-expanded li,
+.gallery-title-expanded b,
+.gallery-title-expanded a {
+  font-size: 16px;
+  color: #1e1e1e;
+  font-family: "TCCC UnityHeadline", "Helvetica Neue", Arial, Helvetica, sans-serif;
+  line-height: 1.4285em;
+}
+
+.gallery-title-expanded p {
+  margin: 0 0 8px;
+}
+
+.gallery-title-expanded li p {
+  margin: 0;
+}
+
+.gallery-title-expanded p:last-child {
+  margin-bottom: 0;
+}
+
+.gallery-title-expanded b {
+  font-weight: 600;
+}
+
+.gallery-title-expanded ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.gallery-title-expanded li {
+  margin: 4px 0;
+}
+
+.gallery-title-expanded a {
+  color: #ed0000;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.gallery-title-expanded a:hover {
+  text-decoration: underline;
+}
+
+@keyframes expandDown {
+  from {
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  to {
+    max-height: 100px;
+    opacity: 1;
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
 }
 
 .image-grid-wrapper {
   position: relative;
   width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .image-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  grid-auto-rows: minmax(50px, auto);
+  grid-auto-rows: 1fr;
   gap: 26px;
-  padding: 20px 20px 50px 16px;
+  padding: 20px 20px 20px 16px;
+  flex: 1;
 }
 
 .image-grid-list {
@@ -73,6 +175,7 @@
   grid-auto-rows: 192px;
   gap: 20px;
   padding: 20px 20px 20px 16px;
+  flex: 1;
 }
 
 /* Loading container */
@@ -83,14 +186,8 @@
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  height: calc(100vh - 590px);
-  /* 590px breakdown: 
-     HeaderBar(65px) + SearchBar(90px) + SearchPanel-Primary(71px) + SearchPanel-Secondary(31px) + 
-     Gallery-Title(94px) + Footer(98px) + Main-content-gap(20px) + Other-margins/paddings(121px) = 590px */
-  min-height: 400px;
-  /* Ensure minimum height for content */
+  flex: 1;
   position: relative;
-  /* Allow for better positioning */
 }
 
 .loading-container p {
@@ -130,9 +227,8 @@
 
 /* Load More Button */
 .load-more-button-container {
-  position: relative;
-  height: 100px;
-  margin-top: 40px;
+  padding-bottom: 50px;
+  padding-top: 30px;
 }
 
 .load-more-button {
