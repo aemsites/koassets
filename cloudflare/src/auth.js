@@ -156,10 +156,10 @@ function redirect(url, status = 302) {
   // });
 }
 
-function redirectToLoginPage(request, env) {
+function redirectToLoginPage(request, env, page = env.LOGIN_PAGE) {
   // build login page url
   const loginPage = new URL(request.uri.origin);
-  loginPage.pathname = env.LOGIN_PAGE || `${AUTH_PREFIX}/login`;
+  loginPage.pathname = page || `${AUTH_PREFIX}/login`;
 
   // with original url path and query string as parameter
   const originalUrl = new URL(request.url);
@@ -186,7 +186,9 @@ export async function withAuthentication(request, env) {
   const session = await validateSessionJWT(request, env, sessionJWT);
   if (!session) {
     console.error(request.error);
-    return redirectToLoginPage(request, env);
+    // if session cookie was found but invalid, user was previously logged in,
+    // so let's send them straight to the MS login page which might auto-login them
+    return redirectToLoginPage(request, env, `${AUTH_PREFIX}/login`);
   }
 
   // authenticated
