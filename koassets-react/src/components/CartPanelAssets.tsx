@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { smrWarnings } from '../constants/warnings';
+import { useAppConfig } from '../contexts/AppConfigContext';
 import type {
     Asset,
     AuthorizedCartItem,
@@ -19,6 +20,11 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     onClose,
     dynamicMediaClient
 }) => {
+    // Get app config from context - no prop drilling needed!
+    const { externalParams } = useAppConfig();
+    const { restrictedBrands } = externalParams;
+    console.debug('CartPanelAssets restrictedBrands:', restrictedBrands);
+
     const [activeStep, setActiveStep] = useState<WorkflowStep>(WorkflowStep.CART);
     const [stepStatus, setStepStatus] = useState<WorkflowStepStatuses>({
         [WorkflowStep.CART]: StepStatus.INIT,

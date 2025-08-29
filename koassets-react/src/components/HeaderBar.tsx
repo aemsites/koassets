@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAppConfig } from '../contexts/AppConfigContext';
 import type { HeaderBarProps } from '../types';
 import AdobeSignInButton from './AdobeSignInButton.jsx';
 import CartIcon from './CartIcon';
@@ -15,9 +16,12 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
     handleDownloadAssets,
     handleAuthenticated,
     handleSignOut,
-    dynamicMediaClient,
-    isBlockIntegration
+    dynamicMediaClient
 }) => {
+    // Get external params from context
+    const { externalParams } = useAppConfig();
+    const isBlockIntegration = externalParams?.isBlockIntegration;
+
     const handleLogoClick = () => {
         window.location.assign('/');
     };

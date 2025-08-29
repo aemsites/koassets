@@ -1,28 +1,33 @@
+# configure worker name and Cloudflare account
 name = "koassets"
-main = "src/index.js"
-workers_dev = true
 account_id = "852dfa4ae1b0d579df29be65b986c101"
-compatibility_date = "2025-08-18"
 
-# no routes yet, using worker URL for now: koassets.adobeaem.workers.dev
-# route = "*.mydomain.com/*"
+# TODO: when hosting the domain on cloudflare:
+# 1. disable workers_dev (except for development)
+workers_dev = true
+# 2. add routes to worker
+# route = "assets.coke.com/*"
 
+
+# do not change these unless code changes require it
+main = "src/index.js"
+compatibility_date = "2025-08-16"
+
+
+# TODO: disable logs when development is done
 [observability.logs]
 enabled = true
 
-[build]
-# command = "npm install && npm test"
-
 [vars]
+# Configure origins here
 HELIX_ORIGIN_HOSTNAME = "main--koassets--aemsites.aem.live"
 DM_ORIGIN_HOSTNAME = "delivery-p64403-e544653.adobeaemcloud.com"
 
-# Optional: enable origin authentication
-# see https://www.aem.live/docs/authentication-setup-site
-# HELIX_ORIGIN_AUTHENTICATION = "hlx_YOUR_TOKEN_HERE"
+# Test tenant & app registration from the Adobe engineering team (Directory "AEM Astra")
+# Needs to be replaced with real IDP and app registration
+MICROSOFT_ENTRA_TENANT_ID = "801ee00e-24ef-45c3-848b-b88400248100"
+MICROSOFT_ENTRA_CLIENT_ID = "0738fc65-4925-42f3-9a18-2080c3ebfa96"
+MICROSOFT_ENTRA_JWKS_URL = "https://login.microsoftonline.com/common/discovery/keys"
 
-# Optional and not recommended: disable push invalidation
-# Uncomment the following line if you need to opt-out of push-invalidation.
-# Keep in mind that this will increase origin traffic and reduce performance
-# so this should only be used on secondary lower environments.
-# PUSH_INVALIDATION = "disabled"
+SESSION_COOKIE_EXPIRATION = "6h"
+LOGIN_PAGE = "/public/welcome"

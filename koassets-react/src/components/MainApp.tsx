@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import '../MainApp.css';
 import { DynamicMediaClient } from '../clients/dynamicmedia-client';
 import { DEFAULT_FACETS, type ExcFacets } from '../constants/facets';
+import { AppConfigProvider } from '../contexts/AppConfigContext';
 import type {
     Asset,
     CartItem,
@@ -85,6 +86,7 @@ function MainApp(): React.JSX.Element {
     const [selectedFacetFilters, setSelectedFacetFilters] = useState<string[][]>([]);
     const [selectedNumericFilters, setSelectedNumericFilters] = useState<string[]>([]);
     const [excFacets, setExcFacets] = useState<ExcFacets | undefined>(undefined);
+
     const [imagePresets, setImagePresets] = useState<{
         assetId?: string;
         items?: Rendition[];
@@ -248,10 +250,11 @@ function MainApp(): React.JSX.Element {
     }, [currentPage, totalPages, isLoadingMore, performSearchImages, query]);
 
     // Handler for searching
-    const search = useCallback((): void => {
+    const search = useCallback((searchQuery?: string): void => {
         setCurrentPage(0);
         // Search for assets or assets in a collection
-        performSearchImages(query, 0);
+        const queryToUse = searchQuery !== undefined ? searchQuery : query;
+        performSearchImages(queryToUse, 0);
     }, [performSearchImages, query]);
 
     // Read query and selectedQueryType from URL on mount
@@ -259,11 +262,42 @@ function MainApp(): React.JSX.Element {
         const params = new URLSearchParams(window.location.search);
         const urlQuery = params.get('query');
         const queryType = params.get('selectedQueryType');
+
+        // Check for saved search parameters
+        const fulltext = params.get('fulltext');
+        const facetFiltersParam = params.get('facetFilters');
+        const numericFiltersParam = params.get('numericFilters');
+
         if (urlQuery !== null) setQuery(urlQuery);
         if (queryType !== null && (queryType === QUERY_TYPES.ASSETS || queryType === QUERY_TYPES.COLLECTIONS)) {
             setSelectedQueryType(queryType);
         }
-    }, [dynamicMediaClient]);
+
+        // Apply saved search parameters if present
+        if (fulltext || facetFiltersParam || numericFiltersParam) {
+            try {
+                if (fulltext) setQuery(fulltext);
+
+                if (facetFiltersParam) {
+                    const facetFilters = JSON.parse(decodeURIComponent(facetFiltersParam));
+                    setSelectedFacetFilters(facetFilters);
+                }
+
+                if (numericFiltersParam) {
+                    const numericFilters = JSON.parse(decodeURIComponent(numericFiltersParam));
+                    setSelectedNumericFilters(numericFilters);
+                }
+
+                // Trigger search after a brief delay to ensure all state is updated
+                setTimeout(() => {
+                    setCurrentPage(0);
+                    performSearchImages(fulltext || '', 0);
+                }, 100);
+            } catch (error) {
+                console.warn('Error parsing URL search parameters:', error);
+            }
+        }
+    }, [dynamicMediaClient, setSelectedFacetFilters, setSelectedNumericFilters, performSearchImages]);
 
     useEffect(() => {
         dynamicMediaClient && window.history.replaceState({}, '', `${window.location.pathname}`);
@@ -550,7 +584,6 @@ function MainApp(): React.JSX.Element {
                     assetRenditionsCache={assetRenditionsCache}
                     fetchAssetRenditions={fetchAssetRenditions}
                     setImagePresets={setImagePresets}
-                    externalParams={externalParams}
                 />
             ) : (
                 <></>
@@ -559,55 +592,58 @@ function MainApp(): React.JSX.Element {
     );
 
     return (
-        <div className="container">
-            <HeaderBar
-                cartItems={cartItems}
-                setCartItems={setCartItems}
-                isCartOpen={isCartOpen}
-                setIsCartOpen={setIsCartOpen}
-                handleRemoveFromCart={handleRemoveFromCart}
-                handleApproveAssets={handleApproveAssets}
-                handleDownloadAssets={handleDownloadAssets}
-                handleAuthenticated={handleAuthenticated}
-                handleSignOut={handleSignOut}
-                dynamicMediaClient={dynamicMediaClient}
-                isBlockIntegration={externalParams.isBlockIntegration}
-            />
-            {/* TODO: Update this once finalized */}
-            {window.location.pathname.includes('/tools/assets-browser/index.html') && (
-                <SearchBar
-                    query={query}
-                    setQuery={setQuery}
-                    sendQuery={search}
-                    selectedQueryType={selectedQueryType}
-                    setSelectedQueryType={handleSetSelectedQueryType}
-                    inputRef={searchBarRef}
-                />)}
-            <div className="main-content">
-                <div className="images-container">
-                    <div className="images-content-wrapper">
-                        <div className="images-content-row">
-                            <div className="images-main">
-                                {breadcrumbs}
-                                {enhancedGallery}
+        <AppConfigProvider externalParams={externalParams}>
+            <div className="container">
+                <HeaderBar
+                    cartItems={cartItems}
+                    setCartItems={setCartItems}
+                    isCartOpen={isCartOpen}
+                    setIsCartOpen={setIsCartOpen}
+                    handleRemoveFromCart={handleRemoveFromCart}
+                    handleApproveAssets={handleApproveAssets}
+                    handleDownloadAssets={handleDownloadAssets}
+                    handleAuthenticated={handleAuthenticated}
+                    handleSignOut={handleSignOut}
+                    dynamicMediaClient={dynamicMediaClient}
+                />
+                {/* TODO: Update this once finalized */}
+                {window.location.pathname.includes('/tools/assets-browser/index.html') && (
+                    <SearchBar
+                        query={query}
+                        setQuery={setQuery}
+                        sendQuery={search}
+                        selectedQueryType={selectedQueryType}
+                        setSelectedQueryType={handleSetSelectedQueryType}
+                        inputRef={searchBarRef}
+                    />)}
+                <div className="main-content">
+                    <div className="images-container">
+                        <div className="images-content-wrapper">
+                            <div className="images-content-row">
+                                <div className="images-main">
+                                    {breadcrumbs}
+                                    {enhancedGallery}
+                                </div>
+                                <div className={`facet-filter-panel ${isMobileFilterOpen ? 'mobile-open' : ''}`}>
+                                    <Facets
+                                        searchResults={searchResults}
+                                        selectedFacetFilters={selectedFacetFilters}
+                                        setSelectedFacetFilters={setSelectedFacetFilters}
+                                        search={search}
+                                        excFacets={excFacets}
+                                        selectedNumericFilters={selectedNumericFilters}
+                                        setSelectedNumericFilters={setSelectedNumericFilters}
+                                        query={query}
+                                        setQuery={setQuery}
+                                    />
+                                </div>
                             </div>
-                            <div className={`facet-filter-panel ${isMobileFilterOpen ? 'mobile-open' : ''}`}>
-                                <Facets
-                                    searchResults={searchResults}
-                                    selectedFacetFilters={selectedFacetFilters}
-                                    setSelectedFacetFilters={setSelectedFacetFilters}
-                                    search={search}
-                                    excFacets={excFacets}
-                                    selectedNumericFilters={selectedNumericFilters}
-                                    setSelectedNumericFilters={setSelectedNumericFilters}
-                                />
-                            </div>
+                            {/* <Footer /> */}
                         </div>
-                        {/* <Footer /> */}
                     </div>
                 </div>
             </div>
-        </div>
+        </AppConfigProvider>
     );
 }
 

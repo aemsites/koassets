@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { DEFAULT_ACCORDION_CONFIG } from '../constants/accordion';
+import { useAppConfig } from '../contexts/AppConfigContext';
 import type { Asset, ImageGalleryProps } from '../types';
 import AssetCardViewGrid from './AssetCardViewGrid';
 import AssetCardViewList from './AssetCardViewList';
@@ -36,9 +37,11 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     imagePresets = {},
     assetRenditionsCache = {},
     fetchAssetRenditions,
-    setImagePresets,
-    externalParams
+    setImagePresets
 }: ImageGalleryProps) => {
+    // Get external params from context
+    const { externalParams } = useAppConfig();
+
     // Extract accordion parameters from external params with fallbacks
     const accordionTitle = externalParams?.accordionTitle || DEFAULT_ACCORDION_CONFIG.accordionTitle;
     const accordionContent = externalParams?.accordionContent || DEFAULT_ACCORDION_CONFIG.accordionContent;

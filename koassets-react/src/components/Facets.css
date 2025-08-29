@@ -37,12 +37,13 @@
   background: #fff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   border: 1px solid #eee;
-  overflow: hidden auto;
+  overflow: hidden;
   transition: box-shadow 0.2s;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   max-height: 350px;
+  position: relative;
 }
 
 .facet-filter-button {
@@ -128,6 +129,10 @@
 .facet-filter-values {
   padding: 0 20px 16px 20px;
   background: #fafbfc;
+  overflow-y: auto;
+  max-height: calc(350px - 60px);
+  /* Account for button height */
+  flex: 1;
 }
 
 .facet-filter-values-list {
@@ -155,6 +160,9 @@
   margin-top: 8px;
   box-sizing: border-box;
   flex: 1;
+  overflow-y: auto;
+  max-height: calc(350px - 60px);
+  /* Account for button height */
 }
 
 .facet-filter-checkbox-label {
@@ -172,24 +180,21 @@
 }
 
 .facet-filter-apply-btn {
-  width: 100%;
+  flex: 1;
   height: 45px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   background: var(--primary-color);
   color: #fff;
   border: none;
   border-radius: 999px;
   font-weight: 500;
-  padding: 16px 0;
-  margin-top: 30px;
+  padding: 12px 16px;
   cursor: pointer;
   transition: background 0.2s;
-  box-shadow: 0 2px 8px rgba(209, 23, 0, 0.08);
-  flex-shrink: 0;
-  align-self: stretch;
+  font-size: 14px;
 }
 
 .facet-filter-apply-btn:hover {
@@ -203,7 +208,7 @@
 }
 
 .facet-filter-apply-text {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
   color: #fff;
 }
@@ -291,4 +296,511 @@
       width: 370px;
     }
   }
+}
+
+/* Saved Search Functionality Styles */
+.facet-filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.facet-filter-tab {
+  background: transparent;
+  border: none;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.facet-filter-tab.active {
+  background: var(--primary-color);
+  color: white;
+}
+
+.facet-filter-tab:hover:not(.active) {
+  background: #f5f5f5;
+  color: #333;
+}
+
+/* Saved Searches List */
+.saved-searches-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  padding-right: 4px;
+  min-height: 0;
+}
+
+.saved-searches-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.saved-searches-empty p {
+  margin: 0 0 8px 0;
+}
+
+.saved-search-item {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: box-shadow 0.2s;
+}
+
+.saved-search-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.saved-search-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.saved-search-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.saved-search-name-link {
+  background: transparent !important;
+  border: none;
+  padding: 0;
+  font-weight: 500;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  text-align: left;
+}
+
+.saved-search-name-link:hover,
+.saved-search-name-link:focus,
+.saved-search-name-link:active {
+  color: var(--primary-color);
+  text-decoration: underline;
+  background: transparent !important;
+  outline: none;
+}
+
+.saved-search-actions-left {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.saved-search-icon-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.saved-search-icon-btn:hover,
+.saved-search-icon-btn:focus,
+.saved-search-icon-btn:active {
+  background: transparent !important;
+  outline: none;
+}
+
+.saved-search-icon-btn img {
+  width: 22px;
+  height: 22px;
+}
+
+.saved-search-delete-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.saved-search-delete-btn:hover,
+.saved-search-delete-btn:focus,
+.saved-search-delete-btn:active {
+  background: transparent !important;
+  outline: none;
+}
+
+.saved-search-delete-btn img {
+  width: 22px;
+  height: 22px;
+}
+
+.saved-search-fav-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.saved-search-fav-btn:hover,
+.saved-search-fav-btn:focus,
+.saved-search-fav-btn:active {
+  background: transparent !important;
+  outline: none;
+}
+
+.saved-search-fav-btn img {
+  width: 20px;
+  height: 20px;
+}
+
+/* Save Search Modal */
+.save-search-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.save-search-modal-content {
+  background: white;
+  border-radius: 8px;
+  padding: 0;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.save-search-modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8f9fa;
+}
+
+.save-search-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+  color: #333;
+}
+
+.save-search-modal-body {
+  padding: 20px;
+}
+
+.save-search-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.save-search-input[type="text"] {
+  background-color: white;
+  color: #333;
+}
+
+.save-search-input.save-search-link-display {
+  background-color: #f5f5f5;
+  color: #666;
+}
+
+.save-search-field {
+  margin-bottom: 20px;
+}
+
+.save-search-field:last-child {
+  margin-bottom: 0;
+}
+
+.save-search-field-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.save-search-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.save-search-modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.save-search-cancel-btn,
+.save-search-confirm-btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.save-search-cancel-btn {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.save-search-cancel-btn:hover {
+  background: #e0e0e0;
+}
+
+.save-search-confirm-btn {
+  background: var(--primary-color);
+  color: white;
+}
+
+.save-search-confirm-btn:hover {
+  background: #d32f2f;
+}
+
+.save-search-confirm-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.delete-search-confirm-btn {
+  background: #dc3545;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.delete-search-confirm-btn:hover {
+  background: #c82333;
+}
+
+/* Delete modal body styling */
+.save-search-modal-body p {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+}
+
+.save-search-modal-body p:last-child {
+  margin-bottom: 0;
+}
+
+.save-search-modal-body strong {
+  font-weight: 600;
+  color: #dc3545;
+}
+
+/* Inline Save Search Form */
+.save-search-inline-form {
+  margin-top: 16px;
+  margin-bottom: 16px;
+  background: #f5e6d3;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.save-search-inline-input-container {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.save-search-inline-input {
+  flex: 1;
+  padding: 14px 16px;
+  border: 2px solid #d43529;
+  border-radius: 25px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  background: white;
+  color: #666;
+}
+
+.save-search-inline-input::placeholder {
+  color: #999;
+}
+
+.save-search-inline-input:focus {
+  border-color: #d43529;
+  box-shadow: none;
+}
+
+.save-search-inline-save-btn {
+  padding: 14px 24px;
+  background: #d43529;
+  color: white;
+  border: 2px solid #d43529;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s ease;
+}
+
+.save-search-inline-save-btn:hover:not(:disabled) {
+  background: #c42e23;
+  border-color: #c42e23;
+}
+
+.save-search-inline-save-btn:disabled {
+  background: #ccc;
+  border-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Action Buttons Layout */
+.facet-filter-buttons {
+  display: flex;
+  gap: 12px;
+  flex-direction: row;
+  margin-top: 24px;
+}
+
+.facet-filter-save-btn {
+  flex: 1;
+  background: white;
+  color: #333;
+  border: 1px solid #d9d9d9;
+  padding: 12px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 45px;
+}
+
+.facet-filter-save-btn.cancel-mode {
+  background: white;
+  color: #333;
+  border: 2px solid #333;
+}
+
+.facet-filter-save-btn:hover:not(:disabled) {
+  border-color: #999;
+  color: #000;
+}
+
+.facet-filter-save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.facet-filter-save-icon img {
+  width: 16px;
+  height: 16px;
+}
+
+/* Tooltip Styles */
+.saved-search-tooltip {
+  background: #333;
+  color: #fff !important;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  max-width: 300px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid #555;
+}
+
+.tooltip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tooltip-search-terms {
+  font-weight: 500;
+  word-break: break-word;
+  color: #fff !important;
+  line-height: 1.3;
+}
+
+.tooltip-filter-count {
+  color: #e0e0e0 !important;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.tooltip-last-used {
+  color: #ccc !important;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+/* Add arrow to tooltip */
+.saved-search-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #333;
+}
+
+/* Prevent buttons from retaining focus/active states after click */
+.saved-search-actions-left button,
+.saved-search-actions-right button,
+.saved-search-fav-btn {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.saved-search-actions-left button:focus-visible,
+.saved-search-actions-right button:focus-visible,
+.saved-search-fav-btn:focus-visible {
+  outline: 2px solid #007acc;
+  outline-offset: 2px;
 }

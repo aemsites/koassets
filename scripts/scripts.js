@@ -170,6 +170,43 @@ export function getBlockKeyValues(block) {
   return result;
 }
 
+/**
+* Fetches spreadsheet data from EDS.
+* @param {string} sheetPath Path to the spreadsheet JSON endpoint (e.g., 'data/products', 'content/pricing')
+* @param {boolean} [cache=true] Whether to cache the result
+* @returns {Promise<Object>} Object representing spreadsheet data
+*/
+export async function fetchSpreadsheetData(sheetPath, sheetName = '', cache = true) {
+  const cacheKey = `sheet-${sheetPath}`;
+  window.edsSpreadsheets = window.edsSpreadsheets || {};
+
+  if (cache && window.edsSpreadsheets[cacheKey]) {
+    return window.edsSpreadsheets[cacheKey];
+  }
+
+  const promise = fetch(`${window.location.origin}/${sheetPath}.json${sheetName ? `?sheet=${sheetName}` : ''}`)
+    .then((resp) => {
+      if (resp.ok) {
+        return resp.json();
+      }
+      throw new Error(`Failed to fetch spreadsheet: ${resp.status} ${resp.statusText}`);
+    })
+    .then((json) => {
+      return json;
+    })
+    .catch((error) => {
+      // eslint-disable-next-line no-console
+      console.warn(`Failed to load spreadsheet from ${sheetPath}:`, error);
+      return [];
+    });
+
+  if (cache) {
+    window.edsSpreadsheets[cacheKey] = promise;
+  }
+
+  return promise;
+}
+
 loadPage();
 
 // enable live preview in da.live
