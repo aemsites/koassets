@@ -262,12 +262,12 @@ function MainApp(): React.JSX.Element {
         const params = new URLSearchParams(window.location.search);
         const urlQuery = params.get('query');
         const queryType = params.get('selectedQueryType');
-
+        
         // Check for saved search parameters
         const fulltext = params.get('fulltext');
         const facetFiltersParam = params.get('facetFilters');
         const numericFiltersParam = params.get('numericFilters');
-
+        
         if (urlQuery !== null) setQuery(urlQuery);
         if (queryType !== null && (queryType === QUERY_TYPES.ASSETS || queryType === QUERY_TYPES.COLLECTIONS)) {
             setSelectedQueryType(queryType);
@@ -277,17 +277,14 @@ function MainApp(): React.JSX.Element {
         if (fulltext || facetFiltersParam || numericFiltersParam) {
             try {
                 if (fulltext) setQuery(fulltext);
-
                 if (facetFiltersParam) {
                     const facetFilters = JSON.parse(decodeURIComponent(facetFiltersParam));
                     setSelectedFacetFilters(facetFilters);
                 }
-
                 if (numericFiltersParam) {
                     const numericFilters = JSON.parse(decodeURIComponent(numericFiltersParam));
                     setSelectedNumericFilters(numericFilters);
                 }
-
                 // Trigger search after a brief delay to ensure all state is updated
                 setTimeout(() => {
                     setCurrentPage(0);
