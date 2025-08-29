@@ -8,9 +8,12 @@ import {
   validateSignedCookie,
 } from './utils-http.js';
 
+/* Configure the URL path prefix for auth flows here */
+const AUTH_PREFIX = '/auth';
+
 const COOKIE_SESSION = 'Session';
 const COOKIE_STATE = 'State';
-const COOKIE_ORIGINAL_URL = 'OriginalURL';
+const ORIGINAL_URL_PARAM = 'url';
 
 const REQUIRED_ENV_VARS = [
   'MICROSOFT_ENTRA_TENANT_ID',
@@ -37,7 +40,7 @@ async function createSessionJWT(request, idToken, env) {
   const jwt = new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     // use current domain as issuer
-    .setIssuer(request.origin)
+    .setIssuer(request.uri.origin)
     // use same audience as MS entra IDP app
     .setAudience(env.MICROSOFT_ENTRA_CLIENT_ID)
     .setExpirationTime(env.SESSION_COOKIE_EXPIRATION || '6h')
@@ -52,7 +55,7 @@ async function validateSessionJWT(request, env, sessionJWT) {
     const key = new TextEncoder().encode(env.COOKIE_SECRET);
 
     const { payload } = await jwtVerify(sessionJWT, key, {
-      issuer: request.origin,
+      issuer: request.uri.origin,
       audience: env.MICROSOFT_ENTRA_CLIENT_ID,
       clockTolerance: 5,
     });
@@ -76,7 +79,7 @@ async function validateMicrosoftSignInCallback(request, state) {
     return null;
   }
 
-  if (formData.get('state') !== state.state) {
+  if (formData.get('state') !== state) {
     request.error = 'OIDC error: Invalid state parameter';
     return null;
   }
@@ -85,7 +88,8 @@ async function validateMicrosoftSignInCallback(request, state) {
 }
 
 async function validateIdToken(request, rawIdToken, env, nonce) {
-  const JWKS = createRemoteJWKSet(new URL(env.MICROSOFT_ENTRA_JWKS_URL));
+  const jwksUrl = env.MICROSOFT_ENTRA_JWKS_URL || 'https://login.microsoftonline.com/common/discovery/keys';
+  const JWKS = createRemoteJWKSet(new URL(jwksUrl));
 
   try {
     // validate id_token signature and expiry
@@ -126,30 +130,52 @@ function redirect(url, status = 302) {
   const response = new Response(null, { status });
   response.headers.set('Location', url);
   return response;
+
+  // TODO: use one of these redirect tricks below to get the original page into the browser history?
+
+  // also redirect() which does HTTP 302 redirect
+
+  // const page = `<meta http-equiv="refresh" content="1;url=${targetUrl}">`;
+  // // const page = `<script>window.location.href = "${targetUrl}";</script>`;
+  // // const redirectPage = `
+  // // <html>
+  // //   <head>
+  // //     <title>${request.url}</title>
+  // //   </head>
+  // //   <body>
+  // //     <script>
+  // //       window.location.assign("${targetUrl}");
+  // //     </script>
+  // //   </body>
+  // // </html>
+  // // `;
+  // return new Response(page, {
+  //   headers: {
+  //     'Content-Type': 'text/html',
+  //   },
+  // });
 }
 
 function redirectToLoginPage(request, env) {
-  const response = redirect(`${request.origin}${env.LOGIN_PAGE || '/public/welcome'}`);
+  // build login page url
+  const loginPage = new URL(request.uri.origin);
+  loginPage.pathname = env.LOGIN_PAGE || `${AUTH_PREFIX}/login`;
+
+  // with original url path and query string as parameter
+  const originalUrl = new URL(request.url);
+  loginPage.searchParams.append(ORIGINAL_URL_PARAM, originalUrl.pathname + originalUrl.search);
+
+  const response = redirect(loginPage.href);
 
   // ensure session cookie is deleted (might be set but invalid)
   deleteCookie(response, COOKIE_SESSION);
-
-  // set a cookie to remember the original url
-  setCookie(response, COOKIE_ORIGINAL_URL, request.url, {
-    // SameSite=None in order to appear later in /auth/callback which is cross-site because it originates from the OIDC provider
-    SameSite: 'None',
-    // Chrome wants Secure with SameSite=None and ignores it for http://localhost. Safari does not like Secure on http://localhost (non SSL)
-    Secure: request.headers.get('User-Agent')?.includes('Chrome') || request.hostname !== 'localhost',
-  });
 
   return response;
 }
 
 // middleware to check if user is authenticated
 export async function withAuthentication(request, env) {
-  const url = new URL(request.url);
-  request.origin = url.origin;
-  request.hostname = url.hostname;
+  request.uri = new URL(request.url);
 
   const sessionJWT = request.cookies[COOKIE_SESSION];
   if (!sessionJWT) {
@@ -169,11 +195,11 @@ export async function withAuthentication(request, env) {
 
 // router for dedicated login & logout flows
 export const authRouter = Router({
+  base: AUTH_PREFIX,
+  route: `${AUTH_PREFIX}/*`,
   before: [
     (request, env) => {
-      const url = new URL(request.url);
-      request.origin = url.origin;
-      request.hostname = url.hostname;
+      request.uri = new URL(request.url);
 
       const missing = REQUIRED_ENV_VARS.filter((v) => !env[v]);
       if (missing.length > 0) {
@@ -182,17 +208,30 @@ export const authRouter = Router({
       }
     }
   ],
-  finally: [
-    (response) => {
-      console.log('Response headers:', response.headers);
-    }
-  ]
 });
 
 authRouter
-  .get('/auth/login', async (request, env) => {
+  .get('/login', async (request, env) => {
+    // build redirect_uri
+    const redirectUrl = new URL(request.uri.origin);
+    redirectUrl.pathname = `${AUTH_PREFIX}/callback`;
+
+    // find the original url
+    const url = new URL(request.url);
+    // first look for an explicit query parameter (if present)
+    let originalUrl = url.searchParams.get(ORIGINAL_URL_PARAM);
+    if (!originalUrl) {
+      // fallback to Referer header
+      const referer = isValidUrl(request.headers.get('Referer'));
+      if (referer && referer.origin === request.uri.origin) {
+        // extract the original url from the Referer header
+        originalUrl = referer.searchParams.get(ORIGINAL_URL_PARAM);
+      }
+    }
+
     const state = {
-      state: crypto.randomUUID(),
+      // pass over original url inside the state parameter as that's the only way to pass back user data
+      state: crypto.randomUUID() + (originalUrl ? `|${originalUrl}` : ''),
       nonce: crypto.randomUUID(),
     };
 
@@ -201,7 +240,7 @@ authRouter
       new URLSearchParams({
         client_id: env.MICROSOFT_ENTRA_CLIENT_ID,
         response_type: 'id_token',
-        redirect_uri: `${request.origin}/auth/callback`,
+        redirect_uri: redirectUrl.href,
         response_mode: 'form_post',
         scope: 'openid profile',
         state: state.state,
@@ -214,20 +253,20 @@ authRouter
       // SameSite=None in order to appear later in /auth/callback which is cross-site because it originates from the OIDC provider
       SameSite: 'None',
       // Chrome wants Secure with SameSite=None and ignores it for http://localhost. Safari does not like Secure on http://localhost (non SSL)
-      Secure: request.headers.get('User-Agent')?.includes('Chrome') || request.hostname !== 'localhost',
+      Secure: request.headers.get('User-Agent')?.includes('Chrome') || request.uri.hostname !== 'localhost',
       // extra safe guarding, 10 minutes for the login flow should be enough
       MaxAge: 60 * 10,
     });
     return response;
   })
 
-  .post('/auth/callback', async (request, env) => {
+  .post('/callback', async (request, env) => {
     const state = await validateSignedCookie(request, env.COOKIE_SECRET, COOKIE_STATE);
     if (!state) {
       return unauthorized(request);
     }
 
-    const formData = await validateMicrosoftSignInCallback(request, state);
+    const formData = await validateMicrosoftSignInCallback(request, state.state);
     if (!formData) {
       return unauthorized(request);
     }
@@ -239,12 +278,13 @@ authRouter
 
     const sessionJWT = await createSessionJWT(request, idToken, env);
 
-    // get original redirect url from cookie
-    let redirectUrl = `${request.origin}/`;
-    const originalUrl = isValidUrl(request.cookies[COOKIE_ORIGINAL_URL]);
-    // ensure it is same server and protocol
-    if (originalUrl && originalUrl.origin === request.origin) {
-      redirectUrl = originalUrl.href;
+    let redirectUrl = `${request.uri.origin}/`;
+    // get original redirect url from state parameter (if present)
+    const originalUrl = state.state.split('|')[1];
+    if (originalUrl?.startsWith('/')
+        && originalUrl !== env.LOGIN_PAGE
+        && originalUrl !== `${AUTH_PREFIX}/login`) {
+      redirectUrl = originalUrl;
     }
 
     const response = redirect(redirectUrl);
@@ -253,15 +293,14 @@ authRouter
       // SameSite=Lax because this request is considered cross-site because it originates from the OIDC provider
       SameSite: 'Lax',
       // Safari does not like Secure on http://localhost (non SSL)
-      Secure: request.hostname !== 'localhost',
+      Secure: request.uri.hostname !== 'localhost',
     });
     // remove temporary cookies
     deleteCookie(response, COOKIE_STATE);
-    deleteCookie(response, COOKIE_ORIGINAL_URL);
     return response;
   })
 
-  .get('/auth/user', withAuthentication, (request) => {
+  .get('/user', withAuthentication, (request) => {
     const user = request.session;
     return json({
       name: user.name,
@@ -271,13 +310,13 @@ authRouter
     });
   })
 
-  .get('/auth/logout', (request, env) => {
+  .get('/logout', (request, env) => {
     console.log('User logout:', request.session);
 
     // redirect to MS logout page
     const logoutUrl = `https://login.microsoftonline.com/${env.MICROSOFT_ENTRA_TENANT_ID}/oauth2/logout?` +
       new URLSearchParams({
-        post_logout_redirect_uri: `${request.origin}/`,
+        post_logout_redirect_uri: `${request.uri.origin}/`,
       });
 
     const response = redirect(logoutUrl);
