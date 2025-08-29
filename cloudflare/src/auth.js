@@ -309,6 +309,7 @@ authRouter
       email: user.email,
       country: user.country,
       usertype: user.usertype,
+      sessionExpiresInSec: Math.floor((user.exp * 1000 - Date.now()) / 1000),
     });
   })
 
