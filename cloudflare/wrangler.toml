@@ -11,7 +11,7 @@ workers_dev = true
 
 # do not change these unless code changes require it
 main = "src/index.js"
-compatibility_date = "2025-08-18"
+compatibility_date = "2025-08-16"
 
 
 # TODO: disable logs when development is done
