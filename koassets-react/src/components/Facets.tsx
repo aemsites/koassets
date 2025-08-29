@@ -433,27 +433,31 @@ const Facets: React.FC<FacetsProps> = ({
             });
         });
 
-        // Load saved search term FIRST
+        // Load saved search term FIRST and ensure it's set before other updates
         const searchTerm = savedSearch.searchTerm || '';
         setQuery(searchTerm);
 
-        // Set flag to indicate we're updating from saved search loading
-        isUpdatingFromExternalRef.current = true;
-        setChecked(newChecked);
-        
-        // Then update filters - this will trigger the auto-search useEffect in MainApp
-        // which will use the updated query state
-        setSelectedFacetFilters(savedSearch.facetFilters);
-        setSelectedNumericFilters(savedSearch.numericFilters);
+        // Use setTimeout to ensure query state update is processed before filter updates
+        // This fixes the issue in block integration mode where state updates might be batched differently
+        setTimeout(() => {
+            // Set flag to indicate we're updating from saved search loading
+            isUpdatingFromExternalRef.current = true;
+            setChecked(newChecked);
+            
+            // Then update filters - this will trigger the auto-search useEffect in MainApp
+            // which will use the updated query state
+            setSelectedFacetFilters(savedSearch.facetFilters);
+            setSelectedNumericFilters(savedSearch.numericFilters);
 
-        // Switch back to filters view
-        setActiveView('filters');
+            // Switch back to filters view
+            setActiveView('filters');
 
-        // Update last used timestamp
-        const now = Date.now();
-        const usedUpdated = savedSearches.map(s => s.id === savedSearch.id ? { ...s, dateLastUsed: now } : s);
-        setSavedSearches(usedUpdated);
-        saveSavedSearches(usedUpdated);
+            // Update last used timestamp
+            const now = Date.now();
+            const usedUpdated = savedSearches.map(s => s.id === savedSearch.id ? { ...s, dateLastUsed: now } : s);
+            setSavedSearches(usedUpdated);
+            saveSavedSearches(usedUpdated);
+        }, 0);
     };
 
     const handleDeleteSavedSearch = (searchId: string) => {
