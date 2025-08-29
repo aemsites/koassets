@@ -125,18 +125,18 @@ Options (use with `./deploy.sh`):
 
 Most configuration is done via environment variables in the `wrangler.toml` file. Important variables:
 
-| Variable | Default | Description |
+| Variable | Default (in code) | Description |
 |----------|---------|-------------|
-| `name` | `koassets` | Cloudflare worker name |
-| `account_id` | `852dfa4ae1b0d579df29be65b986c101` | Cloudflare account ID |
-| `HELIX_ORIGIN_HOSTNAME` | `main--koassets--aemsites.aem.live` | AEM EDS origin server (`*.aem.live`) |
-| `DM_ORIGIN_HOSTNAME` | `delivery-p64403-e544653.adobeaemcloud.com` | AEM Content Hub/Dynamic Media environment URL. |
+| `name` | - | Cloudflare worker name |
+| `account_id` | - | Cloudflare account ID |
+| `HELIX_ORIGIN_HOSTNAME` | - | AEM EDS origin server (`*.aem.live`) |
+| `DM_ORIGIN_HOSTNAME` | - | AEM Content Hub/Dynamic Media environment URL. |
 | `HELIX_PUSH_INVALIDATION` | not set (invalidation enabled) | If set to `disabled`, disable push invalidation to the AEN EDS origin server. |
 | `MICROSOFT_ENTRA_TENANT_ID` | - | Directory (tenant) ID from the app registration in Microsoft Entra admin center. |
 | `MICROSOFT_ENTRA_CLIENT_ID` | - | Application (client) ID from the app registration in Microsoft Entra admin center. |
 | `MICROSOFT_ENTRA_JWKS_URL` | `https://login.microsoftonline.com/common/discovery/keys` | The Microsoft Entra ID public keys URL. Get this from `https://login.microsoftonline.com/{MICROSOFT_ENTRA_TENANT_ID}/.well-known/openid-configuration` and json field `jwks_uri` |
 | `SESSION_COOKIE_EXPIRATION` | `6h` | The expiration time for the session cookie. Example: `1h` for 1 hour, or `10m` for 10 minutes. [Format documentation](https://github.com/panva/jose/blob/main/docs/jwt/sign/classes/SignJWT.md#setexpirationtime) |
-| `LOGIN_PAGE` | `/public/welcome` | The page to redirect to if the user is not authenticated. |
+| `LOGIN_PAGE` | not set (go directly to MS login page) | The page to redirect to if the user is not authenticated. If not set, this will automatically go to the Microsoft login page. |
 
 ## Secrets
 
