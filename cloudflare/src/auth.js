@@ -177,6 +177,12 @@ function redirectToLoginPage(request, env, page = env.LOGIN_PAGE) {
 export async function withAuthentication(request, env) {
   request.uri = new URL(request.url);
 
+  if (env.DISABLE_AUTHENTICATION) {
+    request.session = {};
+    console.warn('Authentication is disabled because DISABLE_AUTHENTICATION is set');
+    return;
+  }
+
   const sessionJWT = request.cookies[COOKIE_SESSION];
   if (!sessionJWT) {
     console.log('No session cookie found');
@@ -309,7 +315,7 @@ authRouter
       email: user.email,
       country: user.country,
       usertype: user.usertype,
-      sessionExpiresInSec: Math.floor((user.exp * 1000 - Date.now()) / 1000),
+      sessionExpiresInSec: user.exp && Math.floor((user.exp * 1000 - Date.now()) / 1000),
     });
   })
 
