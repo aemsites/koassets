@@ -52,8 +52,8 @@ router
   // parse cookies (middleware)
   .all('*', withCookies)
 
-  // authentication flows
-  .all('/auth/*', authRouter.fetch)
+  // authentication flows (/auth/* by default)
+  .all(authRouter.route, authRouter.fetch)
 
   // from here on authentication required (middleware)
   .all('*', withAuthentication)
