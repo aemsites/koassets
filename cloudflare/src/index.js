@@ -42,10 +42,12 @@ const router = Router({
 router
   // public content
   .get('/public/*', originHelix)
+  .get('/tools/*', originHelix)
   .get('/scripts/*', originHelix)
   .get('/styles/*', originHelix)
   .get('/blocks/*', originHelix)
   .get('/fonts/*', originHelix)
+  .get('/icons/*', originHelix)
   .get('/favicon.ico', originHelix)
   .get('/robots.txt', originHelix)
 
