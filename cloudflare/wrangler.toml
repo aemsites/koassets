@@ -1,19 +1,25 @@
+# configure worker name and Cloudflare account
 name = "koassets"
-main = "src/index.js"
-workers_dev = true
 account_id = "852dfa4ae1b0d579df29be65b986c101"
+
+# TODO: when hosting the domain on cloudflare:
+# 1. disable workers_dev (except for development)
+workers_dev = true
+# 2. add routes to worker
+# route = "assets.coke.com/*"
+
+
+# do not change these unless code changes require it
+main = "src/index.js"
 compatibility_date = "2025-08-18"
 
-# no routes yet, using worker URL for now: koassets.adobeaem.workers.dev
-# route = "*.mydomain.com/*"
 
+# TODO: disable logs when development is done
 [observability.logs]
 enabled = true
 
-[build]
-# command = "npm install && npm test"
-
 [vars]
+# Configure origins here
 HELIX_ORIGIN_HOSTNAME = "main--koassets--aemsites.aem.live"
 DM_ORIGIN_HOSTNAME = "delivery-p64403-e544653.adobeaemcloud.com"
 
