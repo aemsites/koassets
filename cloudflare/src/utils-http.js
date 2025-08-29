@@ -80,7 +80,7 @@ export async function createSignedCookie(response, secret, name, payload, option
 export async function validateSignedCookie(request, secret, name) {
   const jwt = request.cookies[name];
   if (!jwt) {
-    console.error(`No signed cookie '${name}' found`);
+    request.error = `No signed cookie '${name}' found`;
     return null;
   }
 
@@ -91,7 +91,7 @@ export async function validateSignedCookie(request, secret, name) {
     return payload;
 
   } catch (error) {
-    console.error(`Error validating signed cookie '${name}': ${error.message}`);
+    request.error = `Error validating signed cookie '${name}': ${error.message}`;
     return null;
   }
 }

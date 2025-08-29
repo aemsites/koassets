@@ -59,7 +59,7 @@ async function validateSessionJWT(request, env, sessionJWT) {
     return payload;
 
   } catch (error) {
-    console.error(`Error validating ${COOKIE_SESSION} cookie: ${error.message}`);
+    request.error = `Invalid ${COOKIE_SESSION} cookie: ${error.message}`;
     return null;
   }
 }
@@ -67,24 +67,24 @@ async function validateSessionJWT(request, env, sessionJWT) {
 async function validateMicrosoftSignInCallback(request, state) {
   const formData = await request.formData();
   if (formData.has('error')) {
-    console.error('Microsoft login error:', formData);
+    request.error = `Microsoft OIDC error: ${formData.get('error')} - ${formData.get('error_description')}`;
     return null;
   }
 
   if (!formData.has('id_token')) {
-    console.error('No id_token in form data');
+    request.error = 'Microsoft OIDC error: No id_token in form data';
     return null;
   }
 
   if (formData.get('state') !== state.state) {
-    console.error('Invalid state parameter');
+    request.error = 'OIDC error: Invalid state parameter';
     return null;
   }
 
   return formData;
 }
 
-async function validateIdToken(rawIdToken, env, nonce) {
+async function validateIdToken(request, rawIdToken, env, nonce) {
   const JWKS = createRemoteJWKSet(new URL(env.MICROSOFT_ENTRA_JWKS_URL));
 
   try {
@@ -98,54 +98,41 @@ async function validateIdToken(rawIdToken, env, nonce) {
 
     // validate nonce
     if (payload.nonce !== nonce) {
-      console.error('Invalid nonce in id_token:', payload.nonce);
+      request.error = `OIDC error: Invalid nonce in id_token: ${payload.nonce}`;
       return null;
     }
     // validate tenant
     if (payload.tid !== env.MICROSOFT_ENTRA_TENANT_ID) {
-      console.error('Invalid tenant (tid) in id_token:', payload.tid);
+      request.error = `OIDC error: Invalid tenant (tid) in id_token: ${payload.tid}`;
       return null;
     }
     return payload;
 
   } catch (error) {
-    console.error('Error validating id_token:', error.message);
+    request.error = `OIDC error: Invalid id_token: ${error.message}`;
     return null;
   }
+}
+
+function unauthorized(request) {
+  if (request.error) {
+    console.error(request.error);
+    return new Response(`Unauthorized - ${request.error}`, { status: 401 });
+  }
+  return new Response('Unauthorized', { status: 401 });
 }
 
 function redirect(url, status = 302) {
   const response = new Response(null, { status });
   response.headers.set('Location', url);
   return response;
-
-  // TODO: use one of these redirect tricks below to get the original page into the browser history?
-
-  // also redirect() which does HTTP 302 redirect
-
-  // const page = `<meta http-equiv="refresh" content="1;url=${targetUrl}">`;
-  // // const page = `<script>window.location.href = "${targetUrl}";</script>`;
-  // // const redirectPage = `
-  // // <html>
-  // //   <head>
-  // //     <title>${request.url}</title>
-  // //   </head>
-  // //   <body>
-  // //     <script>
-  // //       window.location.assign("${targetUrl}");
-  // //     </script>
-  // //   </body>
-  // // </html>
-  // // `;
-  // return new Response(page, {
-  //   headers: {
-  //     'Content-Type': 'text/html',
-  //   },
-  // });
 }
 
 function redirectToLoginPage(request, env) {
   const response = redirect(`${request.origin}${env.LOGIN_PAGE || '/public/welcome'}`);
+
+  // ensure session cookie is deleted (might be set but invalid)
+  deleteCookie(response, COOKIE_SESSION);
 
   // set a cookie to remember the original url
   setCookie(response, COOKIE_ORIGINAL_URL, request.url, {
@@ -154,6 +141,7 @@ function redirectToLoginPage(request, env) {
     // Chrome wants Secure with SameSite=None and ignores it for http://localhost. Safari does not like Secure on http://localhost (non SSL)
     Secure: request.headers.get('User-Agent')?.includes('Chrome') || request.hostname !== 'localhost',
   });
+
   return response;
 }
 
@@ -165,16 +153,17 @@ export async function withAuthentication(request, env) {
 
   const sessionJWT = request.cookies[COOKIE_SESSION];
   if (!sessionJWT) {
-    console.info('No session cookie found');
+    console.log('No session cookie found');
     return redirectToLoginPage(request, env);
   }
 
   const session = await validateSessionJWT(request, env, sessionJWT);
   if (!session) {
-    // TODO: redirect to login page upon invalid session cookie?
-    return new Response('Unauthorized', { status: 401 });
+    console.error(request.error);
+    return redirectToLoginPage(request, env);
   }
 
+  // authenticated
   request.session = session;
 }
 
@@ -235,17 +224,17 @@ authRouter
   .post('/auth/callback', async (request, env) => {
     const state = await validateSignedCookie(request, env.COOKIE_SECRET, COOKIE_STATE);
     if (!state) {
-      return new Response('Unauthorized - missing or invalid state cookie', { status: 401 });
+      return unauthorized(request);
     }
 
     const formData = await validateMicrosoftSignInCallback(request, state);
     if (!formData) {
-      return new Response('Unauthorized - error from Microsoft callback', { status: 401 });
+      return unauthorized(request);
     }
 
-    const idToken = await validateIdToken(formData.get('id_token'), env, state.nonce);
+    const idToken = await validateIdToken(request, formData.get('id_token'), env, state.nonce);
     if (!idToken) {
-      return new Response('Unauthorized - invalid id_token', { status: 401 });
+      return unauthorized(request);
     }
 
     const sessionJWT = await createSessionJWT(request, idToken, env);
