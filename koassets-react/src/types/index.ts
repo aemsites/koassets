@@ -149,7 +149,12 @@ export const QUERY_TYPES = {
 export type QueryType = typeof QUERY_TYPES[keyof typeof QUERY_TYPES];
 
 // Step status types for cart processing
-export type StepStatus = 'init' | 'pending' | 'success' | 'failure';
+export enum StepStatus {
+    INIT = 'init',
+    CURRENT = 'current',
+    SUCCESS = 'success',
+    FAILURE = 'failure'
+}
 
 export interface StepStatuses {
     cart: StepStatus;
@@ -337,20 +342,25 @@ export interface AdobeSignInButtonProps {
 }
 
 // Cart Panel Assets types (complex workflow)
-export type WorkflowStep = 'cart' | 'request-download' | 'rights-check' | 'download';
+export enum WorkflowStep {
+    CART = 'cart',
+    REQUEST_DOWNLOAD = 'request-download',
+    RIGHTS_CHECK = 'rights-check',
+    DOWNLOAD = 'download'
+}
 
 export interface WorkflowStepStatuses {
-    cart: StepStatus;
-    'request-download': StepStatus;
-    'rights-check': StepStatus;
-    'download': StepStatus;
+    [WorkflowStep.CART]: StepStatus;
+    [WorkflowStep.REQUEST_DOWNLOAD]: StepStatus;
+    [WorkflowStep.RIGHTS_CHECK]: StepStatus;
+    [WorkflowStep.DOWNLOAD]: StepStatus;
 }
 
 export interface WorkflowStepIcons {
-    cart: React.JSX.Element | string;
-    'request-download': React.JSX.Element | string;
-    'rights-check': React.JSX.Element | string;
-    'download': React.JSX.Element | string;
+    [WorkflowStep.CART]: React.JSX.Element | string;
+    [WorkflowStep.REQUEST_DOWNLOAD]: React.JSX.Element | string;
+    [WorkflowStep.RIGHTS_CHECK]: React.JSX.Element | string;
+    [WorkflowStep.DOWNLOAD]: React.JSX.Element | string;
 }
 
 export interface CartPanelAssetsProps {

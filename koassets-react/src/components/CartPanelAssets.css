@@ -334,3 +334,16 @@
     color: #999 !important;
     border-color: #e0e0e0 !important;
 }
+
+/* SMR Warnings */
+.smr-warnings {
+    padding: 16px 0;
+}
+
+.smr-warnings p {
+    color: #202020;
+    font-family: "TCCC UnityHeadline Regular", sans-serif;
+    font-size: 14px !important;
+    line-height: 1.4285em;
+    margin: 0 0 1em;
+}
