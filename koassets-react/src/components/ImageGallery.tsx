@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { DEFAULT_ACCORDION_CONFIG } from '../constants/accordion';
-import { useAppConfig } from '../contexts/AppConfigContext';
+import { useAppConfig } from '../hooks/useAppConfig';
 import type { Asset, ImageGalleryProps } from '../types';
 import AssetCardViewGrid from './AssetCardViewGrid';
 import AssetCardViewList from './AssetCardViewList';

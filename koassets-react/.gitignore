@@ -55,3 +55,6 @@ localhost*
 *.tmp
 temp/
 debug.log
+
+# Local development config (never commit)
+public/config.local.js

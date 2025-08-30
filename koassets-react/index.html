@@ -1,15 +1,20 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="ko-assets-logo.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>KO Assets</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <!-- Runtime configuration - load before React app -->
-    <script src="/config.js"></script>
-    <script type="module" src="src/main.tsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="ko-assets-logo.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KO Assets</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <!-- Runtime configuration - load before React app -->
+  <script src="/config.js"></script>
+  <!-- Local development config override (gitignored) -->
+  <script src="/config.local.js" onerror="console.log('No local config found')"></script>
+  <script type="module" src="src/main.tsx"></script>
+</body>
+
 </html>

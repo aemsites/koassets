@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { smrWarnings } from '../constants/warnings';
-import { useAppConfig } from '../contexts/AppConfigContext';
+import { restrictedBrandsWarning, smrWarnings } from '../constants/warnings';
+import { useAppConfig } from '../hooks/useAppConfig';
 import type {
     Asset,
     AuthorizedCartItem,
@@ -23,6 +23,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     // Get app config from context - no prop drilling needed!
     const { externalParams } = useAppConfig();
     const { restrictedBrands } = externalParams;
+    console.debug('CartPanelAssets externalParams:', externalParams);
     console.debug('CartPanelAssets restrictedBrands:', restrictedBrands);
 
     const [activeStep, setActiveStep] = useState<WorkflowStep>(WorkflowStep.CART);
@@ -319,6 +320,54 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         return cartItems.some(item => item?.riskTypeManagement === 'smr');
     }, [cartItems]);
 
+    // Check if any cart item has isRestrictedBrand true
+    const hasRestrictedBrandItems = useMemo(() => {
+        return cartItems?.some(item => item.isRestrictedBrand) || false;
+    }, [cartItems]);
+
+    // Populate each cart item with isRestrictedBrand property whenever cartItems changes
+    useEffect(() => {
+        if (!restrictedBrands || restrictedBrands.length === 0 || !cartItems || cartItems.length === 0) {
+            return;
+        }
+
+        // Get all restricted brand values (case-insensitive)
+        const restrictedBrandValues = restrictedBrands
+            .map(rb => rb.value?.toLowerCase().trim())
+            .filter(Boolean);
+
+        if (restrictedBrandValues.length === 0) {
+            return;
+        }
+
+        // Update each cart item with isRestrictedBrand property
+        const updatedCartItems = cartItems.map(item => {
+            let isRestrictedBrand = false;
+
+            if (item.brand) {
+                // Split by comma and check each brand (case-insensitive)
+                const brands = item.brand.split(',').map(b => b.trim().toLowerCase());
+                isRestrictedBrand = brands.some(brand =>
+                    brand && restrictedBrandValues.includes(brand)
+                );
+            }
+
+            return {
+                ...item,
+                isRestrictedBrand
+            };
+        });
+
+        // Only update if there are actual changes to avoid infinite loops
+        const hasChanges = updatedCartItems.some((item, index) =>
+            item.isRestrictedBrand !== cartItems[index].isRestrictedBrand
+        );
+
+        if (hasChanges) {
+            setCartItems(updatedCartItems);
+        }
+    }, [cartItems, restrictedBrands, setCartItems]);
+
     return (
         <>
             {/* Workflow Progress */}
@@ -410,6 +459,9 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                                             <span className="rights-badge">
                                                 {item?.riskTypeManagement === 'smr' ? 'Self-managed rights (SMR)' : 'Fully-managed rights (FMR)'}
                                             </span>
+                                            <span className="rights-badge">
+                                                {item.isRestrictedBrand ? 'Brand restricted by market' : ''}
+                                            </span>
                                         </div>
                                         <div className="col-action">
                                             <button
@@ -429,8 +481,15 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
 
             {/* SMR Warnings - only show if any cart item has SMR risk type */}
             {hasSMRItems && (
-                <div className="smr-warnings">
+                <div className="smr-warnings tccc-warnings">
                     <p>{smrWarnings}</p>
+                </div>
+            )}
+
+            {/* Restricted Brands Warnings - only show if any cart item has a restricted brand */}
+            {hasRestrictedBrandItems && (
+                <div className="restricted-brands-warnings tccc-warnings">
+                    <p>{restrictedBrandsWarning}</p>
                 </div>
             )}
 
