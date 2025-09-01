@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "description": "KO Assets Portal",
   "scripts": {
+    "install-all": "npm install && cd koassets-react && npm install && cd ../cloudflare && npm install",
+    "dev": "./local.sh",
     "lint:js": "eslint .",
     "lint:css": "stylelint \"blocks/**/*.css\" \"styles/*.css\"",
     "lint": "npm run lint:js && npm run lint:css",
@@ -11,6 +13,7 @@
     "prepare": "husky"
   },
   "devDependencies": {
+    "@adobe/aem-cli": "^16.10.46",
     "@babel/eslint-parser": "7.27.1",
     "eslint": "8.57.1",
     "eslint-config-airbnb-base": "15.0.0",

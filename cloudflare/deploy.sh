@@ -63,7 +63,7 @@ echo "Branch : $branch"
 echo "Tag    : $tag"
 echo "Message: $message"
 
-helixOrigin="$branch--koassets--aemsites.aem.live"
+helixOrigin="https://$branch--koassets--aemsites.aem.live"
 
 export FORCE_COLOR=1
 
@@ -71,7 +71,7 @@ npx wrangler versions upload \
   --preview-alias "$tag" \
   --tag "$tag" \
   --message "$message" \
-  --var "HELIX_ORIGIN_HOSTNAME:$helixOrigin" \
+  --var "HELIX_ORIGIN:$helixOrigin" \
   | tee >(grep "Worker Version ID:" | cut -d " " -f 4 > version.id)
 
 version=$(cat version.id)

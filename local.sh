@@ -1,0 +1,77 @@
+#!/bin/bash
+
+# shellcheck disable=SC2164
+
+# No Color / Reset
+NC=$'\033[0m'
+# Background colors
+BG_YELLOW=$'\033[43m'
+BG_BLUE=$'\033[44m'
+BG_MAGENTA=$'\033[45m'
+
+function prefix() {
+  sed "s/^/${1}${2}$NC /"
+}
+
+function run_cloudflare() {
+  cd cloudflare
+  # add "--live-reload" if auto-reload on cloudflare changes is needed
+  npx wrangler dev --env-file .env --var "HELIX_ORIGIN:http://localhost:3000"
+}
+
+function run_aem() {
+  # add "--log-level silly" if full aem logs are needed
+  npx aem up --no-open --livereload
+}
+
+function run_react_build() {
+  cd koassets-react
+  npx chokidar "**" -i "dist/**" -c "npm run build-local-dev"
+}
+
+export FORCE_COLOR=1
+set -o pipefail
+
+# cloudflare worker: http://localhost:8787
+(run_cloudflare 2>&1 | prefix $BG_YELLOW "[cfl]" ) &
+
+sleep 1
+echo
+
+# aem: http://localhost:3000
+(run_aem 2>&1 | prefix $BG_MAGENTA "[aem]") &
+
+sleep 1
+echo
+
+# vite react build (on file change)
+(run_react_build 2>&1 | prefix $BG_BLUE "[vte]") &
+
+sleep 1
+
+echo
+echo "Started the following stack:"
+echo
+echo  "${BG_YELLOW}[cfl]$NC  http://localhost:8787    Cloudflare Worker"
+echo "               |"
+echo "               +-----> Local worker code in cloudflare/*"
+echo "               |"
+echo "               +-----> /api: Dynamic Media API https://delivery-p64403-e544653.adobeaemcloud.com"
+echo "               |"
+echo "               | EDS origin"
+echo "               ↓"
+echo "${BG_MAGENTA}[aem]$NC  http://localhost:3000    AEM Helix"
+echo "               |"
+echo "               +-----> Local EDS code in *"
+echo "               |"
+echo "               +-----> EDS Content https://main--koassets--aemsites.aem.page"
+echo "               |"
+echo "               | React build in /tools/assets-browser/index.(js|css)"
+echo "               ↓"
+echo    "${BG_BLUE}[vte]$NC  Vite auto-rebuild on file changes inside koassets-react/*"
+echo
+echo "Opening http://localhost:8787"
+
+open -a "${DEV_BROWSER:-Google Chrome}" http://localhost:8787
+
+wait

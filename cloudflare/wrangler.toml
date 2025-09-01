@@ -20,8 +20,8 @@ enabled = true
 
 [vars]
 # Configure origins here
-HELIX_ORIGIN_HOSTNAME = "main--koassets--aemsites.aem.live"
-DM_ORIGIN_HOSTNAME = "delivery-p64403-e544653.adobeaemcloud.com"
+HELIX_ORIGIN = "https://main--koassets--aemsites.aem.live"
+DM_ORIGIN = "https://delivery-p64403-e544653.adobeaemcloud.com"
 
 # Test tenant & app registration from the Adobe engineering team (Directory "AEM Astra")
 # Needs to be replaced with real IDP and app registration
