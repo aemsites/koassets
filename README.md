@@ -53,7 +53,21 @@ npm run install-all
 
 ## Local development
 
-Run full stack locally:
+### Initial setup
+
+Add `cloudflare/.env` file with the following content:
+
+```
+# Local development config and secrets
+
+# Per-developer client secret from MS Entra app registration
+MICROSOFT_ENTRA_CLIENT_SECRET = "......"
+
+# generate locally using `openssl rand -base64 32`
+COOKIE_SECRET = "......"
+```
+
+### Run full stack locally
 
 ```sh
 npm run dev
@@ -63,13 +77,13 @@ This should open <http://localhost:8787> in your browser. Use `Ctrl+C` to stop i
 
 This runs a local cloudflare worker (`wrangler dev`), local EDS (`aem up`) and does auto-rebuild of react code (using `vite build`).
 
-To open a different browser than your default browser, set the `DEV_BROWSER` environment variable. It's used with the macOS `open -a {DEV_BROWSER}` command:
+Environment variables supported by `npm run dev`:
 
-```sh
-export DEV_BROWSER=Safari
-export DEV_BROWSER="Google Chrome"
-export DEV_BROWSER=Firefox
-```
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `AEM_PAGES_URL` | EDS content URL | https://main--koassets--aemsites.aem.page |
+| `DM_ORIGIN` | Dynamic Media API URL | https://delivery-p64403-e544653.adobeaemcloud.com |
+| `DEV_BROWSER` | Browser to open. Mac OS only. `Google Chrome`, `Safari` or `Firefox`. | - (system default) |
 
 ### Troubleshooting: Ports still open
 

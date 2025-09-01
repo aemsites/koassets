@@ -2,6 +2,9 @@
 
 # shellcheck disable=SC2164
 
+AEM_PAGES_URL=${AEM_PAGES_URL:-https://main--koassets--aemsites.aem.page}
+DM_ORIGIN=${DM_ORIGIN:-https://delivery-p64403-e544653.adobeaemcloud.com}
+
 # No Color / Reset
 NC=$'\033[0m'
 # Background colors
@@ -16,7 +19,7 @@ function prefix() {
 function run_cloudflare() {
   cd cloudflare
   # add "--live-reload" if auto-reload on cloudflare changes is needed
-  npx wrangler dev --env-file .env --var "HELIX_ORIGIN:http://localhost:3000"
+  npx wrangler dev --env-file .env --var "HELIX_ORIGIN:http://localhost:3000" --var "DM_ORIGIN:${DM_ORIGIN}"
 }
 
 function run_aem() {
@@ -49,6 +52,12 @@ echo
 
 sleep 1
 
+open -a "${DEV_BROWSER:-Google Chrome}" http://localhost:8787
+
+sleep 1
+
+echo
+echo "-------------------------------------------------------------------------------------"
 echo
 echo "Started the following stack:"
 echo
@@ -56,7 +65,8 @@ echo  "${BG_YELLOW}[cfl]$NC  http://localhost:8787    Cloudflare Worker"
 echo "               |"
 echo "               +-----> Local worker code in cloudflare/*"
 echo "               |"
-echo "               +-----> /api: Dynamic Media API https://delivery-p64403-e544653.adobeaemcloud.com"
+echo "               +-----> /api: Dynamic Media API (env var: DM_ORIGIN)"
+echo "               |             ${DM_ORIGIN}"
 echo "               |"
 echo "               | EDS origin"
 echo "               ↓"
@@ -64,14 +74,16 @@ echo "${BG_MAGENTA}[aem]$NC  http://localhost:3000    AEM Helix"
 echo "               |"
 echo "               +-----> Local EDS code in *"
 echo "               |"
-echo "               +-----> EDS Content https://main--koassets--aemsites.aem.page"
+echo "               +-----> EDS Content (env var: AEM_PAGES_URL)"
+echo "               |       ${AEM_PAGES_URL}"
 echo "               |"
 echo "               | React build in /tools/assets-browser/index.(js|css)"
 echo "               ↓"
 echo    "${BG_BLUE}[vte]$NC  Vite auto-rebuild on file changes inside koassets-react/*"
 echo
-echo "Opening http://localhost:8787"
-
-open -a "${DEV_BROWSER:-Google Chrome}" http://localhost:8787
+echo "Running at http://localhost:8787"
+echo
+echo "-------------------------------------------------------------------------------------"
+echo
 
 wait
