@@ -9,11 +9,7 @@ const isRUMRequest = (url) => /\/\.(rum|optel)\/.*/.test(url.pathname);
 
 export async function originHelix(request, env) {
   const url = new URL(request.url);
-  if (url.hostname === 'localhost') {
-    // special handling for local development using 'wrangler dev'
-    url.protocol = 'https';
-    url.port = 443;
-  } else if (url.port) {
+  if (url.hostname !== 'localhost' && url.port) {
     // Cloudflare opens a couple more ports than 443, so we redirect visitors
     // to the default port to avoid confusion.
     // https://developers.cloudflare.com/fundamentals/reference/network-ports/#network-ports-compatible-with-cloudflares-proxy
@@ -63,15 +59,18 @@ export async function originHelix(request, env) {
   }
   searchParams.sort();
 
-  const helixOrigin = env.HELIX_ORIGIN_HOSTNAME;
-  if (!helixOrigin.match(/^.*--.*--.*\.(?:aem|hlx)\.live/)) {
-    return new Response('Invalid HELIX_ORIGIN_HOSTNAME', { status: 500 });
+  const helixOrigin = env.HELIX_ORIGIN;
+  if (helixOrigin !== 'http://localhost:3000'
+      && !helixOrigin.match(/^https:\/\/.*--.*--.*\.(?:aem|hlx)\.(live|page)$/)) {
+    return new Response('Invalid HELIX_ORIGIN', { status: 500 });
   }
-  url.hostname = helixOrigin;
+  const protocolAndHost = helixOrigin.split('://');
+  url.port = '';
+  url.protocol = protocolAndHost[0];
+  url.host = protocolAndHost[1];
 
-  // console.log('request', request);
+  // console.log(`[origin] ${request.method} ${url.href}`);
 
-  // const req = new Request(url, request);
   const req = new Request(url, {
     method: request.method,
     headers: request.headers,

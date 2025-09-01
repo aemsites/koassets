@@ -129,8 +129,8 @@ Most configuration is done via environment variables in the `wrangler.toml` file
 |----------|---------|-------------|
 | `name` | - | Cloudflare worker name |
 | `account_id` | - | Cloudflare account ID |
-| `HELIX_ORIGIN_HOSTNAME` | - | AEM EDS origin server (`*.aem.live`) |
-| `DM_ORIGIN_HOSTNAME` | - | AEM Content Hub/Dynamic Media environment URL. |
+| `HELIX_ORIGIN_` | - | AEM EDS origin server such as `https://*.aem.live` |
+| `DM_ORIGIN` | - | AEM Content Hub/Dynamic Media environment URL such as `https://delivery-*.adobeaemcloud.com` |
 | `HELIX_PUSH_INVALIDATION` | not set (invalidation enabled) | If set to `disabled`, disable push invalidation to the AEN EDS origin server. |
 | `MICROSOFT_ENTRA_TENANT_ID` | - | Directory (tenant) ID from the app registration in Microsoft Entra admin center. |
 | `MICROSOFT_ENTRA_CLIENT_ID` | - | Application (client) ID from the app registration in Microsoft Entra admin center. |
