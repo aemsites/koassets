@@ -5,8 +5,10 @@ Astra Pilot for an Assets Share Portal built on Helix & Content Hub (Dynamic Med
 ## Environments
 
 Main site (cloudflare worker):
-- Live: https://koassets.adobeaem.workers.dev/l
-- Branch: <https://{branch}-koassets.adobeaem.workers.dev/>
+- Live: https://koassets.adobeaem.workers.dev
+- Branch: <https://{branch}-koassets.adobeaem.workers.dev>
+  - Note: for this URL to work, branch names must be shorter than ~50 characters and only include lowercase letters, numbers, and dashes characters. Due to [cloudflare worker alias limitations](https://developers.cloudflare.com/workers/configuration/previews/#rules-and-limitations).
+  - Note 2: for the IMS login to work, the branch name must be less than 20 chars and only contain letters and numbers (no dashes, no special chars).
 
 Helix origin:
 - Live: https://main--koassets--aemsites.aem.live
@@ -44,34 +46,29 @@ A Cloudflare Worker is located in the [cloudflare](cloudflare) folder. This work
 ## Installation
 
 Install npm dependencies everywhere, in main and child projects:
+
 ```sh
 npm run install-all
 ```
 
-## Linting
-
-Should work in each project folder:
-
-```sh
-npm run lint
-```
-
 ## Local development
 
-Run full stack locally (cloudflare worker, aem, auto-rebuild of react code)
+Run full stack locally:
+
 ```sh
 npm run dev
 ```
 
-This should open <http://localhost:8787> in your browser and auto-reload on frontend code changes (EDS or React code). The react code is automatically re-built on file changes.
+This should open <http://localhost:8787> in your browser. Use `Ctrl+C` to stop it.
 
-Use `Ctrl+C` to stop the local development stack.
+This runs a local cloudflare worker (`wrangler dev`), local EDS (`aem up`) and does auto-rebuild of react code (using `vite build`).
 
-To open a different browser than your default browser, set the `DEV_BROWSER` environment variable:
+To open a different browser than your default browser, set the `DEV_BROWSER` environment variable. It's used with the macOS `open -a {DEV_BROWSER}` command:
+
 ```sh
-DEV_BROWSER=Safari
-DEV_BROWSER=Google Chrome
-DEV_BROWSER=Firefox
+export DEV_BROWSER=Safari
+export DEV_BROWSER="Google Chrome"
+export DEV_BROWSER=Firefox
 ```
 
 ### Troubleshooting: Ports still open
@@ -87,3 +84,11 @@ If after quitting `npm run dev` ports 8787 and 3000 on localhost are still in us
    ```sh
    ps x | grep -vF grep | grep -E "(local.sh|wrangler|chokidar|aem up)" | awk '{print $1}' | xargs kill
    ```
+
+## Linting
+
+Should work in each project folder:
+
+```sh
+npm run lint
+```
