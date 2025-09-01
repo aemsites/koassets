@@ -163,7 +163,10 @@ function redirectToLoginPage(request, env, page = env.LOGIN_PAGE) {
 
   // with original url path and query string as parameter
   const originalUrl = new URL(request.url);
-  loginPage.searchParams.append(ORIGINAL_URL_PARAM, originalUrl.pathname + originalUrl.search);
+  const url = originalUrl.pathname + originalUrl.search;
+  if (url !== '/') {
+    loginPage.searchParams.append(ORIGINAL_URL_PARAM, url);
+  }
 
   const response = redirect(loginPage.href);
 
