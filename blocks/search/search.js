@@ -1,8 +1,17 @@
-import { getBlockKeyValues, stripHtmlAndNewlines } from '../../scripts/scripts.js';
-
-const QUERY_TYPES = {
-  ASSETS: 'Assets'
-}
+const QUERY_TYPES = [
+  {
+    title: 'All',
+    value: '/assets-search/',
+  },
+  {
+    title: 'Assets',
+    value: '/drafts/inedoviesov/assets-search/',
+  },
+  {
+    title: 'Products',
+    value: '/drafts/inedoviesov/search-products/',
+  },
+];
 
 export default function decorate(block) {
   // Create the main container
@@ -17,14 +26,60 @@ export default function decorate(block) {
   const queryDropdown = document.createElement('div');
   queryDropdown.className = 'query-dropdown';
 
-  const select = document.createElement('select');
-  // Match React SearchBar - only show Assets option
-  const optionAssets = document.createElement('option');
-  optionAssets.value = QUERY_TYPES.ASSETS;
-  optionAssets.textContent = QUERY_TYPES.ASSETS;
+  // Create custom dropdown instead of select
+  const searchTypeSelect = document.createElement('div');
+  searchTypeSelect.className = 'custom-select';
 
-  select.append(optionAssets);
-  queryDropdown.append(select);
+  const selectedOption = document.createElement('div');
+  selectedOption.className = 'selected-option';
+  selectedOption.innerHTML = '<span class="selected-text">Assets</span>';
+
+  const optionsList = document.createElement('div');
+  optionsList.className = 'options-list';
+
+  // Create options from QUERY_TYPES array
+  QUERY_TYPES.forEach((queryType) => {
+    const option = document.createElement('div');
+    option.className = 'option';
+    option.textContent = queryType.title;
+    option.dataset.value = queryType.value;
+    option.addEventListener('click', () => {
+      // Remove selected class from all options
+      optionsList.querySelectorAll('.option').forEach(opt => opt.classList.remove('selected'));
+      // Add selected class to clicked option
+      option.classList.add('selected');
+
+      selectedOption.querySelector('.selected-text').textContent = queryType.title;
+      selectedOption.dataset.value = queryType.value;
+      searchTypeSelect.dataset.value = queryType.value;
+      optionsList.style.display = 'none';
+      searchTypeSelect.classList.remove('open');
+    });
+    optionsList.append(option);
+  });
+
+  // Toggle dropdown
+  selectedOption.addEventListener('click', () => {
+    const isOpen = searchTypeSelect.classList.contains('open');
+    if (isOpen) {
+      optionsList.style.display = 'none';
+      searchTypeSelect.classList.remove('open');
+    } else {
+      optionsList.style.display = 'block';
+      searchTypeSelect.classList.add('open');
+    }
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!searchTypeSelect.contains(e.target)) {
+      optionsList.style.display = 'none';
+      searchTypeSelect.classList.remove('open');
+    }
+  });
+
+  searchTypeSelect.append(selectedOption, optionsList);
+  queryDropdown.append(searchTypeSelect);
 
   // Input wrapper
   const queryInputWrapper = document.createElement('div');
@@ -70,28 +125,35 @@ export default function decorate(block) {
 
   // Initialize values from URL parameters
   const urlParams = new URLSearchParams(window.location.search);
-  const queryParam = urlParams.get('query');
-  const selectedQueryTypeParam = urlParams.get('selectedQueryType');
 
+  const queryParam = urlParams.get('query');
   if (queryParam) {
     input.value = decodeURIComponent(queryParam) || '';
   }
 
-  if (selectedQueryTypeParam) {
-    select.value = decodeURIComponent(selectedQueryTypeParam) || QUERY_TYPES.ASSETS;
+  // Set searchTypeSelect based on current page path
+  const currentPath = window.location.pathname;
+  const matchingQueryType = QUERY_TYPES.find((queryType) => queryType.value === currentPath);
+  const defaultQueryType = matchingQueryType || QUERY_TYPES[0];
+
+  selectedOption.querySelector('.selected-text').textContent = defaultQueryType.title;
+  selectedOption.dataset.value = defaultQueryType.value;
+  searchTypeSelect.dataset.value = defaultQueryType.value;
+
+  // Mark the default option as selected
+  const defaultOption = optionsList.querySelector(`[data-value="${defaultQueryType.value}"]`);
+  if (defaultOption) {
+    defaultOption.classList.add('selected');
   }
 
-  const searchObj = getBlockKeyValues(block);
-  const searchPath = searchObj?.path ? `${stripHtmlAndNewlines(searchObj.path)}` : '/assets-search/';
 
   const performSearch = () => {
     const query = input.value;
-    const selectedQueryType = select.value;
+    const selectedSearchType = searchTypeSelect.dataset.value;
+
     // Redirect to assets browser with search parameters
-    window.location.href = `${searchPath}?query=${encodeURIComponent(query)}&selectedQueryType=${encodeURIComponent(selectedQueryType)}`;
-    // window.location.href = `/tools/assets-browser/index.html?query=${encodeURIComponent(query)}&selectedQueryType=${encodeURIComponent(selectedQueryType)}`;
-    // window.location.href = `/assets-search/?query=${encodeURIComponent(query)}&selectedQueryType=${encodeURIComponent(selectedQueryType)}`; // TODO: Update this once finalized
-  }
+    window.location.href = `${selectedSearchType}?query=${encodeURIComponent(query)}`;
+  };
 
   // Search button
   const searchBtn = document.createElement('button');
