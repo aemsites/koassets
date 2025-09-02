@@ -84,6 +84,9 @@ function MainApp(): React.JSX.Element {
     const [selectedQueryType, setSelectedQueryType] = useState<string>(QUERY_TYPES.ASSETS);
     const [selectedFacetFilters, setSelectedFacetFilters] = useState<string[][]>([]);
     const [selectedNumericFilters, setSelectedNumericFilters] = useState<string[]>([]);
+    const [presetFilters, setPresetFilters] = useState<string[]>(() => 
+        externalParams.presetFilters || []
+    );
     const [excFacets, setExcFacets] = useState<ExcFacets | undefined>(undefined);
     const [imagePresets, setImagePresets] = useState<{
         assetId?: string;
@@ -225,6 +228,7 @@ function MainApp(): React.JSX.Element {
             facets: excFacets ? transformExcFacetsToHierarchyArray(excFacets) : [],
             facetFilters: selectedFacetFilters,
             numericFilters: selectedNumericFilters,
+            filters: presetFilters,
             hitsPerPage: HITS_PER_PAGE,
             page: page
         }).then((content) => processDMImages(content, isLoadingMore)).catch((error) => {
@@ -236,7 +240,7 @@ function MainApp(): React.JSX.Element {
             }
         });
 
-    }, [dynamicMediaClient, processDMImages, selectedCollection, selectedFacetFilters, selectedNumericFilters, excFacets]);
+    }, [dynamicMediaClient, processDMImages, selectedCollection, selectedFacetFilters, selectedNumericFilters, excFacets, presetFilters]);
 
     // Handler for loading more results (pagination)
     const handleLoadMoreResults = useCallback((): void => {
@@ -312,6 +316,7 @@ function MainApp(): React.JSX.Element {
     useEffect(() => {
         if (accessToken && !settingsLoadedRef.current) {
             setExcFacets(externalParams.excFacets || DEFAULT_FACETS);
+            setPresetFilters(externalParams.presetFilters || []);
             settingsLoadedRef.current = true;
             // const excClient = new ExcClient({ accessToken });
             // // Get facets from EXC
@@ -321,7 +326,7 @@ function MainApp(): React.JSX.Element {
             //     console.error('Error fetching facets:', error);
             // });
         }
-    }, [accessToken, externalParams.excFacets]);
+    }, [accessToken, externalParams.excFacets, externalParams.presetFilters]);
 
 
 
@@ -505,7 +510,7 @@ function MainApp(): React.JSX.Element {
             console.log(`- Clearing ${localStorageLength} localStorage items`);
             localStorage.clear();
 
-            // Clear all sessionStorage  
+            // Clear all sessionStorage
             const sessionStorageLength = sessionStorage.length;
             console.log(`- Clearing ${sessionStorageLength} sessionStorage items`);
             sessionStorage.clear();
@@ -633,4 +638,4 @@ function MainApp(): React.JSX.Element {
     );
 }
 
-export default MainApp; 
+export default MainApp;
