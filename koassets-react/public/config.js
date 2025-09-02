@@ -5,4 +5,9 @@ window.APP_CONFIG = {
   ADOBE_CLIENT_ID: '',
   BUCKET: '',
   // Add other environment variables as needed
+};
+
+// Default external parameters (empty for development)
+window.KOAssetsConfig = {
+  externalParams: {}
 }; 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAppConfig } from '../hooks/useAppConfig';
 import type { AssetCardProps } from '../types';
 import { formatCategory, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
 import ActionButton from './ActionButton';
@@ -15,9 +16,10 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
     cartItems = [],
     isSelected = false,
     onCheckboxChange,
-    dynamicMediaClient,
     showFullDetails = true
 }) => {
+    // Get dynamicMediaClient from context
+    const { dynamicMediaClient } = useAppConfig();
     // Check if this item is already in the cart
     const isInCart = cartItems.some(cartItem => cartItem.assetId === image.assetId);
 
@@ -84,7 +86,6 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
 
                     <LazyImage
                         asset={image}
-                        dynamicMediaClient={dynamicMediaClient || null}
                         width={350}
                         className="image-container"
                         alt={image.alt || image.name}
@@ -124,7 +125,7 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
                                 </div>
                                 <div className="product-meta-item">
                                     <span className="product-meta-label tccc-metadata-label">RIGHTS FREE</span>
-                                    <span className="product-meta-value tccc-metadata-value">{image.rightsFree}</span>
+                                    <span className="product-meta-value tccc-metadata-value">{image.readyToUse}</span>
                                 </div>
                                 <div className="product-meta-item">
                                     <span className="product-meta-label tccc-metadata-label">CATEGORY</span>
