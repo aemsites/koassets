@@ -182,7 +182,7 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                             </div>
                             <div className="preview-modal-group">
                                 <span className="preview-metadata-label tccc-metadata-label">RIGHTS FREE</span>
-                                <span className="preview-metadata-value tccc-metadata-value">{selectedImage.rightsFree}</span>
+                                <span className="preview-metadata-value tccc-metadata-value">{selectedImage.readyToUse}</span>
                             </div>
                             <div className="preview-modal-group">
                                 <span className="preview-metadata-label tccc-metadata-label">CATEGORY</span>

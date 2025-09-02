@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { smrWarnings } from '../constants/warnings';
-import { useAppConfig } from '../contexts/AppConfigContext';
+import { restrictedBrandsWarning, smrWarnings } from '../constants/warnings';
+import { useAppConfig } from '../hooks/useAppConfig';
 import type {
     Asset,
     AuthorizedCartItem,
@@ -23,7 +23,6 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     // Get app config from context - no prop drilling needed!
     const { externalParams } = useAppConfig();
     const { restrictedBrands } = externalParams;
-    console.debug('CartPanelAssets restrictedBrands:', restrictedBrands);
 
     const [activeStep, setActiveStep] = useState<WorkflowStep>(WorkflowStep.CART);
     const [stepStatus, setStepStatus] = useState<WorkflowStepStatuses>({
@@ -258,6 +257,14 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         console.log(isSuccessful ? 'Download completed successfully' : 'Download failed');
     }, []);
 
+    const handleDirectDownload = useCallback(async (): Promise<void> => {
+        // Skip intermediate steps and go directly to download
+        setStepStatus(prev => ({ ...prev, [WorkflowStep.CART]: StepStatus.SUCCESS }));
+        setActiveStep(WorkflowStep.DOWNLOAD);
+        setStepStatus(prev => ({ ...prev, [WorkflowStep.DOWNLOAD]: StepStatus.CURRENT }));
+        console.log('Direct download initiated - skipping intermediate steps');
+    }, []);
+
     const handleRetryStep = useCallback((step: WorkflowStep): void => {
         setStepStatus(prev => ({ ...prev, [step]: StepStatus.CURRENT }));
         console.log(`Retrying step: ${step}`);
@@ -315,9 +322,61 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     }, [onRemoveItem]);
 
     // Check if any cart item has SMR risk type management
-    const hasSMRItems = useMemo(() => {
+    const hasSMRItem = useMemo(() => {
         return cartItems.some(item => item?.riskTypeManagement === 'smr');
     }, [cartItems]);
+
+    // Check if any cart item has isRestrictedBrand true
+    const hasRestrictedBrandItem = useMemo(() => {
+        return cartItems?.some(item => item.isRestrictedBrand) || false;
+    }, [cartItems]);
+
+    const hasAllItemsReadyToUse = useMemo(() => {
+        return cartItems.every(item => item?.readyToUse?.toLowerCase() === 'yes');
+    }, [cartItems]);
+
+    // Populate each cart item with isRestrictedBrand property whenever cartItems changes
+    useEffect(() => {
+        if (!restrictedBrands || restrictedBrands.length === 0 || !cartItems || cartItems.length === 0) {
+            return;
+        }
+
+        // Get all restricted brand values (case-insensitive)
+        const restrictedBrandValues = restrictedBrands
+            .map(rb => rb.value?.toLowerCase().trim())
+            .filter(Boolean);
+
+        if (restrictedBrandValues.length === 0) {
+            return;
+        }
+
+        // Update each cart item with isRestrictedBrand property
+        const updatedCartItems = cartItems.map(item => {
+            let isRestrictedBrand = false;
+
+            if (item.brand) {
+                // Split by comma and check each brand (case-insensitive)
+                const brands = item.brand.split(',').map(b => b.trim().toLowerCase());
+                isRestrictedBrand = brands.some(brand =>
+                    brand && restrictedBrandValues.includes(brand)
+                );
+            }
+
+            return {
+                ...item,
+                isRestrictedBrand
+            };
+        });
+
+        // Only update if there are actual changes to avoid infinite loops
+        const hasChanges = updatedCartItems.some((item, index) =>
+            item.isRestrictedBrand !== cartItems[index].isRestrictedBrand
+        );
+
+        if (hasChanges) {
+            setCartItems(updatedCartItems);
+        }
+    }, [cartItems, restrictedBrands, setCartItems]);
 
     return (
         <>
@@ -330,20 +389,24 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                     <span className="step-label">Cart</span>
                 </div>
                 <div className="horizontal-line"></div>
-                <div className={getStepClassName(WorkflowStep.REQUEST_DOWNLOAD, activeStep === WorkflowStep.REQUEST_DOWNLOAD)}>
-                    <div className="step-icon">
-                        {renderStepIcon(WorkflowStep.REQUEST_DOWNLOAD)}
-                    </div>
-                    <span className="step-label">Request Download</span>
-                </div>
-                <div className="horizontal-line"></div>
-                <div className={getStepClassName(WorkflowStep.RIGHTS_CHECK, activeStep === WorkflowStep.RIGHTS_CHECK)}>
-                    <div className="step-icon">
-                        {renderStepIcon(WorkflowStep.RIGHTS_CHECK)}
-                    </div>
-                    <span className="step-label">Rights Check</span>
-                </div>
-                <div className="horizontal-line"></div>
+                {!hasAllItemsReadyToUse && (
+                    <>
+                        <div className={getStepClassName(WorkflowStep.REQUEST_DOWNLOAD, activeStep === WorkflowStep.REQUEST_DOWNLOAD)}>
+                            <div className="step-icon">
+                                {renderStepIcon(WorkflowStep.REQUEST_DOWNLOAD)}
+                            </div>
+                            <span className="step-label">Request Download</span>
+                        </div>
+                        <div className="horizontal-line"></div>
+                        <div className={getStepClassName(WorkflowStep.RIGHTS_CHECK, activeStep === WorkflowStep.RIGHTS_CHECK)}>
+                            <div className="step-icon">
+                                {renderStepIcon(WorkflowStep.RIGHTS_CHECK)}
+                            </div>
+                            <span className="step-label">Rights Check</span>
+                        </div>
+                        <div className="horizontal-line"></div>
+                    </>
+                )}
                 <div className={getStepClassName(WorkflowStep.DOWNLOAD, activeStep === WorkflowStep.DOWNLOAD)}>
                     <div className="step-icon">
                         {renderStepIcon(WorkflowStep.DOWNLOAD)}
@@ -410,6 +473,9 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                                             <span className="rights-badge">
                                                 {item?.riskTypeManagement === 'smr' ? 'Self-managed rights (SMR)' : 'Fully-managed rights (FMR)'}
                                             </span>
+                                            <span className="rights-badge">
+                                                {item.isRestrictedBrand ? 'Brand restricted by market' : ''}
+                                            </span>
                                         </div>
                                         <div className="col-action">
                                             <button
@@ -428,9 +494,16 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             </div>
 
             {/* SMR Warnings - only show if any cart item has SMR risk type */}
-            {hasSMRItems && (
-                <div className="smr-warnings">
+            {hasSMRItem && (
+                <div className="smr-warnings tccc-warnings">
                     <p>{smrWarnings}</p>
+                </div>
+            )}
+
+            {/* Restricted Brands Warnings - only show if any cart item has a restricted brand */}
+            {hasRestrictedBrandItem && (
+                <div className="restricted-brands-warnings tccc-warnings">
+                    <p>{restrictedBrandsWarning}</p>
                 </div>
             )}
 
@@ -451,9 +524,15 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
 
                 {/* Dynamic primary button based on step */}
                 {activeStep === WorkflowStep.CART && (
-                    <button className="action-btn primary disabled" onClick={(e) => e.preventDefault()}>
-                        Request Download
-                    </button>
+                    hasAllItemsReadyToUse ? (
+                        <button className="action-btn primary" onClick={handleDirectDownload}>
+                            Download Cart
+                        </button>
+                    ) : (
+                        <button className="action-btn primary disabled" onClick={(e) => e.preventDefault()}>
+                            Request Download
+                        </button>
+                    )
                 )}
                 {activeStep === WorkflowStep.REQUEST_DOWNLOAD && (
                     <>

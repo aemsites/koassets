@@ -17,6 +17,7 @@ export interface Asset {
     assetStatus?: string;
     beverageType?: string;
     brand?: string;
+    isRestrictedBrand?: boolean;
     businessAffairsManager?: string;
     campaignActivationRemark?: string;
     campaignName?: string;
@@ -77,7 +78,7 @@ export interface Asset {
     ratio?: string;
     resolution?: string;
     rightsEndDate?: string | number;
-    rightsFree?: string;
+    readyToUse?: string;
     rightsNotes?: string;
     rightsProfileTitle?: string;
     rightsStartDate?: string | number;
@@ -119,6 +120,7 @@ export interface Asset {
 // Cart-related types
 export interface CartItem extends Asset {
     // Additional cart-specific properties can be added here
+    isRestrictedBrand?: boolean;
 }
 
 // Component prop types

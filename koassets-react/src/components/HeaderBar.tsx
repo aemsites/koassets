@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAppConfig } from '../contexts/AppConfigContext';
+import { useAppConfig } from '../hooks/useAppConfig';
 import type { HeaderBarProps } from '../types';
 import AdobeSignInButton from './AdobeSignInButton.jsx';
 import CartIcon from './CartIcon';

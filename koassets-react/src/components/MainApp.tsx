@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import '../MainApp.css';
 import { DynamicMediaClient } from '../clients/dynamicmedia-client';
 import { DEFAULT_FACETS, type ExcFacets } from '../constants/facets';
-import { AppConfigProvider } from '../contexts/AppConfigContext';
 import type {
     Asset,
     CartItem,
@@ -18,6 +17,7 @@ import { CURRENT_VIEW, LOADING, QUERY_TYPES } from '../types';
 import { populateAssetFromHit } from '../utils/assetTransformers';
 import { fetchOptimizedDeliveryBlob, removeBlobFromCache } from '../utils/blobCache';
 import { getBucket, getExternalParams } from '../utils/config';
+import { AppConfigProvider } from './AppConfigProvider';
 
 // Components
 import Facets from './Facets';
@@ -55,7 +55,7 @@ function MainApp(): React.JSX.Element {
     // External parameters from plain JavaScript
     const [externalParams] = useState<ExternalParams>(() => {
         const params = getExternalParams();
-        console.log('External parameters received:', params);
+        // console.log('External parameters received:', JSON.stringify(params));
         return params;
     });
 
@@ -262,12 +262,12 @@ function MainApp(): React.JSX.Element {
         const params = new URLSearchParams(window.location.search);
         const urlQuery = params.get('query');
         const queryType = params.get('selectedQueryType');
-        
+
         // Check for saved search parameters
         const fulltext = params.get('fulltext');
         const facetFiltersParam = params.get('facetFilters');
         const numericFiltersParam = params.get('numericFilters');
-        
+
         if (urlQuery !== null) setQuery(urlQuery);
         if (queryType !== null && (queryType === QUERY_TYPES.ASSETS || queryType === QUERY_TYPES.COLLECTIONS)) {
             setSelectedQueryType(queryType);

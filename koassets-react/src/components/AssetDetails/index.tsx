@@ -5,7 +5,7 @@ import { fetchOptimizedDeliveryBlob } from '../../utils/blobCache';
 import { removeHyphenTitleCase } from '../../utils/formatters';
 import ActionButton from '../ActionButton';
 import { BUTTON_CONFIGS } from '../ActionButtonConfigs';
-import DownloadRenditions from '../DownloadRenditions';
+import DownloadRenditionsModal from '../DownloadRenditionsModal';
 import './AssetDetails.css';
 import AssetDetailsDRM from './AssetDetailsDRM';
 import AssetDetailsGeneralInfo from './AssetDetailsGeneralInfo';
@@ -46,7 +46,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     const [actionButtonEnable, setActionButtonEnable] = useState<boolean>(false);
     const [watermarkRendition, setWatermarkRendition] = useState<Rendition | undefined>(undefined);
 
-    const rightsFree: boolean = selectedImage?.rightsFree?.toLowerCase() === 'yes' ? true : false;
+    const rightsFree: boolean = selectedImage?.readyToUse?.toLowerCase() === 'yes' ? true : false;
 
     const handleToggleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setCollapseAll(e.target.checked);
@@ -269,7 +269,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">RIGHTS FREE</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.rightsFree}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.readyToUse}</span>
                                     </div>
                                 </div>
                             </div>
@@ -364,7 +364,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                 </div>
             </div>
 
-            <DownloadRenditions
+            <DownloadRenditionsModal
                 isOpen={showDownloadRenditionsModal}
                 asset={selectedImage}
                 onClose={handleDownloadRenditionsModalClose}

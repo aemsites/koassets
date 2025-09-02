@@ -261,7 +261,7 @@ export function populateAssetFromHit(hit: Record<string, unknown>): Asset {
         ratio: ratio,
         resolution: safeStringField(hit, 'tccc-resolution'), //TODO: missing metadata
         rightsEndDate: safeDateField(hit, 'tccc-rightsEndDate'),
-        rightsFree: safeStringField(hit, 'tccc-readyToUse'),
+        readyToUse: safeStringField(hit, 'tccc-readyToUse'),
         rightsNotes: safeStringField(hit, 'tccc-rightsNotes'), //TODO: missing metadata
         rightsProfileTitle: safeStringField(hit, 'tccc-rightsProfileTitle'),
         rightsStartDate: safeDateField(hit, 'tccc-rightsStartDate'),
