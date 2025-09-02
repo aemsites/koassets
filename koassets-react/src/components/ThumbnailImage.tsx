@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import type { DynamicMediaClient } from '../clients/dynamicmedia-client';
+import { useAppConfig } from '../hooks/useAppConfig';
 import type { Asset } from '../types';
 import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
 import './ThumbnailImage.css';
 
 interface ThumbnailImageProps {
     item: Asset;
-    dynamicMediaClient: DynamicMediaClient | null;
 }
 
-const ThumbnailImage: React.FC<ThumbnailImageProps> = ({ item, dynamicMediaClient }) => {
+const ThumbnailImage: React.FC<ThumbnailImageProps> = ({ item }) => {
+    // Get dynamicMediaClient from context
+    const { dynamicMediaClient } = useAppConfig();
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<boolean>(false);

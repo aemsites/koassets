@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { DynamicMediaClient } from '../clients/dynamicmedia-client';
+import { useAppConfig } from '../hooks/useAppConfig';
 import type { Asset } from '../types';
 import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
 import './LazyImage.css';
 
 interface LazyImageProps {
     asset: Asset;
-    dynamicMediaClient: DynamicMediaClient | null;
     width?: number;
     className?: string;
     alt?: string;
@@ -15,12 +14,13 @@ interface LazyImageProps {
 
 const LazyImage: React.FC<LazyImageProps> = ({
     asset,
-    dynamicMediaClient,
     width = 350,
     className = '',
     alt,
     onClick
 }) => {
+    // Get dynamicMediaClient from context
+    const { dynamicMediaClient } = useAppConfig();
     const [imageUrl, setImageUrl] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isError, setIsError] = useState<boolean>(false);

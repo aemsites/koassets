@@ -16,7 +16,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     onAddToCart,
     onRemoveFromCart,
     cartItems = [],
-    dynamicMediaClient,
     searchResult,
     onToggleMobileFilter,
     isMobileFilterOpen,
@@ -36,8 +35,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     isLoadingMore = false,
     imagePresets = {},
     assetRenditionsCache = {},
-    fetchAssetRenditions,
-    setImagePresets
+    fetchAssetRenditions
 }: ImageGalleryProps) => {
     // Get external params from context
     const { externalParams } = useAppConfig();
@@ -242,7 +240,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                                         cartItems={cartItems}
                                         isSelected={selectedCards.has(image.assetId || '')}
                                         onCheckboxChange={handleCheckboxChange}
-                                        dynamicMediaClient={dynamicMediaClient}
                                         showFullDetails={showFullDetails}
                                     />
                                 );
@@ -280,7 +277,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 handleAddToCart={handleAddToCart}
                 handleRemoveFromCart={onRemoveFromCart}
                 cartItems={cartItems}
-                dynamicMediaClient={dynamicMediaClient}
                 renditions={selectedCard?.assetId ? assetRenditionsCache[selectedCard.assetId] : undefined}
                 fetchAssetRenditions={fetchAssetRenditions}
             />
@@ -293,11 +289,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 handleAddToCart={handleAddToCart}
                 handleRemoveFromCart={onRemoveFromCart}
                 cartItems={cartItems}
-                dynamicMediaClient={dynamicMediaClient}
                 imagePresets={imagePresets}
                 renditions={selectedCard?.assetId ? assetRenditionsCache[selectedCard.assetId] : undefined}
                 fetchAssetRenditions={fetchAssetRenditions}
-                setImagePresets={setImagePresets}
             />
         </div>
     );

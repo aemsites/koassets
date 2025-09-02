@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import '../MainApp.css';
+
 import { DynamicMediaClient } from '../clients/dynamicmedia-client';
 import { DEFAULT_FACETS, type ExcFacets } from '../constants/facets';
 import type {
@@ -75,6 +76,7 @@ function MainApp(): React.JSX.Element {
         }
     });
     const [dynamicMediaClient, setDynamicMediaClient] = useState<DynamicMediaClient | null>(null);
+
     const [query, setQuery] = useState<string>('');
     const [dmImages, setDmImages] = useState<Asset[]>([]);
 
@@ -102,6 +104,9 @@ function MainApp(): React.JSX.Element {
 
     // Track which assets are currently being fetched to prevent duplicates
     const fetchingAssetsRef = useRef<Set<string>>(new Set());
+
+    // Track if image presets are being fetched to prevent duplicates
+    const fetchingImagePresetsRef = useRef<boolean>(false);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState<number>(0);
@@ -329,7 +334,7 @@ function MainApp(): React.JSX.Element {
         if (!dynamicMediaClient || !asset.assetId) return;
 
         // Check cache first - use functional state update to get current state
-        let shouldFetch = false;
+        let shouldFetchRenditions = false;
         setAssetRenditionsCache(prevCache => {
             // If already cached, don't fetch
             if (prevCache[asset.assetId!]) {
@@ -343,14 +348,33 @@ function MainApp(): React.JSX.Element {
 
             // Mark as fetching and proceed
             fetchingAssetsRef.current.add(asset.assetId!);
-            shouldFetch = true;
+            shouldFetchRenditions = true;
             return prevCache; // No state change yet
         });
 
-        if (!shouldFetch) return;
+        // Fetch image presets once for all assets (only if not already fetched/fetching)
+        if (!imagePresets.items && !fetchingImagePresetsRef.current) {
+            fetchingImagePresetsRef.current = true;
+            try {
+                const presets = await dynamicMediaClient.getImagePresets();
+                setImagePresets(presets);
+                asset.imagePresets = presets;
+                console.log('Successfully fetched image presets');
+            } catch (error) {
+                console.error('Failed to fetch image presets:', error);
+                setImagePresets({});
+            } finally {
+                fetchingImagePresetsRef.current = false;
+            }
+        } else {
+            asset.imagePresets = imagePresets;
+        }
+
+        if (!shouldFetchRenditions) return;
 
         try {
             const renditions = await dynamicMediaClient.getAssetRenditions(asset);
+            asset.renditions = renditions;
             setAssetRenditionsCache(prev => ({
                 ...prev,
                 [asset.assetId!]: renditions
@@ -366,7 +390,8 @@ function MainApp(): React.JSX.Element {
             // Remove from fetching set when done (success or error)
             fetchingAssetsRef.current.delete(asset.assetId!);
         }
-    }, [dynamicMediaClient]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dynamicMediaClient, imagePresets.items]);
 
     // Add useEffect to trigger search when selectedCollection changes
     useEffect(() => {
@@ -559,7 +584,6 @@ function MainApp(): React.JSX.Element {
                     onAddToCart={handleAddToCart}
                     onRemoveFromCart={handleRemoveFromCart}
                     cartItems={cartItems}
-                    dynamicMediaClient={dynamicMediaClient}
                     searchResult={searchResults?.[0] || null}
                     onToggleMobileFilter={handleToggleMobileFilter}
                     isMobileFilterOpen={isMobileFilterOpen}
@@ -580,7 +604,6 @@ function MainApp(): React.JSX.Element {
                     imagePresets={imagePresets}
                     assetRenditionsCache={assetRenditionsCache}
                     fetchAssetRenditions={fetchAssetRenditions}
-                    setImagePresets={setImagePresets}
                 />
             ) : (
                 <></>
@@ -589,7 +612,12 @@ function MainApp(): React.JSX.Element {
     );
 
     return (
-        <AppConfigProvider externalParams={externalParams}>
+        <AppConfigProvider
+            externalParams={externalParams}
+            dynamicMediaClient={dynamicMediaClient}
+            fetchAssetRenditions={fetchAssetRenditions}
+            imagePresets={imagePresets}
+        >
             <div className="container">
                 <HeaderBar
                     cartItems={cartItems}
@@ -601,7 +629,6 @@ function MainApp(): React.JSX.Element {
                     handleDownloadAssets={handleDownloadAssets}
                     handleAuthenticated={handleAuthenticated}
                     handleSignOut={handleSignOut}
-                    dynamicMediaClient={dynamicMediaClient}
                 />
                 {/* TODO: Update this once finalized */}
                 {window.location.pathname.includes('/tools/assets-browser/index.html') && (

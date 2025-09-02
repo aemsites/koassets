@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
-import type { DynamicMediaClient } from '../clients/dynamicmedia-client';
+import { ToastQueue } from '@react-spectrum/toast';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useAppConfig } from '../hooks/useAppConfig';
 import { Asset, Rendition } from '../types';
 import { formatDimensions, formatFileSize, formatFormatName } from '../utils/formatters';
 import './DownloadRenditionsContent.css';
@@ -7,16 +8,6 @@ import ThumbnailImage from './ThumbnailImage';
 
 interface AssetData {
     asset: Asset;
-    renditions: {
-        assetId?: string;
-        items?: Rendition[];
-        'repo:name'?: string;
-    };
-    imagePresets: {
-        assetId?: string;
-        items?: Rendition[];
-        'repo:name'?: string;
-    };
     renditionsLoading: boolean;
     renditionsError: string | null;
 }
@@ -24,10 +15,10 @@ interface AssetData {
 interface SelectAllRenditionsCheckboxProps {
     assetData: AssetData;
     index: number;
-    selectedRenditions: Set<Rendition>;
+    selectedRenditions: Map<string, Set<Rendition>>;
     collapsedAssets: Set<string>;
-    isRenditionSelected: (rendition: Rendition) => boolean;
-    handleRenditionToggle: (rendition: Rendition) => void;
+    isRenditionSelected: (asset: Asset, rendition: Rendition) => boolean;
+    handleRenditionToggle: (asset: Asset, rendition: Rendition) => void;
     toggleAssetCollapse: (assetId: string) => void;
 }
 
@@ -41,12 +32,23 @@ const SelectAllRenditionsCheckbox: React.FC<SelectAllRenditionsCheckboxProps> = 
     toggleAssetCollapse
 }) => {
     const assetId = assetData.asset.assetId || `asset-${index}`;
-    const allRenditions = [...(assetData.renditions.items || []), ...(assetData.imagePresets.items || [])];
+    const allRenditions = [...(assetData.asset.renditions?.items || []), ...(assetData.asset.imagePresets?.items || [])];
     const nonOriginalRenditions = allRenditions.filter(rendition => rendition.name?.toLowerCase() !== 'original')
-        .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        .sort((a, b) => {
+            const aIsWatermark = (a.name || '').toLowerCase().startsWith('watermark');
+            const bIsWatermark = (b.name || '').toLowerCase().startsWith('watermark');
 
+            // Watermark renditions first
+            if (aIsWatermark && !bIsWatermark) return -1;
+            if (!aIsWatermark && bIsWatermark) return 1;
+
+            // Then alphabetical within each group
+            return (a.name || '').localeCompare(b.name || '');
+        });
+
+    const assetSelectedRenditions = selectedRenditions.get(assetId) || new Set();
     const selectedNonOriginalRenditions = nonOriginalRenditions.filter(rendition =>
-        Array.from(selectedRenditions).some(r => r.name === rendition.name)
+        Array.from(assetSelectedRenditions).some(r => r.name === rendition.name)
     );
     const isAllNonOriginalSelected = nonOriginalRenditions.length > 0 && selectedNonOriginalRenditions.length === nonOriginalRenditions.length;
     const isSomeNonOriginalSelected = selectedNonOriginalRenditions.length > 0 && selectedNonOriginalRenditions.length < nonOriginalRenditions.length;
@@ -67,15 +69,15 @@ const SelectAllRenditionsCheckbox: React.FC<SelectAllRenditionsCheckboxProps> = 
         if (isAllNonOriginalSelected) {
             // Deselect all non-original renditions for this asset
             nonOriginalRenditions.forEach(rendition => {
-                if (isRenditionSelected(rendition)) {
-                    handleRenditionToggle(rendition);
+                if (isRenditionSelected(assetData.asset, rendition)) {
+                    handleRenditionToggle(assetData.asset, rendition);
                 }
             });
         } else {
             // Select all non-original renditions for this asset
             nonOriginalRenditions.forEach(rendition => {
-                if (!isRenditionSelected(rendition)) {
-                    handleRenditionToggle(rendition);
+                if (!isRenditionSelected(assetData.asset, rendition)) {
+                    handleRenditionToggle(assetData.asset, rendition);
                 }
             });
         }
@@ -124,29 +126,195 @@ const SelectAllRenditionsCheckbox: React.FC<SelectAllRenditionsCheckboxProps> = 
 
 interface DownloadRenditionsContentProps {
     assets: AssetData[];
-    dynamicMediaClient: DynamicMediaClient | null;
-    selectedRenditions: Set<Rendition>;
-    acceptTerms: boolean;
-    isDownloading: boolean;
     onClose: () => void;
-    handleDownloadRenditions: () => Promise<void>;
-    isRenditionSelected: (rendition: Rendition) => boolean;
-    handleRenditionToggle: (rendition: Rendition) => void;
-    setAcceptTerms: (checked: boolean) => void;
 }
 
 const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
     assets,
-    dynamicMediaClient,
-    selectedRenditions,
-    acceptTerms,
-    isDownloading,
-    onClose,
-    handleDownloadRenditions,
-    isRenditionSelected,
-    handleRenditionToggle,
-    setAcceptTerms
+    onClose
 }) => {
+    // Get dynamicMediaClient from context instead of props
+    const { dynamicMediaClient, fetchAssetRenditions, imagePresets } = useAppConfig();
+
+    // Moved from DownloadRenditionsModal - all download-related states
+    const [selectedRenditions, setSelectedRenditions] = useState<Map<string, Set<Rendition>>>(new Map());
+    const [acceptTerms, setAcceptTerms] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
+    // State to track which assets have had their renditions loaded (to handle race conditions)
+    const [renditionsLoadedAssets, setRenditionsLoadedAssets] = useState<Set<string>>(new Set());
+
+    // Moved from DownloadRenditionsModal - rendition selection functions
+    const handleRenditionToggle = useCallback((asset: Asset, rendition: Rendition) => {
+        const assetId = asset.assetId || `asset-${asset.name}`;
+        console.log(`Toggling rendition "${rendition.name}" for asset "${assetId}"`);
+
+        setSelectedRenditions(prev => {
+            const newMap = new Map(prev);
+            const assetRenditions = newMap.get(assetId) || new Set();
+            const newAssetRenditions = new Set(assetRenditions);
+
+            const existingRendition = Array.from(newAssetRenditions).find(r => r.name === rendition.name);
+
+            if (existingRendition) {
+                newAssetRenditions.delete(existingRendition);
+            } else {
+                newAssetRenditions.add(rendition);
+            }
+
+            if (newAssetRenditions.size === 0) {
+                newMap.delete(assetId);
+            } else {
+                newMap.set(assetId, newAssetRenditions);
+            }
+
+            return newMap;
+        });
+    }, []);
+
+    const isRenditionSelected = useCallback((asset: Asset, rendition: Rendition) => {
+        const assetId = asset.assetId || `asset-${asset.name}`;
+        const assetRenditions = selectedRenditions.get(assetId) || new Set();
+        return Array.from(assetRenditions).some(r => r.name === rendition.name);
+    }, [selectedRenditions]);
+
+    // Reset selectedRenditions and other states when assets change (e.g., modal reopens)
+    useEffect(() => {
+        setSelectedRenditions(new Map());
+        setAcceptTerms(false);
+        setIsDownloading(false);
+        setRenditionsLoadedAssets(new Set()); // Clear loaded assets tracking
+    }, [assets]);
+
+    // Fetch asset renditions when component mounts or assets change
+    useEffect(() => {
+        if (assets.length > 0 && fetchAssetRenditions) {
+            const fetchPromises = assets.map(async ({ asset }) => {
+                const assetId = asset.assetId || asset.name || `asset-${Math.random()}`;
+
+                await fetchAssetRenditions(asset);
+                console.log(`Renditions fetched for asset ${assetId}:`, asset.renditions?.items?.length || 0);
+
+                // Mark this asset as having renditions loaded
+                setRenditionsLoadedAssets(prev => {
+                    const newSet = new Set(prev);
+                    newSet.add(assetId);
+                    return newSet;
+                });
+            });
+
+            Promise.all(fetchPromises).then(() => {
+                console.log('All renditions fetch requests completed');
+            });
+        }
+    }, [assets, fetchAssetRenditions]);
+
+    // Auto-select original renditions for assets that have just had their renditions loaded
+    useEffect(() => {
+        if (renditionsLoadedAssets.size > 0) {
+            assets.forEach((assetData, index) => {
+                const assetId = assetData.asset.assetId || assetData.asset.name || `asset-${index}`;
+
+                // Only process assets that have had their renditions loaded
+                if (renditionsLoadedAssets.has(assetId)) {
+                    const allRenditions = [...(assetData.asset.renditions?.items || []), ...(assetData.asset.imagePresets?.items || [])];
+                    const originalRendition = allRenditions.find(rendition =>
+                        rendition.name?.toLowerCase() === 'original'
+                    );
+
+                    if (originalRendition && !isRenditionSelected(assetData.asset, originalRendition)) {
+                        console.log(`Auto-selecting original rendition for asset ${assetId} (renditions loaded)`);
+                        handleRenditionToggle(assetData.asset, originalRendition);
+                    }
+                }
+            });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [renditionsLoadedAssets]); // Intentionally excluding isRenditionSelected and handleRenditionToggle to prevent re-running when selections change
+
+    // Moved from DownloadRenditionsModal - download function
+    const handleDownloadRenditions = useCallback(async () => {
+        const asset = assets[0]?.asset; // Get first asset
+
+        // Calculate total selected renditions count
+        let totalSelectedCount = 0;
+        selectedRenditions.forEach(assetRenditions => {
+            totalSelectedCount += assetRenditions.size;
+        });
+
+        if (!asset || !dynamicMediaClient || (!acceptTerms) || isDownloading || totalSelectedCount === 0) {
+            console.warn('Cannot download: missing requirements, already downloading, or no renditions selected');
+            return;
+        }
+
+        if (!asset.readyToUse) {
+            ToastQueue.negative(`This asset is not rights free.`, { timeout: 1000 });
+            return;
+        }
+
+        const count = totalSelectedCount;
+        setIsDownloading(true);
+        let closeProcessingToast;
+
+        try {
+            // Collect all selected renditions from all assets
+            const allSelectedRenditions: Rendition[] = [];
+            selectedRenditions.forEach(assetRenditions => {
+                allSelectedRenditions.push(...Array.from(assetRenditions));
+            });
+
+            if (count === 1) {
+                const rendition = allSelectedRenditions[0];
+                const isImagePreset = rendition && imagePresets?.items?.some(preset => preset.name === rendition.name);
+                await dynamicMediaClient.downloadAsset(asset, rendition, isImagePreset);
+                onClose();
+            } else {
+                // Create renditionsToDownload with preset prefix for image presets
+                const renditionsToDownload = new Set(
+                    allSelectedRenditions.map(rendition => {
+                        const isImagePreset = rendition && imagePresets?.items?.some(preset => preset.name === rendition.name);
+                        if (isImagePreset) {
+                            return {
+                                ...rendition,
+                                name: `preset_${rendition.name}`
+                            };
+                        }
+                        return rendition;
+                    })
+                );
+
+                // Multiple assets archive download - show toast notifications
+                closeProcessingToast = ToastQueue.info(`Processing download request for ${count} renditions. Refreshing the page will cancel the download.`);
+
+                const success = await dynamicMediaClient.downloadAssetsArchive(
+                    [{ asset, renditions: Array.from(renditionsToDownload).map(rendition => ({ name: rendition.name })) }]);
+
+                if (success) {
+                    closeProcessingToast?.();
+                    ToastQueue.positive(`Successfully started downloading ${count} renditions.`, { timeout: 1000 });
+                    onClose();
+                } else {
+                    closeProcessingToast?.();
+                    ToastQueue.negative(`Failed to create archive for ${count} renditions.`, { timeout: 1000 });
+                }
+            }
+        } catch (error) {
+            console.error('Failed to download asset:', error);
+            closeProcessingToast?.();
+            ToastQueue.negative(`Unexpected error occurred while downloading ${count} renditions.`, { timeout: 1000 });
+        } finally {
+            setIsDownloading(false);
+        }
+    }, [assets, dynamicMediaClient, acceptTerms, isDownloading, selectedRenditions, onClose, imagePresets]);
+
+    // Calculate total selected renditions count for UI
+    const totalSelectedCount = React.useMemo(() => {
+        let count = 0;
+        selectedRenditions.forEach(assetRenditions => {
+            count += assetRenditions.size;
+        });
+        return count;
+    }, [selectedRenditions]);
+
     // State for collapsed/expanded per asset - collapsed by default
     const [collapsedAssets, setCollapsedAssets] = useState<Set<string>>(() => {
         // Initialize all assets as collapsed
@@ -172,18 +340,7 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
         });
     }, [assets]);
 
-    // Auto-select original rendition by default for each asset
-    useEffect(() => {
-        assets.forEach(assetData => {
-            const originalRendition = [...(assetData.renditions.items || []), ...(assetData.imagePresets.items || [])]
-                .find(rendition => rendition.name === 'original');
-
-            if (originalRendition && !isRenditionSelected(originalRendition)) {
-                handleRenditionToggle(originalRendition);
-            }
-        });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [assets, isRenditionSelected]); // Intentionally excluding handleRenditionToggle to prevent infinite re-renders
+    // Note: Auto-selection of original renditions is now handled directly in the fetchAssetRenditions useEffect above
 
     const toggleAssetCollapse = (assetId: string) => {
         setCollapsedAssets(prev => {
@@ -211,7 +368,6 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                         <div className="download-renditions-thumbnail">
                             <ThumbnailImage
                                 item={assetData.asset}
-                                dynamicMediaClient={dynamicMediaClient}
                             />
                         </div>
                         <div className="download-renditions-title">
@@ -232,13 +388,13 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
 
                             {/* Individual rendition checkboxes */}
                             {!assetData.renditionsLoading && !assetData.renditionsError &&
-                                (assetData.renditions.items && assetData.renditions.items.length > 0 ||
-                                    assetData.imagePresets.items && assetData.imagePresets.items.length > 0) && (
+                                (assetData.asset.renditions?.items && assetData.asset.renditions?.items.length > 0 ||
+                                    assetData.asset.imagePresets?.items && assetData.asset.imagePresets?.items.length > 0) && (
                                     <div className="renditions-list">
                                         {/* Original rendition - always visible */}
                                         {(() => {
                                             const assetId = assetData.asset.assetId || `asset-${index}`;
-                                            const allRenditions = [...(assetData.renditions.items || []), ...(assetData.imagePresets.items || [])];
+                                            const allRenditions = [...(assetData.asset.renditions?.items || []), ...(assetData.asset.imagePresets?.items || [])];
                                             const originalRendition = allRenditions.find(rendition => rendition.name?.toLowerCase() === 'original');
 
                                             if (!originalRendition) return null;
@@ -248,8 +404,8 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                                                     <input
                                                         type="checkbox"
                                                         className="tccc-checkbox"
-                                                        checked={isRenditionSelected(originalRendition)}
-                                                        onChange={() => handleRenditionToggle(originalRendition)}
+                                                        checked={isRenditionSelected(assetData.asset, originalRendition)}
+                                                        onChange={() => handleRenditionToggle(assetData.asset, originalRendition)}
                                                     />
                                                     <span className="rendition-name">ORIGINAL</span>
                                                     {formatDimensions(originalRendition.dimensions) && (
@@ -290,17 +446,27 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
 
                                         {/* Individual non-original renditions - only show if not collapsed */}
                                         {!collapsedAssets.has(assetData.asset.assetId || `asset-${index}`) && (() => {
-                                            const nonOriginalRenditions = [...(assetData.renditions.items || []), ...(assetData.imagePresets.items || [])]
+                                            const nonOriginalRenditions = [...(assetData.asset.renditions?.items || []), ...(assetData.asset.imagePresets?.items || [])]
                                                 .filter(rendition => rendition.name?.toLowerCase() !== 'original')
-                                                .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                                                .sort((a, b) => {
+                                                    const aIsWatermark = (a.name || '').toLowerCase().startsWith('watermark');
+                                                    const bIsWatermark = (b.name || '').toLowerCase().startsWith('watermark');
+
+                                                    // Watermark renditions first
+                                                    if (aIsWatermark && !bIsWatermark) return -1;
+                                                    if (!aIsWatermark && bIsWatermark) return 1;
+
+                                                    // Then alphabetical within each group
+                                                    return (a.name || '').localeCompare(b.name || '');
+                                                });
 
                                             return nonOriginalRenditions.map((rendition) => (
                                                 <label key={`${assetData.asset.assetId}-${rendition.name}`} className="rendition-item">
                                                     <input
                                                         type="checkbox"
                                                         className="tccc-checkbox"
-                                                        checked={isRenditionSelected(rendition)}
-                                                        onChange={() => handleRenditionToggle(rendition)}
+                                                        checked={isRenditionSelected(assetData.asset, rendition)}
+                                                        onChange={() => handleRenditionToggle(assetData.asset, rendition)}
                                                     />
                                                     <span className="rendition-name">{rendition.name}</span>
                                                     {formatDimensions(rendition.dimensions) && (
@@ -354,9 +520,9 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                     Cancel
                 </button>
                 <button
-                    className={`download-renditions-button primary-button ${(!acceptTerms || isDownloading || selectedRenditions.size === 0) ? 'disabled' : ''}`}
+                    className={`download-renditions-button primary-button ${(!acceptTerms || isDownloading || totalSelectedCount === 0) ? 'disabled' : ''}`}
                     onClick={handleDownloadRenditions}
-                    disabled={!acceptTerms || isDownloading || selectedRenditions.size === 0}
+                    disabled={!acceptTerms || isDownloading || totalSelectedCount === 0}
                 >
                     {isDownloading ? 'Downloading...' : 'Download'}
                 </button>

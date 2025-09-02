@@ -1,6 +1,5 @@
 // Asset-related types
 import React from 'react';
-import type { DynamicMediaClient } from '../clients/dynamicmedia-client';
 
 export interface Rendition {
     name?: string;
@@ -114,6 +113,16 @@ export interface Asset {
     assetAssociatedWithBrand?: string;
     fundingBuOrMarket?: string;
     dateUploaded?: string;
+    renditions?: {
+        assetId?: string;
+        items?: Rendition[];
+        'repo:name'?: string;
+    };
+    imagePresets?: {
+        assetId?: string;
+        items?: Rendition[];
+        'repo:name'?: string;
+    };
     [key: string]: unknown; // For additional Algolia hit properties
 }
 
@@ -138,7 +147,6 @@ export interface AssetCardProps {
     cartItems?: CartItem[];
     isSelected?: boolean;
     onCheckboxChange?: (id: string, checked: boolean) => void;
-    dynamicMediaClient?: DynamicMediaClient | null;
     showFullDetails?: boolean;
 }
 
@@ -200,7 +208,6 @@ export interface CartPanelProps {
     onRemoveItem: (item: CartItem) => void;
     onApproveAssets: (items: CartItem[]) => void;
     onDownloadAssets: (items: CartItem[]) => void;
-    dynamicMediaClient?: DynamicMediaClient | null;
 }
 
 // Header Bar types
@@ -214,7 +221,6 @@ export interface HeaderBarProps {
     handleDownloadAssets: (items: CartItem[]) => void;
     handleAuthenticated: (userData: string) => void;
     handleSignOut: () => void;
-    dynamicMediaClient?: DynamicMediaClient | null;
 }
 
 // Asset Preview types  
@@ -225,7 +231,6 @@ export interface AssetPreviewProps {
     handleAddToCart?: (image: Asset, event: React.MouseEvent) => void;
     handleRemoveFromCart?: (image: Asset) => void;
     cartItems?: CartItem[];
-    dynamicMediaClient?: DynamicMediaClient | null;
     renditions?: {
         assetId?: string;
         items?: Rendition[];
@@ -247,7 +252,6 @@ export interface AssetDetailsProps extends AssetPreviewProps {
         'repo:name'?: string;
     };
     fetchAssetRenditions?: (asset: Asset) => Promise<void>;
-    setImagePresets?: (presets: { assetId?: string; items?: Rendition[]; 'repo:name'?: string; }) => void;
 }
 
 export interface SavedSearch {
@@ -306,7 +310,6 @@ export interface ImageGalleryProps {
     onAddToCart?: (image: Asset) => void;
     onRemoveFromCart?: (image: Asset) => void;
     cartItems?: CartItem[];
-    dynamicMediaClient?: DynamicMediaClient | null;
     searchResult?: SearchResult | null;
     onToggleMobileFilter?: () => void;
     isMobileFilterOpen?: boolean;
@@ -337,7 +340,6 @@ export interface ImageGalleryProps {
         }
     };
     fetchAssetRenditions?: (asset: Asset) => Promise<void>;
-    setImagePresets?: (presets: { assetId?: string; items?: Rendition[]; 'repo:name'?: string; }) => void;
 }
 
 // Main App types (for the most complex component)
@@ -367,7 +369,12 @@ export enum WorkflowStep {
     CART = 'cart',
     REQUEST_DOWNLOAD = 'request-download',
     RIGHTS_CHECK = 'rights-check',
-    DOWNLOAD = 'download'
+    DOWNLOAD = 'download',
+    COMPLETE_DOWNLOAD = 'complete-download'
+}
+
+export enum FilteredItemsType {
+    READY_TO_USE = 'ready-to-use'
 }
 
 export interface WorkflowStepStatuses {
@@ -375,6 +382,7 @@ export interface WorkflowStepStatuses {
     [WorkflowStep.REQUEST_DOWNLOAD]: StepStatus;
     [WorkflowStep.RIGHTS_CHECK]: StepStatus;
     [WorkflowStep.DOWNLOAD]: StepStatus;
+    [WorkflowStep.COMPLETE_DOWNLOAD]: StepStatus;
 }
 
 export interface WorkflowStepIcons {
@@ -382,6 +390,7 @@ export interface WorkflowStepIcons {
     [WorkflowStep.REQUEST_DOWNLOAD]: React.JSX.Element | string;
     [WorkflowStep.RIGHTS_CHECK]: React.JSX.Element | string;
     [WorkflowStep.DOWNLOAD]: React.JSX.Element | string;
+    [WorkflowStep.COMPLETE_DOWNLOAD]: React.JSX.Element | string;
 }
 
 export interface CartPanelAssetsProps {
@@ -391,7 +400,7 @@ export interface CartPanelAssetsProps {
     onApproveAssets: (items: CartItem[]) => void;
     onDownloadAssets: (items: CartItem[]) => void;
     onClose: () => void;
-    dynamicMediaClient?: DynamicMediaClient | null;
+    onActiveStepChange: (step: WorkflowStep) => void;
 }
 
 // Extended CartItem for authorization workflow

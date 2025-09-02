@@ -3,7 +3,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 40px 30px 10px 0;
+    padding: 20px 30px 20px 0;
 }
 
 .cart-panel .workflow-step {
@@ -196,7 +196,7 @@
     display: grid;
     grid-template-columns: 0.5fr 1fr 0.5fr 0.5fr;
     gap: 16px;
-    padding: 16px 0;
+    padding: 10px 0;
     border-bottom: 1px solid #f0f0f0;
     align-items: center;
 }
@@ -214,7 +214,6 @@
 .cart-panel .col-title {
     display: flex;
     flex-direction: column;
-    gap: 4px;
 }
 
 .cart-panel .col-rights {

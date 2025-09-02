@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAppConfig } from '../hooks/useAppConfig';
 import type { AssetCardProps } from '../types';
 import { formatCategory, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
 import ActionButton from './ActionButton';
@@ -20,9 +21,10 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
     cartItems = [],
     isSelected = false,
     onCheckboxChange,
-    dynamicMediaClient,
     showFullDetails = true
 }) => {
+    // Get dynamicMediaClient from context
+    const { dynamicMediaClient } = useAppConfig();
     // Check if this item is already in the cart
     const isInCart = cartItems.some(cartItem => cartItem.assetId === image.assetId);
 
@@ -89,7 +91,6 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
 
                     <LazyImage
                         asset={image}
-                        dynamicMediaClient={dynamicMediaClient || null}
                         width={350}
                         className="image-container"
                         alt={image.alt || image.name}

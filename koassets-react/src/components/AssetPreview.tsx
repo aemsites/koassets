@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useAppConfig } from '../hooks/useAppConfig';
 import type { AssetPreviewProps, Rendition } from '../types';
 import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
 import { formatCategory, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
@@ -13,10 +14,11 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
     handleAddToCart,
     handleRemoveFromCart,
     cartItems = [],
-    dynamicMediaClient,
     renditions = {},
     fetchAssetRenditions
 }) => {
+    // Get dynamicMediaClient from context
+    const { dynamicMediaClient } = useAppConfig();
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
     const [imageLoading, setImageLoading] = useState<boolean>(false);
     const [actionButtonEnable, setActionButtonEnable] = useState<boolean>(false);

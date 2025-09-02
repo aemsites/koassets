@@ -27,7 +27,7 @@
 .download-renditions-row {
     display: grid;
     grid-template-columns: 120px 340px 1fr;
-    padding: 16px 0;
+    padding: 10px 0;
     align-items: flex-start;
     position: relative;
     gap: 10px;

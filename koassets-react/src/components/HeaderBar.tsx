@@ -15,8 +15,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
     handleApproveAssets,
     handleDownloadAssets,
     handleAuthenticated,
-    handleSignOut,
-    dynamicMediaClient
+    handleSignOut
 }) => {
     // Get external params from context
     const { externalParams } = useAppConfig();
@@ -81,7 +80,6 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
                         onRemoveItem={handleRemoveFromCart}
                         onApproveAssets={handleApproveAssets}
                         onDownloadAssets={handleDownloadAssets}
-                        dynamicMediaClient={dynamicMediaClient}
                     />
                 </div>
 
