@@ -498,48 +498,48 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
 
                     {/* Action Buttons */}
                     <div className="cart-actions-footer">
-                        <button className="action-btn secondary" onClick={onClose}>
+                        <button className="action-btn secondary-button" onClick={onClose}>
                             Close
                         </button>
-                        <button className="action-btn secondary" onClick={handleClearCart}>
+                        <button className="action-btn secondary-button" onClick={handleClearCart}>
                             Clear Cart
                         </button>
-                        <button className="action-btn secondary disabled" onClick={(e) => e.preventDefault()}>
+                        <button className="action-btn secondary-button disabled" onClick={(e) => e.preventDefault()}>
                             Share Cart
                         </button>
-                        <button className="action-btn secondary disabled" onClick={(e) => e.preventDefault()}>
+                        <button className="action-btn secondary-button disabled" onClick={(e) => e.preventDefault()}>
                             Add To Collection
                         </button>
 
                         {/* Dynamic primary button based on step */}
                         {activeStep === WorkflowStep.CART && (
                             hasAllItemsReadyToUse ? (
-                                <button className="action-btn primary" onClick={handleDownload}>
+                                <button className="action-btn primary-button" onClick={handleDownload}>
                                     Download Cart
                                 </button>
                             ) : (
-                                <button className="action-btn primary disabled" onClick={handleRequestDownload}>
+                                <button className="action-btn primary-button disabled" onClick={handleRequestDownload}>
                                     Request Download
                                 </button>
                             )
                         )}
                         {activeStep === WorkflowStep.REQUEST_DOWNLOAD && (
                             <>
-                                <button className="action-btn primary" onClick={handleRightsCheck}>
+                                <button className="action-btn primary-button" onClick={handleRightsCheck}>
                                     Check Rights
                                 </button>
                             </>
                         )}
                         {activeStep === WorkflowStep.RIGHTS_CHECK && (
                             <>
-                                <button className="action-btn primary" onClick={handleDownload}>
+                                <button className="action-btn primary-button" onClick={handleDownload}>
                                     Download Assets
                                 </button>
                             </>
                         )}
                         {activeStep === WorkflowStep.DOWNLOAD && (
                             <>
-                                <button className="action-btn primary" onClick={handleCompleteDownload}>
+                                <button className="action-btn primary-button" onClick={handleCompleteDownload}>
                                     Complete Download
                                 </button>
                             </>
