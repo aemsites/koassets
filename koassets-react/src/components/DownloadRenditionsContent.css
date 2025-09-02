@@ -1,0 +1,424 @@
+/* Content */
+.download-renditions-content {
+    padding: 20px 32px 30px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+}
+
+.download-renditions-table-header {
+    color: #6a6a6a;
+    font-family: "TCCC UnityHeadline Regular", sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    letter-spacing: 0.56px;
+    line-height: normal;
+    text-transform: uppercase;
+    display: grid;
+    grid-template-columns: 120px 340px 1fr;
+    padding: 16px 0;
+    border-bottom: 2px solid #e0e0e0;
+    gap: 14px;
+}
+
+.download-renditions-row {
+    display: grid;
+    grid-template-columns: 120px 340px 1fr;
+    padding: 10px 0;
+    align-items: flex-start;
+    position: relative;
+    gap: 14px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* Thumbnail */
+.download-renditions-thumbnail {
+    width: 80px;
+    height: 80px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Loading States */
+.renditions-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.renditions-status.loading {
+    color: #666;
+}
+
+.renditions-status.loading .loading-spinner {
+    margin: 0;
+}
+
+.renditions-status.error {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.loading-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #666;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Title */
+.download-renditions-title {
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+    line-height: 1.4;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+}
+
+/* Options */
+.download-renditions-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+}
+
+.download-renditions-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: #333;
+    line-height: 140%;
+    font-size: 12px;
+    font-weight: 400;
+    position: relative;
+}
+
+/* Override global tccc-checkbox positioning for this modal */
+.download-renditions-option .tccc-checkbox {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    width: 16px !important;
+    height: 16px !important;
+    margin: 0 !important;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: inline-block !important;
+}
+
+/* Renditions status feedback */
+.renditions-status {
+    font-size: 11px;
+    margin-top: 4px;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-weight: 400;
+}
+
+.renditions-status.error {
+    color: #d32f2f;
+    background-color: #ffebee;
+}
+
+.renditions-status.success {
+    color: #2e7d32;
+    background-color: #e8f5e8;
+}
+
+/* Individual renditions list */
+.renditions-list {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    position: relative;
+}
+
+/* Select All item with embedded toggle button */
+.select-all-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #333;
+    line-height: 140%;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 0;
+    border-radius: 4px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    margin-bottom: 4px;
+    position: relative;
+}
+
+.select-all-checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+/* Toggle button for collapse/expand - now inside select-all-item */
+.select-all-item .renditions-toggle-btn {
+    background-image: url('/icons/arrow-down-nav-menu.svg');
+    border: none;
+    width: 24px;
+    height: 24px;
+    background-repeat: no-repeat;
+    background-position: center;
+    cursor: pointer;
+    transition: transform 0.3s ease, background-color 0.2s ease;
+    margin-left: auto;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+    display: inline-block;
+    border-radius: 4px;
+    min-width: 24px;
+    min-height: 24px;
+    pointer-events: auto;
+}
+
+/* Ensure button is visible with hover state */
+.select-all-item .renditions-toggle-btn:hover {
+    color: red;
+    background-color: transparent;
+}
+
+.select-all-item .renditions-toggle-btn.collapsed {
+    transform: rotate(0deg);
+}
+
+.select-all-item .renditions-toggle-btn.expanded {
+    transform: rotate(180deg);
+}
+
+.select-all-checkbox-wrapper .tccc-checkbox {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    width: 16px !important;
+    height: 16px !important;
+    margin: 0 !important;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: inline-block !important;
+}
+
+/* Indeterminate state styling for partial selection */
+.select-all-checkbox-wrapper .tccc-checkbox:indeterminate {
+    background-color: #e74c3c;
+    border-color: #e74c3c;
+}
+
+.select-all-checkbox-wrapper .tccc-checkbox:indeterminate::before {
+    background-color: #e74c3c;
+    border-color: #e74c3c;
+    z-index: 1;
+}
+
+.select-all-checkbox-wrapper .tccc-checkbox:indeterminate::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 3px;
+    background-color: white;
+    display: block;
+    z-index: 2;
+}
+
+.select-all-label-clickable {
+    font-weight: 400;
+    color: #333;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    min-width: 0;
+    overflow: hidden;
+    cursor: pointer;
+    user-select: none;
+    margin-left: 8px;
+}
+
+.rendition-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: #333;
+    line-height: 140%;
+    font-size: 12px;
+    font-weight: 400;
+    padding: 8px 0;
+    border-radius: 4px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    position: relative;
+}
+
+/* Indent individual renditions that appear after "ALL AVAILABLE RENDITIONS" */
+.select-all-item+.rendition-item,
+.rendition-item+.rendition-item {
+    padding-left: 10px;
+}
+
+.rendition-item .tccc-checkbox {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    width: 16px !important;
+    height: 16px !important;
+    margin: 0 !important;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: inline-block !important;
+}
+
+.rendition-name {
+    text-overflow: ellipsis;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.rendition-dimensions {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.rendition-format {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.rendition-size {
+    text-align: right;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.rendition-separator {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* Terms Checkbox */
+.download-renditions-terms {
+    margin-top: 8px;
+}
+
+.download-renditions-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #333;
+}
+
+.download-renditions-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    cursor: pointer;
+}
+
+.terms-link {
+    color: #e74c3c;
+    text-decoration: none;
+}
+
+.terms-link:hover {
+    text-decoration: underline;
+}
+
+/* Actions */
+.download-renditions-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.download-renditions-button {
+    padding: 12px 32px;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.download-renditions-button.cancel {
+    padding: 12px 32px;
+}
+
+.download-renditions-button.disabled {
+    background-color: var(--primary-color-disabled);
+    color: #f8f8f8;
+    cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .download-renditions-content {
+        padding: 24px 20px;
+    }
+
+    .download-renditions-table-header,
+    .download-renditions-row {
+        grid-template-columns: 60px 1fr;
+        gap: 12px;
+    }
+
+    .download-renditions-table-header span:last-child,
+    .download-renditions-options {
+        grid-column: 1 / -1;
+        margin-top: 12px;
+    }
+
+    .download-renditions-actions {
+        flex-direction: column;
+    }
+
+    .download-renditions-button {
+        width: 100%;
+    }
+}

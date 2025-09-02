@@ -1,7 +1,7 @@
-import { getBucket } from './utils/config';
+import { getBucket } from '../utils/config';
 
 const IMS_ORG = '9075A2B154DE8AF80A4C98A7@AdobeOrg';
-const CONTENT_HUB_SETTINGS = {"assetDetails":"","assetCard":"","facets":"","search":"","hydration":"","branding":"","customLinks":"","generalConfig":"","renditionConfig":""};
+const CONTENT_HUB_SETTINGS = { "assetDetails": "", "assetCard": "", "facets": "", "search": "", "hydration": "", "branding": "", "customLinks": "", "generalConfig": "", "renditionConfig": "" };
 const CONTENT_HUB_APP_ID = 'ContentHub';
 
 // Extract the ID from VITE_BUCKET (format: delivery-p64403-e544653 -> 64403-544653)
@@ -107,7 +107,7 @@ export class ExcClient {
         settings = CONTENT_HUB_SETTINGS
     }: GetSettingsParams = {}): Promise<Record<string, unknown>> {
         const settingsData = await this.getExcSettings({ imsOrg, appId, groupId, settings });
-        
+
         if (!settingsData) {
             return {};
         }
@@ -116,7 +116,7 @@ export class ExcClient {
         const settingsRecord = settingsData as Record<string, unknown>;
         const facetsData = settingsRecord?.facets as Record<string, unknown>;
         const facetFields = facetsData?.fields as Record<string, unknown>;
-        
+
         if (facetFields) {
             const transformedFacets: Record<string, unknown> = {};
             Object.entries(facetFields).forEach(([key, value]) => {
@@ -125,7 +125,7 @@ export class ExcClient {
             });
             return transformedFacets;
         }
-        
+
         return {};
     }
 }

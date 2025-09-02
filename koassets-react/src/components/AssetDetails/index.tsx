@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { useAppConfig } from '../../hooks/useAppConfig';
 import type { AssetDetailsProps, Rendition } from '../../types';
-import { retryWithDelay } from '../../utils';
+
 import { fetchOptimizedDeliveryBlob } from '../../utils/blobCache';
 import { removeHyphenTitleCase } from '../../utils/formatters';
 import ActionButton from '../ActionButton';
 import { BUTTON_CONFIGS } from '../ActionButtonConfigs';
-import DownloadRenditions from '../DownloadRenditions';
+import DownloadRenditionsModal from '../DownloadRenditionsModal';
 import './AssetDetails.css';
 import AssetDetailsDRM from './AssetDetailsDRM';
 import AssetDetailsGeneralInfo from './AssetDetailsGeneralInfo';
@@ -33,12 +34,12 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     handleAddToCart,
     handleRemoveFromCart,
     cartItems = [],
-    dynamicMediaClient,
     imagePresets = {},
     renditions = {},
-    fetchAssetRenditions,
-    setImagePresets
+    fetchAssetRenditions
 }) => {
+    // Get dynamicMediaClient from context
+    const { dynamicMediaClient } = useAppConfig();
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
     const [imageLoading, setImageLoading] = useState<boolean>(false);
     const [collapseAll, setCollapseAll] = useState<boolean>(false);
@@ -46,7 +47,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     const [actionButtonEnable, setActionButtonEnable] = useState<boolean>(false);
     const [watermarkRendition, setWatermarkRendition] = useState<Rendition | undefined>(undefined);
 
-    const rightsFree: boolean = selectedImage?.rightsFree?.toLowerCase() === 'yes' ? true : false;
+    const rightsFree: boolean = selectedImage?.readyToUse?.toLowerCase() === 'yes' ? true : false;
 
     const handleToggleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setCollapseAll(e.target.checked);
@@ -160,29 +161,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
         setActionButtonEnable(watermarkRendition ? true : false);
     }, [watermarkRendition]);
 
-    // Fetch image presets when modal opens with retry mechanism
-    useEffect(() => {
-        if (showModal && dynamicMediaClient && !imagePresets.items && setImagePresets) {
-            retryWithDelay(
-                () => dynamicMediaClient.getImagePresets(),
-                {
-                    maxRetries: 3,
-                    delayMs: 1000,
-                    onSuccess: () => {
-                        console.log('Successfully fetched image presets');
-                    },
-                    onFailure: (error) => {
-                        console.error('Failed to fetch image presets after 3 retries:', error);
-                    }
-                }
-            ).then(presets => {
-                setImagePresets(presets);
-            }).catch(() => {
-                // Error already logged in onFailure callback
-                setImagePresets({});
-            });
-        }
-    }, [showModal, dynamicMediaClient, imagePresets.items, setImagePresets]);
+    // Image presets are now fetched automatically by fetchAssetRenditions in MainApp
 
     // Separate effect for cleanup
     useEffect(() => {
@@ -269,7 +248,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">RIGHTS FREE</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.rightsFree}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.readyToUse}</span>
                                     </div>
                                 </div>
                             </div>
@@ -364,11 +343,10 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                 </div>
             </div>
 
-            <DownloadRenditions
+            <DownloadRenditionsModal
                 isOpen={showDownloadRenditionsModal}
                 asset={selectedImage}
                 onClose={handleDownloadRenditionsModalClose}
-                dynamicMediaClient={dynamicMediaClient ?? null}
                 renditions={renditions}
                 imagePresets={imagePresets}
             />

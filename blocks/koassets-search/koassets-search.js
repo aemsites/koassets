@@ -1,8 +1,12 @@
-import { getBlockKeyValues, stripHtmlAndNewlines, convertHtmlListToArray } from '../../scripts/scripts.js';
+import { convertHtmlListToArray, fetchSpreadsheetData, getBlockKeyValues, stripHtmlAndNewlines } from '../../scripts/scripts.js';
 
-export default function decorate(block) {
+export default async function decorate(block) {
     // Get the block key-value pairs
     const blockObj = getBlockKeyValues(block);
+
+    // Get configs spreadsheets
+    const configs = await fetchSpreadsheetData('configs');
+    const restrictedBrands = configs?.['shared-restricted-brands']?.data || configs?.['data'];
 
     // Clear the block content
     block.textContent = '';
@@ -44,6 +48,7 @@ export default function decorate(block) {
         accordionTitle: blockObj.accordionTitle,
         accordionContent: blockObj.accordionContent,
         excFacets: JSON.parse(stripHtmlAndNewlines(blockObj.excFacets)),
+        restrictedBrands: restrictedBrands,
         presetFilters: convertHtmlListToArray(blockObj.presetFilters),
         ...(window.KOAssetsConfig.externalParams || {})
     };
