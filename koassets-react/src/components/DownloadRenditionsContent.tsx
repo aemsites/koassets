@@ -14,7 +14,6 @@ interface AssetData {
 
 interface SelectAllRenditionsCheckboxProps {
     assetData: AssetData;
-    index: number;
     selectedRenditions: Map<string, Set<Rendition>>;
     collapsedAssets: Set<string>;
     isRenditionSelected: (asset: Asset, rendition: Rendition) => boolean;
@@ -24,14 +23,13 @@ interface SelectAllRenditionsCheckboxProps {
 
 const SelectAllRenditionsCheckbox: React.FC<SelectAllRenditionsCheckboxProps> = ({
     assetData,
-    index,
     selectedRenditions,
     collapsedAssets,
     isRenditionSelected,
     handleToggleRendition,
     toggleAssetCollapse
 }) => {
-    const assetId = assetData.asset.assetId || `asset-${index}`;
+    const assetId = assetData.asset.assetId || '';
     const allRenditions = [...(assetData.asset.renditions?.items || []), ...(assetData.asset.imagePresets?.items || [])];
     const nonOriginalRenditions = allRenditions.filter(rendition => rendition.name?.toLowerCase() !== 'original')
         .sort((a, b) => {
@@ -190,8 +188,8 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
     // Fetch asset renditions when component mounts or assets change
     useEffect(() => {
         if (assets.length > 0 && fetchAssetRenditions) {
-            const fetchPromises = assets.map(async ({ asset }, index) => {
-                const assetId = asset.assetId || asset.name || `asset-${index}`;
+            const fetchPromises = assets.map(async ({ asset }) => {
+                const assetId = asset.assetId || '';
 
                 try {
                     await fetchAssetRenditions(asset);
@@ -217,8 +215,8 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
     // Auto-select original renditions for assets that have just had their renditions loaded
     useEffect(() => {
         if (renditionsLoadedAssets.size > 0) {
-            assets.forEach((assetData, index) => {
-                const assetId = assetData.asset.assetId || assetData.asset.name || `asset-${index}`;
+            assets.forEach((assetData) => {
+                const assetId = assetData.asset.assetId || '';
 
                 // Only process assets that have had their renditions loaded
                 if (renditionsLoadedAssets.has(assetId)) {
@@ -338,8 +336,8 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
     const [collapsedAssets, setCollapsedAssets] = useState<Set<string>>(() => {
         // Initialize all assets as collapsed
         const initialCollapsed = new Set<string>();
-        assets.forEach((assetData, index) => {
-            const assetId = assetData.asset.assetId || `asset-${index}`;
+        assets.forEach((assetData) => {
+            const assetId = assetData.asset.assetId || '';
             initialCollapsed.add(assetId);
         });
         return initialCollapsed;
@@ -349,8 +347,8 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
     useEffect(() => {
         setCollapsedAssets(prev => {
             const newCollapsed = new Set(prev);
-            assets.forEach((assetData, index) => {
-                const assetId = assetData.asset.assetId || `asset-${index}`;
+            assets.forEach((assetData) => {
+                const assetId = assetData.asset.assetId || '';
                 if (!newCollapsed.has(assetId)) {
                     newCollapsed.add(assetId); // New assets start collapsed
                 }
@@ -412,7 +410,7 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                                             <div className="renditions-list">
                                                 {/* Original rendition - always visible */}
                                                 {(() => {
-                                                    const assetId = assetData.asset.assetId || `asset-${index}`;
+                                                    const assetId = assetData.asset.assetId || '';
                                                     const allRenditions = [...(assetData.asset.renditions?.items || []), ...(assetData.asset.imagePresets?.items || [])];
                                                     const originalRendition = allRenditions.find(rendition => rendition.name?.toLowerCase() === 'original');
 
@@ -453,9 +451,8 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
 
                                                 {/* Select All checkbox with collapse/expand button - only for non-original renditions */}
                                                 <SelectAllRenditionsCheckbox
-                                                    key={`select-all-${assetData.asset.assetId || index}`}
+                                                    key={`select-all-${assetData.asset?.assetId}`}
                                                     assetData={assetData}
-                                                    index={index}
                                                     selectedRenditions={selectedRenditions}
                                                     collapsedAssets={collapsedAssets}
                                                     isRenditionSelected={isRenditionSelected}
@@ -464,7 +461,7 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                                                 />
 
                                                 {/* Individual non-original renditions - only show if not collapsed */}
-                                                {!collapsedAssets.has(assetData.asset.assetId || `asset-${index}`) && (() => {
+                                                {!collapsedAssets.has(assetData.asset.assetId || '') && (() => {
                                                     const nonOriginalRenditions = [...(assetData.asset.renditions?.items || []), ...(assetData.asset.imagePresets?.items || [])]
                                                         .filter(rendition => rendition.name?.toLowerCase() !== 'original')
                                                         .sort((a, b) => {

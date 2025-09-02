@@ -87,7 +87,7 @@ function MainApp(): React.JSX.Element {
     const [selectedQueryType, setSelectedQueryType] = useState<string>(QUERY_TYPES.ASSETS);
     const [selectedFacetFilters, setSelectedFacetFilters] = useState<string[][]>([]);
     const [selectedNumericFilters, setSelectedNumericFilters] = useState<string[]>([]);
-    const [presetFilters, setPresetFilters] = useState<string[]>(() => 
+    const [presetFilters, setPresetFilters] = useState<string[]>(() =>
         externalParams.presetFilters || []
     );
     const [excFacets, setExcFacets] = useState<ExcFacets | undefined>(undefined);
@@ -384,16 +384,9 @@ function MainApp(): React.JSX.Element {
                 ...prev,
                 [asset.assetId!]: renditions
             }));
+            fetchingAssetsRef.current.delete(asset.assetId!);
         } catch (error) {
             console.error('Failed to fetch asset static renditions:', error);
-            // // Set empty object on error to prevent retry loops
-            // setAssetRenditionsCache(prev => ({
-            //     ...prev,
-            //     [asset.assetId!]: {}
-            // }));
-        } finally {
-            // Remove from fetching set when done (success or error)
-            fetchingAssetsRef.current.delete(asset.assetId!);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dynamicMediaClient, imagePresets.items]);

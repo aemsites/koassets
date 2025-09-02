@@ -21,7 +21,7 @@
     grid-template-columns: 120px 340px 1fr;
     padding: 16px 0;
     border-bottom: 2px solid #e0e0e0;
-    gap: 10px;
+    gap: 14px;
 }
 
 .download-renditions-row {
@@ -30,7 +30,7 @@
     padding: 10px 0;
     align-items: flex-start;
     position: relative;
-    gap: 10px;
+    gap: 14px;
     border-bottom: 1px solid #e0e0e0;
 }
 
@@ -172,7 +172,7 @@
     line-height: 140%;
     font-size: 13px;
     font-weight: 500;
-    padding: 8px 12px;
+    padding: 8px 0;
     border-radius: 4px;
     width: 100%;
     min-width: 0;
@@ -281,7 +281,7 @@
     line-height: 140%;
     font-size: 12px;
     font-weight: 400;
-    padding: 8px 12px;
+    padding: 8px 0;
     border-radius: 4px;
     width: 100%;
     min-width: 0;
@@ -292,7 +292,7 @@
 /* Indent individual renditions that appear after "ALL AVAILABLE RENDITIONS" */
 .select-all-item+.rendition-item,
 .rendition-item+.rendition-item {
-    padding-left: 22px;
+    padding-left: 10px;
 }
 
 .rendition-item .tccc-checkbox {
