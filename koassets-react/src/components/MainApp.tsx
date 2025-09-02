@@ -381,11 +381,11 @@ function MainApp(): React.JSX.Element {
             }));
         } catch (error) {
             console.error('Failed to fetch asset static renditions:', error);
-            // Set empty object on error to prevent retry loops
-            setAssetRenditionsCache(prev => ({
-                ...prev,
-                [asset.assetId!]: {}
-            }));
+            // // Set empty object on error to prevent retry loops
+            // setAssetRenditionsCache(prev => ({
+            //     ...prev,
+            //     [asset.assetId!]: {}
+            // }));
         } finally {
             // Remove from fetching set when done (success or error)
             fetchingAssetsRef.current.delete(asset.assetId!);

@@ -221,10 +221,20 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
 
     const handleCompleteDownload = useCallback(async (): Promise<void> => {
         setStepStatus(prev => ({ ...prev, [WorkflowStep.COMPLETE_DOWNLOAD]: StepStatus.CURRENT }));
-    }, []);
+        setActiveStep(WorkflowStep.COMPLETE_DOWNLOAD);
+        onClose();
+    }, [onClose]);
 
     const handleCloseDownloadContent = useCallback(() => {
         setShowDownloadContent(false);
+    }, []);
+
+    const handleDownloadComplete = useCallback((success: boolean) => {
+        if (success) {
+            setStepStatus(prev => ({ ...prev, [WorkflowStep.DOWNLOAD]: StepStatus.SUCCESS }));
+        } else {
+            setStepStatus(prev => ({ ...prev, [WorkflowStep.DOWNLOAD]: StepStatus.FAILURE }));
+        }
     }, []);
 
     // Helper function to render step icon - simply returns the stepIcon for that step
@@ -421,6 +431,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                 <DownloadRenditionsContent
                     assets={downloadAssetsData}
                     onClose={handleCloseDownloadContent}
+                    onDownloadComplete={handleDownloadComplete}
                 />
             ) : (
                 <>
