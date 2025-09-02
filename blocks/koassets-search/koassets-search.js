@@ -1,4 +1,4 @@
-import { fetchSpreadsheetData, getBlockKeyValues, stripHtmlAndNewlines } from '../../scripts/scripts.js';
+import { convertHtmlListToArray, fetchSpreadsheetData, getBlockKeyValues, stripHtmlAndNewlines } from '../../scripts/scripts.js';
 
 export default async function decorate(block) {
     // Get the block key-value pairs
@@ -16,7 +16,7 @@ export default async function decorate(block) {
     reactContainer.id = 'koassets-search-container';
     reactContainer.className = 'koassets-search-container';
 
-    // Set container styles for natural page integration  
+    // Set container styles for natural page integration
     reactContainer.style.width = '100%';
     // Remove height: 100vh to allow natural scrolling
     reactContainer.style.minHeight = '600px';
@@ -49,6 +49,7 @@ export default async function decorate(block) {
         accordionContent: blockObj.accordionContent,
         excFacets: JSON.parse(stripHtmlAndNewlines(blockObj.excFacets)),
         restrictedBrands: restrictedBrands,
+        presetFilters: convertHtmlListToArray(blockObj.presetFilters),
         ...(window.KOAssetsConfig.externalParams || {})
     };
 
