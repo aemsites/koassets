@@ -158,7 +158,7 @@
     max-width: 1000px;
     max-height: 1000px;
     border-radius: 8px;
-    object-fit: contain;
+    object-fit: cover;
     overflow-wrap: break-word;
 }
 

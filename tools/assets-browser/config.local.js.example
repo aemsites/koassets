@@ -1,0 +1,17 @@
+// Local development configuration override
+// Copy this file to config.local.js (which is gitignored) and customize as needed
+
+window.KOAssetsConfig = {
+  externalParams: {
+    restrictedBrands: [
+      { title: 'Coca-Cola', value: 'coca-cola' },
+      { title: 'Sprite', value: 'sprite' }
+    ],
+    excFacets: {
+      // Add your facet configuration here if needed
+    },
+    accordionTitle: 'My Custom Title',
+    accordionContent: 'My custom accordion content',
+    isBlockIntegration: false
+  }
+};

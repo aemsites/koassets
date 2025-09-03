@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { CartPanelProps } from '../types';
+import { WorkflowStep } from '../types';
 import './CartPanel.css';
 import CartPanelAssets from './CartPanelAssets.jsx';
 import CartPanelTemplates from './CartPanelTemplates';
@@ -11,10 +12,10 @@ const CartPanel: React.FC<CartPanelProps> = ({
     setCartItems,
     onRemoveItem,
     onApproveAssets,
-    onDownloadAssets,
-    dynamicMediaClient
+    onDownloadAssets
 }) => {
     const [activeTab, setActiveTab] = useState<'assets' | 'templates'>('assets');
+    const [activeStep, setActiveStep] = useState<WorkflowStep>(WorkflowStep.CART);
     const panelRef = useRef<HTMLDivElement>(null);
 
     // Handle click outside to close
@@ -34,6 +35,22 @@ const CartPanel: React.FC<CartPanelProps> = ({
         };
     }, [isOpen, onClose]);
 
+    // Prevent body scroll when cart panel is open
+    useEffect(() => {
+        if (isOpen) {
+            document.body.classList.add('cart-panel-open');
+            document.documentElement.classList.add('cart-panel-open');
+        } else {
+            document.body.classList.remove('cart-panel-open');
+            document.documentElement.classList.remove('cart-panel-open');
+        }
+
+        return () => {
+            document.body.classList.remove('cart-panel-open');
+            document.documentElement.classList.remove('cart-panel-open');
+        };
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
     return (
@@ -47,21 +64,23 @@ const CartPanel: React.FC<CartPanelProps> = ({
                     </button>
                 </div>
 
-                {/* Tabs */}
-                <div className="cart-tabs">
-                    <button
-                        className={`cart-tab ${activeTab === 'assets' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('assets')}
-                    >
-                        Assets ({cartItems.length})
-                    </button>
-                    <button
-                        className={`cart-tab ${activeTab === 'templates' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('templates')}
-                    >
-                        Templates ({0})
-                    </button>
-                </div>
+                {/* Tabs - only show when in CART step */}
+                {activeStep === WorkflowStep.CART && (
+                    <div className="cart-tabs">
+                        <button
+                            className={`cart-tab ${activeTab === 'assets' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('assets')}
+                        >
+                            Assets ({cartItems.length})
+                        </button>
+                        <button
+                            className={`cart-tab ${activeTab === 'templates' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('templates')}
+                        >
+                            Templates ({0})
+                        </button>
+                    </div>
+                )}
 
                 {activeTab === 'assets' && (
                     <CartPanelAssets
@@ -71,7 +90,7 @@ const CartPanel: React.FC<CartPanelProps> = ({
                         onApproveAssets={onApproveAssets}
                         onDownloadAssets={onDownloadAssets}
                         onClose={onClose}
-                        dynamicMediaClient={dynamicMediaClient}
+                        onActiveStepChange={setActiveStep}
                     />
                 )}
 

@@ -6,12 +6,14 @@
 
 .koassets-search-container {
     width: 100%;
+
     /* Remove height: 100vh constraint for natural page flow */
     min-height: 600px;
     position: relative;
-    background: #ffffff;
+    background: #fff;
+
     /* Remove overflow: hidden to allow scrolling */
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
 }
 
 .koassets-search-container .koassets-search-wrapper {
@@ -22,6 +24,7 @@
 
 .koassets-search-container .koassets-search-wrapper .koassets-search-root {
     width: 100%;
+
     /* Remove height: 100% to allow natural content height */
     position: relative;
 }
@@ -37,13 +40,13 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(255, 255, 255, 0.95);
+    background: rgb(255 255 255 / 95%);
     backdrop-filter: blur(4px);
     z-index: 1000;
 }
 
 .koassets-search-container .koassets-search-wrapper .koassets-loading p {
-    margin: 16px 0 0 0;
+    margin: 16px 0 0;
     font-size: 16px;
     color: #666;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -53,7 +56,7 @@
     width: 40px;
     height: 40px;
     border: 3px solid #f3f3f3;
-    border-top: 3px solid #0066cc;
+    border-top: 3px solid #06c;
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -81,7 +84,7 @@
 }
 
 .koassets-search-container .koassets-search-wrapper .error-message h3 {
-    margin: 0 0 12px 0;
+    margin: 0 0 12px;
     color: #c53030;
     font-size: 18px;
     font-weight: 600;
@@ -105,13 +108,13 @@
     background: #edf2f7;
     padding: 2px 6px;
     border-radius: 3px;
-    font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+    font-family: Monaco, Consolas, 'Courier New', monospace;
     font-size: 13px;
     color: #2d3748;
 }
 
 /* Responsive adjustments */
-@media (max-width: 768px) {
+@media (width <= 768px) {
     .koassets-search-container {
         /* Remove height: 100vh for natural scrolling */
         min-height: 500px;
@@ -125,7 +128,7 @@
     }
 }
 
-@media (max-width: 480px) {
+@media (width <= 480px) {
     .koassets-search-container .koassets-search-wrapper .koassets-loading p {
         font-size: 14px;
     }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { DEFAULT_ACCORDION_CONFIG } from '../constants/accordion';
+import { useAppConfig } from '../hooks/useAppConfig';
 import type { Asset, ImageGalleryProps } from '../types';
 import AssetCardViewGrid from './AssetCardViewGrid';
 import AssetCardViewList from './AssetCardViewList';
@@ -15,7 +16,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     onAddToCart,
     onRemoveFromCart,
     cartItems = [],
-    dynamicMediaClient,
     searchResult,
     onToggleMobileFilter,
     isMobileFilterOpen,
@@ -35,10 +35,11 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     isLoadingMore = false,
     imagePresets = {},
     assetRenditionsCache = {},
-    fetchAssetRenditions,
-    setImagePresets,
-    externalParams
+    fetchAssetRenditions
 }: ImageGalleryProps) => {
+    // Get external params from context
+    const { externalParams } = useAppConfig();
+
     // Extract accordion parameters from external params with fallbacks
     const accordionTitle = externalParams?.accordionTitle || DEFAULT_ACCORDION_CONFIG.accordionTitle;
     const accordionContent = externalParams?.accordionContent || DEFAULT_ACCORDION_CONFIG.accordionContent;
@@ -239,7 +240,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                                         cartItems={cartItems}
                                         isSelected={selectedCards.has(image.assetId || '')}
                                         onCheckboxChange={handleCheckboxChange}
-                                        dynamicMediaClient={dynamicMediaClient}
                                         showFullDetails={showFullDetails}
                                     />
                                 );
@@ -277,7 +277,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 handleAddToCart={handleAddToCart}
                 handleRemoveFromCart={onRemoveFromCart}
                 cartItems={cartItems}
-                dynamicMediaClient={dynamicMediaClient}
                 renditions={selectedCard?.assetId ? assetRenditionsCache[selectedCard.assetId] : undefined}
                 fetchAssetRenditions={fetchAssetRenditions}
             />
@@ -290,11 +289,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 handleAddToCart={handleAddToCart}
                 handleRemoveFromCart={onRemoveFromCart}
                 cartItems={cartItems}
-                dynamicMediaClient={dynamicMediaClient}
                 imagePresets={imagePresets}
                 renditions={selectedCard?.assetId ? assetRenditionsCache[selectedCard.assetId] : undefined}
                 fetchAssetRenditions={fetchAssetRenditions}
-                setImagePresets={setImagePresets}
             />
         </div>
     );

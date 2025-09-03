@@ -50,6 +50,7 @@
     src: url("../fonts/TCCC-UnityText-Regular.ttf")
     format("opentype");
 }
+
 @font-face {
     font-family: "TCCC UnityText Regular";
     font-display: swap;
