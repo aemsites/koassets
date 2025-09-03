@@ -154,23 +154,19 @@ export function convertHtmlListToArray(htmlString) {
   tempDiv.innerHTML = htmlString.trim();
 
   function processListItems(listElement) {
-    return Array.from(listElement.children, li => {
+    return Array.from(listElement.children, (li) => {
       if (li.tagName !== 'LI') return null;
 
       // Extract direct text content efficiently
       const textContent = Array.from(li.childNodes)
-        .filter(node => 
-          node.nodeType === Node.TEXT_NODE || 
-          (node.nodeType === Node.ELEMENT_NODE && node.tagName !== 'UL' && node.tagName !== 'OL')
-        )
-        .map(node => node.textContent)
+        .filter((node) => node.nodeType === Node.TEXT_NODE
+          || (node.nodeType === Node.ELEMENT_NODE && node.tagName !== 'UL' && node.tagName !== 'OL'))
+        .map((node) => node.textContent)
         .join('')
         .trim();
 
       // Get direct child lists only
-      const nestedLists = Array.from(li.children).filter(child => 
-        child.tagName === 'UL' || child.tagName === 'OL'
-      );
+      const nestedLists = Array.from(li.children).filter((child) => child.tagName === 'UL' || child.tagName === 'OL');
 
       if (nestedLists.length === 0) {
         return textContent || null;
@@ -178,7 +174,7 @@ export function convertHtmlListToArray(htmlString) {
 
       return {
         text: textContent,
-        items: nestedLists.flatMap(processListItems)
+        items: nestedLists.flatMap(processListItems),
       };
     }).filter(Boolean);
   }
@@ -189,7 +185,8 @@ export function convertHtmlListToArray(htmlString) {
 
 /**
  * Extracts all key-value pairs from a block.
- * If the first line of a value contains "{{html}}", it returns the HTML content with the marker removed.
+ * If the first line of a value contains "{{html}}",
+ * it returns the HTML content with the marker removed.
  * Otherwise, it returns plain text content (no HTML tags, no newlines).
  * @param {Element} block The block element containing rows
  * @returns {Object} An object containing all key-value pairs from the block
@@ -217,7 +214,8 @@ export function getBlockKeyValues(block) {
 
 /**
 * Fetches spreadsheet data from EDS.
-* @param {string} sheetPath Path to the spreadsheet JSON endpoint (e.g., 'data/products', 'content/pricing')
+* @param {string} sheetPath Path to the spreadsheet JSON endpoint
+*                           (e.g., 'data/products', 'content/pricing')
 * @param {boolean} [cache=true] Whether to cache the result
 * @returns {Promise<Object>} Object representing spreadsheet data
 */
@@ -236,9 +234,7 @@ export async function fetchSpreadsheetData(sheetPath, sheetName = '', cache = tr
       }
       throw new Error(`Failed to fetch spreadsheet: ${resp.status} ${resp.statusText}`);
     })
-    .then((json) => {
-      return json;
-    })
+    .then((json) => json)
     .catch((error) => {
       // eslint-disable-next-line no-console
       console.warn(`Failed to load spreadsheet from ${sheetPath}:`, error);

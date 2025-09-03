@@ -11,8 +11,6 @@ jobs:
         node-version: 24
     - run: npm ci
     - run: npm run lint
-      # temporary disable linting until all linting issues are fixed
-      if: false
 
   build-react:
     runs-on: ubuntu-latest
