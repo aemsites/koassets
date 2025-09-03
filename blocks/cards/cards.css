@@ -13,7 +13,7 @@
   overflow: hidden; /* Ensures image corners are also rounded */
   display: flex; /* Enable horizontal layout */
   align-items: stretch; /* Ensure both image and content have same height */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+  box-shadow: 0 2px 8px rgb(0 0 0 / 10%); /* Subtle shadow */
   height: 120px;
 }
 
