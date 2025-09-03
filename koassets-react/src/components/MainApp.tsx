@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import '../MainApp.css';
+
+import { DynamicMediaClient } from '../clients/dynamicmedia-client';
 import { DEFAULT_FACETS, type ExcFacets } from '../constants/facets';
-import { DynamicMediaClient } from '../dynamicmedia-client';
 import type {
     Asset,
     CartItem,
@@ -17,6 +18,7 @@ import { CURRENT_VIEW, LOADING, QUERY_TYPES } from '../types';
 import { populateAssetFromHit } from '../utils/assetTransformers';
 import { fetchOptimizedDeliveryBlob, removeBlobFromCache } from '../utils/blobCache';
 import { getBucket, getExternalParams } from '../utils/config';
+import { AppConfigProvider } from './AppConfigProvider';
 
 // Components
 import Facets from './Facets';
@@ -54,7 +56,7 @@ function MainApp(): React.JSX.Element {
     // External parameters from plain JavaScript
     const [externalParams] = useState<ExternalParams>(() => {
         const params = getExternalParams();
-        console.log('External parameters received:', params);
+        // console.log('External parameters received:', JSON.stringify(params));
         return params;
     });
 
@@ -74,6 +76,7 @@ function MainApp(): React.JSX.Element {
         }
     });
     const [dynamicMediaClient, setDynamicMediaClient] = useState<DynamicMediaClient | null>(null);
+
     const [query, setQuery] = useState<string>('');
     const [dmImages, setDmImages] = useState<Asset[]>([]);
 
@@ -84,10 +87,11 @@ function MainApp(): React.JSX.Element {
     const [selectedQueryType, setSelectedQueryType] = useState<string>(QUERY_TYPES.ASSETS);
     const [selectedFacetFilters, setSelectedFacetFilters] = useState<string[][]>([]);
     const [selectedNumericFilters, setSelectedNumericFilters] = useState<string[]>([]);
-    const [presetFilters, setPresetFilters] = useState<string[]>(() => 
+    const [presetFilters, setPresetFilters] = useState<string[]>(() =>
         externalParams.presetFilters || []
     );
     const [excFacets, setExcFacets] = useState<ExcFacets | undefined>(undefined);
+
     const [imagePresets, setImagePresets] = useState<{
         assetId?: string;
         items?: Rendition[];
@@ -103,6 +107,9 @@ function MainApp(): React.JSX.Element {
 
     // Track which assets are currently being fetched to prevent duplicates
     const fetchingAssetsRef = useRef<Set<string>>(new Set());
+
+    // Track if image presets are being fetched to prevent duplicates
+    const fetchingImagePresetsRef = useRef<boolean>(false);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState<number>(0);
@@ -264,32 +271,29 @@ function MainApp(): React.JSX.Element {
         const params = new URLSearchParams(window.location.search);
         const urlQuery = params.get('query');
         const queryType = params.get('selectedQueryType');
-        
+
         // Check for saved search parameters
         const fulltext = params.get('fulltext');
         const facetFiltersParam = params.get('facetFilters');
         const numericFiltersParam = params.get('numericFilters');
-        
+
         if (urlQuery !== null) setQuery(urlQuery);
         if (queryType !== null && (queryType === QUERY_TYPES.ASSETS || queryType === QUERY_TYPES.COLLECTIONS)) {
             setSelectedQueryType(queryType);
         }
-        
+
         // Apply saved search parameters if present
         if (fulltext || facetFiltersParam || numericFiltersParam) {
             try {
                 if (fulltext) setQuery(fulltext);
-                
                 if (facetFiltersParam) {
                     const facetFilters = JSON.parse(decodeURIComponent(facetFiltersParam));
                     setSelectedFacetFilters(facetFilters);
                 }
-                
                 if (numericFiltersParam) {
                     const numericFilters = JSON.parse(decodeURIComponent(numericFiltersParam));
                     setSelectedNumericFilters(numericFilters);
                 }
-                
                 // Trigger search after a brief delay to ensure all state is updated
                 setTimeout(() => {
                     setCurrentPage(0);
@@ -335,7 +339,7 @@ function MainApp(): React.JSX.Element {
         if (!dynamicMediaClient || !asset.assetId) return;
 
         // Check cache first - use functional state update to get current state
-        let shouldFetch = false;
+        let shouldFetchRenditions = false;
         setAssetRenditionsCache(prevCache => {
             // If already cached, don't fetch
             if (prevCache[asset.assetId!]) {
@@ -349,30 +353,43 @@ function MainApp(): React.JSX.Element {
 
             // Mark as fetching and proceed
             fetchingAssetsRef.current.add(asset.assetId!);
-            shouldFetch = true;
+            shouldFetchRenditions = true;
             return prevCache; // No state change yet
         });
 
-        if (!shouldFetch) return;
+        // Fetch image presets once for all assets (only if not already fetched/fetching)
+        if (!imagePresets.items && !fetchingImagePresetsRef.current) {
+            fetchingImagePresetsRef.current = true;
+            try {
+                const presets = await dynamicMediaClient.getImagePresets();
+                setImagePresets(presets);
+                asset.imagePresets = presets;
+                console.log('Successfully fetched image presets');
+            } catch (error) {
+                console.error('Failed to fetch image presets:', error);
+                setImagePresets({});
+            } finally {
+                fetchingImagePresetsRef.current = false;
+            }
+        } else {
+            asset.imagePresets = imagePresets;
+        }
+
+        if (!shouldFetchRenditions) return;
 
         try {
             const renditions = await dynamicMediaClient.getAssetRenditions(asset);
+            asset.renditions = renditions;
             setAssetRenditionsCache(prev => ({
                 ...prev,
                 [asset.assetId!]: renditions
             }));
+            fetchingAssetsRef.current.delete(asset.assetId!);
         } catch (error) {
             console.error('Failed to fetch asset static renditions:', error);
-            // Set empty object on error to prevent retry loops
-            setAssetRenditionsCache(prev => ({
-                ...prev,
-                [asset.assetId!]: {}
-            }));
-        } finally {
-            // Remove from fetching set when done (success or error)
-            fetchingAssetsRef.current.delete(asset.assetId!);
         }
-    }, [dynamicMediaClient]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dynamicMediaClient, imagePresets.items]);
 
     // Add useEffect to trigger search when selectedCollection changes
     useEffect(() => {
@@ -418,34 +435,46 @@ function MainApp(): React.JSX.Element {
     };
 
     const handleBulkAddToCart = async (selectedCardIds: Set<string>, images: Asset[]): Promise<void> => {
-        const newItems: Asset[] = [];
-
-        for (const imageId of selectedCardIds) {
+        // Process all selected images in parallel
+        const processCartImages = async (imageId: string): Promise<Asset | null> => {
             const image = images.find(img => img.assetId === imageId);
-            if (image && !cartItems.some(item => item.assetId === image.assetId)) {
-                // Cache each image when adding to cart
-                if (dynamicMediaClient && image.assetId) {
-                    try {
-                        const cacheKey = `${image.assetId}-350`;
-                        await fetchOptimizedDeliveryBlob(
-                            dynamicMediaClient,
-                            image,
-                            350,
-                            {
-                                cache: false,
-                                cacheKey: cacheKey,
-                                fallbackUrl: image.url
-                            }
-                        );
-                        console.log(`Cached bulk image for cart: ${image.assetId}`);
-                    } catch (error) {
-                        console.warn(`Failed to cache bulk image for cart ${image.assetId}:`, error);
-                    }
-                }
-
-                newItems.push(image);
+            if (!image || cartItems.some(item => item.assetId === image.assetId)) {
+                return null;
             }
-        }
+
+            // Cache the image in parallel
+            if (dynamicMediaClient && image.assetId) {
+                try {
+                    const cacheKey = `${image.assetId}-350`;
+                    await fetchOptimizedDeliveryBlob(
+                        dynamicMediaClient,
+                        image,
+                        350,
+                        {
+                            cache: false,
+                            cacheKey: cacheKey,
+                            fallbackUrl: image.url
+                        }
+                    );
+                    console.log(`Cached bulk image for cart: ${image.assetId}`);
+                } catch (error) {
+                    console.warn(`Failed to cache bulk image for cart ${image.assetId}:`, error);
+                }
+            }
+
+            return image;
+        };
+
+        // Process all images in parallel using Promise.allSettled for better error handling
+        const results = await Promise.allSettled(
+            Array.from(selectedCardIds).map(processCartImages)
+        );
+
+        // Filter successful results and extract the assets
+        const newItems: Asset[] = results
+            .filter((result): result is PromiseFulfilledResult<Asset | null> =>
+                result.status === 'fulfilled' && result.value !== null)
+            .map(result => result.value!);
 
         if (newItems.length > 0) {
             setCartItems(prev => [...prev, ...newItems]);
@@ -553,7 +582,6 @@ function MainApp(): React.JSX.Element {
                     onAddToCart={handleAddToCart}
                     onRemoveFromCart={handleRemoveFromCart}
                     cartItems={cartItems}
-                    dynamicMediaClient={dynamicMediaClient}
                     searchResult={searchResults?.[0] || null}
                     onToggleMobileFilter={handleToggleMobileFilter}
                     isMobileFilterOpen={isMobileFilterOpen}
@@ -574,8 +602,6 @@ function MainApp(): React.JSX.Element {
                     imagePresets={imagePresets}
                     assetRenditionsCache={assetRenditionsCache}
                     fetchAssetRenditions={fetchAssetRenditions}
-                    setImagePresets={setImagePresets}
-                    externalParams={externalParams}
                 />
             ) : (
                 <></>
@@ -584,57 +610,62 @@ function MainApp(): React.JSX.Element {
     );
 
     return (
-        <div className="container">
-            <HeaderBar
-                cartItems={cartItems}
-                setCartItems={setCartItems}
-                isCartOpen={isCartOpen}
-                setIsCartOpen={setIsCartOpen}
-                handleRemoveFromCart={handleRemoveFromCart}
-                handleApproveAssets={handleApproveAssets}
-                handleDownloadAssets={handleDownloadAssets}
-                handleAuthenticated={handleAuthenticated}
-                handleSignOut={handleSignOut}
-                dynamicMediaClient={dynamicMediaClient}
-                isBlockIntegration={externalParams.isBlockIntegration}
-            />
-            {/* TODO: Update this once finalized */}
-            {window.location.pathname.includes('/tools/assets-browser/index.html') && (
-                <SearchBar
-                    query={query}
-                    setQuery={setQuery}
-                    sendQuery={search}
-                    selectedQueryType={selectedQueryType}
-                    setSelectedQueryType={handleSetSelectedQueryType}
-                    inputRef={searchBarRef}
-                />)}
-            <div className="main-content">
-                <div className="images-container">
-                    <div className="images-content-wrapper">
-                        <div className="images-content-row">
-                            <div className="images-main">
-                                {breadcrumbs}
-                                {enhancedGallery}
+        <AppConfigProvider
+            externalParams={externalParams}
+            dynamicMediaClient={dynamicMediaClient}
+            fetchAssetRenditions={fetchAssetRenditions}
+            imagePresets={imagePresets}
+        >
+            <div className="container">
+                <HeaderBar
+                    cartItems={cartItems}
+                    setCartItems={setCartItems}
+                    isCartOpen={isCartOpen}
+                    setIsCartOpen={setIsCartOpen}
+                    handleRemoveFromCart={handleRemoveFromCart}
+                    handleApproveAssets={handleApproveAssets}
+                    handleDownloadAssets={handleDownloadAssets}
+                    handleAuthenticated={handleAuthenticated}
+                    handleSignOut={handleSignOut}
+                />
+                {/* TODO: Update this once finalized */}
+                {window.location.pathname.includes('/tools/assets-browser/index.html') && (
+                    <SearchBar
+                        query={query}
+                        setQuery={setQuery}
+                        sendQuery={search}
+                        selectedQueryType={selectedQueryType}
+                        setSelectedQueryType={handleSetSelectedQueryType}
+                        inputRef={searchBarRef}
+                    />)}
+                <div className="main-content">
+                    <div className="images-container">
+                        <div className="images-content-wrapper">
+                            <div className="images-content-row">
+                                <div className="images-main">
+                                    {breadcrumbs}
+                                    {enhancedGallery}
+                                </div>
+                                <div className={`facet-filter-panel ${isMobileFilterOpen ? 'mobile-open' : ''}`}>
+                                    <Facets
+                                        searchResults={searchResults}
+                                        selectedFacetFilters={selectedFacetFilters}
+                                        setSelectedFacetFilters={setSelectedFacetFilters}
+                                        search={search}
+                                        excFacets={excFacets}
+                                        selectedNumericFilters={selectedNumericFilters}
+                                        setSelectedNumericFilters={setSelectedNumericFilters}
+                                        query={query}
+                                        setQuery={setQuery}
+                                    />
+                                </div>
                             </div>
-                            <div className={`facet-filter-panel ${isMobileFilterOpen ? 'mobile-open' : ''}`}>
-                                <Facets
-                                    searchResults={searchResults}
-                                    selectedFacetFilters={selectedFacetFilters}
-                                    setSelectedFacetFilters={setSelectedFacetFilters}
-                                    search={search}
-                                    excFacets={excFacets}
-                                    selectedNumericFilters={selectedNumericFilters}
-                                    setSelectedNumericFilters={setSelectedNumericFilters}
-                                    query={query}
-                                    setQuery={setQuery}
-                                />
-                            </div>
+                            {/* <Footer /> */}
                         </div>
-                        {/* <Footer /> */}
                     </div>
                 </div>
             </div>
-        </div>
+        </AppConfigProvider>
     );
 }
 

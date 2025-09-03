@@ -55,7 +55,7 @@ const AssetDetailsDRM: React.FC<AssetDetailsDRMProps> = ({ selectedImage, forceC
                         <div className="asset-details-group">
                             <h4 className="asset-details-main-metadata-label">Rights Free</h4>
                             <span className="asset-details-main-metadata-value">
-                                {selectedImage?.rightsFree as string}
+                                {selectedImage?.readyToUse as string}
                             </span>
                         </div>
 
