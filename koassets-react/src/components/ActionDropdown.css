@@ -73,6 +73,10 @@
     border-bottom: 1px solid #f0f0f0;
 }
 
+.ui.simple.dropdown .menu .item:hover {
+    color: var(--primary-color);
+}
+
 .ui.simple.dropdown .dropdown-label {
     font-weight: 500;
 }

@@ -261,12 +261,12 @@ export function populateAssetFromHit(hit: Record<string, unknown>): Asset {
         ratio: ratio,
         resolution: safeStringField(hit, 'tccc-resolution'), //TODO: missing metadata
         rightsEndDate: safeDateField(hit, 'tccc-rightsEndDate'),
-        rightsFree: safeStringField(hit, 'tccc-readyToUse'),
+        readyToUse: safeStringField(hit, 'tccc-readyToUse'),
         rightsNotes: safeStringField(hit, 'tccc-rightsNotes'), //TODO: missing metadata
         rightsProfileTitle: safeStringField(hit, 'tccc-rightsProfileTitle'),
         rightsStartDate: safeDateField(hit, 'tccc-rightsStartDate'),
         rightsStatus: safeStringField(hit, 'tccc-rightsStatus'),
-        riskTypeManagement: safeStringField(hit, 'tccc-riskTypeMgmt'),
+        riskTypeManagement: safeStringField(hit, 'tccc-riskTypeMgmt'), // TODO: what's default value?
         secondaryPackaging: secondaryPackaging,
         sourceAsset: safeStringField(hit, 'tccc-sourceAsset'), //TODO: missing metadata
         sourceId: safeStringField(hit, 'tccc-sourceId'), //TODO: missing metadata

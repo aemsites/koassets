@@ -1,4 +1,4 @@
-import type { DynamicMediaClient } from '../dynamicmedia-client';
+import type { DynamicMediaClient } from '../clients/dynamicmedia-client';
 import type { Asset } from '../types';
 
 export const BLOB_CACHE_PREFIX = 'blob_cache_';
@@ -118,19 +118,19 @@ export const removeBlobFromCache = (assetId: string): void => {
     try {
         // Get all localStorage keys that match our cache pattern
         const keysToRemove: string[] = [];
-        
+
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
             if (key && key.startsWith(BLOB_CACHE_PREFIX) && key.includes(assetId)) {
                 keysToRemove.push(key);
             }
         }
-        
+
         // Remove all matching cache entries
         keysToRemove.forEach(key => {
             localStorage.removeItem(key);
         });
-        
+
         console.log(`Removed ${keysToRemove.length} cached blobs for asset: ${assetId}`);
     } catch (error) {
         console.warn('Failed to remove cached blobs:', error);

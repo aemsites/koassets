@@ -1,6 +1,5 @@
 // Asset-related types
 import React from 'react';
-import type { DynamicMediaClient } from '../dynamicmedia-client';
 
 export interface Rendition {
     name?: string;
@@ -17,6 +16,7 @@ export interface Asset {
     assetStatus?: string;
     beverageType?: string;
     brand?: string;
+    isRestrictedBrand?: boolean;
     businessAffairsManager?: string;
     campaignActivationRemark?: string;
     campaignName?: string;
@@ -77,7 +77,7 @@ export interface Asset {
     ratio?: string;
     resolution?: string;
     rightsEndDate?: string | number;
-    rightsFree?: string;
+    readyToUse?: string;
     rightsNotes?: string;
     rightsProfileTitle?: string;
     rightsStartDate?: string | number;
@@ -113,12 +113,23 @@ export interface Asset {
     assetAssociatedWithBrand?: string;
     fundingBuOrMarket?: string;
     dateUploaded?: string;
+    renditions?: {
+        assetId?: string;
+        items?: Rendition[];
+        'repo:name'?: string;
+    };
+    imagePresets?: {
+        assetId?: string;
+        items?: Rendition[];
+        'repo:name'?: string;
+    };
     [key: string]: unknown; // For additional Algolia hit properties
 }
 
 // Cart-related types
 export interface CartItem extends Asset {
     // Additional cart-specific properties can be added here
+    isRestrictedBrand?: boolean;
 }
 
 // Component prop types
@@ -136,7 +147,6 @@ export interface AssetCardProps {
     cartItems?: CartItem[];
     isSelected?: boolean;
     onCheckboxChange?: (id: string, checked: boolean) => void;
-    dynamicMediaClient?: DynamicMediaClient | null;
     showFullDetails?: boolean;
 }
 
@@ -149,7 +159,12 @@ export const QUERY_TYPES = {
 export type QueryType = typeof QUERY_TYPES[keyof typeof QUERY_TYPES];
 
 // Step status types for cart processing
-export type StepStatus = 'init' | 'pending' | 'success' | 'failure';
+export enum StepStatus {
+    INIT = 'init',
+    CURRENT = 'current',
+    SUCCESS = 'success',
+    FAILURE = 'failure'
+}
 
 export interface StepStatuses {
     cart: StepStatus;
@@ -193,7 +208,6 @@ export interface CartPanelProps {
     onRemoveItem: (item: CartItem) => void;
     onApproveAssets: (items: CartItem[]) => void;
     onDownloadAssets: (items: CartItem[]) => void;
-    dynamicMediaClient?: DynamicMediaClient | null;
 }
 
 // Header Bar types
@@ -207,8 +221,6 @@ export interface HeaderBarProps {
     handleDownloadAssets: (items: CartItem[]) => void;
     handleAuthenticated: (userData: string) => void;
     handleSignOut: () => void;
-    dynamicMediaClient?: DynamicMediaClient | null;
-    isBlockIntegration?: boolean;
 }
 
 // Asset Preview types
@@ -219,7 +231,6 @@ export interface AssetPreviewProps {
     handleAddToCart?: (image: Asset, event: React.MouseEvent) => void;
     handleRemoveFromCart?: (image: Asset) => void;
     cartItems?: CartItem[];
-    dynamicMediaClient?: DynamicMediaClient | null;
     renditions?: {
         assetId?: string;
         items?: Rendition[];
@@ -241,7 +252,6 @@ export interface AssetDetailsProps extends AssetPreviewProps {
         'repo:name'?: string;
     };
     fetchAssetRenditions?: (asset: Asset) => Promise<void>;
-    setImagePresets?: (presets: { assetId?: string; items?: Rendition[]; 'repo:name'?: string; }) => void;
 }
 
 export interface SavedSearch {
@@ -278,12 +288,19 @@ export interface SearchHits {
 
 import type { ExcFacets } from '../constants/facets';
 
+// Restricted Brand interface
+export interface RestrictedBrand {
+    title: string;
+    value: string;
+}
+
 // External Parameters interface
 export interface ExternalParams {
     accordionTitle?: string;
     accordionContent?: string;
     excFacets?: ExcFacets;
     isBlockIntegration?: boolean;
+    restrictedBrands?: RestrictedBrand[];
     presetFilters?: string[];
 }
 
@@ -294,7 +311,6 @@ export interface ImageGalleryProps {
     onAddToCart?: (image: Asset) => void;
     onRemoveFromCart?: (image: Asset) => void;
     cartItems?: CartItem[];
-    dynamicMediaClient?: DynamicMediaClient | null;
     searchResult?: SearchResult | null;
     onToggleMobileFilter?: () => void;
     isMobileFilterOpen?: boolean;
@@ -312,7 +328,6 @@ export interface ImageGalleryProps {
     onLoadMoreResults?: () => void;
     hasMorePages?: boolean;
     isLoadingMore?: boolean;
-    externalParams?: ExternalParams;
     imagePresets?: {
         assetId?: string;
         items?: Rendition[];
@@ -326,7 +341,6 @@ export interface ImageGalleryProps {
         }
     };
     fetchAssetRenditions?: (asset: Asset) => Promise<void>;
-    setImagePresets?: (presets: { assetId?: string; items?: Rendition[]; 'repo:name'?: string; }) => void;
 }
 
 // Main App types (for the most complex component)
@@ -352,20 +366,32 @@ export interface AdobeSignInButtonProps {
 }
 
 // Cart Panel Assets types (complex workflow)
-export type WorkflowStep = 'cart' | 'request-download' | 'rights-check' | 'download';
+export enum WorkflowStep {
+    CART = 'cart',
+    REQUEST_DOWNLOAD = 'request-download',
+    RIGHTS_CHECK = 'rights-check',
+    DOWNLOAD = 'download',
+    COMPLETE_DOWNLOAD = 'complete-download'
+}
+
+export enum FilteredItemsType {
+    READY_TO_USE = 'ready-to-use'
+}
 
 export interface WorkflowStepStatuses {
-    cart: StepStatus;
-    'request-download': StepStatus;
-    'rights-check': StepStatus;
-    'download': StepStatus;
+    [WorkflowStep.CART]: StepStatus;
+    [WorkflowStep.REQUEST_DOWNLOAD]: StepStatus;
+    [WorkflowStep.RIGHTS_CHECK]: StepStatus;
+    [WorkflowStep.DOWNLOAD]: StepStatus;
+    [WorkflowStep.COMPLETE_DOWNLOAD]: StepStatus;
 }
 
 export interface WorkflowStepIcons {
-    cart: React.JSX.Element | string;
-    'request-download': React.JSX.Element | string;
-    'rights-check': React.JSX.Element | string;
-    'download': React.JSX.Element | string;
+    [WorkflowStep.CART]: React.JSX.Element | string;
+    [WorkflowStep.REQUEST_DOWNLOAD]: React.JSX.Element | string;
+    [WorkflowStep.RIGHTS_CHECK]: React.JSX.Element | string;
+    [WorkflowStep.DOWNLOAD]: React.JSX.Element | string;
+    [WorkflowStep.COMPLETE_DOWNLOAD]: React.JSX.Element | string;
 }
 
 export interface CartPanelAssetsProps {
@@ -375,7 +401,7 @@ export interface CartPanelAssetsProps {
     onApproveAssets: (items: CartItem[]) => void;
     onDownloadAssets: (items: CartItem[]) => void;
     onClose: () => void;
-    dynamicMediaClient?: DynamicMediaClient | null;
+    onActiveStepChange: (step: WorkflowStep) => void;
 }
 
 // Extended CartItem for authorization workflow

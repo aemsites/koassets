@@ -92,8 +92,8 @@
 }
 
 .columns.loginpage .button:not(.secondary):hover {
-  background-color: #cc0000;
-  border-color: #cc0000;
+  background-color: #c00;
+  border-color: #c00;
 }
 
 .columns.loginpage .button.secondary {
@@ -109,11 +109,11 @@
 
 .columns.loginpage .columns-img-col img {
   border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 10%);
 }
 
 /* Mobile responsive */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .columns.loginpage > div {
     flex-direction: column;
     gap: 40px;
