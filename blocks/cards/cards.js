@@ -16,15 +16,15 @@ export default function decorate(block) {
     const link = cardBody?.querySelector('a');
     if (link) {
       // Store the original link's href and target
-      const href = link.href;
-      const target = link.target;
-      
+      const { href } = link;
+      const { target } = link;
+
       // Make the whole card clickable
       li.style.cursor = 'pointer';
       li.addEventListener('click', (e) => {
         // Prevent default if clicking directly on the link
         if (e.target.tagName === 'A') return;
-        
+
         // Navigate to the link
         if (target === '_blank') {
           window.open(href, '_blank');
@@ -32,7 +32,7 @@ export default function decorate(block) {
           window.location.href = href;
         }
       });
-      
+
       // Keep the original link styling but remove its default click behavior for card clicks
       link.addEventListener('click', (e) => {
         e.stopPropagation();
