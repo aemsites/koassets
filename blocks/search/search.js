@@ -1,31 +1,10 @@
-const QUERY_TYPES = [
-  {
-    title: 'All',
-    value: '/assets-search/',
-  },
-  {
-    title: 'Assets',
-    value: '/drafts/inedoviesov/assets-search/',
-  },
-  {
-    title: 'Products',
-    value: '/drafts/inedoviesov/search-products/',
-  },
-];
+import {
+  convertHtmlListToArray,
+  fetchSpreadsheetData,
+  getBlockKeyValues,
+} from '../../scripts/scripts.js';
 
-export default function decorate(block) {
-  // Create the main container
-  const queryInputContainer = document.createElement('div');
-  queryInputContainer.className = 'query-input-container';
-
-  // Create the input bar
-  const queryInputBar = document.createElement('div');
-  queryInputBar.className = 'query-input-bar';
-
-  // Dropdown
-  const queryDropdown = document.createElement('div');
-  queryDropdown.className = 'query-dropdown';
-
+function createCustomDropdown(pathObjects) {
   // Create custom dropdown instead of select
   const searchTypeSelect = document.createElement('div');
   searchTypeSelect.className = 'custom-select';
@@ -37,15 +16,15 @@ export default function decorate(block) {
   const optionsList = document.createElement('div');
   optionsList.className = 'options-list';
 
-  // Create options from QUERY_TYPES array
-  QUERY_TYPES.forEach((queryType) => {
+  // Create options from pathObjects array
+  pathObjects.forEach((queryType) => {
     const option = document.createElement('div');
     option.className = 'option';
     option.textContent = queryType.title;
     option.dataset.value = queryType.value;
     option.addEventListener('click', () => {
       // Remove selected class from all options
-      optionsList.querySelectorAll('.option').forEach(opt => opt.classList.remove('selected'));
+      optionsList.querySelectorAll('.option').forEach((opt) => opt.classList.remove('selected'));
       // Add selected class to clicked option
       option.classList.add('selected');
 
@@ -79,40 +58,62 @@ export default function decorate(block) {
   });
 
   searchTypeSelect.append(selectedOption, optionsList);
-  queryDropdown.append(searchTypeSelect);
+
+  return { searchTypeSelect, selectedOption, optionsList };
+}
+
+export default async function decorate(block) {
+  const searchObj = getBlockKeyValues(block);
+
+  let pathObjects = [];
+  if (searchObj?.paths) { // block has own paths configured
+    const pathArray = convertHtmlListToArray(searchObj.paths);
+
+    // Convert pathArray from "title: value" strings to objects
+    pathObjects = pathArray.map((item) => {
+      const [title, value] = item.split(':')
+        .map((part) => part.trim());
+      return {
+        title,
+        value,
+      };
+    });
+  } else if (searchObj?.paths === undefined) { // fallback to centrally configured search page paths
+    const configs = await fetchSpreadsheetData('configs', 'search-pages');
+    pathObjects = configs?.data || [];
+  }
+
+  // Create the main container
+  const queryInputContainer = document.createElement('div');
+  queryInputContainer.className = 'query-input-container';
+
+  // Create the input bar
+  const queryInputBar = document.createElement('div');
+  queryInputBar.className = 'query-input-bar';
+
+  // Dropdown
+  const queryDropdown = document.createElement('div');
+  queryDropdown.className = 'query-dropdown';
+
+  // Create custom dropdown using the extracted method only if pathObjects has items
+  let searchTypeSelect;
+  let selectedOption;
+  let optionsList;
+  if (pathObjects.length > 0) {
+    const dropdown = createCustomDropdown(pathObjects);
+    searchTypeSelect = dropdown.searchTypeSelect;
+    selectedOption = dropdown.selectedOption;
+    optionsList = dropdown.optionsList;
+    queryDropdown.append(searchTypeSelect);
+  }
 
   // Input wrapper
   const queryInputWrapper = document.createElement('div');
   queryInputWrapper.className = 'query-input-wrapper';
 
-  // Search icon (SVG)
+  // Search icon
   const querySearchIcon = document.createElement('span');
   querySearchIcon.className = 'query-search-icon';
-
-  const svgNS = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(svgNS, 'svg');
-  svg.setAttribute('width', '20');
-  svg.setAttribute('height', '20');
-  svg.setAttribute('fill', 'none');
-  svg.setAttribute('stroke', 'currentColor');
-  svg.setAttribute('stroke-width', '2');
-  svg.setAttribute('stroke-linecap', 'round');
-  svg.setAttribute('stroke-linejoin', 'round');
-  svg.setAttribute('viewBox', '0 0 24 24');
-
-  const circle = document.createElementNS(svgNS, 'circle');
-  circle.setAttribute('cx', '11');
-  circle.setAttribute('cy', '11');
-  circle.setAttribute('r', '8');
-
-  const line = document.createElementNS(svgNS, 'line');
-  line.setAttribute('x1', '21');
-  line.setAttribute('y1', '21');
-  line.setAttribute('x2', '16.65');
-  line.setAttribute('y2', '16.65');
-
-  svg.append(circle, line);
-  querySearchIcon.append(svg);
 
   // Input
   const input = document.createElement('input');
@@ -131,28 +132,31 @@ export default function decorate(block) {
     input.value = decodeURIComponent(queryParam) || '';
   }
 
-  // Set searchTypeSelect based on current page path
-  const currentPath = window.location.pathname;
-  const matchingQueryType = QUERY_TYPES.find((queryType) => queryType.value === currentPath);
-  const defaultQueryType = matchingQueryType || QUERY_TYPES[0];
+  // Set searchTypeSelect based on current page path (only if dropdown exists)
+  if (pathObjects.length > 0 && selectedOption) {
+    const currentPath = window.location.pathname;
+    const matchingQueryType = pathObjects.find((queryType) => queryType.value === currentPath);
+    const defaultQueryType = matchingQueryType || pathObjects[0];
 
-  selectedOption.querySelector('.selected-text').textContent = defaultQueryType.title;
-  selectedOption.dataset.value = defaultQueryType.value;
-  searchTypeSelect.dataset.value = defaultQueryType.value;
+    selectedOption.querySelector('.selected-text').textContent = defaultQueryType.title;
+    selectedOption.dataset.value = defaultQueryType.value;
+    searchTypeSelect.dataset.value = defaultQueryType.value;
 
-  // Mark the default option as selected
-  const defaultOption = optionsList.querySelector(`[data-value="${defaultQueryType.value}"]`);
-  if (defaultOption) {
-    defaultOption.classList.add('selected');
+    // Mark the default option as selected
+    const defaultOption = optionsList.querySelector(`[data-value="${defaultQueryType.value}"]`);
+    if (defaultOption) {
+      defaultOption.classList.add('selected');
+    }
   }
-
 
   const performSearch = () => {
     const query = input.value;
-    const selectedSearchType = searchTypeSelect.dataset.value;
 
-    // Redirect to assets browser with search parameters
-    window.location.href = `${selectedSearchType}?query=${encodeURIComponent(query)}`;
+    // If no dropdown exists, use a current page path
+    const selectedSearchPath = searchTypeSelect?.dataset.value || window.location.pathname;
+
+    // Redirect to search page with search parameters
+    window.location.href = `${selectedSearchPath}?query=${encodeURIComponent(query)}`;
   };
 
   // Search button
@@ -170,10 +174,14 @@ export default function decorate(block) {
   });
 
   // Assemble everything
-  queryInputBar.append(queryDropdown, queryInputWrapper, searchBtn);
+  if (pathObjects.length > 0) {
+    queryInputBar.append(queryDropdown, queryInputWrapper, searchBtn);
+  } else {
+    queryInputBar.append(queryInputWrapper, searchBtn);
+    input.classList.add('rounded-box');
+  }
   queryInputContainer.append(queryInputBar);
 
-  // Now you can append queryInputContainer to your searchBlock or wherever needed
   block.textContent = '';
   block.append(queryInputContainer);
 }
