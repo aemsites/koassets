@@ -1,8 +1,8 @@
 import { getBlockKeyValues, stripHtmlAndNewlines } from '../../scripts/scripts.js';
 
 const QUERY_TYPES = {
-  ASSETS: 'Assets'
-}
+  ASSETS: 'Assets',
+};
 
 export default function decorate(block) {
   // Create the main container
@@ -34,7 +34,7 @@ export default function decorate(block) {
   const querySearchIcon = document.createElement('span');
   querySearchIcon.className = 'query-search-icon';
 
-  const svgNS = "http://www.w3.org/2000/svg";
+  const svgNS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgNS, 'svg');
   svg.setAttribute('width', '20');
   svg.setAttribute('height', '20');
@@ -89,9 +89,12 @@ export default function decorate(block) {
     const selectedQueryType = select.value;
     // Redirect to assets browser with search parameters
     window.location.href = `${searchPath}?query=${encodeURIComponent(query)}&selectedQueryType=${encodeURIComponent(selectedQueryType)}`;
-    // window.location.href = `/tools/assets-browser/index.html?query=${encodeURIComponent(query)}&selectedQueryType=${encodeURIComponent(selectedQueryType)}`;
-    // window.location.href = `/assets-search/?query=${encodeURIComponent(query)}&selectedQueryType=${encodeURIComponent(selectedQueryType)}`; // TODO: Update this once finalized
-  }
+    // window.location.href = `/tools/assets-browser/index.html?query=${encodeURIComponent(query)}`
+    //   + `&selectedQueryType=${encodeURIComponent(selectedQueryType)}`;
+    // TODO: Update this once finalized
+    // window.location.href = `/assets-search/?query=${encodeURIComponent(query)}`
+    //   + `&selectedQueryType=${encodeURIComponent(selectedQueryType)}`;
+  };
 
   // Search button
   const searchBtn = document.createElement('button');
