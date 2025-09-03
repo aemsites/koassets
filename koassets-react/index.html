@@ -10,8 +10,7 @@
 
 <body>
   <div id="root"></div>
-  <!-- Runtime configuration - load before React app -->
-  <script src="/config.js"></script>
+
   <!-- Local development config override (gitignored) -->
   <script src="/config.local.js" onerror="console.log('No local config found')"></script>
   <script type="module" src="src/main.tsx"></script>

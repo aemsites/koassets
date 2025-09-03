@@ -461,7 +461,8 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                                         </div>
                                         <div className="col-rights">
                                             <span className="rights-badge">
-                                                {item?.riskTypeManagement === 'smr' ? 'Self-managed rights (SMR)' : 'Fully-managed rights (FMR)'}
+                                                {item?.riskTypeManagement?.toLowerCase() === 'smr' ? 'Self-managed rights (SMR)' :
+                                                    item?.riskTypeManagement?.toLowerCase() === 'fmr' ? 'Fully-managed rights (FMR)' : 'N/A'}
                                             </span>
                                             <span className="rights-badge">
                                                 {item.isRestrictedBrand ? 'Brand restricted by market' : ''}

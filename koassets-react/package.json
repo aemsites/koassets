@@ -11,7 +11,6 @@
     "build:staging": "npx cross-env NODE_ENV=staging vite build && node scripts/generate-runtime-config.cjs",
     "build:prod": "npx cross-env NODE_ENV=production vite build && node scripts/generate-runtime-config.cjs",
     "build:static": "vite build && node scripts/generate-safe-config.cjs",
-    "build:deploy": "vite build && node scripts/generate-deployment-config.cjs",
     "build:embed": "vite build && node scripts/generate-html-with-config.cjs",
     "preview": "vite preview",
     "preview:staging": "npx cross-env NODE_ENV=staging vite preview",
