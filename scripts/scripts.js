@@ -216,18 +216,10 @@ export function getBlockKeyValues(block) {
 * Fetches spreadsheet data from EDS.
 * @param {string} sheetPath Path to the spreadsheet JSON endpoint
                             (e.g., 'data/products', 'content/pricing')
-* @param {boolean} [cache=true] Whether to cache the result
 * @returns {Promise<Object>} Object representing spreadsheet data
 */
-export async function fetchSpreadsheetData(sheetPath, sheetName = '', cache = true) {
-  const cacheKey = `sheet-${sheetPath}`;
-  window.edsSpreadsheets = window.edsSpreadsheets || {};
-
-  if (cache && window.edsSpreadsheets[cacheKey]) {
-    return window.edsSpreadsheets[cacheKey];
-  }
-
-  const promise = fetch(`${window.location.origin}/${sheetPath}.json${sheetName ? `?sheet=${sheetName}` : ''}`)
+export async function fetchSpreadsheetData(sheetPath, sheetName = '') {
+  return fetch(`${window.location.origin}/${sheetPath}.json${sheetName ? `?sheet=${sheetName}` : ''}`)
     .then((resp) => {
       if (resp.ok) {
         return resp.json();
@@ -240,12 +232,6 @@ export async function fetchSpreadsheetData(sheetPath, sheetName = '', cache = tr
       console.warn(`Failed to load spreadsheet from ${sheetPath}:`, error);
       return [];
     });
-
-  if (cache) {
-    window.edsSpreadsheets[cacheKey] = promise;
-  }
-
-  return promise;
 }
 
 loadPage();
