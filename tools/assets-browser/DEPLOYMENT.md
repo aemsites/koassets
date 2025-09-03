@@ -6,8 +6,7 @@ This directory contains the built React application for static deployment (no se
 
 ## Files
 
-- `index.html` - Main HTML file with embedded config OR reference to config.js
-- `config.js.template` - Safe template for generating configs
+- `index.html` - Main HTML file with embedded config
 - `assets/` - Built JavaScript and CSS files
 
 ## Deployment Options
@@ -74,21 +73,7 @@ cd koassets-react; $env:VITE_ADOBE_CLIENT_ID="your-client-id"; $env:VITE_BUCKET=
 </script>
 ```
 
-### Option 3: Separate Config File
 
-**Zsh/Bash:**
-
-```bash
-cd koassets-react && VITE_ADOBE_CLIENT_ID=your-client-id VITE_BUCKET=your-bucket-name npm run build:deploy
-```
-
-**PowerShell:**
-
-```powershell
-cd koassets-react; $env:VITE_ADOBE_CLIENT_ID="your-client-id"; $env:VITE_BUCKET="your-bucket-name"; npm run build:deploy
-```
-
-**Result:** Separate `config.js` file created (not committed to git).
 
 ## Deployment Workflow
 
@@ -99,9 +84,9 @@ cd koassets-react; $env:VITE_ADOBE_CLIENT_ID="your-client-id"; $env:VITE_BUCKET=
 3. **Process template**: Server replaces `${ADOBE_CLIENT_ID}` and `${BUCKET}` with actual values
 4. **Test**: Verify the app loads and authenticates correctly
 
-### Option 2: Static Embedded Config
+### Option 2: Static Embedded Config (Currently Used)
 
-1. **Build locally** using one of the commands above
+1. **Build locally** using the embedded config command above
 2. **Upload** the entire `tools/assets-browser/` directory to your static host
 3. **Test** that the app loads and authenticates correctly
 
