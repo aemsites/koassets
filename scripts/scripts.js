@@ -19,8 +19,16 @@ import {
 async function loadUser() {
   // TODO: run this every 5 minutes and warn when expiry is less than 30 minutes
   //       with option to re-authenticate
-  const user = await fetch(`${window.location.origin}/auth/user`);
-  window.user = await user.json();
+
+  window.user = undefined;
+  try {
+    const user = await fetch(`${window.location.origin}/auth/user`);
+    if (user.ok) {
+      window.user = await user.json();
+    }
+  } catch (_ignore) {
+    // do nothing
+  }
 }
 
 /**
