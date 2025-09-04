@@ -1,0 +1,542 @@
+/* Cart Request Download Component */
+.cart-request-download {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    min-height: 0;
+    flex: 1;
+}
+
+.cart-request-download-content {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+    flex: 1;
+    padding: 0;
+    min-height: 0;
+    overflow: hidden;
+    height: 100%;
+    max-height: 100%;
+}
+
+/* Asset List Column */
+.cart-request-download-assets {
+    border-right: 1px solid #e0e0e0;
+    padding-right: 24px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.cart-request-download-assets h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    font-family: "TCCC UnityHeadline Regular", sans-serif;
+}
+
+.asset-list-items {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    padding-right: 8px;
+}
+
+/* Custom scrollbar for asset list */
+.asset-list-items::-webkit-scrollbar {
+    width: 6px;
+}
+
+.asset-list-items::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.asset-list-items::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.asset-list-items::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.asset-list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #e0e0e0;
+    background: #fff;
+}
+
+.asset-list-item:last-child {
+    border-bottom: none;
+}
+
+.asset-thumbnail {
+    flex-shrink: 0;
+}
+
+.asset-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.asset-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    line-height: 1.4;
+    margin-bottom: 6px;
+    word-wrap: break-word;
+}
+
+.asset-type {
+    font-size: 12px;
+    color: #666;
+    font-weight: 600;
+}
+
+/* Intended Use Form Column */
+.cart-request-download-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.cart-request-download-form-content {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+    padding-right: 8px;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Custom scrollbar for form content */
+.cart-request-download-form-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.cart-request-download-form-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.cart-request-download-form-content::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.cart-request-download-form-content::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.cart-request-download-form h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    font-family: "TCCC UnityHeadline Regular", sans-serif;
+}
+
+.cart-request-download-form .my-date-picker {
+    padding: 0;
+}
+
+/* Form Fields */
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-field label {
+    font-size: .75rem;
+    font-weight: 400;
+    line-height: 1.05rem;
+    color: #1e1e1e;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: "TCCC UnityHeadline Regular", sans-serif;
+}
+
+.cart-request-download-form .gallery-title-icon {
+    cursor: pointer;
+}
+
+/* Warning Messages */
+.markets-warning,
+.media-channels-warning {
+    background: rgba(106, 201, 206, .102);
+    border-radius: .5rem;
+    color: #1e1e1e;
+    font-size: .75rem !important;
+    font-weight: 500;
+    line-height: 1.25rem !important;
+    padding: .75rem;
+    font-family: "TCCC UnityText Regular", sans-serif;
+    margin: 4px 0 8px 0;
+}
+
+/* Search Input */
+.search-markets {
+    margin-bottom: 12px;
+}
+
+.search-input {
+    width: 100%;
+    max-width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d9d9d9;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: "TCCC UnityText Regular", sans-serif;
+    background: white;
+    box-sizing: border-box;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.1);
+}
+
+.search-input::placeholder {
+    color: #999;
+}
+
+/* Markets List */
+.markets-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background: white;
+}
+
+/* Custom scrollbar for markets list */
+.markets-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.markets-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.markets-list::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.markets-list::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.market-item:last-child {
+    border-bottom: none;
+}
+
+.market-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: white;
+}
+
+.market-main:hover {
+    background: #f8f8f8;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #333;
+    flex: 1;
+    margin: 0;
+    font-weight: 400;
+    font-family: "TCCC UnityText Regular", sans-serif;
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin: 0;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary-color);
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"]:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.checkbox-label:has(input[type="checkbox"]:disabled) {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.expand-button {
+    background: transparent;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.expand-button:hover {
+    background: #f0f0f0;
+}
+
+/* Child Markets */
+.market-children {
+    padding: 0 0 8px 24px;
+}
+
+.child-market {
+    padding: 6px 12px;
+    margin: 0;
+}
+
+.child-market:hover {
+    background: #f0f0f0;
+}
+
+/* Media Channels List */
+.media-channels-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background: white;
+    padding: 8px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2px;
+}
+
+/* Custom scrollbar for media channels */
+.media-channels-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.media-channels-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.media-channels-list::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.media-channels-list::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.media-channels-list .checkbox-label {
+    padding: 6px 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.media-channels-list .checkbox-label:hover {
+    background: #f8f8f8;
+}
+
+/* Form Actions */
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 8px 0 0;
+    border-top: 1px solid #e0e0e0;
+    flex-shrink: 0;
+    background: white;
+}
+
+.form-actions-right {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Buttons */
+.cancel-btn,
+.request-authorization-btn {
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid;
+    font-family: "TCCC UnityText Regular", sans-serif;
+}
+
+.cancel-btn {
+    background: white;
+    color: #666;
+    border-color: #d9d9d9;
+}
+
+.cancel-btn:hover {
+    background: #f5f5f5;
+    border-color: #999;
+    color: #333;
+}
+
+.request-authorization-btn {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .cart-request-download-content {
+        grid-template-columns: 280px 1fr;
+        gap: 24px;
+    }
+}
+
+@media (max-width: 900px) {
+    .cart-request-download-content {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    .cart-request-download-assets {
+        border-right: none;
+        border-bottom: 1px solid #e0e0e0;
+        padding-right: 0;
+        padding-bottom: 24px;
+    }
+
+    .asset-list-items {
+        max-height: 200px;
+    }
+}
+
+@media (max-width: 600px) {
+    .form-actions {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .form-actions-right {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .save-intended-use-btn,
+    .cancel-btn,
+    .request-authorization-btn {
+        flex: 1;
+        min-width: 120px;
+    }
+}
+
+.date-validation-error {
+    font-size: 12px;
+    color: #dc3545;
+    margin-top: 4px;
+    padding: 4px 8px;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    font-family: "TCCC UnityText Regular", sans-serif;
+}
+
+/* Loading and Error States */
+.loading-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    font-size: 14px;
+    color: #666;
+    font-family: "TCCC UnityText Regular", sans-serif;
+}
+
+.error-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    font-size: 14px;
+    color: #dc3545;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    margin: 10px 0;
+    text-align: center;
+    font-family: "TCCC UnityText Regular", sans-serif;
+}
+
+.horizontal-separator {
+    border: 1px solid #e4e4e4;
+    margin: .25rem 0 .625rem;
+}
+
+.loading-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #666;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 8px auto;
+}
+
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: #666;
+    font-size: 14px;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Disabled items styling */
+.checkbox-label.disabled {
+    color: #999;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.checkbox-label.disabled input[type="checkbox"] {
+    cursor: not-allowed;
+}
+
+.checkbox-label.disabled input[type="checkbox"]:disabled {
+    opacity: 0.5;
+}

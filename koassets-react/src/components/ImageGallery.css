@@ -52,7 +52,7 @@
   margin: 0;
   font-size: 16px;
   color: #1e1e1e;
-  font-family: "TCCC UnityHeadline", "Helvetica Neue", Arial, Helvetica, sans-serif;
+  font-family: "TCCC UnityHeadline Regular", "Helvetica Neue", Arial, Helvetica, sans-serif;
   line-height: 1.4285em;
 }
 
@@ -97,7 +97,7 @@
 .gallery-title-expanded a {
   font-size: 16px;
   color: #1e1e1e;
-  font-family: "TCCC UnityHeadline", "Helvetica Neue", Arial, Helvetica, sans-serif;
+  font-family: "TCCC UnityHeadline Regular", "Helvetica Neue", Arial, Helvetica, sans-serif;
   line-height: 1.4285em;
 }
 
@@ -241,7 +241,7 @@
   color: #ed0000;
   cursor: pointer;
   display: flex;
-  font-family: "TCCC UnityHeadline", "Helvetica Neue", Arial, Helvetica, sans-serif;
+  font-family: "TCCC UnityHeadline Regular", "Helvetica Neue", Arial, Helvetica, sans-serif;
   font-size: 14px;
   font-weight: 400;
   height: 50px;

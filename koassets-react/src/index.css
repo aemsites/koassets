@@ -7,15 +7,9 @@
 }
 
 @font-face {
-  font-family: "TCCC UnityHeadline";
-  font-display: swap;
-  src: url("/fonts/TCCC-UnityHeadline-Regular.ttf") format("opentype");
-}
-
-@font-face {
   font-family: "TCCC UnityHeadline Regular";
   font-display: swap;
-  src: url("/fonts/TCCC-UnityText-Regular.ttf") format("opentype");
+  src: url("/fonts/TCCC-UnityHeadline-Regular.ttf") format("opentype");
 }
 
 @font-face {

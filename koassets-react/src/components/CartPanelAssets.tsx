@@ -11,8 +11,183 @@ import type {
 import { FilteredItemsType, StepStatus, WorkflowStep } from '../types';
 import { removeBlobFromCache } from '../utils/blobCache';
 import './CartPanelAssets.css';
+import CartRequestDownload from './CartRequestDownload';
+import CartRightsCheck from './CartRightsCheck';
 import DownloadRenditionsContent from './DownloadRenditionsContent';
 import ThumbnailImage from './ThumbnailImage';
+
+// Interface for intended use data
+interface IntendedUseData {
+    airDate?: number | null;
+    pullDate?: number | null;
+    countries: number[];
+    mediaChannels: number[];
+}
+
+// Component for rendering individual cart item row
+interface CartItemRowProps {
+    item: Asset;
+    onRemoveItem: (item: Asset) => void;
+}
+
+const CartItemRow: React.FC<CartItemRowProps> = ({ item, onRemoveItem }) => {
+    const authorizedItem = item as AuthorizedCartItem;
+
+    return (
+        <div className={`cart-item-row ${authorizedItem.authorized === false ? 'disabled' : ''}`}>
+            <div className="col-thumbnail">
+                <ThumbnailImage item={item} />
+            </div>
+            <div className="col-title">
+                <div className="item-title">{item.title || item.name}</div>
+                <br />
+                <div className="item-type">TYPE: {item.formatLabel?.toUpperCase()}</div>
+            </div>
+            <div className="col-rights">
+                <span className="rights-badge">
+                    {item?.riskTypeManagement?.toLowerCase() === 'smr' ? 'Self-managed rights (SMR)' :
+                        item?.riskTypeManagement?.toLowerCase() === 'fmr' ? 'Fully-managed rights (FMR)' : 'N/A'}
+                </span>
+                <span className="rights-badge">
+                    {item.isRestrictedBrand ? 'Brand restricted by market' : ''}
+                </span>
+            </div>
+            <div className="col-action">
+                <button
+                    className="delete-button"
+                    onClick={() => onRemoveItem(item)}
+                    aria-label="Remove item"
+                >
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// Component for rendering cart actions footer
+interface CartActionsFooterProps {
+    activeStep: WorkflowStep;
+    hasAllItemsReadyToUse: boolean;
+    onClose: () => void;
+    onClearCart: () => void;
+    onDownload: () => void;
+    onRequestDownload: () => void;
+    onRightsCheck: () => void;
+    onCompleteDownload: () => void;
+}
+
+const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
+    activeStep,
+    hasAllItemsReadyToUse,
+    onClose,
+    onClearCart,
+    onDownload,
+    onRequestDownload,
+    onRightsCheck,
+    onCompleteDownload
+}) => {
+    return (
+        <div className="cart-actions-footer">
+            <button className="action-btn secondary-button" onClick={onClose}>
+                Close
+            </button>
+            <button className="action-btn secondary-button" onClick={onClearCart}>
+                Clear Cart
+            </button>
+            <button className="action-btn secondary-button disabled" onClick={(e) => e.preventDefault()}>
+                Share Cart
+            </button>
+            <button className="action-btn secondary-button disabled" onClick={(e) => e.preventDefault()}>
+                Add To Collection
+            </button>
+
+            {/* Dynamic primary button based on step */}
+            {activeStep === WorkflowStep.CART && (
+                hasAllItemsReadyToUse ? (
+                    <button className="action-btn primary-button" onClick={onDownload}>
+                        Download Cart
+                    </button>
+                ) : (
+                    <button className="action-btn primary-button" onClick={onRequestDownload}>
+                        Request Download
+                    </button>
+                )
+            )}
+            {activeStep === WorkflowStep.REQUEST_DOWNLOAD && (
+                <>
+                    <button className="action-btn primary-button" onClick={onRightsCheck}>
+                        Check Rights
+                    </button>
+                </>
+            )}
+            {activeStep === WorkflowStep.RIGHTS_CHECK && (
+                <>
+                    <button className="action-btn primary-button" onClick={onDownload}>
+                        Download Assets
+                    </button>
+                </>
+            )}
+            {activeStep === WorkflowStep.DOWNLOAD && (
+                <>
+                    <button className="action-btn primary-button" onClick={onCompleteDownload}>
+                        Complete Download
+                    </button>
+                </>
+            )}
+        </div>
+    );
+};
+
+// Component for rendering workflow progress steps
+interface WorkflowProgressProps {
+    activeStep: WorkflowStep;
+    hasAllItemsReadyToUse: boolean;
+    getStepClassName: (step: WorkflowStep, isActive: boolean) => string;
+    renderStepIcon: (step: WorkflowStep) => React.ReactNode;
+}
+
+const WorkflowProgress: React.FC<WorkflowProgressProps> = ({
+    activeStep,
+    hasAllItemsReadyToUse,
+    getStepClassName,
+    renderStepIcon
+}) => {
+    return (
+        <div className="workflow-progress">
+            <div className={getStepClassName(WorkflowStep.CART, activeStep === WorkflowStep.CART)}>
+                <div className="step-icon">
+                    {renderStepIcon(WorkflowStep.CART)}
+                </div>
+                <span className="step-label">Cart</span>
+            </div>
+            <div className="horizontal-line"></div>
+            {!hasAllItemsReadyToUse && (
+                <>
+                    <div className={getStepClassName(WorkflowStep.REQUEST_DOWNLOAD, activeStep === WorkflowStep.REQUEST_DOWNLOAD)}>
+                        <div className="step-icon">
+                            {renderStepIcon(WorkflowStep.REQUEST_DOWNLOAD)}
+                        </div>
+                        <span className="step-label">Request Download</span>
+                    </div>
+                    <div className="horizontal-line"></div>
+                    <div className={getStepClassName(WorkflowStep.RIGHTS_CHECK, activeStep === WorkflowStep.RIGHTS_CHECK)}>
+                        <div className="step-icon">
+                            {renderStepIcon(WorkflowStep.RIGHTS_CHECK)}
+                        </div>
+                        <span className="step-label">Rights Check</span>
+                    </div>
+                    <div className="horizontal-line"></div>
+                </>
+            )}
+            <div className={getStepClassName(WorkflowStep.DOWNLOAD, activeStep === WorkflowStep.DOWNLOAD)}>
+                <div className="step-icon">
+                    {renderStepIcon(WorkflowStep.DOWNLOAD)}
+                </div>
+                <span className="step-label">Download</span>
+            </div>
+        </div>
+    );
+};
 
 const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     cartItems,
@@ -42,6 +217,12 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     });
     const [filteredItems, setFilteredItems] = useState<{ [key in FilteredItemsType]: Asset[] }>({} as { [key in FilteredItemsType]: Asset[] });
     const [showDownloadContent, setShowDownloadContent] = useState(false);
+    const [intendedUse, setIntendedUse] = useState<IntendedUseData>({
+        airDate: null,
+        pullDate: null,
+        countries: [],
+        mediaChannels: []
+    });
 
     // Notify parent when activeStep changes
     useEffect(() => {
@@ -225,16 +406,69 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         onClose();
     }, [onClose]);
 
+    // Handler for saving intended use data
+    const handleSaveIntendedUse = useCallback((intendedUse: IntendedUseData): void => {
+        console.log('Saving intended use data:', intendedUse);
+        // TODO: Implement API call to save intended use data
+    }, []);
+
+    // Handler for requesting authorization with intended use data
+    const handleRequestAuthorizationWithIntendedUse = useCallback((intendedUseData: IntendedUseData): void => {
+        console.log('Requesting authorization with intended use data:', intendedUseData);
+
+        // Store the intended use data
+        setIntendedUse(intendedUseData);
+
+        // Mark REQUEST_DOWNLOAD step as successful
+        setStepStatus(prev => ({ ...prev, [WorkflowStep.REQUEST_DOWNLOAD]: StepStatus.SUCCESS }));
+
+        // Move to RIGHTS_CHECK step
+        setActiveStep(WorkflowStep.RIGHTS_CHECK);
+        setStepStatus(prev => ({ ...prev, [WorkflowStep.RIGHTS_CHECK]: StepStatus.CURRENT }));
+
+        // TODO: Implement API call to submit authorization request
+    }, []);
+
+    // Handler for canceling from request download step
+    const handleCancelRequestDownload = useCallback((): void => {
+        // Go back to CART step
+        setActiveStep(WorkflowStep.CART);
+        setStepStatus(prev => ({ ...prev, [WorkflowStep.REQUEST_DOWNLOAD]: StepStatus.INIT }));
+    }, []);
+
     const handleCloseDownloadContent = useCallback(() => {
         setShowDownloadContent(false);
     }, []);
 
-    const handleDownloadComplete = useCallback((success: boolean) => {
+    const handleDownloadCompleted = useCallback((success: boolean) => {
         if (success) {
             setStepStatus(prev => ({ ...prev, [WorkflowStep.DOWNLOAD]: StepStatus.SUCCESS }));
         } else {
             setStepStatus(prev => ({ ...prev, [WorkflowStep.DOWNLOAD]: StepStatus.FAILURE }));
         }
+    }, []);
+
+    // Handler for going back to request download from rights check
+    const handleBackToRequestDownload = useCallback((): void => {
+        setActiveStep(WorkflowStep.REQUEST_DOWNLOAD);
+        setStepStatus(prev => ({ ...prev, [WorkflowStep.RIGHTS_CHECK]: StepStatus.INIT }));
+    }, []);
+
+    // Handler for when assets are approved for download
+    const handleDownloadApproved = useCallback((downloadOptions: { assetId: string; originalAsset: boolean; allRenditions: boolean }[]) => {
+        console.log('Download approved for options:', downloadOptions);
+        // Move to DOWNLOAD step
+        setActiveStep(WorkflowStep.DOWNLOAD);
+        setStepStatus(prev => ({ ...prev, [WorkflowStep.RIGHTS_CHECK]: StepStatus.SUCCESS }));
+        setShowDownloadContent(true);
+    }, []);
+
+    // Handler for requesting rights extension
+    const handleRequestRightsExtension = useCallback((): void => {
+        console.log('Requesting rights extension');
+        // TODO: Implement API call for rights extension request
+        // For now, just show success status
+        setStepStatus(prev => ({ ...prev, [WorkflowStep.RIGHTS_CHECK]: StepStatus.SUCCESS }));
     }, []);
 
     // Helper function to render step icon - simply returns the stepIcon for that step
@@ -364,41 +598,14 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     }
 
     return (
-        <>
+        <div className="cart-panel-assets-wrapper">
             {/* Workflow Steps Icons */}
-            <div className="workflow-progress">
-                <div className={getStepClassName(WorkflowStep.CART, activeStep === WorkflowStep.CART)}>
-                    <div className="step-icon">
-                        {renderStepIcon(WorkflowStep.CART)}
-                    </div>
-                    <span className="step-label">Cart</span>
-                </div>
-                <div className="horizontal-line"></div>
-                {!hasAllItemsReadyToUse && (
-                    <>
-                        <div className={getStepClassName(WorkflowStep.REQUEST_DOWNLOAD, activeStep === WorkflowStep.REQUEST_DOWNLOAD)}>
-                            <div className="step-icon">
-                                {renderStepIcon(WorkflowStep.REQUEST_DOWNLOAD)}
-                            </div>
-                            <span className="step-label">Request Download</span>
-                        </div>
-                        <div className="horizontal-line"></div>
-                        <div className={getStepClassName(WorkflowStep.RIGHTS_CHECK, activeStep === WorkflowStep.RIGHTS_CHECK)}>
-                            <div className="step-icon">
-                                {renderStepIcon(WorkflowStep.RIGHTS_CHECK)}
-                            </div>
-                            <span className="step-label">Rights Check</span>
-                        </div>
-                        <div className="horizontal-line"></div>
-                    </>
-                )}
-                <div className={getStepClassName(WorkflowStep.DOWNLOAD, activeStep === WorkflowStep.DOWNLOAD)}>
-                    <div className="step-icon">
-                        {renderStepIcon(WorkflowStep.DOWNLOAD)}
-                    </div>
-                    <span className="step-label">Download</span>
-                </div>
-            </div>
+            <WorkflowProgress
+                activeStep={activeStep}
+                hasAllItemsReadyToUse={hasAllItemsReadyToUse}
+                getStepClassName={getStepClassName}
+                renderStepIcon={renderStepIcon}
+            />
 
             {/* Status Messages */}
             {/*
@@ -427,15 +634,32 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             */}
 
             {/* Download Renditions Content */}
-            {showDownloadContent && downloadAssetsData.length > 0 ? (
+            {activeStep === WorkflowStep.DOWNLOAD && showDownloadContent && downloadAssetsData.length > 0 ? (
                 <DownloadRenditionsContent
                     assets={downloadAssetsData}
                     onClose={handleCloseDownloadContent}
-                    onDownloadComplete={handleDownloadComplete}
+                    onDownloadCompleted={handleDownloadCompleted}
+                />
+            ) : activeStep === WorkflowStep.REQUEST_DOWNLOAD ? (
+                <CartRequestDownload
+                    cartItems={cartItems}
+                    onCancel={handleCancelRequestDownload}
+                    onRequestAuthorization={handleRequestAuthorizationWithIntendedUse}
+                    onSaveIntendedUse={handleSaveIntendedUse}
+                />
+            ) : activeStep === WorkflowStep.RIGHTS_CHECK ? (
+                <CartRightsCheck
+                    cartItems={cartItems}
+                    intendedUse={intendedUse}
+                    onCancel={onClose}
+                    onUpdateIntendedUse={handleBackToRequestDownload}
+                    onDownloadApproved={handleDownloadApproved}
+                    onRequestRightsExtension={handleRequestRightsExtension}
                 />
             ) : (
                 <>
                     <div className="cart-content">
+                        {/* Cart Items Count */}
                         <div className="cart-items-count">
                             <span className="red-text">{cartItemsCountText}</span> in your cart
                         </div>
@@ -445,40 +669,13 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
 
                         {/* Cart Items */}
                         <div className="cart-items-table">
-                            {cartItems.map((item: Asset) => {
-                                const authorizedItem = item as AuthorizedCartItem;
-                                return (
-                                    <div key={item.assetId} className={`cart-item-row ${authorizedItem.authorized === false ? 'disabled' : ''}`}>
-                                        <div className="col-thumbnail">
-                                            <ThumbnailImage
-                                                item={item}
-                                            />
-                                        </div>
-                                        <div className="col-title">
-                                            <div className="item-title">{item.title || item.name}</div>
-                                            <br />
-                                            <div className="item-type">TYPE: {item.formatLabel?.toUpperCase()}</div>
-                                        </div>
-                                        <div className="col-rights">
-                                            <span className="rights-badge">
-                                                {item?.riskTypeManagement?.toLowerCase() === 'smr' ? 'Self-managed rights (SMR)' :
-                                                    item?.riskTypeManagement?.toLowerCase() === 'fmr' ? 'Fully-managed rights (FMR)' : 'N/A'}
-                                            </span>
-                                            <span className="rights-badge">
-                                                {item.isRestrictedBrand ? 'Brand restricted by market' : ''}
-                                            </span>
-                                        </div>
-                                        <div className="col-action">
-                                            <button
-                                                className="delete-button"
-                                                onClick={() => handleRemoveItem(item)}
-                                                aria-label="Remove item"
-                                            >
-                                            </button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                            {cartItems.map((item: Asset) => (
+                                <CartItemRow
+                                    key={item.assetId}
+                                    item={item}
+                                    onRemoveItem={handleRemoveItem}
+                                />
+                            ))}
                         </div>
 
                     </div>
@@ -498,57 +695,19 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                     )}
 
                     {/* Action Buttons */}
-                    <div className="cart-actions-footer">
-                        <button className="action-btn secondary-button" onClick={onClose}>
-                            Close
-                        </button>
-                        <button className="action-btn secondary-button" onClick={handleClearCart}>
-                            Clear Cart
-                        </button>
-                        <button className="action-btn secondary-button disabled" onClick={(e) => e.preventDefault()}>
-                            Share Cart
-                        </button>
-                        <button className="action-btn secondary-button disabled" onClick={(e) => e.preventDefault()}>
-                            Add To Collection
-                        </button>
-
-                        {/* Dynamic primary button based on step */}
-                        {activeStep === WorkflowStep.CART && (
-                            hasAllItemsReadyToUse ? (
-                                <button className="action-btn primary-button" onClick={handleDownload}>
-                                    Download Cart
-                                </button>
-                            ) : (
-                                <button className="action-btn primary-button disabled" onClick={handleRequestDownload}>
-                                    Request Download
-                                </button>
-                            )
-                        )}
-                        {activeStep === WorkflowStep.REQUEST_DOWNLOAD && (
-                            <>
-                                <button className="action-btn primary-button" onClick={handleRightsCheck}>
-                                    Check Rights
-                                </button>
-                            </>
-                        )}
-                        {activeStep === WorkflowStep.RIGHTS_CHECK && (
-                            <>
-                                <button className="action-btn primary-button" onClick={handleDownload}>
-                                    Download Assets
-                                </button>
-                            </>
-                        )}
-                        {activeStep === WorkflowStep.DOWNLOAD && (
-                            <>
-                                <button className="action-btn primary-button" onClick={handleCompleteDownload}>
-                                    Complete Download
-                                </button>
-                            </>
-                        )}
-                    </div>
+                    <CartActionsFooter
+                        activeStep={activeStep}
+                        hasAllItemsReadyToUse={hasAllItemsReadyToUse}
+                        onClose={onClose}
+                        onClearCart={handleClearCart}
+                        onDownload={handleDownload}
+                        onRequestDownload={handleRequestDownload}
+                        onRightsCheck={handleRightsCheck}
+                        onCompleteDownload={handleCompleteDownload}
+                    />
                 </>
             )}
-        </>
+        </div>
     );
 };
 

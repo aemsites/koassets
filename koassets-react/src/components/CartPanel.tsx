@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { CartPanelProps } from '../types';
 import { WorkflowStep } from '../types';
 import './CartPanel.css';
@@ -16,24 +16,8 @@ const CartPanel: React.FC<CartPanelProps> = ({
 }) => {
     const [activeTab, setActiveTab] = useState<'assets' | 'templates'>('assets');
     const [activeStep, setActiveStep] = useState<WorkflowStep>(WorkflowStep.CART);
-    const panelRef = useRef<HTMLDivElement>(null);
 
-    // Handle click outside to close
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (isOpen && panelRef.current && !panelRef.current.contains(event.target as Node)) {
-                onClose();
-            }
-        };
-
-        if (isOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-        }
-
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [isOpen, onClose]);
+    // Click outside to close is disabled - users must use the X button or other explicit actions to close
 
     // Prevent body scroll when cart panel is open
     useEffect(() => {
@@ -55,7 +39,7 @@ const CartPanel: React.FC<CartPanelProps> = ({
 
     return (
         <div className="cart-panel-overlay">
-            <div className="cart-panel" ref={panelRef}>
+            <div className="cart-panel">
                 {/* Header with close button */}
                 <div className="cart-panel-header">
                     <h2>Cart</h2>
