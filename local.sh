@@ -5,6 +5,9 @@
 AEM_PAGES_URL=${AEM_PAGES_URL:-https://main--koassets--aemsites.aem.page}
 DM_ORIGIN=${DM_ORIGIN:-https://delivery-p64403-e544653.adobeaemcloud.com}
 
+# https://www.aem.live/developer/cli-reference#general-options
+AEM_LOG_LEVEL=${AEM_LOG_LEVEL:-info}
+
 # No Color / Reset
 NC=$'\033[0m'
 # Background colors
@@ -16,15 +19,23 @@ function prefix() {
   sed "s/^/${1}${2}$NC /"
 }
 
+function filter_cf_logs() {
+  if [ "$CLOUDFLARE_REQUEST_LOGS" != "1" ]; then
+    grep --line-buffered -v -E "^.*\[wrangler:info\].*(GET|HEAD|POST|OPTIONS|PUT|DELETE|TRACE|CONNECT)"
+  else
+    cat
+  fi
+}
+
 function run_cloudflare() {
   cd cloudflare
   # add "--live-reload" if auto-reload on cloudflare changes is needed
-  npx wrangler dev --env-file .env --var "HELIX_ORIGIN:http://localhost:3000" --var "DM_ORIGIN:${DM_ORIGIN}"
+  npx wrangler dev --env-file .env --var "HELIX_ORIGIN:http://localhost:3000" --var "DM_ORIGIN:${DM_ORIGIN}" 2>&1 | filter_cf_logs
 }
 
 function run_aem() {
   # add "--log-level silly" if full aem logs are needed
-  npx aem up --no-open --livereload
+  npx aem up --no-open --livereload --log-level "${AEM_LOG_LEVEL}"
 }
 
 function run_react_build() {
