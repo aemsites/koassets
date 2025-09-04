@@ -1,5 +1,6 @@
 import { getMetadata } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
+import showProfileModal from './profile.js';
 
 // media query match that indicates mobile/tablet width
 const isDesktop = window.matchMedia('(min-width: 900px)');
@@ -103,18 +104,13 @@ function toggleMenu(nav, navSections, forceExpanded = null) {
   }
 }
 
-/**
- * loads and decorates the header, mainly the nav
- * @param {Element} block The header block element
- */
-export default async function decorate(block) {
+async function createNavBar() {
   // load nav as fragment
   const navMeta = getMetadata('nav');
   const navPath = navMeta ? new URL(navMeta, window.location).pathname : '/nav';
   const fragment = await loadFragment(navPath);
 
   // decorate nav DOM
-  block.textContent = '';
   const nav = document.createElement('nav');
   nav.id = 'nav';
   while (fragment.firstElementChild) nav.append(fragment.firstElementChild);
@@ -162,5 +158,104 @@ export default async function decorate(block) {
   const navWrapper = document.createElement('div');
   navWrapper.className = 'nav-wrapper';
   navWrapper.append(nav);
-  block.append(navWrapper);
+  return navWrapper;
+}
+
+function getUserInitials() {
+  return window.user.name.split(' ').map((name) => name.charAt(0)).join('').toUpperCase();
+}
+
+function createHeaderBar() {
+  // Create TCCC primary header bar
+  const headerBar = document.createElement('div');
+  headerBar.className = 'header-bar';
+
+  // Create language section
+  const languageSection = document.createElement('div');
+  languageSection.className = 'language-selector';
+
+  const languageButton = document.createElement('div');
+  languageButton.className = 'language-selector-button';
+  languageButton.innerHTML = `
+    <span class="language-icon country-flag-usa"></span>
+    <span class="country-name">EN-US</span>
+    <span class="down-arrow-icon"></span>
+  `;
+  languageSection.appendChild(languageButton);
+
+  // Create upload button
+  const uploadButton = document.createElement('div');
+  uploadButton.className = 'header-upload-button';
+  uploadButton.innerHTML = `
+    <a class="upload-icon">Upload</a>
+  `;
+
+  // Create help section
+  const helpSection = document.createElement('div');
+  helpSection.className = 'help-section';
+
+  const helpButton = document.createElement('div');
+  helpButton.className = 'help-section-button';
+  helpButton.innerHTML = `
+    Help
+    <span class="down-arrow-icon"></span>
+  `;
+  helpSection.appendChild(helpButton);
+
+  // Create user button (user dropdown)
+  const myAccount = document.createElement('div');
+  myAccount.className = 'my-account';
+  const myAccountButton = document.createElement('div');
+  myAccountButton.className = 'my-account-button';
+  myAccountButton.innerHTML = `
+    <div class="avatar">${getUserInitials()}</div>
+    My Account
+    <span class="down-arrow-icon"></span>
+  `;
+
+  const myAccountMenu = document.createElement('div');
+  myAccountMenu.className = 'my-account-menu';
+  myAccountMenu.innerHTML = `
+    <ul>
+      <li><a href="#" id="my-profile-link">My Profile</a></li>
+      <li><a href="#">My Rights Requests</a></li>
+      <li><a href="#">My Saved Templates</a></li>
+      <li><a href="#">My Print Jobs</a></li>
+      <li><a href="#">My Collections</a></li>
+      <li><a href="#">My Saved Searches</a></li>
+      <li><a href="/auth/logout">Log Out</a></li>
+    </ul>
+  `;
+  myAccountButton.addEventListener('click', () => {
+    // toggle display
+    myAccountMenu.style.display = myAccountMenu.style.display === 'block' ? 'none' : 'block';
+    myAccountButton.classList.toggle('active');
+  });
+  myAccount.appendChild(myAccountButton);
+  myAccount.appendChild(myAccountMenu);
+
+  // Add event listener for My Profile link
+  const profileLink = myAccountMenu.querySelector('#my-profile-link');
+  profileLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    showProfileModal();
+    // Close the account menu
+    myAccountMenu.style.display = 'none';
+    myAccountButton.classList.remove('active');
+  });
+
+  // Append all elements directly to header bar
+  headerBar.append(languageSection, uploadButton, helpSection, myAccount);
+
+  return headerBar;
+}
+
+/**
+ * loads and decorates the header, mainly the nav
+ * @param {Element} block The header block element
+ */
+export default async function decorate(block) {
+  block.textContent = '';
+  block.append(createHeaderBar());
+  block.append(await createNavBar());
 }
