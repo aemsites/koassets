@@ -2,10 +2,9 @@
 
 A Cloudflare Worker that acts as outermost CDN for the KO Assets project with some additional features. It provides authentication, authorization, edge caching, and request routing to the various AEM backends (Helix/EDS, Dynamic Media OpenAPI and more).
 
-Production Worker URL: https://koassets.adobeaem.workers.dev
-Branch URLs: `https://{branch}-koassets.adobeaem.workers.dev`
-
-[Worker in Cloudflare Dashboard](https://dash.cloudflare.com/852dfa4ae1b0d579df29be65b986c101/workers/services/view/koassets/production/metrics)
+* Production Worker URL: https://koassets.adobeaem.workers.dev
+* Branch URLs: `https://{branch}-koassets.adobeaem.workers.dev`
+* [Worker in Cloudflare Dashboard](https://dash.cloudflare.com/852dfa4ae1b0d579df29be65b986c101/workers/services/view/koassets/production/metrics)
 
 ## Setup
 
