@@ -83,7 +83,9 @@ Environment variables supported by `npm run dev`:
 |----------|-------------|---------|
 | `AEM_PAGES_URL` | EDS content URL | https://main--koassets--aemsites.aem.page |
 | `DM_ORIGIN` | Dynamic Media API URL | https://delivery-p64403-e544653.adobeaemcloud.com |
-| `DEV_BROWSER` | Browser to open. Mac OS only. `Google Chrome`, `Safari` or `Firefox`. | - (system default) |
+| `DEV_BROWSER` | Browser to open. Mac OS only.<br><br>Options:<ul><li>`Google Chrome`</li><li>`Safari`</li><li>`Firefox`</li></ul> | - (system default) |
+| `CLOUDFLARE_REQUEST_LOGS` | Set to `1` to show request logs from cloudflare worker, which is the default behavior of `wrangler dev` but we turn it off to keep things readable.<br><br> Example request log:<br>`[wrangler:info] GET /path 200 OK (10ms)` | - (off) |
+| `AEM_LOG_LEVEL` | Set [`aem` log level](https://www.aem.live/developer/cli-reference#general-options). | `info` |
 
 ### Troubleshooting: Ports still open
 
