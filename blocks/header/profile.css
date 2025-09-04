@@ -1,0 +1,150 @@
+/* Profile Modal */
+.profile-modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgb(0 0 0 / 50%);
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-modal .profile-modal-content {
+  background-color: white;
+  margin: auto;
+  padding: 0;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 4px 20px rgb(0 0 0 / 15%);
+}
+
+.profile-modal .profile-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  z-index: 1001;
+}
+
+.profile-modal .profile-modal-close:hover {
+  color: #000;
+}
+
+.profile-modal .profile-header {
+  padding: 24px 24px 0;
+  border-bottom: 1px solid #e5e5e5;
+  margin-bottom: 24px;
+}
+
+.profile-modal .profile-header h1 {
+  font-family: var(--heading-font-family);
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 16px;
+  color: #1e1e1e;
+}
+
+.profile-modal .profile-info {
+  padding: 0 24px;
+  margin-bottom: 32px;
+}
+
+.profile-modal .profile-field {
+  margin-bottom: 24px;
+}
+
+.profile-modal .profile-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.profile-modal .profile-value {
+  font-size: 16px;
+  color: #1e1e1e;
+  font-weight: 400;
+  padding: 8px 0;
+}
+
+.profile-modal .notifications-section {
+  padding: 0 24px;
+  margin-bottom: 32px;
+}
+
+.profile-modal .notifications-section h2 {
+  font-family: var(--heading-font-family);
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 20px;
+  color: #1e1e1e;
+}
+
+.profile-modal .notification-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.profile-modal .notification-item:last-child {
+  border-bottom: none;
+}
+
+.profile-modal .notification-item span {
+  font-size: 16px;
+  color: #1e1e1e;
+}
+
+.profile-modal .profile-actions {
+  padding: 0 24px 24px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.profile-modal .save-button {
+  background-color: #ccc;
+  border: none;
+  border-radius: 24px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #666;
+  transition: background-color 0.3s ease;
+}
+
+.profile-modal .save-button:hover {
+  background-color: #bbb;
+}
+
+/* Responsive design */
+@media (width <= 768px) {
+  .profile-modal .profile-modal-content {
+    width: 95%;
+    margin: 20px auto;
+  }
+
+  .profile-modal .profile-header,
+  .profile-modal .profile-info,
+  .profile-modal .notifications-section,
+  .profile-modal .profile-actions {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

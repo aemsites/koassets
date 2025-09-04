@@ -1,31 +1,258 @@
 /* header and nav layout */
+
+@import url("./profile.css");
+
+:root {
+  --header-bar-height: 48px;
+  --nav-bar-height: calc(var(--nav-height) - var(--header-bar-height));
+}
+
+header {
+  font-family: var(--heading-font-family);
+}
+
+/* Header Bar at top of page */
+header .header-bar {
+  align-items: center;
+  background-color: #f0f0f0;
+  box-sizing: border-box;
+  display: flex;
+  font-size: 14px;
+  padding: 4px 24px 4px 48px;
+  height: var(--header-bar-height);
+  width: 100%;
+  position: fixed;
+  top: 0;
+  z-index: 3;
+}
+
+/* Language Section */
+header .header-bar .language-selector {
+  font-weight: 700;
+}
+
+header .header-bar .language-selector .language-selector-button {
+  display: flex;
+  position: relative;
+  cursor: pointer;
+}
+
+header .header-bar .language-selector .country-name {
+  color: #1e1e1e;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 140%;
+  margin-left: 8px;
+  margin-right: 8px;
+}
+
+header .header-bar .language-selector .language-icon {
+  display: inline-block;
+  margin-right: 30px;
+}
+
+header .header-bar .language-selector .language-icon::before {
+  border-radius: 50%;
+  height: 24px;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+}
+
+header .header-bar .language-selector .country-flag-usa::before {
+  background: url("/icons/country-flags/US.svg") no-repeat 50%;
+  content: "";
+  position: absolute;
+}
+
+/* Upload Button */
+header .header-bar .header-upload-button {
+  color: #1e1e1e;
+  cursor: pointer;
+  margin-left: auto;
+  position: relative;
+}
+
+header .header-bar .header-upload-button:hover {
+  color: #ed0000;
+}
+
+header .header-bar .header-upload-button .upload-icon::before {
+  background: url("/icons/upload-icon.svg") no-repeat 50%;
+  content: "";
+  height: 16px;
+  left: -22px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+}
+
+header .header-bar .header-upload-button:hover .upload-icon::before {
+  background: url("/icons/upload-icon-red.svg") no-repeat 50%;
+}
+
+/* Help Section */
+header .header-bar .help-section {
+  flex-shrink: 0;
+  cursor: pointer;
+  margin-left: 55px;
+  position: relative;
+}
+
+header .header-bar .help-section .help-section-button {
+  align-items: center;
+  display: inline-flex;
+}
+
+header .header-bar .help-section .help-section-button:hover {
+  color: #ed0000;
+}
+
+header .header-bar .help-section .help-section-button::before {
+  background: url("/icons/help-icon.svg") no-repeat 50%;
+  content: "";
+  height: 16px;
+  left: -22px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+}
+
+header .header-bar .help-section .help-section-button:hover::before {
+  background: url("/icons/help-icon-red.svg") no-repeat 50%;
+}
+
+/* User Button (User Dropdown) */
+header .header-bar .my-account {
+  flex-shrink: 0;
+  font-size: 14px;
+  margin-left: 32px;
+  position: relative;
+}
+
+header .header-bar .my-account .my-account-button {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #6ac9ce;
+  border-radius: 60px;
+  cursor: pointer;
+  display: flex;
+  line-height: 140%;
+  max-height: 40px;
+  padding: 6px 16px 6px 6px;
+}
+
+header .header-bar .my-account .avatar {
+  background-color: #6ac9ce;
+  border-radius: 50%;
+  font-weight: 700;
+  letter-spacing: 0.84px;
+  margin-right: 4px;
+  padding: 4px;
+  text-align: center;
+}
+
+header .header-bar .my-account-button:hover {
+  background: #6ac9ce;
+}
+
+header .header-bar .my-account-button:hover .avatar {
+  background-color: #fff;
+}
+
+header .header-bar .my-account-button.active {
+  background: #6ac9ce;
+}
+
+header .header-bar .my-account-button.active .avatar {
+  background-color: #fff;
+}
+
+header .header-bar .my-account .my-account-menu {
+  display: none;
+  position: relative;
+  top: 100%;
+  left: 0;
+}
+
+header .header-bar .my-account .my-account-menu > ul {
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 0 14px 0 rgb(0 0 0 / 12%);
+  font-size: 14px;
+  left: 50%;
+  list-style-type: none;
+  margin: 0;
+  min-width: 200px;
+  padding: 8px;
+  position: absolute;
+  top: 5px;
+  transform: translateX(-50%);
+  z-index: 100;
+}
+
+header .header-bar .my-account .my-account-menu >ul > li {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 8px 4px;
+  width: 100%;
+}
+
+/* Arrow Icons */
+header .header-bar .down-arrow-icon {
+  display: flex;
+}
+
+header .header-bar .down-arrow-icon::before {
+  background: url("/icons/down-arrow-icon.svg") no-repeat 50%;
+  content: "";
+  display: inline-block;
+  height: 20px;
+  margin-left: 4px;
+  width: 20px;
+}
+
+header .header-bar .down-arrow-icon:hover::before {
+  background: url("/icons/down-arrow-icon-red.svg") no-repeat 50%;
+}
+
+/* Mobile responsive padding */
+@media (width <= 1439px) {
+  header .header-bar {
+    padding: 4px 24px 4px 48px;
+  }
+}
+
 header .nav-wrapper {
   background-color: var(--background-color);
   width: 100%;
   z-index: 2;
   position: fixed;
+  top: var(--header-bar-height);
 }
 
 header nav {
   box-sizing: border-box;
   display: grid;
   grid-template:
-    'hamburger brand tools' var(--nav-height)
+    'hamburger brand tools' var(--nav-bar-height)
     'sections sections sections' 1fr / auto 1fr auto;
   align-items: center;
   gap: 0 24px;
   margin: auto;
   max-width: 1248px;
-  height: var(--nav-height);
+  height: var(--nav-bar-height);
   padding: 0 24px;
-  font-family: var(--body-font-family);
 }
 
 header nav[aria-expanded='true'] {
   grid-template:
-    'hamburger brand' var(--nav-height)
+    'hamburger brand' var(--nav-bar-height)
     'sections sections' 1fr
-    'tools tools' var(--nav-height) / auto 1fr;
+    'tools tools' var(--nav-bar-height) / auto 1fr;
   overflow-y: auto;
   min-height: 100dvh;
 }
