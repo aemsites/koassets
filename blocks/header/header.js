@@ -264,6 +264,13 @@ function createHeaderBar() {
  */
 export default async function decorate(block) {
   block.textContent = '';
+
+  if (getMetadata('header') === 'no') {
+    // quick hack for welcome page
+    block.parentElement.style.height = '60px';
+    return;
+  }
+
   block.append(createHeaderBar());
   block.append(await createNavBar());
 }
