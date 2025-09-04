@@ -162,6 +162,9 @@ async function createNavBar() {
 }
 
 function getUserInitials() {
+  if (!window.user || !window.user.name) {
+    return '';
+  }
   return window.user.name.split(' ').map((name) => name.charAt(0)).join('').toUpperCase();
 }
 
@@ -202,50 +205,55 @@ function createHeaderBar() {
   `;
   helpSection.appendChild(helpButton);
 
+  headerBar.append(languageSection, uploadButton, helpSection);
+
   // Create user button (user dropdown)
-  const myAccount = document.createElement('div');
-  myAccount.className = 'my-account';
-  const myAccountButton = document.createElement('div');
-  myAccountButton.className = 'my-account-button';
-  myAccountButton.innerHTML = `
-    <div class="avatar">${getUserInitials()}</div>
-    My Account
-    <span class="down-arrow-icon"></span>
-  `;
+  // Note: window.user not defined aka logged out should normally not happen
+  //       as the user agent should be redirected to the login page before
+  if (window.user) {
+    const myAccount = document.createElement('div');
+    myAccount.className = 'my-account';
+    const myAccountButton = document.createElement('div');
+    myAccountButton.className = 'my-account-button';
+    myAccountButton.innerHTML = `
+      <div class="avatar">${getUserInitials()}</div>
+      My Account
+      <span class="down-arrow-icon"></span>
+    `;
 
-  const myAccountMenu = document.createElement('div');
-  myAccountMenu.className = 'my-account-menu';
-  myAccountMenu.innerHTML = `
-    <ul>
-      <li><a href="#" id="my-profile-link">My Profile</a></li>
-      <li><a href="#">My Rights Requests</a></li>
-      <li><a href="#">My Saved Templates</a></li>
-      <li><a href="#">My Print Jobs</a></li>
-      <li><a href="#">My Collections</a></li>
-      <li><a href="#">My Saved Searches</a></li>
-      <li><a href="/auth/logout">Log Out</a></li>
-    </ul>
-  `;
-  myAccountButton.addEventListener('click', () => {
-    // toggle display
-    myAccountMenu.style.display = myAccountMenu.style.display === 'block' ? 'none' : 'block';
-    myAccountButton.classList.toggle('active');
-  });
-  myAccount.appendChild(myAccountButton);
-  myAccount.appendChild(myAccountMenu);
+    const myAccountMenu = document.createElement('div');
+    myAccountMenu.className = 'my-account-menu';
+    myAccountMenu.innerHTML = `
+      <ul>
+        <li><a href="#" id="my-profile-link">My Profile</a></li>
+        <li><a href="#">My Rights Requests</a></li>
+        <li><a href="#">My Saved Templates</a></li>
+        <li><a href="#">My Print Jobs</a></li>
+        <li><a href="#">My Collections</a></li>
+        <li><a href="#">My Saved Searches</a></li>
+        <li><a href="/auth/logout">Log Out</a></li>
+      </ul>
+    `;
+    myAccountButton.addEventListener('click', () => {
+      // toggle display
+      myAccountMenu.style.display = myAccountMenu.style.display === 'block' ? 'none' : 'block';
+      myAccountButton.classList.toggle('active');
+    });
+    myAccount.appendChild(myAccountButton);
+    myAccount.appendChild(myAccountMenu);
 
-  // Add event listener for My Profile link
-  const profileLink = myAccountMenu.querySelector('#my-profile-link');
-  profileLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    showProfileModal();
-    // Close the account menu
-    myAccountMenu.style.display = 'none';
-    myAccountButton.classList.remove('active');
-  });
+    // Add event listener for My Profile link
+    const profileLink = myAccountMenu.querySelector('#my-profile-link');
+    profileLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      showProfileModal();
+      // Close the account menu
+      myAccountMenu.style.display = 'none';
+      myAccountButton.classList.remove('active');
+    });
 
-  // Append all elements directly to header bar
-  headerBar.append(languageSection, uploadButton, helpSection, myAccount);
+    headerBar.append(myAccount);
+  }
 
   return headerBar;
 }
