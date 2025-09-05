@@ -1,7 +1,7 @@
 /* Full Screen Modal Styles */
 .asset-details-modal {
     position: fixed;
-    top: 0;
+    top: var(--nav-height);
     left: 0;
     right: 0;
     bottom: 0;
@@ -17,7 +17,7 @@
 .asset-details-modal-inner {
     width: 100vw;
     max-width: 100vw;
-    min-height: 100vh;
+    min-height: calc(100vh - var(--nav-height));
     background: white;
     position: relative;
     display: flex;
@@ -48,7 +48,6 @@
     flex: 1;
     min-height: 70vh;
     overflow: visible;
-    padding-top: 50px;
 }
 
 /* Metadata Grouping Section */
@@ -253,9 +252,6 @@
     line-height: 1.575rem;
 }
 
-.asset-details-main-header .asset-details-main-description {
-    /* No specific styling needed, flows naturally */
-}
 
 .asset-details-main-tags {
     display: flex;
