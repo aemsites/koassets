@@ -18,7 +18,7 @@
     "lint": "eslint src --ext js,jsx,ts,tsx --report-unused-disable-directives",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build:koassets-react": "npm install && VITE_ADOBE_CLIENT_ID=ko-assets-ims VITE_BUCKET=delivery-p64403-e544653 VITE_EXC_BASE_URL=https://exc-unifiedcontent.experience.adobe.net npm run build:embed",
-    "copy-to-eds": "cp -r dist/* ../tools/assets-browser/",
+    "copy-to-eds": "rm dist/index.html; cp -r dist/* ../tools/assets-browser/",
     "build-and-copy:koassets-react": "npm run build:koassets-react && npm run copy-to-eds",
     "build-local-dev": "VITE_ADOBE_CLIENT_ID=ko-assets-ims VITE_BUCKET=delivery-p64403-e544653 VITE_EXC_BASE_URL=https://exc-unifiedcontent.experience.adobe.net vite build && npm run copy-to-eds"
   },

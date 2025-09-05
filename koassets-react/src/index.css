@@ -32,10 +32,6 @@
 
 body {
   margin: 0;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  /* Allow natural scrolling - remove overflow hidden, height, and position constraints */
 }
 
 code {

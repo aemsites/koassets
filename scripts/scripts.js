@@ -14,6 +14,24 @@ import {
 } from './aem.js';
 
 /**
+ * Loads the logged inuser data.
+ */
+async function loadUser() {
+  // TODO: run this every 5 minutes and warn when expiry is less than 30 minutes
+  //       with option to re-authenticate
+
+  window.user = undefined;
+  try {
+    const user = await fetch(`${window.location.origin}/auth/user`);
+    if (user.ok) {
+      window.user = await user.json();
+    }
+  } catch (_ignore) {
+    // do nothing
+  }
+}
+
+/**
  * Builds hero block and prepends to main in a new section.
  * @param {Element} main The container element
  */
@@ -96,6 +114,8 @@ async function loadEager(doc) {
  * @param {Element} doc The container element
  */
 async function loadLazy(doc) {
+  await loadUser();
+
   const main = doc.querySelector('main');
   await loadSections(main);
 
