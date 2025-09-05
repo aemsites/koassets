@@ -17,6 +17,25 @@
 # - uses tag = <user>-<branch>
 # - points Helix origin to <branch> aem.live
 
+# Configuration
+# Helix github
+REPO=koassets
+ORG=aemsites
+# cloudflare worker
+WORKER=koassets
+WORKER_DOMAIN=adobeaem
+
+# Usage: upload_version <tag> <message>
+# Returns version id in version.id file
+function upload_version() {
+  npx wrangler versions upload \
+    --preview-alias "$1" \
+    --tag "$1" \
+    --message "$2" \
+    --var "HELIX_ORIGIN:$HELIX_ORIGIN" \
+    | tee >(grep "Worker Version ID:" | cut -d " " -f 4 > version.id)
+}
+
 set -e
 set -o pipefail
 
@@ -42,6 +61,7 @@ if [ "$ci" = "true" ]; then
   tag="$branch"
   # last commit message
   message=$(git log -1 --pretty=%B)
+
 else
   echo "Manual deployment"
   user=$(git config user.email | cut -d@ -f 1)
@@ -63,31 +83,46 @@ echo "Branch : $branch"
 echo "Tag    : $tag"
 echo "Message: $message"
 
-helixOrigin="https://$branch--koassets--aemsites.aem.live"
-
 export FORCE_COLOR=1
 
-npx wrangler versions upload \
-  --preview-alias "$tag" \
-  --tag "$tag" \
-  --message "$message" \
-  --var "HELIX_ORIGIN:$helixOrigin" \
-  | tee >(grep "Worker Version ID:" | cut -d " " -f 4 > version.id)
-
-version=$(cat version.id)
-rm version.id
-
-echo "Helix Origin : $helixOrigin"
-echo "Worker URL   : https://$tag-koassets.adobeaem.workers.dev"
-url="https://$tag-koassets.adobeaem.workers.dev"
-
-# on CI and main branch, deploy to production
-if [ "$ci" = "true" ] && [ "$branch" = "main" ]; then
-  npx wrangler versions deploy -y "$version"
-  echo
-  echo "Production URL: https://koassets.adobeaem.workers.dev"
-  url="https://koassets.adobeaem.workers.dev"
+if [ "$tag" = "preview" ]; then
+  echo "ERROR: branch name 'preview' is reserved for production preview URL."
+  exit 1
 fi
+
+# 1. deploy branch url for EDS live content
+HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.live"
+upload_version "$tag" "$message"
+version=$(cat version.id)
+
+url="https://$tag-$WORKER.$WORKER_DOMAIN.workers.dev"
+
+# 2. deploy branch url for EDS preview content
+HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.page"
+upload_version "$tag-preview" "$message"
+
+if [ "$ci" = "true" ] && [ "$branch" = "main" ]; then
+  # 3. on CI and main branch, deploy to production (live content)
+  npx wrangler versions deploy -y "$version"
+
+  url="https://$WORKER.adobeaem.workers.dev"
+
+  # 4. on CI and main branch, deploy to preview alias
+  upload_version "preview" "$message"
+fi
+
+rm version.id || true
+
+echo
+echo "======================================================================================================================"
+echo "Branch Worker URL (preview): https://$tag-preview-$WORKER.$WORKER_DOMAIN.workers.dev"
+echo "Branch Worker URL (live)   : https://$tag-$WORKER.$WORKER_DOMAIN.workers.dev"
+if [ "$ci" = "true" ] && [ "$branch" = "main" ]; then
+  echo
+  echo "Production Worker URL (preview): https://preview-$WORKER.$WORKER_DOMAIN.workers.dev"
+  echo "Production Worker URL (live)   : https://$WORKER.$WORKER_DOMAIN.workers.dev"
+fi
+echo "======================================================================================================================"
 
 if [ -n "$GITHUB_OUTPUT" ]; then
   echo "tag=$tag" >> "$GITHUB_OUTPUT"
