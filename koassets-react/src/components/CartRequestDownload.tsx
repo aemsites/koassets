@@ -1,7 +1,6 @@
 import { CalendarDate } from '@internationalized/date';
-import React, { useCallback, useEffect, useState } from 'react';
-import { FadelClient, type RightsAttribute } from '../clients/fadel-client';
-import type { Asset } from '../types';
+import React, { useCallback, useState } from 'react';
+import type { Asset, CachedRightsData, IntendedUseData, RequestDownloadStepData, RightsData } from '../types';
 import './CartRequestDownload.css';
 import MyDatePicker from './MyDatePicker';
 import ThumbnailImage from './ThumbnailImage';
@@ -9,63 +8,15 @@ import ThumbnailImage from './ThumbnailImage';
 interface CartRequestDownloadProps {
     cartItems: Asset[];
     onCancel: () => void;
-    onRequestAuthorization: (intendedUse: IntendedUseData) => void;
+    onRequestAuthorization: (intendedUse: IntendedUseData, stepData: RequestDownloadStepData) => void;
     onSaveIntendedUse?: (intendedUse: IntendedUseData) => void;
+    onBack: (stepData: RequestDownloadStepData) => void;
+    initialData?: RequestDownloadStepData;
+    cachedRightsData: CachedRightsData;
 }
 
-interface IntendedUseData {
-    airDate?: number | null;
-    pullDate?: number | null;
-    countries: number[];
-    mediaChannels: number[];
-}
 
-interface RightsData {
-    rightId: number;
-    name: string;
-    enabled: boolean;
-    children?: RightsData[];
-}
 
-// Type aliases for clarity
-type MarketData = RightsData;
-type MediaChannelData = RightsData;
-
-// Generic transform function for rights data
-const transformRightsAttributesToRightsData = (rightsAttributes: RightsAttribute[]): RightsData[] => {
-    if (!rightsAttributes || rightsAttributes.length === 0) {
-        return [];
-    }
-
-    const rootAttribute = rightsAttributes[0]; // The root "All" element
-
-    const transformAttribute = (attr: RightsAttribute): RightsData => ({
-        rightId: attr.right.rightId,
-        name: attr.right.shortDescription,
-        enabled: attr.enabled,
-        children: attr.childrenLst?.map(transformAttribute) || []
-    });
-
-    // First element is "All" from the root
-    const allElement: RightsData = {
-        rightId: rootAttribute.right.rightId,
-        name: rootAttribute.right.shortDescription,
-        enabled: rootAttribute.enabled,
-        children: []
-    };
-
-    // Other elements are from root's childrenLst
-    const childElements = rootAttribute.childrenLst?.map(transformAttribute) || [];
-
-    return [allElement, ...childElements];
-};
-
-// Convenience functions for specific use cases
-const transformMarketRightsToMarketData = (rightsAttributes: RightsAttribute[]): MarketData[] =>
-    transformRightsAttributesToRightsData(rightsAttributes);
-
-const transformMediaRightsToMediaChannelData = (rightsAttributes: RightsAttribute[]): MediaChannelData[] =>
-    transformRightsAttributesToRightsData(rightsAttributes);
 
 // Utility functions for date conversion
 const calendarDateToEpoch = (date: CalendarDate | null): number | null => {
@@ -81,87 +32,34 @@ const calendarDateToEpoch = (date: CalendarDate | null): number | null => {
 // };
 
 
+
 const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
     cartItems,
     onCancel,
     onRequestAuthorization,
-    onSaveIntendedUse
+    onSaveIntendedUse,
+    onBack,
+    initialData,
+    cachedRightsData
 }) => {
-    const [airDate, setAirDate] = useState<CalendarDate | null>(null);
-    const [pullDate, setPullDate] = useState<CalendarDate | null>(null);
-    const [selectedMarkets, setSelectedMarkets] = useState<Set<number>>(new Set());
-    const [selectedMediaChannels, setSelectedMediaChannels] = useState<Set<number>>(new Set());
-    const [marketSearchTerm, setMarketSearchTerm] = useState('');
+    const [airDate, setAirDate] = useState<CalendarDate | null>(initialData?.airDate || null);
+    const [pullDate, setPullDate] = useState<CalendarDate | null>(initialData?.pullDate || null);
+    const [selectedMarkets, setSelectedMarkets] = useState<Set<RightsData>>(initialData?.selectedMarkets || new Set());
+    const [selectedMediaChannels, setSelectedMediaChannels] = useState<Set<RightsData>>(initialData?.selectedMediaChannels || new Set());
+    const [marketSearchTerm, setMarketSearchTerm] = useState(initialData?.marketSearchTerm || '');
     const [expandedRegions, setExpandedRegions] = useState<Set<number>>(new Set());
 
-    // Market rights data state
-    const [marketsData, setMarketsData] = useState<MarketData[]>([]);
-    const [isLoadingMarkets, setIsLoadingMarkets] = useState(true);
-    const [marketsError, setMarketsError] = useState<string>('');
-
-    // Media channels data state
-    const [mediaChannelsData, setMediaChannelsData] = useState<MediaChannelData[]>([]);
-    const [isLoadingMediaChannels, setIsLoadingMediaChannels] = useState(true);
-    const [mediaChannelsError, setMediaChannelsError] = useState<string>('');
+    // Use cached rights data from parent
+    const marketsData = cachedRightsData.marketsData;
+    const mediaChannelsData = cachedRightsData.mediaChannelsData;
+    const isLoadingMarkets = !cachedRightsData.isLoaded;
+    const isLoadingMediaChannels = !cachedRightsData.isLoaded;
+    const marketsError = '';
+    const mediaChannelsError = '';
 
     // Add validation error message state
-    const [dateValidationError, setDateValidationError] = useState<string>('');
+    const [dateValidationError, setDateValidationError] = useState<string>(initialData?.dateValidationError || '');
 
-    // Fetch market rights data on component mount
-    useEffect(() => {
-        const fetchMarketRights = async () => {
-            try {
-                setIsLoadingMarkets(true);
-                setMarketsError('');
-
-                const client = new FadelClient();
-                const response = await client.fetchMarketRights();
-
-                // Transform the data (already includes "All" as first element)
-                const transformedData = transformMarketRightsToMarketData(response.attribute);
-
-                setMarketsData(transformedData);
-            } catch (error) {
-                console.error('Error fetching market rights:', error);
-                setMarketsError('Failed to load markets data. Please try again later.');
-
-                // Fallback to empty data with just "All" option
-                setMarketsData([{ rightId: 0, name: 'All', enabled: true, children: [] }]);
-            } finally {
-                setIsLoadingMarkets(false);
-            }
-        };
-
-        fetchMarketRights();
-    }, []);
-
-    // Fetch media channels data on component mount
-    useEffect(() => {
-        const fetchMediaChannels = async () => {
-            try {
-                setIsLoadingMediaChannels(true);
-                setMediaChannelsError('');
-
-                const client = new FadelClient();
-                const response = await client.fetchMediaRights();
-
-                // Transform the data (already includes "All" as first element)
-                const transformedData = transformMediaRightsToMediaChannelData(response.attribute);
-
-                setMediaChannelsData(transformedData);
-            } catch (error) {
-                console.error('Error fetching media channels:', error);
-                setMediaChannelsError('Failed to load media channels data. Please try again later.');
-
-                // Fallback to empty data with just "All" option
-                setMediaChannelsData([{ rightId: 0, name: 'All', enabled: true, children: [] }]);
-            } finally {
-                setIsLoadingMediaChannels(false);
-            }
-        };
-
-        fetchMediaChannels();
-    }, []);
 
     // Validate date relationship and set error messages
     const validateDates = useCallback((air: CalendarDate | null, pull: CalendarDate | null) => {
@@ -181,10 +79,23 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
         }
     }, []);
 
-    // Get the "All" option ID (first item in the list)
-    const getAllOptionId = useCallback(() => {
-        return marketsData.length > 0 ? marketsData[0].rightId : 0;
+    // Get the "All" option (first item in the list)
+    const getAllOption = useCallback(() => {
+        return marketsData.length > 0 ? marketsData[0] : null;
     }, [marketsData]);
+
+    // Helper function to check if a parent market is selected
+    const isParentMarketSelected = useCallback((childRightId: number) => {
+        // Find which parent market contains this child
+        const parentMarket = marketsData.find(market =>
+            market.children?.some(child => child.rightId === childRightId)
+        );
+
+        if (!parentMarket) return false;
+
+        // Check if the parent is selected
+        return Array.from(selectedMarkets).some(m => m.rightId === parentMarket.rightId);
+    }, [marketsData, selectedMarkets]);
 
     // Filter markets based on search term
     const filteredMarkets = marketsData.filter(market =>
@@ -194,89 +105,130 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
         )
     );
 
-    const handleMarketToggle = useCallback((marketId: number) => {
-        // Find the market to check if it's enabled
-        const market = marketsData.find(m => m.rightId === marketId) ||
-            marketsData.find(m => m.children?.some(c => c.rightId === marketId))?.children?.find(c => c.rightId === marketId);
-
+    const handleMarketToggle = useCallback((market: RightsData) => {
         // Don't allow toggling disabled items
-        if (market && !market.enabled) {
+        if (!market.enabled) {
             return;
         }
 
-        const allOptionId = getAllOptionId();
+        // Don't allow toggling children if their parent is selected
+        if (isParentMarketSelected(market.rightId)) {
+            return;
+        }
+
+        const allOption = getAllOption();
         setSelectedMarkets(prev => {
             const newSet = new Set(prev);
 
-            if (marketId === allOptionId) {
+            if (allOption && market.rightId === allOption.rightId) {
                 // If selecting 'all', clear everything and only keep 'all'
-                if (newSet.has(allOptionId)) {
-                    newSet.delete(allOptionId);
+                const hasAllOption = Array.from(newSet).some(m => m.rightId === allOption.rightId);
+                if (hasAllOption) {
+                    // Remove all option
+                    newSet.forEach(m => {
+                        if (m.rightId === allOption.rightId) {
+                            newSet.delete(m);
+                        }
+                    });
                 } else {
                     newSet.clear();
-                    newSet.add(allOptionId);
+                    newSet.add(allOption);
                 }
             } else {
                 // If selecting any other market, remove 'all' if it's selected
-                if (newSet.has(allOptionId)) {
-                    newSet.delete(allOptionId);
+                if (allOption) {
+                    newSet.forEach(m => {
+                        if (m.rightId === allOption.rightId) {
+                            newSet.delete(m);
+                        }
+                    });
                 }
 
                 // Toggle the selected market
-                if (newSet.has(marketId)) {
-                    newSet.delete(marketId);
+                const existingMarket = Array.from(newSet).find(m => m.rightId === market.rightId);
+                if (existingMarket) {
+                    newSet.delete(existingMarket);
                 } else {
-                    newSet.add(marketId);
+                    // When selecting a parent market, remove any of its children that are selected
+                    if (market.children && market.children.length > 0) {
+                        market.children.forEach(child => {
+                            const selectedChild = Array.from(newSet).find(m => m.rightId === child.rightId);
+                            if (selectedChild) {
+                                newSet.delete(selectedChild);
+                            }
+                        });
+                    }
+
+                    newSet.add(market);
                 }
             }
 
             return newSet;
         });
-    }, [getAllOptionId, marketsData]);
+    }, [getAllOption, isParentMarketSelected]);
 
-    // Get the "All" option ID for media channels (first item in the list)
-    const getAllMediaChannelOptionId = useCallback(() => {
-        return mediaChannelsData.length > 0 ? mediaChannelsData[0].rightId : 0;
+    // Get the "All" option for media channels (first item in the list)
+    const getAllMediaChannelOption = useCallback(() => {
+        return mediaChannelsData.length > 0 ? mediaChannelsData[0] : null;
     }, [mediaChannelsData]);
 
-    const handleMediaChannelToggle = useCallback((channelId: number) => {
-        // Find the channel to check if it's enabled
-        const channel = mediaChannelsData.find(c => c.rightId === channelId);
+    // Helper functions to check if "All" is selected
+    const isAllMarketsSelected = useCallback(() => {
+        const allOption = getAllOption();
+        return allOption ? Array.from(selectedMarkets).some(m => m.rightId === allOption.rightId) : false;
+    }, [selectedMarkets, getAllOption]);
 
+    const isAllMediaChannelsSelected = useCallback(() => {
+        const allOption = getAllMediaChannelOption();
+        return allOption ? Array.from(selectedMediaChannels).some(c => c.rightId === allOption.rightId) : false;
+    }, [selectedMediaChannels, getAllMediaChannelOption]);
+
+    const handleMediaChannelToggle = useCallback((channel: RightsData) => {
         // Don't allow toggling disabled items
-        if (channel && !channel.enabled) {
+        if (!channel.enabled) {
             return;
         }
 
-        const allOptionId = getAllMediaChannelOptionId();
+        const allOption = getAllMediaChannelOption();
         setSelectedMediaChannels(prev => {
             const newSet = new Set(prev);
 
-            if (channelId === allOptionId) {
+            if (allOption && channel.rightId === allOption.rightId) {
                 // If selecting 'All', clear everything and only keep 'All'
-                if (newSet.has(allOptionId)) {
-                    newSet.delete(allOptionId);
+                const hasAllOption = Array.from(newSet).some(c => c.rightId === allOption.rightId);
+                if (hasAllOption) {
+                    // Remove all option
+                    newSet.forEach(c => {
+                        if (c.rightId === allOption.rightId) {
+                            newSet.delete(c);
+                        }
+                    });
                 } else {
                     newSet.clear();
-                    newSet.add(allOptionId);
+                    newSet.add(allOption);
                 }
             } else {
                 // If selecting any other media channel, remove 'All' if it's selected
-                if (newSet.has(allOptionId)) {
-                    newSet.delete(allOptionId);
+                if (allOption) {
+                    newSet.forEach(c => {
+                        if (c.rightId === allOption.rightId) {
+                            newSet.delete(c);
+                        }
+                    });
                 }
 
                 // Toggle the selected channel
-                if (newSet.has(channelId)) {
-                    newSet.delete(channelId);
+                const existingChannel = Array.from(newSet).find(c => c.rightId === channel.rightId);
+                if (existingChannel) {
+                    newSet.delete(existingChannel);
                 } else {
-                    newSet.add(channelId);
+                    newSet.add(channel);
                 }
             }
 
             return newSet;
         });
-    }, [getAllMediaChannelOptionId, mediaChannelsData]);
+    }, [getAllMediaChannelOption]);
 
     const handleRegionToggle = useCallback((regionId: number) => {
         setExpandedRegions(prev => {
@@ -289,6 +241,16 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
             return newSet;
         });
     }, []);
+
+    // Helper function to get current step data
+    const getCurrentStepData = useCallback((): RequestDownloadStepData => ({
+        airDate,
+        pullDate,
+        selectedMarkets,
+        selectedMediaChannels,
+        marketSearchTerm,
+        dateValidationError
+    }), [airDate, pullDate, selectedMarkets, selectedMediaChannels, marketSearchTerm, dateValidationError]);
 
     const handleSaveIntendedUse = useCallback(() => {
         const intendedUseData: IntendedUseData = {
@@ -327,8 +289,8 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
             mediaChannels: Array.from(selectedMediaChannels)
         };
         console.log('Requesting authorization with intended use data:', intendedUseData);
-        onRequestAuthorization(intendedUseData);
-    }, [airDate, pullDate, selectedMarkets, selectedMediaChannels, onRequestAuthorization]);
+        onRequestAuthorization(intendedUseData, getCurrentStepData());
+    }, [airDate, pullDate, selectedMarkets, selectedMediaChannels, onRequestAuthorization, getCurrentStepData]);
 
     return (
         <div className="cart-request-download">
@@ -441,9 +403,12 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
                                                     <label className={`checkbox-label ${!market.enabled ? 'disabled' : ''}`}>
                                                         <input
                                                             type="checkbox"
-                                                            checked={selectedMarkets.has(market.rightId)}
-                                                            disabled={!market.enabled || (market.rightId !== getAllOptionId() && selectedMarkets.has(getAllOptionId()))}
-                                                            onChange={() => handleMarketToggle(market.rightId)}
+                                                            checked={Array.from(selectedMarkets).some(m => m.rightId === market.rightId)}
+                                                            disabled={!market.enabled || (() => {
+                                                                const allOption = getAllOption();
+                                                                return Boolean(allOption && market.rightId !== allOption.rightId && isAllMarketsSelected());
+                                                            })()}
+                                                            onChange={() => handleMarketToggle(market)}
                                                         />
                                                         {market.name}
                                                     </label>
@@ -467,12 +432,12 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
                                                                 child.name.toLowerCase().includes(marketSearchTerm.toLowerCase())
                                                             )
                                                             .map((child) => (
-                                                                <label key={child.rightId} className={`checkbox-label child-market ${!child.enabled ? 'disabled' : ''}`}>
+                                                                <label key={child.rightId} className={`checkbox-label child-market ${!child.enabled || isParentMarketSelected(child.rightId) ? 'disabled' : ''}`}>
                                                                     <input
                                                                         type="checkbox"
-                                                                        checked={selectedMarkets.has(child.rightId)}
-                                                                        disabled={!child.enabled || selectedMarkets.has(getAllOptionId())}
-                                                                        onChange={() => handleMarketToggle(child.rightId)}
+                                                                        checked={Array.from(selectedMarkets).some(m => m.rightId === child.rightId)}
+                                                                        disabled={!child.enabled || isAllMarketsSelected() || isParentMarketSelected(child.rightId)}
+                                                                        onChange={() => handleMarketToggle(child)}
                                                                     />
                                                                     {child.name}
                                                                 </label>
@@ -512,9 +477,12 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
                                             <label className={`checkbox-label ${!channel.enabled ? 'disabled' : ''}`}>
                                                 <input
                                                     type="checkbox"
-                                                    checked={selectedMediaChannels.has(channel.rightId)}
-                                                    disabled={!channel.enabled || (channel.rightId !== getAllMediaChannelOptionId() && selectedMediaChannels.has(getAllMediaChannelOptionId()))}
-                                                    onChange={() => handleMediaChannelToggle(channel.rightId)}
+                                                    checked={Array.from(selectedMediaChannels).some(c => c.rightId === channel.rightId)}
+                                                    disabled={!channel.enabled || (() => {
+                                                        const allOption = getAllMediaChannelOption();
+                                                        return Boolean(allOption && channel.rightId !== allOption.rightId && isAllMediaChannelsSelected());
+                                                    })()}
+                                                    onChange={() => handleMediaChannelToggle(channel)}
                                                 />
                                                 {channel.name}
                                             </label>
@@ -528,6 +496,14 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
 
                     {/* Action Buttons - Outside scrolling area */}
                     <div className="form-actions">
+                        <button
+                            className="back-btn secondary-button"
+                            onClick={() => onBack(getCurrentStepData())}
+                            type="button"
+                        >
+                            Back
+                        </button>
+
                         <button
                             disabled={true}
                             className="save-intended-use-btn secondary-button"

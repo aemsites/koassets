@@ -1,10 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import type { RightsAttribute } from '../clients/fadel-client';
+import { FadelClient } from '../clients/fadel-client';
 import { restrictedBrandsWarning, smrWarnings } from '../constants/warnings';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type {
     Asset,
     AuthorizedCartItem,
+    CachedRightsData,
     CartPanelAssetsProps,
+    IntendedUseData,
+    RequestDownloadStepData,
+    RightsCheckStepData,
+    RightsData,
+    WorkflowStepData,
     WorkflowStepIcons,
     WorkflowStepStatuses
 } from '../types';
@@ -16,13 +24,6 @@ import CartRightsCheck from './CartRightsCheck';
 import DownloadRenditionsContent from './DownloadRenditionsContent';
 import ThumbnailImage from './ThumbnailImage';
 
-// Interface for intended use data
-interface IntendedUseData {
-    airDate?: number | null;
-    pullDate?: number | null;
-    countries: number[];
-    mediaChannels: number[];
-}
 
 // Component for rendering individual cart item row
 interface CartItemRowProps {
@@ -224,6 +225,87 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         mediaChannels: []
     });
 
+    // State for storing step form data
+    const [stepData, setStepData] = useState<WorkflowStepData>({});
+
+    // State for cached rights data
+    const [cachedRightsData, setCachedRightsData] = useState<CachedRightsData>({
+        marketsData: [],
+        mediaChannelsData: [],
+        isLoaded: false
+    });
+
+
+    // Transform RightsAttribute[] to RightsData[] - copied from CartRequestDownload
+    const transformRightsAttributesToRightsData = useCallback((rightsAttributes: RightsAttribute[]): RightsData[] => {
+        if (!rightsAttributes || rightsAttributes.length === 0) {
+            return [];
+        }
+
+        const rootAttribute = rightsAttributes[0]; // The root "All" element
+
+        const transformAttribute = (attr: RightsAttribute): RightsData => ({
+            rightId: attr.right.rightId,
+            name: attr.right.description,
+            enabled: attr.enabled,
+            children: attr.childrenLst?.map(transformAttribute) || []
+        });
+
+        // First element is "All" from the root
+        const allElement: RightsData = {
+            rightId: rootAttribute.right.rightId,
+            name: rootAttribute.right.description,
+            enabled: rootAttribute.enabled,
+            children: []
+        };
+
+        // Other elements are from root's childrenLst
+        const childElements = rootAttribute.childrenLst?.map(transformAttribute) || [];
+
+        return [allElement, ...childElements];
+    }, []);
+
+    // Fetch and cache rights data
+    const fetchRightsData = useCallback(async () => {
+        if (cachedRightsData.isLoaded) {
+            return; // Already loaded, no need to fetch again
+        }
+
+        try {
+            const fadelClient = new FadelClient();
+
+            // Fetch both market rights and media rights in parallel
+            const [marketRightsResponse, mediaRightsResponse] = await Promise.all([
+                fadelClient.fetchMarketRights(),
+                fadelClient.fetchMediaRights()
+            ]);
+
+            const marketsData = transformRightsAttributesToRightsData(marketRightsResponse.attribute);
+            const mediaChannelsData = transformRightsAttributesToRightsData(mediaRightsResponse.attribute);
+
+            setCachedRightsData({
+                marketsData,
+                mediaChannelsData,
+                isLoaded: true
+            });
+        } catch (error) {
+            console.error('Failed to fetch rights data:', error);
+            // Set empty data but mark as loaded to prevent infinite retries
+            setCachedRightsData({
+                marketsData: [],
+                mediaChannelsData: [],
+                isLoaded: true
+            });
+        }
+    }, [cachedRightsData.isLoaded, transformRightsAttributesToRightsData]);
+
+    // Effect to fetch rights data when component mounts or when moving to REQUEST_DOWNLOAD step
+    useEffect(() => {
+        if (activeStep === WorkflowStep.REQUEST_DOWNLOAD && !cachedRightsData.isLoaded) {
+            fetchRightsData();
+        }
+    }, [activeStep, fetchRightsData, cachedRightsData.isLoaded]);
+
     // Notify parent when activeStep changes
     useEffect(() => {
         onActiveStepChange(activeStep);
@@ -406,6 +488,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         onClose();
     }, [onClose]);
 
+
     // Handler for saving intended use data
     const handleSaveIntendedUse = useCallback((intendedUse: IntendedUseData): void => {
         console.log('Saving intended use data:', intendedUse);
@@ -413,11 +496,17 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     }, []);
 
     // Handler for requesting authorization with intended use data
-    const handleRequestAuthorizationWithIntendedUse = useCallback((intendedUseData: IntendedUseData): void => {
+    const handleRequestAuthorizationWithIntendedUse = useCallback((intendedUseData: IntendedUseData, requestDownloadData: RequestDownloadStepData): void => {
         console.log('Requesting authorization with intended use data:', intendedUseData);
 
         // Store the intended use data
         setIntendedUse(intendedUseData);
+
+        // Store the request download step data
+        setStepData(prev => ({
+            ...prev,
+            requestDownload: requestDownloadData
+        }));
 
         // Mark REQUEST_DOWNLOAD step as successful
         setStepStatus(prev => ({ ...prev, [WorkflowStep.REQUEST_DOWNLOAD]: StepStatus.SUCCESS }));
@@ -446,12 +535,6 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         } else {
             setStepStatus(prev => ({ ...prev, [WorkflowStep.DOWNLOAD]: StepStatus.FAILURE }));
         }
-    }, []);
-
-    // Handler for going back to request download from rights check
-    const handleBackToRequestDownload = useCallback((): void => {
-        setActiveStep(WorkflowStep.REQUEST_DOWNLOAD);
-        setStepStatus(prev => ({ ...prev, [WorkflowStep.RIGHTS_CHECK]: StepStatus.INIT }));
     }, []);
 
     // Handler for when assets are approved for download
@@ -646,15 +729,45 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                     onCancel={handleCancelRequestDownload}
                     onRequestAuthorization={handleRequestAuthorizationWithIntendedUse}
                     onSaveIntendedUse={handleSaveIntendedUse}
+                    onBack={(stepData: RequestDownloadStepData) => {
+                        // Store the current step data before going back
+                        setStepData(prev => ({
+                            ...prev,
+                            requestDownload: stepData
+                        }));
+
+                        setActiveStep(WorkflowStep.CART);
+                        setStepStatus(prev => ({
+                            ...prev,
+                            [WorkflowStep.REQUEST_DOWNLOAD]: StepStatus.INIT,
+                            [WorkflowStep.CART]: StepStatus.CURRENT
+                        }));
+                    }}
+                    initialData={stepData.requestDownload}
+                    cachedRightsData={cachedRightsData}
                 />
             ) : activeStep === WorkflowStep.RIGHTS_CHECK ? (
                 <CartRightsCheck
                     cartItems={cartItems}
                     intendedUse={intendedUse}
                     onCancel={onClose}
-                    onUpdateIntendedUse={handleBackToRequestDownload}
                     onDownloadApproved={handleDownloadApproved}
                     onRequestRightsExtension={handleRequestRightsExtension}
+                    onBack={(stepData: RightsCheckStepData) => {
+                        // Store the current step data before going back
+                        setStepData(prev => ({
+                            ...prev,
+                            rightsCheck: stepData
+                        }));
+
+                        setActiveStep(WorkflowStep.REQUEST_DOWNLOAD);
+                        setStepStatus(prev => ({
+                            ...prev,
+                            [WorkflowStep.RIGHTS_CHECK]: StepStatus.INIT,
+                            [WorkflowStep.REQUEST_DOWNLOAD]: StepStatus.CURRENT
+                        }));
+                    }}
+                    initialData={stepData.rightsCheck}
                 />
             ) : (
                 <>

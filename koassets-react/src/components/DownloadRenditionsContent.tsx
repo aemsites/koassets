@@ -320,6 +320,23 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
             onDownloadCompleted?.(false);
         } finally {
             setIsDownloading(false);
+            // Reset all selected renditions except "original"
+            setSelectedRenditions(prev => {
+                const newMap = new Map();
+                prev.forEach((assetRenditions, assetId) => {
+                    const originalRenditions = new Set();
+                    assetRenditions.forEach(rendition => {
+                        if (rendition.name === 'original') {
+                            originalRenditions.add(rendition);
+                        }
+                    });
+                    if (originalRenditions.size > 0) {
+                        newMap.set(assetId, originalRenditions);
+                    }
+                });
+                return newMap;
+            });
+            setAcceptTerms(false);
         }
     }, [assets, dynamicMediaClient, acceptTerms, isDownloading, selectedRenditions, onClose, onDownloadCompleted]);
 

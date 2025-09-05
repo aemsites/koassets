@@ -1,6 +1,52 @@
 // Asset-related types
 import React from 'react';
 
+// Rights-related interfaces
+export interface RightsData {
+    rightId: number;
+    name: string;
+    enabled: boolean;
+    children?: RightsData[];
+}
+
+export interface IntendedUseData {
+    airDate?: number | null;
+    pullDate?: number | null;
+    countries: RightsData[];
+    mediaChannels: RightsData[];
+}
+
+// Step form data interfaces for persistence
+export interface RequestDownloadStepData {
+    airDate?: import('@internationalized/date').CalendarDate | null;
+    pullDate?: import('@internationalized/date').CalendarDate | null;
+    selectedMarkets: Set<RightsData>;
+    selectedMediaChannels: Set<RightsData>;
+    marketSearchTerm: string;
+    dateValidationError: string;
+}
+
+// Cached rights data interfaces
+export interface CachedRightsData {
+    marketsData: RightsData[];
+    mediaChannelsData: RightsData[];
+    isLoaded: boolean;
+}
+
+export interface RightsCheckStepData {
+    downloadOptions: Record<string, {
+        assetId: string;
+        originalAsset: boolean;
+        allRenditions: boolean;
+    }>;
+    agreesToTerms: boolean;
+}
+
+export interface WorkflowStepData {
+    requestDownload?: RequestDownloadStepData;
+    rightsCheck?: RightsCheckStepData;
+}
+
 export interface Rendition {
     name?: string;
     format?: string;
