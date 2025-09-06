@@ -2,6 +2,13 @@
 .koassets-search {
     width: 100%;
     position: relative;
+    z-index: 0;
+}
+
+/* When popup modals are present, elevate the entire koassets-search container */
+.koassets-search:has(.cart-panel-overlay),
+.koassets-search:has(.asset-preview-modal),
+.koassets-search:has(.download-renditions-overlay) {
     z-index: 10;
 }
 
