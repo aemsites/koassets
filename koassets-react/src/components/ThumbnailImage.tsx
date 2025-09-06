@@ -38,7 +38,6 @@ const ThumbnailImage: React.FC<ThumbnailImageProps> = ({ item }) => {
 
                 if (blobUrl) {
                     setImageUrl(blobUrl);
-                    console.log(`Loaded cart image: ${item.assetId}`);
                 } else {
                     setError(true);
                 }

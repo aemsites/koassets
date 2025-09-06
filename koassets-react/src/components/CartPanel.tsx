@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import type { CartPanelProps } from '../types';
 import { WorkflowStep } from '../types';
 import './CartPanel.css';
-import CartPanelAssets from './CartPanelAssets.jsx';
+import CartPanelAssets from './CartPanelAssets';
 import CartPanelTemplates from './CartPanelTemplates';
 
 const CartPanel: React.FC<CartPanelProps> = ({
@@ -14,6 +14,10 @@ const CartPanel: React.FC<CartPanelProps> = ({
     onApproveAssets,
     onDownloadAssets
 }) => {
+    // These props are kept for interface compatibility but not used in this component
+    void onApproveAssets;
+    void onDownloadAssets;
+
     const [activeTab, setActiveTab] = useState<'assets' | 'templates'>('assets');
     const [activeStep, setActiveStep] = useState<WorkflowStep>(WorkflowStep.CART);
 
@@ -71,8 +75,6 @@ const CartPanel: React.FC<CartPanelProps> = ({
                         cartItems={cartItems}
                         setCartItems={setCartItems}
                         onRemoveItem={onRemoveItem}
-                        onApproveAssets={onApproveAssets}
-                        onDownloadAssets={onDownloadAssets}
                         onClose={onClose}
                         onActiveStepChange={setActiveStep}
                     />

@@ -1,6 +1,6 @@
+import { CalendarDate } from '@internationalized/date';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { RightsAttribute } from '../clients/fadel-client';
-import { FadelClient } from '../clients/fadel-client';
 import { restrictedBrandsWarning, smrWarnings } from '../constants/warnings';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type {
@@ -8,8 +8,8 @@ import type {
     AuthorizedCartItem,
     CachedRightsData,
     CartPanelAssetsProps,
-    IntendedUseData,
     RequestDownloadStepData,
+    RequestRightsExtensionStepData,
     RightsCheckStepData,
     RightsData,
     WorkflowStepData,
@@ -20,10 +20,10 @@ import { FilteredItemsType, StepStatus, WorkflowStep } from '../types';
 import { removeBlobFromCache } from '../utils/blobCache';
 import './CartPanelAssets.css';
 import CartRequestDownload from './CartRequestDownload';
+import CartRequestRightsExtension from './CartRequestRightsExtension';
 import CartRightsCheck from './CartRightsCheck';
 import DownloadRenditionsContent from './DownloadRenditionsContent';
 import ThumbnailImage from './ThumbnailImage';
-
 
 // Component for rendering individual cart item row
 interface CartItemRowProps {
@@ -71,10 +71,9 @@ interface CartActionsFooterProps {
     hasAllItemsReadyToUse: boolean;
     onClose: () => void;
     onClearCart: () => void;
-    onDownload: () => void;
-    onRequestDownload: () => void;
-    onRightsCheck: () => void;
-    onCompleteDownload: () => void;
+    onOpenDownload: () => void;
+    onOpenRequestDownload: () => void;
+    onCloseDownload: () => void;
 }
 
 const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
@@ -82,10 +81,9 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
     hasAllItemsReadyToUse,
     onClose,
     onClearCart,
-    onDownload,
-    onRequestDownload,
-    onRightsCheck,
-    onCompleteDownload
+    onOpenDownload,
+    onOpenRequestDownload,
+    onCloseDownload
 }) => {
     return (
         <div className="cart-actions-footer">
@@ -105,32 +103,19 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
             {/* Dynamic primary button based on step */}
             {activeStep === WorkflowStep.CART && (
                 hasAllItemsReadyToUse ? (
-                    <button className="action-btn primary-button" onClick={onDownload}>
+                    <button className="action-btn primary-button" onClick={onOpenDownload}>
                         Download Cart
                     </button>
                 ) : (
-                    <button className="action-btn primary-button" onClick={onRequestDownload}>
+                    <button className="action-btn primary-button" onClick={onOpenRequestDownload}>
                         Request Download
                     </button>
                 )
             )}
-            {activeStep === WorkflowStep.REQUEST_DOWNLOAD && (
-                <>
-                    <button className="action-btn primary-button" onClick={onRightsCheck}>
-                        Check Rights
-                    </button>
-                </>
-            )}
-            {activeStep === WorkflowStep.RIGHTS_CHECK && (
-                <>
-                    <button className="action-btn primary-button" onClick={onDownload}>
-                        Download Assets
-                    </button>
-                </>
-            )}
+            {/* when activeStep === RIGHTS_CHECK, it has its own buttons */}
             {activeStep === WorkflowStep.DOWNLOAD && (
                 <>
-                    <button className="action-btn primary-button" onClick={onCompleteDownload}>
+                    <button className="action-btn primary-button" onClick={onCloseDownload}>
                         Complete Download
                     </button>
                 </>
@@ -178,6 +163,17 @@ const WorkflowProgress: React.FC<WorkflowProgressProps> = ({
                         <span className="step-label">Rights Check</span>
                     </div>
                     <div className="horizontal-line"></div>
+                    {activeStep === WorkflowStep.REQUEST_RIGHTS_EXTENSION && (
+                        <>
+                            <div className={getStepClassName(WorkflowStep.REQUEST_RIGHTS_EXTENSION, activeStep === WorkflowStep.REQUEST_RIGHTS_EXTENSION)}>
+                                <div className="step-icon">
+                                    {renderStepIcon(WorkflowStep.REQUEST_RIGHTS_EXTENSION)}
+                                </div>
+                                <span className="step-label">Request Rights Extension</span>
+                            </div>
+                            <div className="horizontal-line"></div>
+                        </>
+                    )}
                 </>
             )}
             <div className={getStepClassName(WorkflowStep.DOWNLOAD, activeStep === WorkflowStep.DOWNLOAD)}>
@@ -206,27 +202,52 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         [WorkflowStep.CART]: StepStatus.INIT,
         [WorkflowStep.REQUEST_DOWNLOAD]: StepStatus.INIT,
         [WorkflowStep.RIGHTS_CHECK]: StepStatus.INIT,
+        [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: StepStatus.INIT,
         [WorkflowStep.DOWNLOAD]: StepStatus.INIT,
-        [WorkflowStep.COMPLETE_DOWNLOAD]: StepStatus.INIT
+        [WorkflowStep.CLOSE_DOWNLOAD]: StepStatus.INIT
     });
     const [stepIcon, setStepIcon] = useState<WorkflowStepIcons>({
         [WorkflowStep.CART]: '',
         [WorkflowStep.REQUEST_DOWNLOAD]: '',
         [WorkflowStep.RIGHTS_CHECK]: '',
+        [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: '',
         [WorkflowStep.DOWNLOAD]: '',
-        [WorkflowStep.COMPLETE_DOWNLOAD]: ''
+        [WorkflowStep.CLOSE_DOWNLOAD]: ''
     });
     const [filteredItems, setFilteredItems] = useState<{ [key in FilteredItemsType]: Asset[] }>({} as { [key in FilteredItemsType]: Asset[] });
     const [showDownloadContent, setShowDownloadContent] = useState(false);
-    const [intendedUse, setIntendedUse] = useState<IntendedUseData>({
-        airDate: null,
-        pullDate: null,
-        countries: [],
-        mediaChannels: []
-    });
 
     // State for storing step form data
     const [stepData, setStepData] = useState<WorkflowStepData>({});
+
+    // State for rights extension form data (managed by parent)
+    const [rightsExtensionFormData, setRightsExtensionFormData] = useState<RequestRightsExtensionStepData>({
+        restrictedAssets: [],
+        agencyType: 'TCCC Associate',
+        agencyName: 'a', // required
+        contactName: 'b', // required
+        contactEmail: 'c', // required
+        contactPhone: '',
+        materialsRequiredDate: null,
+        formatsRequired: '',
+        usageRightsRequired: {
+            music: false,
+            talent: false,
+            photographer: false,
+            voiceover: false,
+            stockFootage: false
+        },
+        adaptationIntention: 'd', // required
+        budgetForMarket: 'e', // required
+        exceptionOrNotes: '',
+        agreesToTerms: true
+    });
+
+    // State for rights check form data (managed by parent)
+    const [rightsCheckFormData, setRightsCheckFormData] = useState<RightsCheckStepData>({
+        downloadOptions: {},
+        agreesToTerms: false
+    });
 
     // State for cached rights data
     const [cachedRightsData, setCachedRightsData] = useState<CachedRightsData>({
@@ -234,6 +255,35 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         mediaChannelsData: [],
         isLoaded: false
     });
+
+    // TEMP DEBUG: Initialize debug data on component load
+    useEffect(() => {
+        // Set debug data immediately with placeholder data
+        const todayDate = new Date();
+        const tomorrowDate = new Date(todayDate);
+        tomorrowDate.setDate(todayDate.getDate() + 1);
+
+        const todayCalendar = new CalendarDate(todayDate.getFullYear(), todayDate.getMonth() + 1, todayDate.getDate());
+        const tomorrowCalendar = new CalendarDate(tomorrowDate.getFullYear(), tomorrowDate.getMonth() + 1, tomorrowDate.getDate());
+
+        // Create placeholder "All" options
+        const placeholderAllMarket: RightsData = { rightId: 0, name: 'All', enabled: true };
+        const placeholderAllMediaChannel: RightsData = { rightId: 0, name: 'All', enabled: true };
+
+        setStepData(prevStepData => ({
+            ...prevStepData,
+            requestDownload: {
+                airDate: todayCalendar,
+                pullDate: tomorrowCalendar,
+                countries: [placeholderAllMarket],
+                mediaChannels: [placeholderAllMediaChannel],
+                selectedMarkets: new Set([placeholderAllMarket]),
+                selectedMediaChannels: new Set([placeholderAllMediaChannel]),
+                marketSearchTerm: '',
+                dateValidationError: ''
+            }
+        }));
+    }, []); // Empty dependency array - runs only on mount
 
 
     // Transform RightsAttribute[] to RightsData[] - copied from CartRequestDownload
@@ -272,12 +322,13 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         }
 
         try {
-            const fadelClient = new FadelClient();
-
+            // const fadelClient = new FadelClient();
             // Fetch both market rights and media rights in parallel
             const [marketRightsResponse, mediaRightsResponse] = await Promise.all([
-                fadelClient.fetchMarketRights(),
-                fadelClient.fetchMediaRights()
+                // fadelClient.fetchMarketRights(),
+                Promise.resolve({ attribute: [] }),
+                // fadelClient.fetchMediaRights()
+                Promise.resolve({ attribute: [] })
             ]);
 
             const marketsData = transformRightsAttributesToRightsData(marketRightsResponse.attribute);
@@ -322,25 +373,25 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                         case StepStatus.INIT:
                             setStepIcon(prev => ({
                                 ...prev,
-                                [WorkflowStep.CART]: <img src={`${import.meta.env.BASE_URL}icons/cart-stepper-icon-init.svg`} alt="Cart" />
+                                [WorkflowStep.CART]: <img src={`/icons/cart-stepper-icon.svg`} alt="Cart" />
                             }));
                             break;
                         case StepStatus.CURRENT:
                             setStepIcon(prev => ({
                                 ...prev,
-                                [WorkflowStep.CART]: <img src={`${import.meta.env.BASE_URL}icons/cart-stepper-icon-current.svg`} alt="Cart Current" />
+                                [WorkflowStep.CART]: <img src={`/icons/cart-stepper-icon.svg`} alt="Cart Current" />
                             }));
                             break;
                         case StepStatus.SUCCESS:
                             setStepIcon(prev => ({
                                 ...prev,
-                                [WorkflowStep.CART]: <img src={`${import.meta.env.BASE_URL}icons/stepper-icon-success.svg`} alt="Cart Success" />
+                                [WorkflowStep.CART]: <img src={`/icons/cart-icon-success.svg`} alt="Cart Success" />
                             }));
                             break;
                         case StepStatus.FAILURE:
                             setStepIcon(prev => ({
                                 ...prev,
-                                [WorkflowStep.CART]: <img src={`${import.meta.env.BASE_URL}icons/cart-stepper-icon-failure.svg`} alt="Cart Failure" />
+                                [WorkflowStep.CART]: <img src={`/icons/cart-icon-failure.svg`} alt="Cart Failure" />
                             }));
                             break;
                     }
@@ -351,25 +402,25 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                         case StepStatus.INIT:
                             setStepIcon(prev => ({
                                 ...prev,
-                                [WorkflowStep.REQUEST_DOWNLOAD]: <img src={`${import.meta.env.BASE_URL}icons/request-download-stepper-icon-init.svg`} alt="Request Download" />
+                                [WorkflowStep.REQUEST_DOWNLOAD]: <img src={`/icons/download-asset-grey.svg`} alt="Request Download" />
                             }));
                             break;
                         case StepStatus.CURRENT:
                             setStepIcon(prev => ({
                                 ...prev,
-                                [WorkflowStep.REQUEST_DOWNLOAD]: <img src={`${import.meta.env.BASE_URL}icons/request-download-stepper-icon-current.svg`} alt="Request Download Current" />
+                                [WorkflowStep.REQUEST_DOWNLOAD]: <img src={`/icons/donwload-cart-step-red.svg`} alt="Request Download Current" />
                             }));
                             break;
                         case StepStatus.SUCCESS:
                             setStepIcon(prev => ({
                                 ...prev,
-                                [WorkflowStep.REQUEST_DOWNLOAD]: <img src={`${import.meta.env.BASE_URL}icons/stepper-icon-success.svg`} alt="Request Download Success" />
+                                [WorkflowStep.REQUEST_DOWNLOAD]: <img src={`/icons/cart-icon-success.svg`} alt="Request Download Success" />
                             }));
                             break;
                         case StepStatus.FAILURE:
                             setStepIcon(prev => ({
                                 ...prev,
-                                [WorkflowStep.REQUEST_DOWNLOAD]: <img src={`${import.meta.env.BASE_URL}icons/request-download-stepper-icon-failure.svg`} alt="Request Download Failure" />
+                                [WorkflowStep.REQUEST_DOWNLOAD]: <img src={`/icons/cart-icon-failure.svg`} alt="Request Download Failure" />
                             }));
                             break;
                     }
@@ -380,25 +431,54 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                         case StepStatus.INIT:
                             setStepIcon(prev => ({
                                 ...prev,
-                                [WorkflowStep.RIGHTS_CHECK]: <img src={`${import.meta.env.BASE_URL}icons/rights-check-stepper-icon-init.svg`} alt="Rights Check" />
+                                [WorkflowStep.RIGHTS_CHECK]: <img src={`/icons/rights-check-grey.svg`} alt="Rights Check" />
                             }));
                             break;
                         case StepStatus.CURRENT:
                             setStepIcon(prev => ({
                                 ...prev,
-                                [WorkflowStep.RIGHTS_CHECK]: <img src={`${import.meta.env.BASE_URL}icons/rights-check-stepper-icon-current.svg`} alt="Rights Check Current" />
+                                [WorkflowStep.RIGHTS_CHECK]: <img src={`/icons/rights-check-red.svg`} alt="Rights Check Current" />
                             }));
                             break;
                         case StepStatus.SUCCESS:
                             setStepIcon(prev => ({
                                 ...prev,
-                                [WorkflowStep.RIGHTS_CHECK]: <img src={`${import.meta.env.BASE_URL}icons/stepper-icon-success.svg`} alt="Rights Check Success" />
+                                [WorkflowStep.RIGHTS_CHECK]: <img src={`/icons/cart-icon-success.svg`} alt="Rights Check Success" />
                             }));
                             break;
                         case StepStatus.FAILURE:
                             setStepIcon(prev => ({
                                 ...prev,
-                                [WorkflowStep.RIGHTS_CHECK]: <img src={`${import.meta.env.BASE_URL}icons/rights-check-stepper-icon-failure.svg`} alt="Rights Check Failure" />
+                                [WorkflowStep.RIGHTS_CHECK]: <img src={`/icons/cart-icon-failure.svg`} alt="Rights Check Failure" />
+                            }));
+                            break;
+                    }
+                    break;
+
+                case WorkflowStep.REQUEST_RIGHTS_EXTENSION:
+                    switch (status) {
+                        case StepStatus.INIT:
+                            setStepIcon(prev => ({
+                                ...prev,
+                                [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: <img src={`/icons/request-rights-red.svg`} alt="Rights Check" />
+                            }));
+                            break;
+                        case StepStatus.CURRENT:
+                            setStepIcon(prev => ({
+                                ...prev,
+                                [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: <img src={`/icons/request-rights-red.svg`} alt="Rights Check Current" />
+                            }));
+                            break;
+                        case StepStatus.SUCCESS:
+                            setStepIcon(prev => ({
+                                ...prev,
+                                [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: <img src={`/icons/cart-icon-success.svg`} alt="Rights Check Success" />
+                            }));
+                            break;
+                        case StepStatus.FAILURE:
+                            setStepIcon(prev => ({
+                                ...prev,
+                                [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: <img src={`/icons/cart-icon-failure.svg`} alt="Rights Check Failure" />
                             }));
                             break;
                     }
@@ -409,26 +489,26 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                         case StepStatus.INIT:
                             setStepIcon(prev => ({
                                 ...prev,
-                                [WorkflowStep.DOWNLOAD]: <img src={`${import.meta.env.BASE_URL}icons/download-stepper-icon-init.svg`} alt="Download" />
+                                [WorkflowStep.DOWNLOAD]: <img src={`/icons/download-icon.svg`} alt="Download" />
                             }));
                             break;
                         case StepStatus.CURRENT:
                             setStepIcon(prev => ({
                                 ...prev,
-                                [WorkflowStep.DOWNLOAD]: <img src={`${import.meta.env.BASE_URL}icons/download-stepper-icon-current.svg`} alt="Download Current" />
+                                [WorkflowStep.DOWNLOAD]: <img src={`/icons/donwload-cart-step-red.svg`} alt="Download Current" />
                             }));
                             break;
                         case StepStatus.SUCCESS:
                             // Could trigger success notification or auto-close
                             setStepIcon(prev => ({
                                 ...prev,
-                                [WorkflowStep.DOWNLOAD]: <img src={`${import.meta.env.BASE_URL}icons/stepper-icon-success.svg`} alt="Download Success" />
+                                [WorkflowStep.DOWNLOAD]: <img src={`/icons/cart-icon-success.svg`} alt="Download Success" />
                             }));
                             break;
                         case StepStatus.FAILURE:
                             setStepIcon(prev => ({
                                 ...prev,
-                                [WorkflowStep.DOWNLOAD]: <img src={`${import.meta.env.BASE_URL}icons/download-stepper-icon-failure.svg`} alt="Download Failure" />
+                                [WorkflowStep.DOWNLOAD]: <img src={`/icons/cart-icon-failure.svg`} alt="Download Failure" />
                             }));
                             break;
                     }
@@ -456,18 +536,99 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         setCartItems([]);
     }, [cartItems, setCartItems]);
 
-    const handleRequestDownload = useCallback((): void => {
+    const handleOpenRequestDownload = useCallback((): void => {
         setStepStatus(prev => ({ ...prev, [WorkflowStep.CART]: StepStatus.SUCCESS }));
         setActiveStep(WorkflowStep.REQUEST_DOWNLOAD);
         setStepStatus(prev => ({ ...prev, [WorkflowStep.REQUEST_DOWNLOAD]: StepStatus.CURRENT }));
     }, []);
 
-    const handleRightsCheck = useCallback(async (): Promise<void> => {
+    // Handler for opening rights check with intended use data
+    const handleOpenRightsCheck = useCallback((requestDownloadData: RequestDownloadStepData): void => {
+        console.log('Opening rights check with request download data:', requestDownloadData);
+
+        // Initialize the rights check form data with default values
+        setRightsCheckFormData({
+            downloadOptions: {},
+            agreesToTerms: false
+        });
+
+        // Store the request download step data (which now includes intended use data)
+        setStepData(prev => ({
+            ...prev,
+            requestDownload: requestDownloadData
+        }));
+
+        // Mark REQUEST_DOWNLOAD step as successful
+        setStepStatus(prev => ({ ...prev, [WorkflowStep.REQUEST_DOWNLOAD]: StepStatus.SUCCESS }));
+
+        // Move to RIGHTS_CHECK step
         setActiveStep(WorkflowStep.RIGHTS_CHECK);
         setStepStatus(prev => ({ ...prev, [WorkflowStep.RIGHTS_CHECK]: StepStatus.CURRENT }));
     }, []);
 
-    const handleDownload = useCallback(async (): Promise<void> => {
+    // Handler for requesting rights extension
+    const handleOpenRequestRightsExtension = useCallback((restrictedAssets: Asset[], requestDownloadData: RequestDownloadStepData): void => {
+        // Store the current rights check form data before moving to rights extension
+        setStepData(prev => ({
+            ...prev,
+            rightsCheck: rightsCheckFormData,
+            requestDownload: requestDownloadData
+        }));
+
+        // Initialize the rights extension form data with restricted assets
+        setRightsExtensionFormData(prev => ({
+            ...prev,
+            restrictedAssets
+        }));
+
+        // Store the rights extension step data with restricted assets
+        setStepData(prev => ({
+            ...prev,
+            rightsExtension: {
+                restrictedAssets
+            }
+        }));
+
+        // Mark RIGHTS_CHECK step as successful
+        setStepStatus(prev => ({ ...prev, [WorkflowStep.RIGHTS_CHECK]: StepStatus.SUCCESS }));
+
+        // Move to REQUEST_RIGHTS_EXTENSION step
+        setActiveStep(WorkflowStep.REQUEST_RIGHTS_EXTENSION);
+        setStepStatus(prev => ({ ...prev, [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: StepStatus.CURRENT }));
+    }, [rightsCheckFormData]);
+
+    // Handler for sending rights extension request
+    const handleSendRightsExtensionRequest = useCallback((rightsExtensionData: RequestRightsExtensionStepData): void => {
+        // Update the form data state
+        setRightsExtensionFormData(rightsExtensionData);
+
+        // Store the rights extension data
+        setStepData(prev => ({
+            ...prev,
+            rightsExtension: rightsExtensionData
+        }));
+
+        // TODO: Implement API call to submit rights extension request
+        console.log('Rights extension request sent:', rightsExtensionData);
+
+        // Remove restricted assets from cart
+        if (rightsExtensionData.restrictedAssets && rightsExtensionData.restrictedAssets.length > 0) {
+            const restrictedAssetIds = rightsExtensionData.restrictedAssets.map(asset => asset.assetId);
+            const authorizedItems = cartItems.filter(item => !restrictedAssetIds.includes(item.assetId));
+
+            setCartItems(authorizedItems);
+
+            // If there are still items in cart after removal, go back to RIGHTS_CHECK
+            if (authorizedItems.length > 0) {
+                setStepStatus(prev => ({ ...prev, [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: StepStatus.SUCCESS }));
+                setActiveStep(WorkflowStep.RIGHTS_CHECK);
+                setStepStatus(prev => ({ ...prev, [WorkflowStep.RIGHTS_CHECK]: StepStatus.CURRENT }));
+            }
+            // If no items left, the auto-close useEffect will handle closing the cart
+        }
+    }, [cartItems, setCartItems]);
+
+    const handleOpenDownload = useCallback(async (): Promise<void> => {
         setStepStatus(prev => ({ ...prev, [WorkflowStep.CART]: stepStatus[WorkflowStep.CART] === StepStatus.INIT ? StepStatus.SUCCESS : stepStatus[WorkflowStep.CART] }));
         setActiveStep(WorkflowStep.DOWNLOAD);
         setStepStatus(prev => ({ ...prev, [WorkflowStep.DOWNLOAD]: StepStatus.CURRENT }));
@@ -482,41 +643,13 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         }
     }, [stepStatus, filteredItems]);
 
-    const handleCompleteDownload = useCallback(async (): Promise<void> => {
-        setStepStatus(prev => ({ ...prev, [WorkflowStep.COMPLETE_DOWNLOAD]: StepStatus.CURRENT }));
-        setActiveStep(WorkflowStep.COMPLETE_DOWNLOAD);
+    const handleCloseDownload = useCallback(async (): Promise<void> => {
+        setStepStatus(prev => ({ ...prev, [WorkflowStep.CLOSE_DOWNLOAD]: StepStatus.CURRENT }));
+        setActiveStep(WorkflowStep.CLOSE_DOWNLOAD);
         onClose();
     }, [onClose]);
 
 
-    // Handler for saving intended use data
-    const handleSaveIntendedUse = useCallback((intendedUse: IntendedUseData): void => {
-        console.log('Saving intended use data:', intendedUse);
-        // TODO: Implement API call to save intended use data
-    }, []);
-
-    // Handler for requesting authorization with intended use data
-    const handleRequestAuthorizationWithIntendedUse = useCallback((intendedUseData: IntendedUseData, requestDownloadData: RequestDownloadStepData): void => {
-        console.log('Requesting authorization with intended use data:', intendedUseData);
-
-        // Store the intended use data
-        setIntendedUse(intendedUseData);
-
-        // Store the request download step data
-        setStepData(prev => ({
-            ...prev,
-            requestDownload: requestDownloadData
-        }));
-
-        // Mark REQUEST_DOWNLOAD step as successful
-        setStepStatus(prev => ({ ...prev, [WorkflowStep.REQUEST_DOWNLOAD]: StepStatus.SUCCESS }));
-
-        // Move to RIGHTS_CHECK step
-        setActiveStep(WorkflowStep.RIGHTS_CHECK);
-        setStepStatus(prev => ({ ...prev, [WorkflowStep.RIGHTS_CHECK]: StepStatus.CURRENT }));
-
-        // TODO: Implement API call to submit authorization request
-    }, []);
 
     // Handler for canceling from request download step
     const handleCancelRequestDownload = useCallback((): void => {
@@ -529,30 +662,22 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         setShowDownloadContent(false);
     }, []);
 
-    const handleDownloadCompleted = useCallback((success: boolean) => {
+    const handleDownloadCompleted = useCallback((success: boolean, successfulAssets?: Asset[]) => {
         if (success) {
             setStepStatus(prev => ({ ...prev, [WorkflowStep.DOWNLOAD]: StepStatus.SUCCESS }));
+            console.log('Download completed successfully for assets:', successfulAssets);
+
+            // Remove successfully downloaded assets from cart
+            if (successfulAssets && successfulAssets.length > 0) {
+                const successfulAssetIds = successfulAssets.map(asset => asset.assetId);
+                setCartItems(prevItems =>
+                    prevItems.filter(item => !successfulAssetIds.includes(item.assetId))
+                );
+            }
         } else {
             setStepStatus(prev => ({ ...prev, [WorkflowStep.DOWNLOAD]: StepStatus.FAILURE }));
         }
-    }, []);
-
-    // Handler for when assets are approved for download
-    const handleDownloadApproved = useCallback((downloadOptions: { assetId: string; originalAsset: boolean; allRenditions: boolean }[]) => {
-        console.log('Download approved for options:', downloadOptions);
-        // Move to DOWNLOAD step
-        setActiveStep(WorkflowStep.DOWNLOAD);
-        setStepStatus(prev => ({ ...prev, [WorkflowStep.RIGHTS_CHECK]: StepStatus.SUCCESS }));
-        setShowDownloadContent(true);
-    }, []);
-
-    // Handler for requesting rights extension
-    const handleRequestRightsExtension = useCallback((): void => {
-        console.log('Requesting rights extension');
-        // TODO: Implement API call for rights extension request
-        // For now, just show success status
-        setStepStatus(prev => ({ ...prev, [WorkflowStep.RIGHTS_CHECK]: StepStatus.SUCCESS }));
-    }, []);
+    }, [setCartItems]);
 
     // Helper function to render step icon - simply returns the stepIcon for that step
     const renderStepIcon = useCallback((step: WorkflowStep, defaultIcon?: string): React.JSX.Element | string => {
@@ -672,6 +797,13 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         }
     }, [cartItems, restrictedBrands, setCartItems]);
 
+    // Close cart when all items are removed
+    useEffect(() => {
+        if (cartItems.length === 0) {
+            onClose();
+        }
+    }, [cartItems.length, onClose]);
+
     if (cartItemsCount === 0) {
         return (
             <div className="cart-content">
@@ -690,33 +822,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                 renderStepIcon={renderStepIcon}
             />
 
-            {/* Status Messages */}
-            {/*
-            <div className="workflow-status">
-                {stepStatus[WorkflowStep.CART] === StepStatus.FAILURE && (
-                    <div className="status-message error">
-                        ❌ Cart preparation failed. Please try again.
-                    </div>
-                )}
-                {stepStatus[WorkflowStep.REQUEST_DOWNLOAD] === StepStatus.FAILURE && (
-                    <div className="status-message error">
-                        ❌ Download request failed. Please retry.
-                    </div>
-                )}
-                {stepStatus[WorkflowStep.RIGHTS_CHECK] === StepStatus.FAILURE && (
-                    <div className="status-message error">
-                        ❌ Rights check failed. Please retry.
-                    </div>
-                )}
-                {stepStatus[WorkflowStep.DOWNLOAD] === StepStatus.FAILURE && (
-                    <div className="status-message error">
-                        ❌ Download failed. Please retry.
-                    </div>
-                )}
-            </div>
-            */}
-
-            {/* Download Renditions Content */}
+            {/* Direct Download */}
             {activeStep === WorkflowStep.DOWNLOAD && showDownloadContent && downloadAssetsData.length > 0 ? (
                 <DownloadRenditionsContent
                     assets={downloadAssetsData}
@@ -727,8 +833,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                 <CartRequestDownload
                     cartItems={cartItems}
                     onCancel={handleCancelRequestDownload}
-                    onRequestAuthorization={handleRequestAuthorizationWithIntendedUse}
-                    onSaveIntendedUse={handleSaveIntendedUse}
+                    onOpenRightsCheck={handleOpenRightsCheck}
                     onBack={(stepData: RequestDownloadStepData) => {
                         // Store the current step data before going back
                         setStepData(prev => ({
@@ -749,11 +854,22 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             ) : activeStep === WorkflowStep.RIGHTS_CHECK ? (
                 <CartRightsCheck
                     cartItems={cartItems}
-                    intendedUse={intendedUse}
+                    intendedUse={stepData.requestDownload || {
+                        airDate: null,
+                        pullDate: null,
+                        countries: [],
+                        mediaChannels: [],
+                        selectedMarkets: new Set(),
+                        selectedMediaChannels: new Set(),
+                        marketSearchTerm: '',
+                        dateValidationError: ''
+                    }}
                     onCancel={onClose}
-                    onDownloadApproved={handleDownloadApproved}
-                    onRequestRightsExtension={handleRequestRightsExtension}
+                    onOpenRequestRightsExtension={handleOpenRequestRightsExtension}
                     onBack={(stepData: RightsCheckStepData) => {
+                        // Update the form data state
+                        setRightsCheckFormData(stepData);
+
                         // Store the current step data before going back
                         setStepData(prev => ({
                             ...prev,
@@ -767,7 +883,42 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                             [WorkflowStep.REQUEST_DOWNLOAD]: StepStatus.CURRENT
                         }));
                     }}
-                    initialData={stepData.rightsCheck}
+                    initialData={rightsCheckFormData}
+                    onDownloadCompleted={handleDownloadCompleted}
+                />
+            ) : activeStep === WorkflowStep.REQUEST_RIGHTS_EXTENSION ? (
+                <CartRequestRightsExtension
+                    restrictedAssets={rightsExtensionFormData.restrictedAssets || []}
+                    intendedUse={stepData.requestDownload || {
+                        airDate: null,
+                        pullDate: null,
+                        countries: [],
+                        mediaChannels: [],
+                        selectedMarkets: new Set(),
+                        selectedMediaChannels: new Set(),
+                        marketSearchTerm: '',
+                        dateValidationError: ''
+                    }}
+                    onCancel={onClose}
+                    onSendRightsExtensionRequest={handleSendRightsExtensionRequest}
+                    onBack={(stepData: RequestRightsExtensionStepData) => {
+                        // Update the form data state
+                        setRightsExtensionFormData(stepData);
+
+                        // Store the current step data before going back
+                        setStepData(prev => ({
+                            ...prev,
+                            rightsExtension: stepData
+                        }));
+
+                        setActiveStep(WorkflowStep.RIGHTS_CHECK);
+                        setStepStatus(prev => ({
+                            ...prev,
+                            [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: StepStatus.INIT,
+                            [WorkflowStep.RIGHTS_CHECK]: StepStatus.CURRENT
+                        }));
+                    }}
+                    initialData={rightsExtensionFormData}
                 />
             ) : (
                 <>
@@ -813,10 +964,9 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                         hasAllItemsReadyToUse={hasAllItemsReadyToUse}
                         onClose={onClose}
                         onClearCart={handleClearCart}
-                        onDownload={handleDownload}
-                        onRequestDownload={handleRequestDownload}
-                        onRightsCheck={handleRightsCheck}
-                        onCompleteDownload={handleCompleteDownload}
+                        onOpenDownload={handleOpenDownload}
+                        onOpenRequestDownload={handleOpenRequestDownload}
+                        onCloseDownload={handleCloseDownload}
                     />
                 </>
             )}

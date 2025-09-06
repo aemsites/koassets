@@ -1,17 +1,18 @@
-import React, { useCallback, useState } from 'react';
-import type { Asset, IntendedUseData, RightsCheckStepData } from '../types';
+import type { CalendarDate } from '@internationalized/date';
+import React, { useCallback, useEffect, useState } from 'react';
+import type { Asset, RequestDownloadStepData, RightsCheckStepData } from '../types';
 import './CartRightsCheck.css';
 import DownloadRenditionsContent from './DownloadRenditionsContent';
 import ThumbnailImage from './ThumbnailImage';
 
 interface CartRightsCheckProps {
     cartItems: Asset[];
-    intendedUse: IntendedUseData;
+    intendedUse: RequestDownloadStepData;
     onCancel: () => void;
-    onDownloadApproved: (downloadOptions: DownloadOptions[]) => void;
-    onRequestRightsExtension: () => void;
+    onOpenRequestRightsExtension: (restrictedAssets: Asset[], requestDownloadData: RequestDownloadStepData) => void;
     onBack: (stepData: RightsCheckStepData) => void;
     initialData?: RightsCheckStepData;
+    onDownloadCompleted?: (success: boolean, successfulAssets?: Asset[]) => void;
 }
 
 
@@ -26,28 +27,35 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
     cartItems,
     intendedUse,
     onCancel,
-    onDownloadApproved,
-    onRequestRightsExtension,
+    onOpenRequestRightsExtension,
     onBack,
-    initialData
+    initialData,
+    onDownloadCompleted
 }) => {
     const [downloadOptions] = useState<Record<string, DownloadOptions>>(initialData?.downloadOptions || {});
 
-    // Categorize assets based on readyToUse field
-    const authorizedAssets = cartItems.filter(item =>
-        item?.readyToUse?.toLowerCase() === 'yes'
+    // Local state for authorized assets (so we can modify it when downloads complete)
+    const [authorizedAssets, setAuthorizedAssets] = useState<Asset[]>(() =>
+        cartItems.filter(item => item?.readyToUse?.toLowerCase() === 'yes')
     );
 
     const restrictedAssets = cartItems.filter(item =>
         item?.readyToUse?.toLowerCase() !== 'yes'
     );
 
-    const formatDate = (epochTime: number | null | undefined): string => {
-        if (!epochTime) return '';
-        const date = new Date(epochTime);
+    // Sync authorized assets when cartItems changes (in case items are added/removed from outside)
+    useEffect(() => {
+        const newAuthorizedAssets = cartItems.filter(item =>
+            item?.readyToUse?.toLowerCase() === 'yes'
+        );
+        setAuthorizedAssets(newAuthorizedAssets);
+    }, [cartItems]);
+
+    const formatDate = (calendarDate: CalendarDate | null | undefined): string => {
+        if (!calendarDate) return '';
         const months = ['January', 'February', 'March', 'April', 'May', 'June',
             'July', 'August', 'September', 'October', 'November', 'December'];
-        return `${months[date.getMonth()]} ${String(date.getDate()).padStart(2, '0')}, ${date.getFullYear()}`;
+        return `${months[calendarDate.month - 1]} ${String(calendarDate.day).padStart(2, '0')}, ${calendarDate.year}`;
     };
 
 
@@ -56,6 +64,11 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
         downloadOptions,
         agreesToTerms: true // DownloadRenditionsContent handles its own terms
     }), [downloadOptions]);
+
+    // Handler function to request rights extension
+    const handleOpenRightsExtension = useCallback(() => {
+        onOpenRequestRightsExtension(restrictedAssets, intendedUse);
+    }, [restrictedAssets, intendedUse, onOpenRequestRightsExtension]);
 
     return (
         <div className="cart-rights-check">
@@ -83,7 +96,7 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
                     </div>
                 </div>
 
-                {/* Authorized Assets Section */}
+                {/* Rights-free Assets Section */}
                 {authorizedAssets.length > 0 && (
                     <div className="assets-section authorized-assets">
                         <h3>Assets Cleared - Available to Download</h3>
@@ -101,9 +114,11 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
                                 // Handle close action if needed
                                 console.log('Download renditions closed');
                             }}
-                            onDownloadCompleted={(success) => {
-                                console.log('Download completed:', success);
+                            onDownloadCompleted={(success, successfulAssets) => {
+                                console.log('Download completed:', success, 'Successful assets:', successfulAssets);
+                                onDownloadCompleted?.(success, successfulAssets);
                             }}
+                            showCancel={false}
                         />
                     </div>
                 )}
@@ -158,7 +173,7 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
                         <div className="section-actions">
                             <button
                                 className="request-rights-extension-btn primary-button"
-                                onClick={onRequestRightsExtension}
+                                onClick={handleOpenRightsExtension}
                                 type="button"
                             >
                                 Request Rights Extension

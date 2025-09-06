@@ -144,12 +144,12 @@
 }
 
 .restricted-assets .table-header {
-    grid-template-columns: 80px 1fr 120px 120px 100px 100px;
+    grid-template-columns: 120px 1fr 140px 140px 120px 120px;
 }
 
 .table-row {
     display: grid;
-    grid-template-columns: 80px 1fr auto;
+    grid-template-columns: 120px 1fr auto;
     gap: 16px;
     padding: 16px 20px;
     border-bottom: 1px solid #f1f1f1;
@@ -157,7 +157,7 @@
 }
 
 .restricted-assets .table-row {
-    grid-template-columns: 80px 1fr 120px 120px 100px 100px;
+    grid-template-columns: 120px 1fr 140px 140px 120px 120px;
 }
 
 .table-row:last-child {

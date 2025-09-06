@@ -2,6 +2,7 @@
 .koassets-search {
     width: 100%;
     position: relative;
+    z-index: 10;
 }
 
 .koassets-search-container {
@@ -114,7 +115,7 @@
 }
 
 /* Responsive adjustments */
-@media (width <= 768px) {
+@media (width <=768px) {
     .koassets-search-container {
         /* Remove height: 100vh for natural scrolling */
         min-height: 500px;
@@ -128,7 +129,7 @@
     }
 }
 
-@media (width <= 480px) {
+@media (width <=480px) {
     .koassets-search-container .koassets-search-wrapper .koassets-loading p {
         font-size: 14px;
     }

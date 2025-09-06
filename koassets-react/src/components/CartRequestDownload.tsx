@@ -1,6 +1,6 @@
 import { CalendarDate } from '@internationalized/date';
 import React, { useCallback, useState } from 'react';
-import type { Asset, CachedRightsData, IntendedUseData, RequestDownloadStepData, RightsData } from '../types';
+import type { Asset, CachedRightsData, RequestDownloadStepData, RightsData } from '../types';
 import './CartRequestDownload.css';
 import MyDatePicker from './MyDatePicker';
 import ThumbnailImage from './ThumbnailImage';
@@ -8,8 +8,7 @@ import ThumbnailImage from './ThumbnailImage';
 interface CartRequestDownloadProps {
     cartItems: Asset[];
     onCancel: () => void;
-    onRequestAuthorization: (intendedUse: IntendedUseData, stepData: RequestDownloadStepData) => void;
-    onSaveIntendedUse?: (intendedUse: IntendedUseData) => void;
+    onOpenRightsCheck: (stepData: RequestDownloadStepData) => void;
     onBack: (stepData: RequestDownloadStepData) => void;
     initialData?: RequestDownloadStepData;
     cachedRightsData: CachedRightsData;
@@ -19,10 +18,7 @@ interface CartRequestDownloadProps {
 
 
 // Utility functions for date conversion
-const calendarDateToEpoch = (date: CalendarDate | null): number | null => {
-    if (!date) return null;
-    return new Date(date.year, date.month - 1, date.day).getTime();
-};
+// Note: CalendarDate to epoch conversion removed as it's no longer needed
 
 // Utility function for converting epoch back to CalendarDate (for future use if needed)
 // const epochToCalendarDate = (epochTime: number | null): CalendarDate | null => {
@@ -36,16 +32,21 @@ const calendarDateToEpoch = (date: CalendarDate | null): number | null => {
 const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
     cartItems,
     onCancel,
-    onRequestAuthorization,
-    onSaveIntendedUse,
+    onOpenRightsCheck,
     onBack,
     initialData,
     cachedRightsData
 }) => {
     const [airDate, setAirDate] = useState<CalendarDate | null>(initialData?.airDate || null);
     const [pullDate, setPullDate] = useState<CalendarDate | null>(initialData?.pullDate || null);
-    const [selectedMarkets, setSelectedMarkets] = useState<Set<RightsData>>(initialData?.selectedMarkets || new Set());
-    const [selectedMediaChannels, setSelectedMediaChannels] = useState<Set<RightsData>>(initialData?.selectedMediaChannels || new Set());
+    const [selectedMarkets, setSelectedMarkets] = useState<Set<RightsData>>(
+        initialData?.selectedMarkets ||
+        (initialData?.countries ? new Set(initialData.countries) : new Set())
+    );
+    const [selectedMediaChannels, setSelectedMediaChannels] = useState<Set<RightsData>>(
+        initialData?.selectedMediaChannels ||
+        (initialData?.mediaChannels ? new Set(initialData.mediaChannels) : new Set())
+    );
     const [marketSearchTerm, setMarketSearchTerm] = useState(initialData?.marketSearchTerm || '');
     const [expandedRegions, setExpandedRegions] = useState<Set<number>>(new Set());
 
@@ -59,7 +60,6 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
 
     // Add validation error message state
     const [dateValidationError, setDateValidationError] = useState<string>(initialData?.dateValidationError || '');
-
 
     // Validate date relationship and set error messages
     const validateDates = useCallback((air: CalendarDate | null, pull: CalendarDate | null) => {
@@ -246,21 +246,14 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
     const getCurrentStepData = useCallback((): RequestDownloadStepData => ({
         airDate,
         pullDate,
+        countries: Array.from(selectedMarkets),
+        mediaChannels: Array.from(selectedMediaChannels),
         selectedMarkets,
         selectedMediaChannels,
         marketSearchTerm,
         dateValidationError
     }), [airDate, pullDate, selectedMarkets, selectedMediaChannels, marketSearchTerm, dateValidationError]);
 
-    const handleSaveIntendedUse = useCallback(() => {
-        const intendedUseData: IntendedUseData = {
-            airDate: calendarDateToEpoch(airDate),
-            pullDate: calendarDateToEpoch(pullDate),
-            countries: Array.from(selectedMarkets),
-            mediaChannels: Array.from(selectedMediaChannels)
-        };
-        onSaveIntendedUse?.(intendedUseData);
-    }, [airDate, pullDate, selectedMarkets, selectedMediaChannels, onSaveIntendedUse]);
 
     // Validation logic for form completion
     const isFormValid = useCallback(() => {
@@ -282,15 +275,10 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
     }, [selectedMarkets.size, selectedMediaChannels.size, airDate, pullDate]);
 
     const handleRequestAuthorization = useCallback(() => {
-        const intendedUseData: IntendedUseData = {
-            airDate: calendarDateToEpoch(airDate),
-            pullDate: calendarDateToEpoch(pullDate),
-            countries: Array.from(selectedMarkets),
-            mediaChannels: Array.from(selectedMediaChannels)
-        };
-        console.log('Requesting authorization with intended use data:', intendedUseData);
-        onRequestAuthorization(intendedUseData, getCurrentStepData());
-    }, [airDate, pullDate, selectedMarkets, selectedMediaChannels, onRequestAuthorization, getCurrentStepData]);
+        const requestDownloadData = getCurrentStepData();
+        console.log('Requesting authorization with request download data:', requestDownloadData);
+        onOpenRightsCheck(requestDownloadData);
+    }, [onOpenRightsCheck, getCurrentStepData]);
 
     return (
         <div className="cart-request-download">
@@ -504,14 +492,6 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
                             Back
                         </button>
 
-                        <button
-                            disabled={true}
-                            className="save-intended-use-btn secondary-button"
-                            onClick={handleSaveIntendedUse}
-                            type="button"
-                        >
-                            Save Intended Use
-                        </button>
                         <div className="form-actions-right">
                             <button
                                 className="cancel-btn secondary-button"

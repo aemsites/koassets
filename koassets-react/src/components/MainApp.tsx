@@ -343,6 +343,7 @@ function MainApp(): React.JSX.Element {
         setAssetRenditionsCache(prevCache => {
             // If already cached, don't fetch
             if (prevCache[asset.assetId!]) {
+                asset.renditions = prevCache[asset.assetId!];
                 return prevCache; // No state change
             }
 
@@ -415,7 +416,6 @@ function MainApp(): React.JSX.Element {
                             fallbackUrl: image.url
                         }
                     );
-                    console.log(`Cached image for cart: ${image.assetId}`);
                 } catch (error) {
                     console.warn(`Failed to cache image for cart ${image.assetId}:`, error);
                 }
