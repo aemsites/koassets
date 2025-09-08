@@ -134,7 +134,7 @@ const CartRequestRightsExtension: React.FC<CartRequestRightsExtensionProps> = ({
                             </div>
                             <div className="intended-use-item">
                                 <label>INTENDED MARKETS</label>
-                                <div>{intendedUse.countries.map(c => c.name).join(', ')}</div>
+                                <div>{intendedUse.markets.map(c => c.name).join(', ')}</div>
                             </div>
                             <div className="intended-use-item">
                                 <label>INTENDED MEDIA</label>

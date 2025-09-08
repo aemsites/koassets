@@ -41,7 +41,7 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
     const [pullDate, setPullDate] = useState<CalendarDate | null>(initialData?.pullDate || null);
     const [selectedMarkets, setSelectedMarkets] = useState<Set<RightsData>>(
         initialData?.selectedMarkets ||
-        (initialData?.countries ? new Set(initialData.countries) : new Set())
+        (initialData?.markets ? new Set(initialData.markets) : new Set())
     );
     const [selectedMediaChannels, setSelectedMediaChannels] = useState<Set<RightsData>>(
         initialData?.selectedMediaChannels ||
@@ -246,7 +246,7 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
     const getCurrentStepData = useCallback((): RequestDownloadStepData => ({
         airDate,
         pullDate,
-        countries: Array.from(selectedMarkets),
+        markets: Array.from(selectedMarkets),
         mediaChannels: Array.from(selectedMediaChannels),
         selectedMarkets,
         selectedMediaChannels,

@@ -41,25 +41,52 @@ interface MarketRightsResponse {
     attribute: RightsAttribute[];
 }
 
+export interface CheckRightsRequest {
+    inDate: number; // epoch time (air date)
+    outDate: number; // epoch time (pull date)
+    selectedExternalAssets: string[]; // array of asset IDs
+    selectedRights: {
+        "20": number[]; // array of media rights IDs
+        "30": number[]; // array of market rights IDs
+    };
+}
+
+export interface CheckRightsResponse {
+    // TODO: Add proper response interface based on what the API returns
+    // This can be updated once we know the actual response structure
+    status: number;
+    data?: unknown;
+    [key: string]: unknown;
+}
+
 export class FadelClient {
-    private host: string;
+    private baseUrl: string;
     private username: string;
     private password: string;
     private accessToken: string | null = null;
     private tokenExpiry: number | null = null;
 
+    private static instance: FadelClient | null = null;
+
     constructor() {
-        const host = import.meta.env.VITE_FADEL_HOST;
+        const baseUrl = import.meta.env.VITE_FADEL_BASE_URL;
         const username = import.meta.env.VITE_FADEL_USERNAME;
         const password = import.meta.env.VITE_FADEL_PASSWORD;
 
-        if (!host || !username || !password) {
-            throw new Error('Missing required environment variables: VITE_FADEL_HOST, VITE_FADEL_USERNAME, VITE_FADEL_PASSWORD');
+        if (!baseUrl || !username || !password) {
+            throw new Error('Missing required environment variables: VITE_FADEL_BASE_URL, VITE_FADEL_USERNAME, VITE_FADEL_PASSWORD');
         }
 
-        this.host = host;
+        this.baseUrl = baseUrl;
         this.username = username;
         this.password = password;
+    }
+
+    public static getInstance(): FadelClient {
+        if (!FadelClient.instance) {
+            FadelClient.instance = new FadelClient();
+        }
+        return FadelClient.instance;
     }
 
     private createAuthRequestToken(): string {
@@ -73,7 +100,7 @@ export class FadelClient {
             return this.accessToken;
         }
 
-        const authUrl = `https://${this.host}/rc-api/authenticate`;
+        const authUrl = `${this.baseUrl}/rc-api/authenticate`;
         const authRequestToken = this.createAuthRequestToken();
 
         try {
@@ -116,7 +143,7 @@ export class FadelClient {
 
     async fetchMediaRights(): Promise<MediaRightsResponse> {
         const accessToken = await this.getAccessToken();
-        const url = `https://${this.host}/rc-api/rights/search/20`;
+        const url = `${this.baseUrl}/rc-api/rights/search/20`;
 
         try {
             const response = await fetch(url, {
@@ -143,7 +170,7 @@ export class FadelClient {
 
     async fetchMarketRights(): Promise<MarketRightsResponse> {
         const accessToken = await this.getAccessToken();
-        const url = `https://${this.host}/rc-api/rights/search/30`;
+        const url = `${this.baseUrl}/rc-api/rights/search/30`;
 
         try {
             const response = await fetch(url, {
@@ -164,6 +191,45 @@ export class FadelClient {
             return await response.json();
         } catch (error) {
             console.error('Error fetching market rights:', error);
+            throw error;
+        }
+    }
+
+    async checkRights(request: CheckRightsRequest): Promise<CheckRightsResponse> {
+        const accessToken = await this.getAccessToken();
+        const url = `${this.baseUrl}/rc-api/clearance/assetclearance`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': accessToken,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(request)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Rights check failed: ${response.status} ${response.statusText}`);
+            }
+
+            // Handle 204 No Content response
+            if (response.status === 204) {
+                return {
+                    status: 204,
+                    data: null
+                };
+            }
+
+            // For other successful responses, parse JSON
+            const data = await response.json();
+            return {
+                status: response.status,
+                data,
+                ...data
+            };
+        } catch (error) {
+            console.error('Error checking rights:', error);
             throw error;
         }
     }

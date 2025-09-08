@@ -1,5 +1,6 @@
 import type { CalendarDate } from '@internationalized/date';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FadelClient, type CheckRightsRequest } from '../clients/fadel-client';
 import type { Asset, RequestDownloadStepData, RightsCheckStepData } from '../types';
 import './CartRightsCheck.css';
 import DownloadRenditionsContent from './DownloadRenditionsContent';
@@ -33,15 +34,25 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
     onDownloadCompleted
 }) => {
     const [downloadOptions] = useState<Record<string, DownloadOptions>>(initialData?.downloadOptions || {});
+    const isCheckingRightsRef = useRef(false);
 
     // Local state for authorized assets (so we can modify it when downloads complete)
     const [authorizedAssets, setAuthorizedAssets] = useState<Asset[]>(() =>
         cartItems.filter(item => item?.readyToUse?.toLowerCase() === 'yes')
     );
 
-    const restrictedAssets = cartItems.filter(item =>
-        item?.readyToUse?.toLowerCase() !== 'yes'
+    // Memoize restrictedAssets to prevent unnecessary re-renders
+    const restrictedAssets = useMemo(() =>
+        cartItems.filter(item => item?.readyToUse?.toLowerCase() !== 'yes'),
+        [cartItems]
     );
+
+    // Helper function to convert CalendarDate to epoch time
+    const calendarDateToEpoch = useCallback((calendarDate: CalendarDate | null | undefined): number => {
+        if (!calendarDate) return 0;
+        const date = new Date(calendarDate.year, calendarDate.month - 1, calendarDate.day);
+        return date.getTime();
+    }, []);
 
     // Sync authorized assets when cartItems changes (in case items are added/removed from outside)
     useEffect(() => {
@@ -50,6 +61,64 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
         );
         setAuthorizedAssets(newAuthorizedAssets);
     }, [cartItems]);
+
+    // Call checkRights when component mounts or key data changes
+    useEffect(() => {
+        const performRightsCheck = async () => {
+            // Prevent concurrent calls
+            if (isCheckingRightsRef.current) {
+                console.log('Rights check already in progress, skipping');
+                return;
+            }
+
+            if (!intendedUse.airDate || !intendedUse.pullDate || restrictedAssets.length === 0) {
+                console.log('Skipping rights check - missing required data');
+                return;
+            }
+
+            isCheckingRightsRef.current = true;
+            try {
+                const fadelClient = FadelClient.getInstance();
+
+                // Prepare the request data
+                const request: CheckRightsRequest = {
+                    inDate: calendarDateToEpoch(intendedUse.airDate),
+                    outDate: calendarDateToEpoch(intendedUse.pullDate),
+                    selectedExternalAssets: restrictedAssets.map(asset => asset.assetId).filter((id): id is string => Boolean(id)).map(id => id.replace('urn:aaid:aem:', '')),
+                    selectedRights: {
+                        "20": Array.from(intendedUse.selectedMediaChannels).map(channel => channel.rightId),
+                        "30": Array.from(intendedUse.selectedMarkets).map(market => market.rightId)
+                    }
+                };
+
+                console.log('Calling checkRights with request:', request);
+                const response = await fadelClient.checkRights(request);
+                console.log('Rights check response:', response);
+
+                // Handle 204 No Content response
+                if (response.status === 204) {
+                    console.log('Rights check returned 204 - logging restricted assets:', restrictedAssets);
+                }
+
+                // TODO: Process the response and update UI state accordingly
+
+            } catch (error) {
+                console.error('Rights check failed:', error);
+                // TODO: Handle error state in UI
+            } finally {
+                isCheckingRightsRef.current = false;
+            }
+        };
+
+        performRightsCheck();
+    }, [
+        intendedUse.airDate,
+        intendedUse.pullDate,
+        intendedUse.selectedMediaChannels,
+        intendedUse.selectedMarkets,
+        restrictedAssets,
+        calendarDateToEpoch
+    ]);
 
     const formatDate = (calendarDate: CalendarDate | null | undefined): string => {
         if (!calendarDate) return '';
@@ -87,7 +156,7 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
                         </div>
                         <div className="intended-use-item">
                             <label>INTENDED MARKETS</label>
-                            <div>{intendedUse.countries.map(c => c.name).join(', ')}</div>
+                            <div>{intendedUse.markets.map(c => c.name).join(', ')}</div>
                         </div>
                         <div className="intended-use-item">
                             <label>INTENDED MEDIA</label>

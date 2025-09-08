@@ -118,9 +118,9 @@
 }
 
 .authorization-status.restricted {
-    background: #ffeaa7;
-    color: #d63031;
-    border-bottom: 1px solid #fdcb6e;
+    background: #fff6f6;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
 }
 
 /* Assets Table */

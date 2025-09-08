@@ -275,7 +275,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             requestDownload: {
                 airDate: todayCalendar,
                 pullDate: tomorrowCalendar,
-                countries: [placeholderAllMarket],
+                markets: [placeholderAllMarket],
                 mediaChannels: [placeholderAllMediaChannel],
                 selectedMarkets: new Set([placeholderAllMarket]),
                 selectedMediaChannels: new Set([placeholderAllMediaChannel]),
@@ -857,7 +857,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                     intendedUse={stepData.requestDownload || {
                         airDate: null,
                         pullDate: null,
-                        countries: [],
+                        markets: [],
                         mediaChannels: [],
                         selectedMarkets: new Set(),
                         selectedMediaChannels: new Set(),
@@ -892,7 +892,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                     intendedUse={stepData.requestDownload || {
                         airDate: null,
                         pullDate: null,
-                        countries: [],
+                        markets: [],
                         mediaChannels: [],
                         selectedMarkets: new Set(),
                         selectedMediaChannels: new Set(),

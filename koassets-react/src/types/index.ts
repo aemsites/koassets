@@ -13,7 +13,7 @@ export interface RightsData {
 export interface RequestDownloadStepData {
     airDate?: import('@internationalized/date').CalendarDate | null;
     pullDate?: import('@internationalized/date').CalendarDate | null;
-    countries: RightsData[];
+    markets: RightsData[];
     mediaChannels: RightsData[];
     selectedMarkets: Set<RightsData>;
     selectedMediaChannels: Set<RightsData>;
