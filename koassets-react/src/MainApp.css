@@ -81,8 +81,8 @@ button:disabled {
 }
 
 .container .tccc-tag {
-  background: #fff0da;
-  color: #a46801;
+  background: rgba(247, 153, 0, .3);
+  color: #1e1e1e;
   font-family: "TCCC UnityHeadline Regular", sans-serif;
   font-size: 10px;
   font-weight: 600;
