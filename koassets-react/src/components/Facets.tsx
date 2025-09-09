@@ -882,7 +882,6 @@ const Facets: React.FC<FacetsProps> = ({
                                                     )}
                                                     <span
                                                         className={`facet-filter-arrow ${expandedFacets[facetTechId] ? 'expanded' : ''}`}
-                                                        onClick={() => toggle(facetTechId)}
                                                     ></span>
                                                 </div>
                                             </div>
