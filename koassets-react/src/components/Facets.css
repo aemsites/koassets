@@ -846,6 +846,7 @@
   align-items: center;
   flex: 1;
   padding-right: 15px;
+  min-height: 30px;
 }
 
 .facet-search-input-wrapper {
@@ -858,7 +859,8 @@
   background: white;
   height: 30px;
   border-color: #85b7d9;
-  box-shadow: inset 0 0 0 0 rgba(34, 36, 38, .35)
+  box-shadow: inset 0 0 0 0 rgba(34, 36, 38, .35);
+  box-sizing: border-box;
 }
 
 .facet-search-icon-inside {
@@ -875,6 +877,11 @@
   background: transparent;
   padding: 4px 8px;
   font-size: 12px;
+  line-height: 1.2;
+  font-family: inherit;
+  vertical-align: middle;
+  min-height: 0;
+  box-sizing: border-box;
 }
 
 .facet-search-close-icon {
