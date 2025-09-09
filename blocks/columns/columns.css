@@ -72,41 +72,6 @@
   margin-bottom: 40px;
 }
 
-.columns.loginpage .button {
-  font-family: "TCCC UnityText Regular", sans-serif;
-  display: inline-block;
-  padding: 15px 40px;
-  font-size: 1rem;
-  font-weight: bold;
-  text-decoration: none;
-  border-radius: 50px;
-  text-align: center;
-  min-width: 200px;
-  transition: all 0.3s ease;
-}
-
-.columns.loginpage .button:not(.secondary) {
-  background-color: #e60000;
-  color: white;
-  border: 2px solid #e60000;
-}
-
-.columns.loginpage .button:not(.secondary):hover {
-  background-color: #c00;
-  border-color: #c00;
-}
-
-.columns.loginpage .button.secondary {
-  background-color: white;
-  color: #333;
-  border: 2px solid #ddd;
-}
-
-.columns.loginpage .button.secondary:hover {
-  background-color: #f5f5f5;
-  border-color: #bbb;
-}
-
 .columns.loginpage .columns-img-col img {
   border-radius: 12px;
   box-shadow: 0 10px 30px rgb(0 0 0 / 10%);
