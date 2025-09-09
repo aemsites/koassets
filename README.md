@@ -55,16 +55,27 @@ npm run install-all
 
 ### Initial setup
 
+⚠️ _Will move everything from `.env` file to `.secrets` file and drop the `.env` file_
+
 Add `cloudflare/.env` file with the following content:
 
 ```
 # Local development config and secrets
 
 # Per-developer client secret from MS Entra app registration
-MICROSOFT_ENTRA_CLIENT_SECRET = "......"
+MICROSOFT_ENTRA_CLIENT_SECRET="..."
 
 # generate locally using `openssl rand -base64 32`
-COOKIE_SECRET = "......"
+COOKIE_SECRET="..."
+```
+
+Add `cloudflare/.secrets` file with the following content:
+
+```
+# DM IMS technical account token
+# (for local.sh, not worker code)
+KOASSETS_DM_CLIENT_ID="..."
+KOASSETS_DM_CLIENT_SECRET="..."
 ```
 
 ### Run full stack locally
@@ -76,6 +87,8 @@ npm run dev
 This should open <http://localhost:8787> in your browser. Use `Ctrl+C` to stop it.
 
 This runs a local cloudflare worker (`wrangler dev`), local EDS (`aem up`) and does auto-rebuild of react code (using `vite build`).
+
+Note you will need to stop and restart `npm run dev` after 24 hours to renew the DM IMS technical account token.
 
 Environment variables supported by `npm run dev`:
 

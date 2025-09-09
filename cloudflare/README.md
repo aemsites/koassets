@@ -102,8 +102,8 @@ To deploy local work manually, you can run
 ```bash
 npm run deploy
 
-# alternatively
-./deploy.sh
+# implemented in
+./scripts/deploy.sh
 ```
 
 This will deploy the worker to the preview URL using the `user` id (git email address without the domain) and `branch` name:
@@ -114,10 +114,10 @@ https://{user}-{branch}-koassets.adobeaem.workers.dev
 
 This will use the same `branch` for the Helix origin: `{branch}--koassets--aemsites.aem.live`
 
-Options (use with `./deploy.sh`):
+Options:
 
-- `./deploy.sh "my change"`: add custom message for the worker version in Cloudflare
-- `./deploy.sh --tail`: tail logs after deployment (Note: seems to not work well for specific worker versions)
+- `npm run deploy -- "my change"`: add custom message for the worker version in Cloudflare
+- `npm run deploy -- --tail`: tail logs after deployment (Note: seems to not work well for specific worker versions)
 
 
 ## Configuration
@@ -140,6 +140,10 @@ Most configuration is done via environment variables in the `wrangler.toml` file
 
 ## Secrets
 
+⚠️ _Need to migrate all worker secrets below to the Secret Store_
+
+### Worker Secrets
+
 These secrets must **not** be checked into git, and must be stored as [secrets in Cloudflare](https://developers.cloudflare.com/workers/configuration/secrets/).
 
 * Production: Add secrets via the Cloudflare dashboard or use `wrangler secret put`
@@ -150,3 +154,17 @@ These secrets must **not** be checked into git, and must be stored as [secrets i
 | `HELIX_ORIGIN_AUTHENTICATION` | AEM EDS authentication token. |
 | `MICROSOFT_ENTRA_CLIENT_SECRET` | Client secret from the app registration in Microsoft Entra admin center. |
 | `COOKIE_SECRET` | Secret used to sign the session cookie. Must be a cryptographically secure random string of characters. Can be generated on a command line using `openssl rand -base64 32`. |
+
+### Secret Store
+
+To ease rotation of secrets, without having to re-deploy the worker, we use [Secret Store](https://developers.cloudflare.com/secrets-store/) instead of worker secrets ([explanation of the differences](https://github.com/cloudflare/workers-sdk/issues/10585#issuecomment-3271987962)).
+
+* Secret store ID: `5d64b0d295964846b36569f507fb7b13`
+* As options are limited in the Secret Store beta, we are using the _default secret store_ in the Franklin (Dev) account.
+* And use a common prefix `KOASSETS_` for individual secrets, to avoid conflicts with other workers.
+* Ideally this should be a dedicated secret store just for `koassets`. In which case we would not need the prefix.
+
+| Name in Secret Store | Variable Name in Code | Description |
+|----------|----------|-------------|
+| `KOASSETS_DM_CLIENT_ID` | `DM_CLIENT_ID` | Client ID for the DM IMS technical account used to access `DM_ORIGIN`. |
+| `KOASSETS_DM_ACCESS_TOKEN` | `DM_ACCESS_TOKEN` | Access token from the DM IMS technical account used to access `DM_ORIGIN`. |

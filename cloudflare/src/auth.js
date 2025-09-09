@@ -6,7 +6,7 @@ import {
   isValidUrl,
   setCookie,
   validateSignedCookie,
-} from './utils-http.js';
+} from './util/http.js';
 
 /* Configure the URL path prefix for auth flows here */
 const AUTH_PREFIX = '/auth';
@@ -322,7 +322,7 @@ authRouter
     });
   })
 
-  .get('/logout', (request, env) => {
+  .get('/logout', withAuthentication, (request, env) => {
     console.log('User logout:', request.session);
 
     // redirect to MS logout page

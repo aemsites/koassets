@@ -5,8 +5,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
+    - uses: actions/checkout@v5
+    - uses: actions/setup-node@v5
       with:
         node-version: 24
     - run: npm ci
@@ -18,8 +18,8 @@ jobs:
       run:
         working-directory: koassets-react
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
+    - uses: actions/checkout@v5
+    - uses: actions/setup-node@v5
       with:
         node-version: 24
     - name: Set up artifactory credentials
@@ -36,8 +36,8 @@ jobs:
       run:
         working-directory: cloudflare
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v4
+    - uses: actions/checkout@v5
+    - uses: actions/setup-node@v5
       with:
         node-version: 24
     - run: npm ci
@@ -56,7 +56,10 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
+      with:
+        # needed for deploy.sh to check PR/branch for cloudflare changes
+        fetch-depth: 0
     - run: npm ci
     - run: npm run deploy -- --ci ${{ github.ref_name }}
       id: deploy

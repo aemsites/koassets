@@ -7,6 +7,10 @@ account_id = "852dfa4ae1b0d579df29be65b986c101"
 workers_dev = true
 # 2. add routes to worker
 # route = "assets.coke.com/*"
+# 3. disable preview_urls and replace with a separate
+#    route preview.assets.coke.com/* that effectively
+#    uses *.aem.page as origin (likely needs a code change)
+preview_urls = true
 
 
 # do not change these unless code changes require it
@@ -17,6 +21,7 @@ compatibility_date = "2025-08-16"
 # TODO: disable logs when development is done
 [observability.logs]
 enabled = true
+
 
 [vars]
 # Configure origins here
@@ -31,3 +36,14 @@ MICROSOFT_ENTRA_JWKS_URL = "https://login.microsoftonline.com/common/discovery/k
 
 SESSION_COOKIE_EXPIRATION = "6h"
 LOGIN_PAGE = "/public/welcome"
+
+
+[[secrets_store_secrets]]
+store_id = "5d64b0d295964846b36569f507fb7b13"
+binding = "DM_CLIENT_ID"
+secret_name = "KOASSETS_DM_CLIENT_ID"
+
+[[secrets_store_secrets]]
+store_id = "5d64b0d295964846b36569f507fb7b13"
+binding = "DM_ACCESS_TOKEN"
+secret_name = "KOASSETS_DM_ACCESS_TOKEN"

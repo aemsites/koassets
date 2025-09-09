@@ -8,6 +8,10 @@ helix-importer-ui
 *.bak
 .idea
 
+.env
+.secrets
+.wrangler/
+
 # Generated configuration files with sensitive data
 react/dist/config.js
 tools/assets-browser/config.js
