@@ -72,7 +72,7 @@ button:disabled {
 }
 
 .container .tccc-metadata-value {
-  font-family: "TCCC UnityHeadline Regular", sans-serif;
+  font-family: "TCCC UnityHeadline", sans-serif;
   text-transform: uppercase;
   color: #0e202e;
   font-size: 12px;
@@ -83,7 +83,7 @@ button:disabled {
 .container .tccc-tag {
   background: rgba(247, 153, 0, .3);
   color: #1e1e1e;
-  font-family: "TCCC UnityHeadline Regular", sans-serif;
+  font-family: "TCCC UnityHeadline", sans-serif;
   font-size: 10px;
   font-weight: 600;
   display: inline-block;
@@ -102,7 +102,7 @@ button:disabled {
 
 .container h3 a {
   /* stylelint-disable-next-line font-family-no-missing-generic-family-keyword */
-  font-family: "TCCC UnityHeadline Regular";
+  font-family: "TCCC UnityHeadline";
   font-size: 14px;
   font-style: normal;
   font-weight: 600;
@@ -244,7 +244,7 @@ button:disabled {
   border: 1.5px solid #9a9a9a;
   color: #1e1e1e;
   font-weight: 700;
-  font-family: "TCCC UnityHeadline Regular", sans-serif;
+  font-family: "TCCC UnityHeadline", sans-serif;
   font-size: .875rem;
   line-height: 140%;
   border-radius: 2.5rem;
@@ -274,7 +274,7 @@ button:disabled {
   opacity: .5;
   pointer-events: none;
   display: inline-flex;
-  font-family: "TCCC UnityHeadline Regular", sans-serif;
+  font-family: "TCCC UnityHeadline", sans-serif;
   font-size: 14px;
   height: 42px;
   justify-content: center;

@@ -35,7 +35,7 @@
     font-size: 18px;
     font-weight: 600;
     color: #333;
-    font-family: "TCCC UnityHeadline Regular", sans-serif;
+    font-family: "TCCC UnityHeadline", sans-serif;
 }
 
 /* Intended Use Section */
@@ -52,7 +52,7 @@
     font-size: 16px;
     font-weight: 600;
     color: #333;
-    font-family: "TCCC UnityHeadline Regular", sans-serif;
+    font-family: "TCCC UnityHeadline", sans-serif;
 }
 
 .intended-use-grid {
@@ -193,7 +193,7 @@
     font-size: 18px;
     font-weight: 600;
     color: #333;
-    font-family: "TCCC UnityHeadline Regular", sans-serif;
+    font-family: "TCCC UnityHeadline", sans-serif;
 }
 
 /* Form Fields */
@@ -211,7 +211,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-family: "TCCC UnityHeadline Regular", sans-serif;
+    font-family: "TCCC UnityHeadline", sans-serif;
 }
 
 .form-field label .required {

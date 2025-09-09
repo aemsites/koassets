@@ -152,7 +152,7 @@
   font-style: normal;
   font-weight: 400;
   line-height: 140%;
-  font-family: "TCCC UnityHeadline Regular", sans-serif !important;
+  font-family: "TCCC UnityHeadline", sans-serif !important;
   padding-right: 5px;
   cursor: pointer;
 }
@@ -380,7 +380,7 @@
   cursor: pointer;
   font-size: 14px;
   font-style: normal;
-  font-family: "TCCC UnityHeadline Regular", sans-serif;
+  font-family: "TCCC UnityHeadline", sans-serif;
   font-weight: 600;
   color: #666;
   transition: all 0.2s;

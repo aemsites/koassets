@@ -54,7 +54,7 @@
     font-size: 18px;
     font-weight: 600;
     color: #333;
-    font-family: "TCCC UnityHeadline Regular", sans-serif;
+    font-family: "TCCC UnityHeadline", sans-serif;
 }
 
 .intended-use-details {
@@ -97,7 +97,7 @@
     font-size: 18px;
     font-weight: 600;
     color: #333;
-    font-family: "TCCC UnityHeadline Regular", sans-serif;
+    font-family: "TCCC UnityHeadline", sans-serif;
     background: #f8f9fa;
     border-bottom: 1px solid #e9ecef;
 }

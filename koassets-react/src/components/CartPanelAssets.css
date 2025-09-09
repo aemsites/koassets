@@ -260,7 +260,7 @@
 .cart-panel .rights-badge {
     border-radius: 4px;
     font-size: 12px;
-    font-family: "TCCC UnityHeadline Regular", sans-serif;
+    font-family: "TCCC UnityHeadline", sans-serif;
     font-weight: 600;
 }
 
@@ -270,7 +270,7 @@
 
 .cart-panel .tccc-warnings p {
     color: #202020;
-    font-family: "TCCC UnityHeadline Regular", sans-serif;
+    font-family: "TCCC UnityHeadline", sans-serif;
     font-size: 14px !important;
     line-height: 1.4285em;
     margin: 0 0 1em;
