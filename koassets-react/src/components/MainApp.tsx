@@ -239,6 +239,15 @@ function MainApp(): React.JSX.Element {
             hitsPerPage: HITS_PER_PAGE,
             page: page
         }).then((content) => processDMImages(content, isLoadingMore)).catch((error) => {
+            // Prevent infinite execution when Network error occurs
+            if (error?.message === 'Network error') {
+                console.warn('Network error encountered, stopping execution to prevent infinite loop');
+                setLoading(prev => ({ ...prev, [LOADING.dmImages]: false }));
+                setIsLoadingMore(false);
+                // Don't clear images or trigger further state changes that might cause re-execution
+                return;
+            }
+
             console.error('Error searching assets:', error);
             setLoading(prev => ({ ...prev, [LOADING.dmImages]: false }));
             setIsLoadingMore(false);
