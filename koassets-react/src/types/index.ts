@@ -3,6 +3,7 @@ import React from 'react';
 
 // Rights-related interfaces
 export interface RightsData {
+    id: number;
     rightId: number;
     name: string;
     enabled: boolean;

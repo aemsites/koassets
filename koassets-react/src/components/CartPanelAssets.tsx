@@ -1,6 +1,6 @@
-import { CalendarDate } from '@internationalized/date';
+import { ToastQueue } from '@react-spectrum/toast';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import type { RightsAttribute } from '../clients/fadel-client';
+import { FadelClient, type RightsAttribute } from '../clients/fadel-client';
 import { restrictedBrandsWarning, smrWarnings } from '../constants/warnings';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type {
@@ -224,9 +224,9 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     const [rightsExtensionFormData, setRightsExtensionFormData] = useState<RequestRightsExtensionStepData>({
         restrictedAssets: [],
         agencyType: 'TCCC Associate',
-        agencyName: 'a', // required
-        contactName: 'b', // required
-        contactEmail: 'c', // required
+        agencyName: '', // required
+        contactName: '', // required
+        contactEmail: '', // required
         contactPhone: '',
         materialsRequiredDate: null,
         formatsRequired: '',
@@ -237,8 +237,8 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             voiceover: false,
             stockFootage: false
         },
-        adaptationIntention: 'd', // required
-        budgetForMarket: 'e', // required
+        adaptationIntention: '', // required
+        budgetForMarket: '', // required
         exceptionOrNotes: '',
         agreesToTerms: true
     });
@@ -257,33 +257,33 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     });
 
     // TEMP DEBUG: Initialize debug data on component load
-    useEffect(() => {
-        // Set debug data immediately with placeholder data
-        const todayDate = new Date();
-        const tomorrowDate = new Date(todayDate);
-        tomorrowDate.setDate(todayDate.getDate() + 1);
+    // useEffect(() => {
+    //     // Set debug data immediately with placeholder data
+    //     const todayDate = new Date();
+    //     const tomorrowDate = new Date(todayDate);
+    //     tomorrowDate.setDate(todayDate.getDate() + 1);
 
-        const todayCalendar = new CalendarDate(todayDate.getFullYear(), todayDate.getMonth() + 1, todayDate.getDate());
-        const tomorrowCalendar = new CalendarDate(tomorrowDate.getFullYear(), tomorrowDate.getMonth() + 1, tomorrowDate.getDate());
+    //     const todayCalendar = new CalendarDate(todayDate.getFullYear(), todayDate.getMonth() + 1, todayDate.getDate());
+    //     const tomorrowCalendar = new CalendarDate(tomorrowDate.getFullYear(), tomorrowDate.getMonth() + 1, tomorrowDate.getDate());
 
-        // Create placeholder "All" options
-        const placeholderAllMarket: RightsData = { rightId: 0, name: 'All', enabled: true };
-        const placeholderAllMediaChannel: RightsData = { rightId: 0, name: 'All', enabled: true };
+    //     // Create placeholder "All" options
+    //     const placeholderAllMarket: RightsData = { rightId: 0, name: 'All', enabled: true };
+    //     const placeholderAllMediaChannel: RightsData = { rightId: 0, name: 'All', enabled: true };
 
-        setStepData(prevStepData => ({
-            ...prevStepData,
-            requestDownload: {
-                airDate: todayCalendar,
-                pullDate: tomorrowCalendar,
-                markets: [placeholderAllMarket],
-                mediaChannels: [placeholderAllMediaChannel],
-                selectedMarkets: new Set([placeholderAllMarket]),
-                selectedMediaChannels: new Set([placeholderAllMediaChannel]),
-                marketSearchTerm: '',
-                dateValidationError: ''
-            }
-        }));
-    }, []); // Empty dependency array - runs only on mount
+    //     setStepData(prevStepData => ({
+    //         ...prevStepData,
+    //         requestDownload: {
+    //             airDate: todayCalendar,
+    //             pullDate: tomorrowCalendar,
+    //             markets: [placeholderAllMarket],
+    //             mediaChannels: [placeholderAllMediaChannel],
+    //             selectedMarkets: new Set([placeholderAllMarket]),
+    //             selectedMediaChannels: new Set([placeholderAllMediaChannel]),
+    //             marketSearchTerm: '',
+    //             dateValidationError: ''
+    //         }
+    //     }));
+    // }, []); // Empty dependency array - runs only on mount
 
 
     // Transform RightsAttribute[] to RightsData[] - copied from CartRequestDownload
@@ -295,6 +295,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         const rootAttribute = rightsAttributes[0]; // The root "All" element
 
         const transformAttribute = (attr: RightsAttribute): RightsData => ({
+            id: attr.id,
             rightId: attr.right.rightId,
             name: attr.right.description,
             enabled: attr.enabled,
@@ -303,6 +304,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
 
         // First element is "All" from the root
         const allElement: RightsData = {
+            id: rootAttribute.id,
             rightId: rootAttribute.right.rightId,
             name: rootAttribute.right.description,
             enabled: rootAttribute.enabled,
@@ -322,13 +324,12 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         }
 
         try {
-            // const fadelClient = new FadelClient();
+            const fadelClient = FadelClient.getInstance();
             // Fetch both market rights and media rights in parallel
             const [marketRightsResponse, mediaRightsResponse] = await Promise.all([
-                // fadelClient.fetchMarketRights(),
-                Promise.resolve({ attribute: [] }),
-                // fadelClient.fetchMediaRights()
-                Promise.resolve({ attribute: [] })
+                fadelClient.fetchMarketRights(),
+                fadelClient.fetchMediaRights()
+                // Promise.resolve({ attribute: [] }) // TEMP DEBUG: enable
             ]);
 
             const marketsData = transformRightsAttributesToRightsData(marketRightsResponse.attribute);
@@ -341,6 +342,8 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             });
         } catch (error) {
             console.error('Failed to fetch rights data:', error);
+            ToastQueue.negative('Failed to fetch Rights Data', { timeout: 2000 });
+
             // Set empty data but mark as loaded to prevent infinite retries
             setCachedRightsData({
                 marketsData: [],

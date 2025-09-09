@@ -36,15 +36,24 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
     const [downloadOptions] = useState<Record<string, DownloadOptions>>(initialData?.downloadOptions || {});
     const isCheckingRightsRef = useRef(false);
 
+    // Keep track of newly authorized asset IDs from rights check
+    const [newlyAuthorizedAssetIds, setNewlyAuthorizedAssetIds] = useState<Set<string>>(new Set());
+
+    // Loading state for rights check
+    const [isRightsCheckLoading, setIsRightsCheckLoading] = useState<boolean>(true);
+
     // Local state for authorized assets (so we can modify it when downloads complete)
     const [authorizedAssets, setAuthorizedAssets] = useState<Asset[]>(() =>
         cartItems.filter(item => item?.readyToUse?.toLowerCase() === 'yes')
     );
 
-    // Memoize restrictedAssets to prevent unnecessary re-renders
+    // Memoize restrictedAssets to prevent unnecessary re-renders, excluding newly authorized assets
     const restrictedAssets = useMemo(() =>
-        cartItems.filter(item => item?.readyToUse?.toLowerCase() !== 'yes'),
-        [cartItems]
+        cartItems.filter(item =>
+            item?.readyToUse?.toLowerCase() !== 'yes' &&
+            !newlyAuthorizedAssetIds.has(item.assetId || '')
+        ),
+        [cartItems, newlyAuthorizedAssetIds]
     );
 
     // Helper function to convert CalendarDate to epoch time
@@ -73,8 +82,11 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
 
             if (!intendedUse.airDate || !intendedUse.pullDate || restrictedAssets.length === 0) {
                 console.log('Skipping rights check - missing required data');
+                setIsRightsCheckLoading(false);
                 return;
             }
+
+            setIsRightsCheckLoading(true);
 
             isCheckingRightsRef.current = true;
             try {
@@ -86,8 +98,8 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
                     outDate: calendarDateToEpoch(intendedUse.pullDate),
                     selectedExternalAssets: restrictedAssets.map(asset => asset.assetId).filter((id): id is string => Boolean(id)).map(id => id.replace('urn:aaid:aem:', '')),
                     selectedRights: {
-                        "20": Array.from(intendedUse.selectedMediaChannels).map(channel => channel.rightId),
-                        "30": Array.from(intendedUse.selectedMarkets).map(market => market.rightId)
+                        "20": Array.from(intendedUse.selectedMediaChannels).map(channel => channel.id),
+                        "30": Array.from(intendedUse.selectedMarkets).map(market => market.id)
                     }
                 };
 
@@ -95,18 +107,57 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
                 const response = await fadelClient.checkRights(request);
                 console.log('Rights check response:', response);
 
-                // Handle 204 No Content response
+                // Handle 204 No Content response - all assets are cleared
                 if (response.status === 204) {
-                    console.log('Rights check returned 204 - logging restricted assets:', restrictedAssets);
-                }
+                    console.log('Rights check returned 204 - all assets cleared, moving to authorized');
 
-                // TODO: Process the response and update UI state accordingly
+                    // Move all restricted assets to authorized
+                    if (restrictedAssets.length > 0) {
+                        const allRestrictedAssetIds = new Set(
+                            restrictedAssets
+                                .map(asset => asset.assetId)
+                                .filter((id): id is string => Boolean(id))
+                        );
+
+                        setAuthorizedAssets(prev => [...prev, ...restrictedAssets]);
+                        setNewlyAuthorizedAssetIds(prev => new Set([...prev, ...allRestrictedAssetIds]));
+                        console.log(`Moved all ${restrictedAssets.length} restricted assets to authorized status`);
+                    }
+                } else if (response.restOfAssets && response.restOfAssets.length > 0) {
+                    // Process available assets and move them from restricted to authorized
+                    const newlyAuthorizedAssets: Asset[] = [];
+                    const newAuthorizedIds = new Set<string>();
+
+                    response.restOfAssets.forEach(item => {
+                        if (item.available === true) {
+                            // Find the matching asset in restrictedAssets by comparing assetExtId with cleaned assetId
+                            const matchingAsset = restrictedAssets.find(asset => {
+                                const cleanedAssetId = asset.assetId?.replace('urn:aaid:aem:', '');
+                                return cleanedAssetId === item.asset.assetExtId;
+                            });
+
+                            if (matchingAsset && matchingAsset.assetId) {
+                                newlyAuthorizedAssets.push(matchingAsset);
+                                newAuthorizedIds.add(matchingAsset.assetId);
+                                console.log(`Moving asset ${matchingAsset.assetId} from restricted to authorized`);
+                            }
+                        }
+                    });
+
+                    // Add newly authorized assets to the authorized assets state and track their IDs
+                    if (newlyAuthorizedAssets.length > 0) {
+                        setAuthorizedAssets(prev => [...prev, ...newlyAuthorizedAssets]);
+                        setNewlyAuthorizedAssetIds(prev => new Set([...prev, ...newAuthorizedIds]));
+                        console.log(`Moved ${newlyAuthorizedAssets.length} assets to authorized status`);
+                    }
+                }
 
             } catch (error) {
                 console.error('Rights check failed:', error);
                 // TODO: Handle error state in UI
             } finally {
                 isCheckingRightsRef.current = false;
+                setIsRightsCheckLoading(false);
             }
         };
 
@@ -165,90 +216,100 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
                     </div>
                 </div>
 
-                {/* Rights-free Assets Section */}
-                {authorizedAssets.length > 0 && (
-                    <div className="assets-section authorized-assets">
-                        <h3>Assets Cleared - Available to Download</h3>
-                        <div className="authorization-status authorized">
-                            Usage Is Authorized For {authorizedAssets.length} Of {cartItems.length} Assets
-                        </div>
-
-                        <DownloadRenditionsContent
-                            assets={authorizedAssets.map(asset => ({
-                                asset,
-                                renditionsLoading: false,
-                                renditionsError: null
-                            }))}
-                            onClose={() => {
-                                // Handle close action if needed
-                                console.log('Download renditions closed');
-                            }}
-                            onDownloadCompleted={(success, successfulAssets) => {
-                                console.log('Download completed:', success, 'Successful assets:', successfulAssets);
-                                onDownloadCompleted?.(success, successfulAssets);
-                            }}
-                            showCancel={false}
-                        />
+                {/* Loading Spinner */}
+                {isRightsCheckLoading ? (
+                    <div className="rights-check-loading">
+                        <div className="loading-spinner" />
+                        <div className="loading-text">Checking asset rights...</div>
                     </div>
-                )}
+                ) : (
+                    <>
+                        {/* Rights-free Assets Section */}
+                        {authorizedAssets.length > 0 && (
+                            <div className="assets-section authorized-assets">
+                                <h3>Assets Cleared - Available to Download</h3>
+                                <div className="authorization-status authorized">
+                                    Usage Is Authorized For {authorizedAssets.length} Of {cartItems.length} Assets
+                                </div>
 
-                {/* Restricted Assets Section */}
-                {restrictedAssets.length > 0 && (
-                    <div className="assets-section restricted-assets">
-                        <h3>Assets Restricted - Please Request Rights Extension</h3>
-                        <div className="authorization-status restricted">
-                            Rights Restricted For {restrictedAssets.length} Of {cartItems.length} Assets
-                        </div>
-
-                        <div className="assets-table">
-                            <div className="table-header">
-                                <div className="col-thumbnail">THUMBNAIL</div>
-                                <div className="col-title">TITLE</div>
-                                <div className="col-date">INTENDED AIR DATE</div>
-                                <div className="col-date">INTENDED PULL DATE</div>
-                                <div className="col-markets">INTENDED MARKETS</div>
-                                <div className="col-media">INTENDED MEDIA</div>
+                                <DownloadRenditionsContent
+                                    assets={authorizedAssets.map(asset => ({
+                                        asset,
+                                        renditionsLoading: false,
+                                        renditionsError: null
+                                    }))}
+                                    onClose={() => {
+                                        // Handle close action if needed
+                                        console.log('Download renditions closed');
+                                    }}
+                                    onDownloadCompleted={(success, successfulAssets) => {
+                                        console.log('Download completed:', success, 'Successful assets:', successfulAssets);
+                                        onDownloadCompleted?.(success, successfulAssets);
+                                    }}
+                                    showCancel={false}
+                                />
                             </div>
+                        )}
 
-                            {restrictedAssets.map((asset) => {
+                        {/* Restricted Assets Section */}
+                        {restrictedAssets.length > 0 && (
+                            <div className="assets-section restricted-assets">
+                                <h3>Assets Restricted - Please Request Rights Extension</h3>
+                                <div className="authorization-status restricted">
+                                    Rights Restricted For {restrictedAssets.length} Of {cartItems.length} Assets
+                                </div>
 
-                                return (
-                                    <div key={asset.assetId} className="table-row">
-                                        <div className="col-thumbnail">
-                                            <ThumbnailImage item={asset} />
-                                        </div>
-                                        <div className="col-title">
-                                            <div className="asset-title">{asset.title || asset.name}</div>
-                                        </div>
-                                        <div className="col-date">
-                                            <div className="date-with-icon">
-                                                <span className="date-icon">📅</span>
-                                                <span>SEP 03, 2025</span>
-                                            </div>
-                                        </div>
-                                        <div className="col-date">
-                                            <div className="date-with-icon">
-                                                <span className="date-icon">📅</span>
-                                                <span>SEP 04, 2025</span>
-                                            </div>
-                                        </div>
-                                        <div className="col-markets">ALL</div>
-                                        <div className="col-media">ALL</div>
+                                <div className="assets-table">
+                                    <div className="table-header">
+                                        <div className="col-thumbnail">THUMBNAIL</div>
+                                        <div className="col-title">TITLE</div>
+                                        <div className="col-date">INTENDED AIR DATE</div>
+                                        <div className="col-date">INTENDED PULL DATE</div>
+                                        <div className="col-markets">INTENDED MARKETS</div>
+                                        <div className="col-media">INTENDED MEDIA</div>
                                     </div>
-                                );
-                            })}
-                        </div>
 
-                        <div className="section-actions">
-                            <button
-                                className="request-rights-extension-btn primary-button"
-                                onClick={handleOpenRightsExtension}
-                                type="button"
-                            >
-                                Request Rights Extension
-                            </button>
-                        </div>
-                    </div>
+                                    {restrictedAssets.map((asset) => {
+
+                                        return (
+                                            <div key={asset.assetId} className="table-row">
+                                                <div className="col-thumbnail">
+                                                    <ThumbnailImage item={asset} />
+                                                </div>
+                                                <div className="col-title">
+                                                    <div className="asset-title">{asset.title || asset.name}</div>
+                                                </div>
+                                                <div className="col-date">
+                                                    <div className="date-with-icon">
+                                                        <span className="date-icon">📅</span>
+                                                        <span>SEP 03, 2025</span>
+                                                    </div>
+                                                </div>
+                                                <div className="col-date">
+                                                    <div className="date-with-icon">
+                                                        <span className="date-icon">📅</span>
+                                                        <span>SEP 04, 2025</span>
+                                                    </div>
+                                                </div>
+                                                <div className="col-markets">ALL</div>
+                                                <div className="col-media">ALL</div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="section-actions">
+                                    <button
+                                        className="request-rights-extension-btn primary-button"
+                                        onClick={handleOpenRightsExtension}
+                                        type="button"
+                                    >
+                                        Request Rights Extension
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
 
                 {/* Bottom Actions */}

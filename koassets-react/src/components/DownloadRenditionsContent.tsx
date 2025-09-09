@@ -409,7 +409,7 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                             />
                         </div>
                         <div className="download-renditions-title">
-                            {assetData.asset.name}
+                            {assetData.asset.title || assetData.asset.name}
                         </div>
                         <div className="download-renditions-options">
                             {(() => {

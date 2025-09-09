@@ -51,12 +51,39 @@ export interface CheckRightsRequest {
     };
 }
 
+interface AssetOrganization {
+    assetOrgId: number;
+    orgId: number;
+    orgName: string;
+}
+
+interface Asset {
+    assetId: number;
+    name: string;
+    assetExtId: string;
+    assetOrganizations: {
+        [orgId: string]: AssetOrganization;
+    };
+}
+
+interface RestOfAssetsItem {
+    asset: Asset;
+    typeCode: string;
+    typeName: string;
+    available: boolean;
+    notAvailable: boolean;
+    availableExcept: boolean;
+    availableCount: number;
+    notAvailableCount: number;
+    allSelectionCount: number;
+    notAvailableAnswerListUri: string;
+    thumbnailUri: string;
+}
+
 export interface CheckRightsResponse {
-    // TODO: Add proper response interface based on what the API returns
-    // This can be updated once we know the actual response structure
     status: number;
-    data?: unknown;
-    [key: string]: unknown;
+    restOfAssets: RestOfAssetsItem[];
+    totalRecords: number;
 }
 
 export class FadelClient {
@@ -217,15 +244,15 @@ export class FadelClient {
             if (response.status === 204) {
                 return {
                     status: 204,
-                    data: null
+                    restOfAssets: [],
+                    totalRecords: 0
                 };
             }
 
-            // For other successful responses, parse JSON
+            // Parse JSON response with proper typing
             const data = await response.json();
             return {
                 status: response.status,
-                data,
                 ...data
             };
         } catch (error) {

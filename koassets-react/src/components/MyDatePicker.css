@@ -10,6 +10,10 @@
 }
 
 [role="dialog"] header {
+  height: 100% !important;
+}
+
+[role="dialog"] header {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
