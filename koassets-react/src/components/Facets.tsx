@@ -278,16 +278,6 @@ const Facets: React.FC<FacetsProps> = ({
                 items.push(
                     <div key={itemKey} className={containerClasses}>
                         <div className="facet-filter-checkbox-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                            {hasSubLevels && (
-                                <span
-                                    className="facet-filter-arrow"
-                                    style={{ cursor: 'pointer', fontSize: '12px', color: '#888', minWidth: '12px' }}
-                                    onClick={() => toggleHierarchyItem(hierarchyItemKey, facetTechId, fullPath, hierarchyData)}
-                                >
-                                    {isHierarchyItemExpanded ? '\u25BC' : '\u25B6'}
-                                </span>
-                            )}
-                            {!hasSubLevels && <span style={{ minWidth: '12px' }}></span>}
                             <label className="facet-filter-checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0, cursor: 'pointer', flex: 1 }}>
                                 <input
                                     className="facet-filter-checkbox-input"
@@ -794,6 +784,7 @@ const Facets: React.FC<FacetsProps> = ({
                                 <button
                                     className={`facet-filter-tab clear`}
                                     onClick={(e) => {
+                                        setActiveView('filters');
                                         e.stopPropagation();
                                         handleClearAllChecks();
                                     }}
