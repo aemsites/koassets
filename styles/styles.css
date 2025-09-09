@@ -18,6 +18,8 @@
   --text-color: #1e1e1e;
   --link-color: #202020;
   --link-hover-color: #f40000;
+  --color-secondary-light-sky-blue: #6ac9ce1a;
+  --color-secondary: #1E1E1E;
 
   /* fonts */
   --body-font-family: "TCCC UnityText Regular", roboto-fallback, sans-serif;
@@ -306,13 +308,13 @@ main .section.highlight {
 }
 
 main .section.light-blue {
-  background-color: #f0f9fa;
+  background-color: var(--color-secondary-light-sky-blue);
   padding-top: 16px;
   padding-bottom: 16px;
 }
 
 main .section.dark {
-  background-color: #1E1E1E;
+  background-color: var(--color-secondary);
   padding-top: 16px;
   padding-bottom: 16px;
 }
@@ -338,39 +340,4 @@ main .section.center {
   padding: 16px;
   margin: 8px 0;
   border-radius: 4px;
-}
-
-.contentstore-bg {
-  background-color: #222;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-
-  /* Other properties */
-  color: var(--light-color);
-  padding: 16px;
-  margin: 8px 0;
-  border-radius: 4px;
-}
-
-.contentstore-formbutton {
-  display: flex;
-  justify-content: center;
-
-  /* Centers the button horizontally */
-  align-items: center;
-
-  /* Centers the button vertically if needed */
-}
-
-.contentstore-formbutton button,
-.contentstore-formbutton a.button {
-  background-color: #d11700;
-  color: white;
-  transition: background-color 0.2s ease;
-}
-
-.contentstore-formbutton button:hover,
-.contentstore-formbutton a.button:hover {
-  background-color: #d11700;
 }
