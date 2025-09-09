@@ -54,18 +54,18 @@
   border: none;
   font-size: 17px;
   font-weight: 500;
-  cursor: pointer;
   outline: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 15px 20px;
+  padding: 15px;
   box-sizing: border-box;
   margin: 0;
   background-color: #fff;
   position: sticky;
   top: 0;
   z-index: 1;
+  cursor: pointer;
 }
 
 .facet-filter-button:hover,
@@ -74,9 +74,76 @@
   background-color: #fff;
 }
 
+.facet-filter-button-search {
+  height: auto;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  font-size: 17px;
+  font-weight: 500;
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px;
+  box-sizing: border-box;
+  margin: 0;
+  background-color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  gap: 15px;
+}
+
 .facet-filter-arrow {
-  font-size: 15px;
-  color: #888;
+  position: relative;
+}
+
+.facet-filter-arrow::after {
+  content: "\f078";
+  cursor: pointer;
+  font-family: FontAwesome;
+  font-size: 14px;
+  margin-left: auto;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.facet-filter-arrow.expanded::after {
+  content: "\f077";
+}
+
+.facet-filter-arrow-top-level::after {
+  position: relative;
+  content: "\f078";
+  cursor: pointer;
+  font-family: FontAwesome;
+  font-size: 14px;
+  margin-left: auto;
+  padding: 0px 15px 0px 0;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.facet-filter-arrow-top-level.expanded {
+  padding-left: 10px;
+}
+
+.facet-filter-arrow-top-level.expanded::after {
+  content: "\f077";
+}
+
+.facet-filter-arrow-sub-level {
+  cursor: pointer;
+  font-size: 12px;
+  color: #666;
+  margin-left: 8px;
+  font-weight: bold;
 }
 
 .facet-filter-label {
@@ -86,6 +153,8 @@
   font-weight: 400;
   line-height: 140%;
   font-family: "TCCC UnityHeadline", sans-serif !important;
+  padding-right: 5px;
+  cursor: pointer;
 }
 
 .facet-filter-header {
@@ -830,30 +899,26 @@
 .facet-search-trigger {
   width: 16px;
   height: 16px;
-  opacity: 0.6;
   cursor: pointer;
   transition: opacity 0.2s;
   margin-right: 2px;
   flex-shrink: 0;
 }
 
-.facet-search-trigger:hover {
-  opacity: 1;
-}
-
 .facet-search-container {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  padding-right: 15px;
-  min-height: 30px;
-}
-
-.facet-search-input-wrapper {
   position: relative;
   display: flex;
   align-items: center;
   flex: 1;
+  min-height: 30px;
+  box-sizing: border-box;
+}
+
+.facet-search-input-wrapper {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
   border: 1px solid #ddd;
   border-radius: 40px;
   background: white;
@@ -861,6 +926,7 @@
   border-color: #85b7d9;
   box-shadow: inset 0 0 0 0 rgba(34, 36, 38, .35);
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .facet-search-icon-inside {
@@ -886,9 +952,13 @@
 
 .facet-search-close-icon {
   cursor: pointer;
-  margin-right: 6px;
+  margin-right: 8px;
   flex-shrink: 0;
   transition: opacity 0.2s;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
 }
 
 .facet-search-close-icon:hover {
@@ -899,7 +969,9 @@
 .facet-filter-right-section {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 20px;
+  flex-shrink: 0;
+  min-width: 0;
 }
 
 /* Prevent buttons from retaining focus/active states after click */
