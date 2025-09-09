@@ -358,22 +358,25 @@ function MainApp(): React.JSX.Element {
             return prevCache; // No state change yet
         });
 
-        // Fetch image presets once for all assets (only if not already fetched/fetching)
-        if (!imagePresets.items && !fetchingImagePresetsRef.current) {
-            fetchingImagePresetsRef.current = true;
-            try {
-                const presets = await dynamicMediaClient.getImagePresets();
-                setImagePresets(presets);
-                asset.imagePresets = presets;
-                console.log('Successfully fetched image presets');
-            } catch (error) {
-                console.error('Failed to fetch image presets:', error);
-                setImagePresets({});
-            } finally {
-                fetchingImagePresetsRef.current = false;
+        // Only attach image presets to asset if it's not a video
+        if (asset.formatType?.toLowerCase() !== 'video') {
+            // Fetch image presets once for all assets (only if not already fetched/fetching)
+            if (!imagePresets.items && !fetchingImagePresetsRef.current) {
+                fetchingImagePresetsRef.current = true;
+                try {
+                    const presets = await dynamicMediaClient.getImagePresets();
+                    setImagePresets(presets);
+                    asset.imagePresets = presets;
+                    console.log('Successfully fetched image presets');
+                } catch (error) {
+                    console.error('Failed to fetch image presets:', error);
+                    setImagePresets({});
+                } finally {
+                    fetchingImagePresetsRef.current = false;
+                }
+            } else {
+                asset.imagePresets = imagePresets;
             }
-        } else {
-            asset.imagePresets = imagePresets;
         }
 
         if (!shouldFetchRenditions) return;
