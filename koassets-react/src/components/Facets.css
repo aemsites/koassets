@@ -92,36 +92,35 @@
   display: flex;
   align-items: center;
   padding: 0 0 8px 0;
-  border-bottom: 2px solid #f44336;
   margin-bottom: 24px;
   background: #fafbfc;
 }
 
 .facet-filter-header-title {
-  color: #f44336;
   font-weight: 900;
   font-size: 14px;
   flex: 1;
 }
 
-.facet-filter-header-clear {
+.facet-filter-tab-group.active .facet-filter-tab.clear {
   color: #888;
+}
+
+.facet-filter-tab.clear {
   font-weight: bold;
   font-size: 11px;
   cursor: pointer;
   background: none;
   border: none;
-  padding: 0;
-  margin: 0;
-  text-align: left;
+  margin-left: auto;
 }
 
-.facet-filter-header-clear:hover {
+.facet-filter-tab.clear:hover {
   background: none;
   outline: none;
 }
 
-.facet-filter-header-clear:focus {
+.facet-filter-tab.clear:focus {
   background: none;
   outline: none;
 }
@@ -215,13 +214,12 @@
 
 /* Facet count tag styling */
 .facet-filter-count-tag {
-  margin-left: auto;
-  margin-right: 10px;
+  margin-right: 4px;
 }
 
 /* Hierarchy container styles */
 .facet-hierarchy-container {
-  /* Base container style - no special styling */
+  position: relative;
 }
 
 .facet-hierarchy-container-indented {
@@ -302,30 +300,68 @@
 .facet-filter-tabs {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
   width: 100%;
+  gap: 10px;
 }
 
 .facet-filter-tab {
   background: transparent;
   border: none;
-  padding: 8px 16px;
+  padding: 8px 0;
   cursor: pointer;
   font-size: 14px;
-  font-weight: 500;
+  font-style: normal;
+  font-family: "TCCC UnityHeadline", sans-serif;
+  font-weight: 600;
   color: #666;
-  border-radius: 4px;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.facet-filter-tab.active {
-  background: var(--primary-color);
-  color: white;
+.facet-filter-tab-group {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
 }
 
+.facet-filter-tab-group.active {
+  border-color: var(--primary-color);
+  border-bottom: 3px solid var(--primary-color);
+  border-radius: 0;
+}
+
+.facet-filter-tab-group.active:hover {
+  background: none;
+}
+
+.facet-filter-tab-group.right {
+  justify-content: flex-end;
+}
+
+.facet-filter-tab {
+  border-color: var(--primary-color);
+  font-weight: 600;
+  border-radius: 0;
+}
+
+.facet-filter-tab-group.active .facet-filter-tab {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.facet-filter-tab-group.active .facet-filter-tab:hover {
+  background: none;
+  color: var(--primary-color);
+}
+
+.facet-filter-tab-group:hover:not(.active),
 .facet-filter-tab:hover:not(.active) {
-  background: #f5f5f5;
-  color: #333;
+  cursor: pointer;
+  background: none;
+  color: var(--primary-color);
 }
 
 /* Saved Searches List */
@@ -789,6 +825,75 @@
   transform: translateX(-50%);
   border: 6px solid transparent;
   border-top-color: #333;
+}
+
+/* Facet Search Styles */
+.facet-search-trigger {
+  width: 16px;
+  height: 16px;
+  opacity: 0.6;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+.facet-search-trigger:hover {
+  opacity: 1;
+}
+
+.facet-search-container {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  padding-right: 15px;
+}
+
+.facet-search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 40px;
+  background: white;
+  height: 30px;
+  border-color: #85b7d9;
+  box-shadow: inset 0 0 0 0 rgba(34, 36, 38, .35)
+}
+
+.facet-search-icon-inside {
+  width: 16px;
+  height: 16px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.facet-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.facet-search-close-icon {
+  cursor: pointer;
+  margin-right: 6px;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
+}
+
+.facet-search-close-icon:hover {
+  opacity: 1;
+}
+
+/* Group right-side elements together */
+.facet-filter-right-section {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 /* Prevent buttons from retaining focus/active states after click */
