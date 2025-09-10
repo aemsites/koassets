@@ -368,6 +368,11 @@ export interface ExternalParams {
     isBlockIntegration?: boolean;
     restrictedBrands?: RestrictedBrand[];
     presetFilters?: string[];
+    fadelParams?: [{
+        baseUrl?: string;
+        username?: string;
+        password?: string;
+    }];
 }
 
 // Image Gallery types
