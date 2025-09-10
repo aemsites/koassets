@@ -1,3 +1,5 @@
+import { getExternalParams } from '../utils/config';
+
 interface AuthResponse {
     accessToken: string;
     expiresIn?: number;
@@ -96,9 +98,11 @@ export class FadelClient {
     private static instance: FadelClient | null = null;
 
     constructor() {
-        const baseUrl = import.meta.env.VITE_FADEL_BASE_URL;
-        const username = import.meta.env.VITE_FADEL_USERNAME;
-        const password = import.meta.env.VITE_FADEL_PASSWORD;
+        const externalParams = getExternalParams();
+        const fadelParams = externalParams.fadelParams;
+        const baseUrl = import.meta.env.VITE_FADEL_BASE_URL || fadelParams?.baseUrl;
+        const username = import.meta.env.VITE_FADEL_USERNAME || fadelParams?.username;
+        const password = import.meta.env.VITE_FADEL_PASSWORD || fadelParams?.password;
 
         if (!baseUrl || !username || !password) {
             throw new Error('Missing required environment variables: VITE_FADEL_BASE_URL, VITE_FADEL_USERNAME, VITE_FADEL_PASSWORD');
