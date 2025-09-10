@@ -2,9 +2,11 @@
 
 A Cloudflare Worker that acts as outermost CDN for the KO Assets project with some additional features. It provides authentication, authorization, edge caching, and request routing to the various AEM backends (Helix/EDS, Dynamic Media OpenAPI and more).
 
-* Production Worker URL: https://koassets.adobeaem.workers.dev
-* Branch URLs: `https://{branch}-koassets.adobeaem.workers.dev`
-* [Worker in Cloudflare Dashboard](https://dash.cloudflare.com/852dfa4ae1b0d579df29be65b986c101/workers/services/view/koassets/production/metrics)
+- [Worker in Cloudflare Dashboard](https://dash.cloudflare.com/852dfa4ae1b0d579df29be65b986c101/workers/services/view/koassets/production/metrics)
+- Live: https://koassets.adobeaem.workers.dev
+- Branch Live: <https://{branch}-koassets.adobeaem.workers.dev>
+- Preview: https://preview-koassets.adobeaem.workers.dev
+- Branch Preview: <https://{branch}-preview-koassets.adobeaem.workers.dev>
 
 ## Setup
 
@@ -27,25 +29,8 @@ If you need to deploy to a different Cloudflare account:
 ## Develop
 
 ### Local server
-To develop and debug locally:
 
-Create a `.env` file inside this folder with the necessary [Secrets](#secrets) and any other [Configuration](#configuration) variables that you want to override locally:
-
-```
-# Local development config and secrets
-
-COOKIE_SECRET = "..."
-MICROSOFT_ENTRA_CLIENT_SECRET = "..."
-HELIX_ORIGIN_AUTHENTICATION = "..."
-```
-
-Then run:
-
-```bash
-npm run dev
-```
-
-This runs [wrangler dev](https://developers.cloudflare.com/workers/development-testing/#local-development) which will start a local server with the worker at http://localhost:8787. It will auto-reload on code changes.
+Run the full local development stack using the `npm run dev` in the **root folder of the git repository**. See [Local development in root README](../README.md#local-development).
 
 ### Tests
 
@@ -55,7 +40,7 @@ npm test
 
 ### Linting
 
-We use [Biome](https://biomejs.dev/) for linting and formatting.
+This cloudflare folder uses [Biome](https://biomejs.dev/) for linting and formatting.
 
 ```bash
 npm run lint
@@ -82,18 +67,23 @@ then make test requests to the worker.
 
 ### CI branch
 
-On each branch/PR push, the Github Actions CI will automatically deploy the worker under a preview URL for the `branch`:
+On each branch/PR push, the Github Actions CI will automatically deploy brancher worker URLs:
 
-```bash
-https://{branch}-koassets.adobeaem.workers.dev
-```
+| URL | Helix origin |
+|-----|--------------|
+| `https://{branch}-koassets.adobeaem.workers.dev` | `https://{branch}--koassets--aemsites.aem.live` |
+| `https://{branch}-preview-koassets.adobeaem.workers.dev` | `https://{branch}--koassets--aemsites.aem.page` |
 
-This will use the same branch for the Helix origin: `{branch}--koassets--aemsites.aem.live`
 
-### CI production
+### CI main
 
-On each `main` branch push, the Github ActionsCI will do the same as above and additionally deploy that same worker version to production at https://koassets.adobeaem.workers.dev.
+On each `main` branch push, the Github ActionsCI will do the same as above and additionally deploy that same worker version to "production" worker URLs:
 
+
+| URL | Helix origin |
+|-----|--------------|
+| https://koassets.adobeaem.workers.dev | https://main--koassets--aemsites.aem.live |
+| https://preview-koassets.adobeaem.workers.dev | https://main--koassets--aemsites.aem.page |
 
 ### Manual deploy
 
@@ -164,7 +154,17 @@ To ease rotation of secrets, without having to re-deploy the worker, we use [Sec
 * And use a common prefix `KOASSETS_` for individual secrets, to avoid conflicts with other workers.
 * Ideally this should be a dedicated secret store just for `koassets`. In which case we would not need the prefix.
 
-| Name in Secret Store | Variable Name in Code | Description |
-|----------|----------|-------------|
-| `KOASSETS_DM_CLIENT_ID` | `DM_CLIENT_ID` | Client ID for the DM IMS technical account used to access `DM_ORIGIN`. |
-| `KOASSETS_DM_ACCESS_TOKEN` | `DM_ACCESS_TOKEN` | Access token from the DM IMS technical account used to access `DM_ORIGIN`. |
+| Name in Secret Store | Variable Name in Code | Description | Rotation |
+|----------|----------|-------------|----------|
+| `KOASSETS_DM_CLIENT_ID` | `DM_CLIENT_ID` | Client ID for the DM IMS technical account used to access `DM_ORIGIN`. | Only changed if the DM IMS technical account is changed. |
+| `KOASSETS_DM_ACCESS_TOKEN` | `DM_ACCESS_TOKEN` | Access token from the DM IMS technical account used to access `DM_ORIGIN`. Valid 24 hours. | Automatically rotated every 6 hours using the `rotate-dm-token.yaml` Github Action.<br><br>Manually rotate by running<br><br>```./scripts/create-ims-token.sh $DM_CLIENT_ID $DM_CLIENT_SECRET "AdobeID,openid"```<br><br> and updating in secret store. |
+
+### CI secrets
+
+These secrets need to be configured in the CI (Github Actions).
+
+| Variable | Description |
+|----------|-------------|
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API token used to deploy workers and rotate secrets via [Github Actions](../.github/workflows/). |
+| `DM_CLIENT_ID` | Client ID for the DM IMS technical account used to access `DM_ORIGIN`. |
+| `DM_CLIENT_SECRET` | Client secret for the DM IMS technical account used to access `DM_ORIGIN`. |
