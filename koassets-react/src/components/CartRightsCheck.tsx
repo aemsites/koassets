@@ -182,7 +182,7 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
     // Helper function to get current step data
     const getCurrentStepData = useCallback((): RightsCheckStepData => ({
         downloadOptions,
-        agreesToTerms: true // DownloadRenditionsContent handles its own terms
+        agreesToTerms: false
     }), [downloadOptions]);
 
     // Handler function to request rights extension

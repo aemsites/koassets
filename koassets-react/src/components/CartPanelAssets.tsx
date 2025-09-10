@@ -240,7 +240,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         adaptationIntention: '', // required
         budgetForMarket: '', // required
         exceptionOrNotes: '',
-        agreesToTerms: true
+        agreesToTerms: false
     });
 
     // State for rights check form data (managed by parent)
