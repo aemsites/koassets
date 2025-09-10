@@ -21,3 +21,6 @@ tools/assets-browser/config.js
 
 # Local development config (never commit)
 **/config.local.js
+
+todo.md
+curl.md

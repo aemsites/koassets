@@ -23,16 +23,16 @@ if [ -z "$SECRET_STORE_ID" ] || [ -z "$FILE" ]; then
 fi
 
 while IFS='=' read -r key value; do
-    # Skip empty lines and comments
-    if [[ -z "$key" || "$key" =~ ^# ]]; then
-        continue
-    fi
+  # Skip empty lines and comments
+  if [[ -z "$key" || "$key" =~ ^# ]]; then
+      continue
+  fi
 
-    # Trim whitespace
-    key=$(echo "$key" | xargs)
-    value=$(echo "$value" | xargs)
+  # Trim whitespace
+  key=$(echo "$key" | xargs)
+  value=$(echo "$value" | xargs)
 
-    # 'secret create' does create OR update
-    echo "$value" | WRANGLER_LOG=error npx wrangler secrets-store secret create $SECRET_STORE_ID --scopes workers --name "$key" > /dev/null
+  # 'secret create' does create OR update
+  echo "$value" | WRANGLER_LOG=error npx wrangler secrets-store secret create $SECRET_STORE_ID --scopes workers --name "$key" > /dev/null
 
 done < "$FILE"

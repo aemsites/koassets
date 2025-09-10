@@ -25,46 +25,6 @@ function prefix() {
   sed "s/^/${1}${2}$NC /"
 }
 
-function update_cloudflare_secrets() {
-  cd cloudflare
-
-  # parse CLOUDFLARE_SECRET_STORE_ID out of wrangler.toml, only the first match
-  CLOUDFLARE_SECRET_STORE_ID=$(grep -m 1 'store_id = "' wrangler.toml | sed 's/.*store_id = "\(.*\)".*/\1/')
-  # if not found
-  if [ -z "$CLOUDFLARE_SECRET_STORE_ID" ]; then
-    echo "Error: no secret store_id found in cloudflare/wrangler.toml"
-    exit 1
-  fi
-
-  if [ ! -f .secrets ]; then
-    echo "Error: missing cloudflare/.secrets file"
-    exit 1
-  fi
-  # clean local secret store to make it be identical to the .secrets file
-  rm -rf .wrangler/state/v3/secrets-store
-  # load secrets from .secrets file
-  echo "Loading secrets from cloudflare/.secrets into local wrangler secret store..."
-  ./scripts/load-secret-store.sh $CLOUDFLARE_SECRET_STORE_ID .secrets
-
-  # create IMS token for DM
-  echo "Generating IMS token for DM..."
-  source .secrets
-  if [ -z "$KOASSETS_DM_CLIENT_ID" ] || [ -z "$KOASSETS_DM_CLIENT_SECRET" ]; then
-    echo "Error: KOASSETS_DM_CLIENT_ID and KOASSETS_DM_CLIENT_SECRET are required in cloudflare/.secrets"
-    exit 1
-  fi
-  DM_TOKEN=$(./scripts/create-ims-token.sh "$KOASSETS_DM_CLIENT_ID" "$KOASSETS_DM_CLIENT_SECRET" "AdobeID,openid")
-
-  echo "$DM_TOKEN" | WRANGLER_LOG=error \
-    npx wrangler secrets-store secret create $CLOUDFLARE_SECRET_STORE_ID \
-      --scopes workers \
-      --name KOASSETS_DM_ACCESS_TOKEN > /dev/null
-
-  # npx wrangler secrets-store secret list $CLOUDFLARE_SECRET_STORE_ID
-
-  cd - > /dev/null
-}
-
 function filter_cf_logs() {
   if [ "$CLOUDFLARE_REQUEST_LOGS" != "1" ]; then
     grep --line-buffered -v -E "^.*\[wrangler:info\].*(GET|HEAD|POST|OPTIONS|PUT|DELETE|TRACE|CONNECT)"
@@ -77,7 +37,7 @@ function run_cloudflare() {
   cd cloudflare
 
   # add "--live-reload" if auto-reload on cloudflare changes is needed
-  npx wrangler dev \
+  npm run dev -- \
     --var "HELIX_ORIGIN:http://localhost:3000" \
     --var "DM_ORIGIN:${DM_ORIGIN}" \
     2>&1 | filter_cf_logs
@@ -90,15 +50,15 @@ function run_aem() {
 
 function run_react_build() {
   cd koassets-react
-  npx chokidar "**" -i "dist/**" -c "npm run build-local-dev"
-}
 
-update_cloudflare_secrets | prefix $BG_YELLOW "[cfl]"
+  echo "[Vite Build] Watching for React code changes in koassets-react/* ..."
+  npm run auto-build
+}
 
 # cloudflare worker: http://localhost:8787
 (run_cloudflare 2>&1 | prefix $BG_YELLOW "[cfl]" ) &
 
-sleep 1
+sleep 4
 echo
 
 # aem: http://localhost:3000
@@ -111,6 +71,7 @@ echo
 (run_react_build 2>&1 | prefix $BG_BLUE "[vte]") &
 
 sleep 1
+echo
 
 open -a "${DEV_BROWSER:-Google Chrome}" http://localhost:8787
 

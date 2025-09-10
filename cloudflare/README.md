@@ -30,7 +30,15 @@ If you need to deploy to a different Cloudflare account:
 
 ### Local server
 
-Run the full local development stack using the `npm run dev` in the **root folder of the git repository**. See [Local development in root README](../README.md#local-development).
+It is recommended to run the [full local development stack](../README.md#local-development) using `npm run dev` in the **root folder of the git repository**.
+
+If you _only_ want to run the cloudflare worker locally:
+
+1. Make sure you have `.secrets` file with required [secret store secrets](#secret-store). See [example here](../README.md#local-development).
+2. Run `npm run dev`
+
+To overwrite configurations locally, change them in `wrangler.toml` or create an `.env` file to overwrite (do not commit).
+For defining secrets they all go into the `.secrets` file.
 
 ### Tests
 
@@ -112,7 +120,7 @@ Options:
 
 ## Configuration
 
-Most configuration is done via environment variables in the `wrangler.toml` file. Important variables:
+Most configuration is done via environment variables in the `wrangler.toml` file:
 
 | Variable | Default (in code) | Description |
 |----------|---------|-------------|
@@ -149,19 +157,22 @@ These secrets must **not** be checked into git, and must be stored as [secrets i
 
 To ease rotation of secrets, without having to re-deploy the worker, we use [Secret Store](https://developers.cloudflare.com/secrets-store/) instead of worker secrets ([explanation of the differences](https://github.com/cloudflare/workers-sdk/issues/10585#issuecomment-3271987962)).
 
-* Secret store ID: `5d64b0d295964846b36569f507fb7b13`
+To configure these secrets locally (for use with `npm run dev`), create a `.secrets` file in this folder and add the secret store secrets there.
+
+Secret Store ID: `5d64b0d295964846b36569f507fb7b13`
+
 * As options are limited in the Secret Store beta, we are using the _default secret store_ in the Franklin (Dev) account.
 * And use a common prefix `KOASSETS_` for individual secrets, to avoid conflicts with other workers.
 * Ideally this should be a dedicated secret store just for `koassets`. In which case we would not need the prefix.
 
 | Name in Secret Store | Variable Name in Code | Description | Rotation |
-|----------|----------|-------------|----------|
+|----------------------|-----------------------|-------------|----------|
 | `KOASSETS_DM_CLIENT_ID` | `DM_CLIENT_ID` | Client ID for the DM IMS technical account used to access `DM_ORIGIN`. | Only changed if the DM IMS technical account is changed. |
 | `KOASSETS_DM_ACCESS_TOKEN` | `DM_ACCESS_TOKEN` | Access token from the DM IMS technical account used to access `DM_ORIGIN`. Valid 24 hours. | Automatically rotated every 6 hours using the `rotate-dm-token.yaml` Github Action.<br><br>Manually rotate by running<br><br>```./scripts/create-ims-token.sh $DM_CLIENT_ID $DM_CLIENT_SECRET "AdobeID,openid"```<br><br> and updating in secret store. |
 
 ### CI secrets
 
-These secrets need to be configured in the CI (Github Actions).
+These secrets need to be configured in the CI (Github Actions) and are used for deployment and secret rotation workflows.
 
 | Variable | Description |
 |----------|-------------|
