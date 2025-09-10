@@ -229,6 +229,41 @@ const Facets: React.FC<FacetsProps> = ({
         }));
     }, []);
 
+    // Helper function to check if hierarchy item should be shown based on search
+    const shouldShowHierarchyItem = useCallback((
+        hierarchyData: { [level: number]: { [key: string]: number } },
+        facetName: string,
+        searchTerm: string,
+        level: number
+    ): boolean => {
+        if (!searchTerm) return true;
+
+        const lowerSearchTerm = searchTerm.toLowerCase();
+
+        // Check if the full hierarchy path contains the search term
+        if (facetName.toLowerCase().includes(lowerSearchTerm)) {
+            return true;
+        }
+
+        // Check if any descendant items at deeper levels match the search term
+        for (let deeperLevel = level + 1; deeperLevel < 10; deeperLevel++) {
+            const deeperLevelData = hierarchyData[deeperLevel];
+            if (!deeperLevelData) continue;
+
+            for (const [deeperFacetName] of Object.entries(deeperLevelData)) {
+                // Check if this deeper item is a descendant of the current item
+                if (deeperFacetName.startsWith(facetName + ' / ')) {
+                    // Check if the descendant matches the search term
+                    if (deeperFacetName.toLowerCase().includes(lowerSearchTerm)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }, []);
+
     // Memoized function to render hierarchy levels
     const renderHierarchyLevel = useCallback((
         hierarchyData: { [level: number]: { [key: string]: number } },
@@ -247,8 +282,8 @@ const Facets: React.FC<FacetsProps> = ({
             const pathParts = facetName.split(' / ');
             const displayName = pathParts[pathParts.length - 1].trim();
 
-            // Filter based on search term
-            if (searchTerm && !displayName.toLowerCase().includes(searchTerm.toLowerCase())) {
+            // Filter based on search term - check full hierarchy path and descendants
+            if (searchTerm && !shouldShowHierarchyItem(hierarchyData, facetName, searchTerm, level)) {
                 return; // Skip this item if it doesn't match search
             }
 
@@ -303,7 +338,7 @@ const Facets: React.FC<FacetsProps> = ({
         });
 
         return items;
-    }, [checked, handleCheckbox, expandedHierarchyItems, toggleHierarchyItem, facetSearchTerms]);
+    }, [checked, handleCheckbox, expandedHierarchyItems, toggleHierarchyItem, facetSearchTerms, shouldShowHierarchyItem]);
 
     /**
      * Renders the facet checkboxes from search results
