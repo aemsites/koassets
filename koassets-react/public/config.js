@@ -4,6 +4,9 @@
 window.APP_CONFIG = {
   ADOBE_CLIENT_ID: '',
   BUCKET: '',
+  FADEL_BASE_URL: '',
+  FADEL_USERNAME: '',
+  FADEL_PASSWORD: '',
   // Add other environment variables as needed
 };
 

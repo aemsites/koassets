@@ -9,6 +9,7 @@ export default async function decorate(block) {
   // Get configs spreadsheets
   const configs = await fetchSpreadsheetData('configs');
   const restrictedBrands = configs?.['shared-restricted-brands']?.data || configs?.data;
+  const fadelParams = configs?.['fadel-params']?.data || {};
 
   // Clear the block content
   block.textContent = '';
@@ -50,6 +51,7 @@ export default async function decorate(block) {
     accordionTitle: blockObj.accordionTitle,
     accordionContent: blockObj.accordionContent,
     excFacets: JSON.parse(stripHtmlAndNewlines(blockObj.excFacets)),
+    fadelParams,
     restrictedBrands,
     presetFilters: convertHtmlListToArray(blockObj.presetFilters),
     ...(window.KOAssetsConfig.externalParams || {}),

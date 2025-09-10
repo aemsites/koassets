@@ -3,7 +3,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px 30px 20px 0;
+    padding: 20px 30px 40px 0;
+    flex-shrink: 0;
 }
 
 .cart-panel .workflow-step {
@@ -129,6 +130,21 @@
     padding: 0 0 20px;
 }
 
+/* Specific layout for CartPanelAssets wrapper - use a more reliable approach */
+.cart-panel-assets-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Ensure CartRequestDownload component gets proper flex behavior */
+.cart-panel .cart-request-download {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
 .cart-panel .cart-items-count {
     font-size: 14px;
     color: #666;
@@ -244,7 +260,7 @@
 .cart-panel .rights-badge {
     border-radius: 4px;
     font-size: 12px;
-    font-family: "TCCC UnityHeadline Regular", sans-serif;
+    font-family: "TCCC UnityHeadline", sans-serif;
     font-weight: 600;
 }
 
@@ -254,7 +270,7 @@
 
 .cart-panel .tccc-warnings p {
     color: #202020;
-    font-family: "TCCC UnityHeadline Regular", sans-serif;
+    font-family: "TCCC UnityHeadline", sans-serif;
     font-size: 14px !important;
     line-height: 1.4285em;
     margin: 0 0 1em;

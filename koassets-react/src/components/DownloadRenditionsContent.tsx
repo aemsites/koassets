@@ -125,13 +125,15 @@ const SelectAllRenditionsCheckbox: React.FC<SelectAllRenditionsCheckboxProps> = 
 interface DownloadRenditionsContentProps {
     assets: AssetData[];
     onClose: () => void;
-    onDownloadComplete?: (success: boolean) => void;
+    onDownloadCompleted?: (success: boolean, successfulAssets?: Asset[]) => void;
+    showCancel?: boolean;
 }
 
 const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
     assets,
     onClose,
-    onDownloadComplete
+    onDownloadCompleted: onDownloadCompleted,
+    showCancel = true
 }) => {
     // Get dynamicMediaClient from context instead of props
     const { dynamicMediaClient, fetchAssetRenditions } = useAppConfig();
@@ -270,12 +272,12 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                 if (rendition && assetForRendition) {
                     const isImagePreset = rendition && assetForRendition.imagePresets?.items?.some(preset => preset.name === rendition.name);
                     await dynamicMediaClient.downloadAsset(assetForRendition, rendition, isImagePreset);
-                    onDownloadComplete?.(true);
+                    onDownloadCompleted?.(true, [assetForRendition]);
                     onClose();
                 } else {
                     console.error('Could not find asset or rendition for single download');
                     ToastQueue.negative('Error: Could not find asset or rendition for single download.', { timeout: 1000 });
-                    onDownloadComplete?.(false);
+                    onDownloadCompleted?.(false, []);
                 }
             } else {
                 // Multiple assets archive download - show toast notifications
@@ -283,6 +285,7 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
 
                 // Collect all assets with their selected renditions
                 const assetsWithRenditions = [];
+                const successfulAssets: Asset[] = [];
                 for (const [assetId, assetRenditions] of selectedRenditions) {
                     const assetData = assets.find(assetData => assetData.asset.assetId === assetId);
 
@@ -297,6 +300,7 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                             asset: assetData.asset,
                             renditions: renditionsForThisAsset
                         });
+                        successfulAssets.push(assetData.asset);
                     }
                 }
 
@@ -305,23 +309,40 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                 if (success) {
                     closeProcessingToast?.();
                     ToastQueue.positive(`Successfully started downloading ${count} renditions.`, { timeout: 1000 });
-                    onDownloadComplete?.(true);
+                    onDownloadCompleted?.(true, successfulAssets);
                     onClose();
                 } else {
                     closeProcessingToast?.();
                     ToastQueue.negative(`Failed to create archive for ${count} renditions.`, { timeout: 1000 });
-                    onDownloadComplete?.(false);
+                    onDownloadCompleted?.(false, []);
                 }
             }
         } catch (error) {
             console.error('Failed to download asset:', error);
             closeProcessingToast?.();
             ToastQueue.negative(`Unexpected error occurred while downloading ${count} renditions.`, { timeout: 1000 });
-            onDownloadComplete?.(false);
+            onDownloadCompleted?.(false, []);
         } finally {
             setIsDownloading(false);
+            // Reset all selected renditions except "original"
+            setSelectedRenditions(prev => {
+                const newMap = new Map();
+                prev.forEach((assetRenditions, assetId) => {
+                    const originalRenditions = new Set();
+                    assetRenditions.forEach(rendition => {
+                        if (rendition.name === 'original') {
+                            originalRenditions.add(rendition);
+                        }
+                    });
+                    if (originalRenditions.size > 0) {
+                        newMap.set(assetId, originalRenditions);
+                    }
+                });
+                return newMap;
+            });
+            setAcceptTerms(false);
         }
-    }, [assets, dynamicMediaClient, acceptTerms, isDownloading, selectedRenditions, onClose, onDownloadComplete]);
+    }, [assets, dynamicMediaClient, acceptTerms, isDownloading, selectedRenditions, onClose, onDownloadCompleted]);
 
     // Calculate total selected renditions count for UI
     const totalSelectedCount = React.useMemo(() => {
@@ -388,7 +409,7 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                             />
                         </div>
                         <div className="download-renditions-title">
-                            {assetData.asset.name}
+                            {assetData.asset.title || assetData.asset.name}
                         </div>
                         <div className="download-renditions-options">
                             {(() => {
@@ -397,7 +418,6 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
 
                                 return (
                                     <>
-                                        {/* Renditions status feedback */}
                                         {!hasRenditions && (
                                             <div className="renditions-status loading">
                                                 <div className="loading-spinner"></div>
@@ -531,13 +551,15 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
             </div>
 
             <div className="download-renditions-actions">
-                <button
-                    className="download-renditions-button cancel secondary-button"
-                    onClick={onClose}
-                    disabled={isDownloading}
-                >
-                    Cancel
-                </button>
+                {showCancel && (
+                    <button
+                        className="download-renditions-button cancel secondary-button"
+                        onClick={onClose}
+                        disabled={isDownloading}
+                    >
+                        Cancel
+                    </button>
+                )}
                 <button
                     className={`download-renditions-button primary-button ${(!acceptTerms || isDownloading || totalSelectedCount === 0) ? 'disabled' : ''}`}
                     onClick={handleDownloadRenditions}

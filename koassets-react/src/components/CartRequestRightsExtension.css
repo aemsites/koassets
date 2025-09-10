@@ -1,0 +1,427 @@
+/* Cart Request Rights Extension Component */
+.cart-request-rights-extension {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    min-height: 0;
+    flex: 1;
+}
+
+.cart-request-rights-extension-content {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+    flex: 1;
+    padding: 0;
+    min-height: 0;
+    overflow: hidden;
+    height: 100%;
+    max-height: 100%;
+}
+
+/* Asset List Column */
+.cart-request-rights-extension-assets {
+    border-right: 1px solid #e0e0e0;
+    padding-right: 24px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.cart-request-rights-extension-assets h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    font-family: "TCCC UnityHeadline", sans-serif;
+}
+
+/* Intended Use Section */
+.intended-use-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    border: 1px solid #e9ecef;
+}
+
+.intended-use-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    font-family: "TCCC UnityHeadline", sans-serif;
+}
+
+.intended-use-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    font-size: 12px;
+}
+
+.intended-use-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.intended-use-item label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: "TCCC UnityText Regular", sans-serif;
+}
+
+.intended-use-item div {
+    font-size: 12px;
+    font-weight: 500;
+    color: #333;
+    font-family: "TCCC UnityText Regular", sans-serif;
+    line-height: 1.3;
+}
+
+.asset-list-items {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    padding-right: 8px;
+}
+
+/* Custom scrollbar for asset list */
+.asset-list-items::-webkit-scrollbar {
+    width: 6px;
+}
+
+.asset-list-items::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.asset-list-items::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.asset-list-items::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.asset-list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #e0e0e0;
+    background: #fff;
+}
+
+.asset-list-item:last-child {
+    border-bottom: none;
+}
+
+.asset-thumbnail {
+    flex-shrink: 0;
+}
+
+.asset-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.asset-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    line-height: 1.4;
+    margin-bottom: 6px;
+    word-wrap: break-word;
+}
+
+.asset-type {
+    font-size: 12px;
+    color: #666;
+    font-weight: 600;
+}
+
+/* Request Rights Extension Form Column */
+.cart-request-rights-extension-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.cart-request-rights-extension-form-content {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+    padding-right: 8px;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Custom scrollbar for form content */
+.cart-request-rights-extension-form-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.cart-request-rights-extension-form-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.cart-request-rights-extension-form-content::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.cart-request-rights-extension-form-content::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.cart-request-rights-extension-form h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    font-family: "TCCC UnityHeadline", sans-serif;
+}
+
+/* Form Fields */
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-field label {
+    font-size: .75rem;
+    font-weight: 400;
+    line-height: 1.05rem;
+    color: #1e1e1e;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: "TCCC UnityHeadline", sans-serif;
+}
+
+.form-field label .required {
+    color: #dc3545;
+    margin-left: 2px;
+}
+
+/* Form Inputs */
+.form-input,
+.form-select,
+.form-textarea {
+    width: 100%;
+    max-width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d9d9d9;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: "TCCC UnityText Regular", sans-serif;
+    background: white;
+    box-sizing: border-box;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.1);
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+    color: #999;
+}
+
+.form-select {
+    cursor: pointer;
+}
+
+.form-textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+/* Date Picker */
+.form-field .my-date-picker {
+    padding: 0;
+}
+
+/* Usage Rights Required */
+.usage-rights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.usage-right-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.usage-right-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary-color);
+    cursor: pointer;
+}
+
+.usage-right-item label {
+    font-size: 13px;
+    color: #333;
+    cursor: pointer;
+    font-weight: 400;
+    font-family: "TCCC UnityText Regular", sans-serif;
+    margin: 0;
+}
+
+/* Contact Search */
+.contact-search {
+    position: relative;
+}
+
+.contact-search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #d9d9d9;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 10;
+}
+
+.contact-search-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 14px;
+    font-family: "TCCC UnityText Regular", sans-serif;
+}
+
+.contact-search-item:hover {
+    background: #f8f8f8;
+}
+
+.contact-search-item:last-child {
+    border-bottom: none;
+}
+
+/* Terms Agreement */
+.cart-request-rights-extension-form-content .terms-agreement {
+    background: white;
+    border: none;
+    padding: 0 0 20px 0;
+}
+
+.cart-request-rights-extension-form-content .terms-agreement .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #333;
+    cursor: pointer;
+    font-family: "TCCC UnityText Regular", sans-serif;
+}
+
+.cart-request-rights-extension-form-content .terms-agreement .checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary-color);
+    cursor: pointer;
+}
+
+.cart-request-rights-extension-form-content .terms-link {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.cart-request-rights-extension-form-content .terms-link:hover {
+    text-decoration: underline;
+}
+
+/* Form Actions */
+.cart-request-rights-extension-form-content .form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 8px 0 0;
+    border-top: 1px solid #e0e0e0;
+    flex-shrink: 0;
+    background: white;
+}
+
+.cart-request-rights-extension-form-content .form-actions-right {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .cart-request-rights-extension-content {
+        grid-template-columns: 280px 1fr;
+        gap: 24px;
+    }
+}
+
+@media (max-width: 900px) {
+    .cart-request-rights-extension-content {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    .cart-request-rights-extension-assets {
+        border-right: none;
+        border-bottom: 1px solid #e0e0e0;
+        padding-right: 0;
+        padding-bottom: 24px;
+    }
+
+    .asset-list-items {
+        max-height: 200px;
+    }
+
+    .usage-rights-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .cart-request-rights-extension-form-content .form-actions {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .cart-request-rights-extension-form-content .form-actions-right {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+
+    .usage-rights-grid {
+        grid-template-columns: 1fr;
+    }
+}

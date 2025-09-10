@@ -17,10 +17,10 @@
     "preview:prod": "npx cross-env NODE_ENV=production vite preview",
     "lint": "eslint src --ext js,jsx,ts,tsx --report-unused-disable-directives",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build:koassets-react": "npm install && VITE_ADOBE_CLIENT_ID=ko-assets-ims VITE_BUCKET=delivery-p64403-e544653 VITE_EXC_BASE_URL=https://exc-unifiedcontent.experience.adobe.net npm run build:embed",
+    "build:koassets-react": "npm install && VITE_ADOBE_CLIENT_ID=ko-assets-ims VITE_BUCKET=delivery-p64403-e544653 VITE_EXC_BASE_URL=https://exc-unifiedcontent.experience.adobe.net VITE_FADEL_BASE_URL=${VITE_FADEL_BASE_URL} VITE_FADEL_USERNAME=${VITE_FADEL_USERNAME} VITE_FADEL_PASSWORD=${VITE_FADEL_PASSWORD} npm run build:embed",
     "copy-to-eds": "rm dist/index.html; cp -r dist/* ../tools/assets-browser/",
     "build-and-copy:koassets-react": "npm run build:koassets-react && npm run copy-to-eds",
-    "build-local-dev": "VITE_ADOBE_CLIENT_ID=ko-assets-ims VITE_BUCKET=delivery-p64403-e544653 VITE_EXC_BASE_URL=https://exc-unifiedcontent.experience.adobe.net vite build && npm run copy-to-eds"
+    "build-local-dev": "VITE_ADOBE_CLIENT_ID=ko-assets-ims VITE_BUCKET=delivery-p64403-e544653 VITE_EXC_BASE_URL=https://exc-unifiedcontent.experience.adobe.net VITE_FADEL_BASE_URL=${VITE_FADEL_BASE_URL} VITE_FADEL_USERNAME=${VITE_FADEL_USERNAME} VITE_FADEL_PASSWORD=${VITE_FADEL_PASSWORD} vite build && npm run copy-to-eds"
   },
   "engines": {
     "node": ">=18.0.0"
