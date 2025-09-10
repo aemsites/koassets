@@ -67,14 +67,11 @@ function getEnvVar(key) {
 const config = {
     ADOBE_CLIENT_ID: getEnvVar('VITE_ADOBE_CLIENT_ID'),
     BUCKET: getEnvVar('VITE_BUCKET'),
-    FADEL_BASE_URL: getEnvVar('VITE_FADEL_BASE_URL'),
-    FADEL_USERNAME: getEnvVar('VITE_FADEL_USERNAME'),
-    FADEL_PASSWORD: getEnvVar('VITE_FADEL_PASSWORD'),
     // Add other environment variables as needed
 };
 
 // Validate required configuration
-const requiredVars = ['ADOBE_CLIENT_ID', 'BUCKET', 'FADEL_BASE_URL', 'FADEL_USERNAME', 'FADEL_PASSWORD'];
+const requiredVars = ['ADOBE_CLIENT_ID', 'BUCKET'];
 const missingVars = requiredVars.filter(key => !config[key]);
 
 if (missingVars.length > 0) {
@@ -93,9 +90,6 @@ const configContent = `// Runtime configuration generated from environment varia
 window.APP_CONFIG = {
   ADOBE_CLIENT_ID: '${config.ADOBE_CLIENT_ID}',
   BUCKET: '${config.BUCKET}',
-  FADEL_BASE_URL: '${config.FADEL_BASE_URL}',
-  FADEL_USERNAME: '${config.FADEL_USERNAME}',
-  FADEL_PASSWORD: '${config.FADEL_PASSWORD}',
   // Add other environment variables as needed
 };
 `;
@@ -121,9 +115,6 @@ console.log('📋 Configuration:');
 console.log(`   Environment: ${nodeEnv}`);
 console.log(`   ADOBE_CLIENT_ID: ${config.ADOBE_CLIENT_ID || '(not set)'}`);
 console.log(`   BUCKET: ${config.BUCKET || '(not set)'}`);
-console.log(`   FADEL_BASE_URL: ${config.FADEL_BASE_URL || '(not set)'}`);
-console.log(`   FADEL_USERNAME: ${config.FADEL_USERNAME || '(not set)'}`);
-console.log(`   FADEL_PASSWORD: ${config.FADEL_PASSWORD ? '***' : '(not set)'}`);
 
 // Show sources that were checked
 console.log('\n🔍 Environment sources checked (in order of precedence):');
