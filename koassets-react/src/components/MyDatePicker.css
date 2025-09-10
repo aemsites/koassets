@@ -10,6 +10,10 @@
 }
 
 [role="dialog"] header {
+  height: 100% !important;
+}
+
+[role="dialog"] header {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
@@ -251,8 +255,7 @@ button[slot="next"]:hover {
   color: white !important;
   border: none !important;
   border-radius: 0 6px 6px 0 !important;
-  width: 32px !important;
-  height: 32px !important;
+  width: 35px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;

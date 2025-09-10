@@ -228,6 +228,12 @@ button:disabled {
   outline: none;
 }
 
+.container .primary-button:disabled {
+  background-color: var(--primary-color-disabled);
+  color: #f8f8f8;
+  cursor: not-allowed;
+}
+
 .container .primary-button:hover:not(:disabled) {
   background-color: var(--primary-color-hover);
 }
@@ -264,10 +270,18 @@ button:disabled {
 }
 
 .container .secondary-button:disabled {
-  background-color: #ccc;
-  color: #999;
   cursor: not-allowed;
-  border: none;
+  opacity: .5;
+  pointer-events: none;
+  display: inline-flex;
+  font-family: "TCCC UnityHeadline", sans-serif;
+  font-size: 14px;
+  height: 42px;
+  justify-content: center;
+  line-height: 140%;
+  background-color: #fff;
+  border: 1.5px solid #9a9a9a;
+  color: #1e1e1e;
 }
 
 /* Breadcrumb navigation styles */

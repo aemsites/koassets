@@ -38,36 +38,39 @@
 /* New TCCCunity Fonts */
 
 @font-face {
-    font-family: "TCCC UnityHeadline";
-    font-display: swap;
-    src: url("../fonts/TCCC-UnityHeadline-Regular.ttf")
-    format("opentype");
+  font-family: "TCCC UnityHeadline";
+  font-display: swap;
+  src: url("../fonts/TCCC-UnityHeadline-Regular.ttf") format("opentype");
 }
 
 @font-face {
-    font-family: "TCCC UnityHeadline Regular";
-    font-display: swap;
-    src: url("../fonts/TCCC-UnityText-Regular.ttf")
-    format("opentype");
+  font-family: "TCCC UnityHeadline Regular";
+  font-display: swap;
+  src: url("../fonts/TCCC-UnityText-Regular.ttf") format("opentype");
 }
 
 @font-face {
-    font-family: "TCCC UnityText Regular";
-    font-display: swap;
-    src: url("../fonts/TCCC-UnityText-Regular.ttf")
-    format("opentype");
+  font-family: "TCCC UnityText Regular";
+  font-display: swap;
+  src: url("../fonts/TCCC-UnityText-Regular.ttf") format("opentype");
 }
 
 @font-face {
-    font-family: "TCCC UnityText Bold";
-    font-display: swap;
-    src: url("../fonts/TCCC-UnityText-Bold.ttf")
-    format("opentype");
+  font-family: "TCCC UnityText Bold";
+  font-display: swap;
+  src: url("../fonts/TCCC-UnityText-Bold.ttf") format("opentype");
 }
 
 @font-face {
-    font-family: "TCCC UnityText Medium";
-    font-display: swap;
-    src: url("../fonts/TCCC-UnityText-Medium.ttf")
-    format("opentype");
+  font-family: "TCCC UnityText Medium";
+  font-display: swap;
+  src: url("../fonts/TCCC-UnityText-Medium.ttf") format("opentype");
+}
+
+@font-face {
+  font-family: FontAwesome;
+  font-display: swap;
+  src: url("../fonts/fontawesome-webfont.ttf") format("opentype");
+  font-weight: normal;
+  font-style: normal;
 }

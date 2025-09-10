@@ -229,6 +229,41 @@ const Facets: React.FC<FacetsProps> = ({
         }));
     }, []);
 
+    // Helper function to check if hierarchy item should be shown based on search
+    const shouldShowHierarchyItem = useCallback((
+        hierarchyData: { [level: number]: { [key: string]: number } },
+        facetName: string,
+        searchTerm: string,
+        level: number
+    ): boolean => {
+        if (!searchTerm) return true;
+
+        const lowerSearchTerm = searchTerm.toLowerCase();
+
+        // Check if the full hierarchy path contains the search term
+        if (facetName.toLowerCase().includes(lowerSearchTerm)) {
+            return true;
+        }
+
+        // Check if any descendant items at deeper levels match the search term
+        for (let deeperLevel = level + 1; deeperLevel < 10; deeperLevel++) {
+            const deeperLevelData = hierarchyData[deeperLevel];
+            if (!deeperLevelData) continue;
+
+            for (const [deeperFacetName] of Object.entries(deeperLevelData)) {
+                // Check if this deeper item is a descendant of the current item
+                if (deeperFacetName.startsWith(facetName + ' / ')) {
+                    // Check if the descendant matches the search term
+                    if (deeperFacetName.toLowerCase().includes(lowerSearchTerm)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }, []);
+
     // Memoized function to render hierarchy levels
     const renderHierarchyLevel = useCallback((
         hierarchyData: { [level: number]: { [key: string]: number } },
@@ -247,8 +282,8 @@ const Facets: React.FC<FacetsProps> = ({
             const pathParts = facetName.split(' / ');
             const displayName = pathParts[pathParts.length - 1].trim();
 
-            // Filter based on search term
-            if (searchTerm && !displayName.toLowerCase().includes(searchTerm.toLowerCase())) {
+            // Filter based on search term - check full hierarchy path and descendants
+            if (searchTerm && !shouldShowHierarchyItem(hierarchyData, facetName, searchTerm, level)) {
                 return; // Skip this item if it doesn't match search
             }
 
@@ -303,7 +338,7 @@ const Facets: React.FC<FacetsProps> = ({
         });
 
         return items;
-    }, [checked, handleCheckbox, expandedHierarchyItems, toggleHierarchyItem, facetSearchTerms]);
+    }, [checked, handleCheckbox, expandedHierarchyItems, toggleHierarchyItem, facetSearchTerms, shouldShowHierarchyItem]);
 
     /**
      * Renders the facet checkboxes from search results
@@ -784,6 +819,7 @@ const Facets: React.FC<FacetsProps> = ({
                                 <button
                                     className={`facet-filter-tab clear`}
                                     onClick={(e) => {
+                                        setActiveView('filters');
                                         e.stopPropagation();
                                         handleClearAllChecks();
                                     }}
@@ -831,6 +867,7 @@ const Facets: React.FC<FacetsProps> = ({
                                                             placeholder={`Search ${label}...`}
                                                             value={facetSearchTerms[facetTechId] || ''}
                                                             autoFocus
+                                                            onClick={(e) => e.stopPropagation()}
                                                             onChange={(e) => handleFacetSearchChange(facetTechId, e.target.value)}
                                                             onKeyDown={(e) => {
                                                                 if (e.key === 'Escape') {
@@ -888,10 +925,10 @@ const Facets: React.FC<FacetsProps> = ({
                                         )}
                                         {/* For each facet retrieved from EXC, render the appropriate checkboxes and hierarchy if needed */}
                                         {renderFacetsFromSearchResult(facetTechId)}
-                                    </div>
+                                    </div >
                                 );
                             })}
-                        </div>
+                        </div >
                     ) : (
                         <div className="saved-searches-list">
                             {savedSearches.length === 0 ? (
@@ -984,182 +1021,192 @@ const Facets: React.FC<FacetsProps> = ({
                             )}
                         </div>
                     )}
-                </div>
-            </div>
+                </div >
+            </div >
 
             {/* Edit Saved Search Modal */}
-            {showEditLinkModal && (
-                <div className="save-search-modal">
-                    <div className="save-search-modal-content">
-                        <div className="save-search-modal-header">
-                            <h3>Edit Saved Search</h3>
-                        </div>
-                        <div className="save-search-modal-body">
-                            <div className="save-search-field">
-                                <label htmlFor="edit-search-name" className="save-search-field-label">Search Name:</label>
-                                <input
-                                    id="edit-search-name"
-                                    type="text"
-                                    value={editingSearchName}
-                                    onChange={(e) => setEditingSearchName(e.target.value)}
-                                    className="save-search-input"
-                                    placeholder="Enter search name"
-                                    autoFocus
-                                />
+            {
+                showEditLinkModal && (
+                    <div className="save-search-modal">
+                        <div className="save-search-modal-content">
+                            <div className="save-search-modal-header">
+                                <h3>Edit Saved Search</h3>
                             </div>
-                            <div className="save-search-field">
-                                <label className="save-search-field-label">Generated Link:</label>
-                                <textarea
-                                    className="save-search-input save-search-link-display"
-                                    value={editLinkText}
-                                    readOnly
-                                    rows={4}
-                                />
+                            <div className="save-search-modal-body">
+                                <div className="save-search-field">
+                                    <label htmlFor="edit-search-name" className="save-search-field-label">Search Name:</label>
+                                    <input
+                                        id="edit-search-name"
+                                        type="text"
+                                        value={editingSearchName}
+                                        onChange={(e) => setEditingSearchName(e.target.value)}
+                                        className="save-search-input"
+                                        placeholder="Enter search name"
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="save-search-field">
+                                    <label className="save-search-field-label">Generated Link:</label>
+                                    <textarea
+                                        className="save-search-input save-search-link-display"
+                                        value={editLinkText}
+                                        readOnly
+                                        rows={4}
+                                    />
+                                </div>
                             </div>
-                        </div>
-                        <div className="save-search-modal-footer">
-                            <button className="save-search-cancel-btn" onClick={handleCloseEditLink} type="button">Cancel</button>
-                            <button
-                                className="save-search-confirm-btn"
-                                onClick={handleConfirmEditLink}
-                                type="button"
-                                disabled={!editingSearchName.trim()}
-                            >
-                                Update
-                            </button>
+                            <div className="save-search-modal-footer">
+                                <button className="save-search-cancel-btn" onClick={handleCloseEditLink} type="button">Cancel</button>
+                                <button
+                                    className="save-search-confirm-btn"
+                                    onClick={handleConfirmEditLink}
+                                    type="button"
+                                    disabled={!editingSearchName.trim()}
+                                >
+                                    Update
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
 
 
             {/* Delete Confirmation Modal */}
-            {showDeleteModal && (
-                <div className="save-search-modal">
-                    <div className="save-search-modal-content">
-                        <div className="save-search-modal-header">
-                            <h3>Delete Saved Search</h3>
-                        </div>
-                        <div className="save-search-modal-body">
-                            <p>Are you sure you want to delete "<strong>{deleteSearchName}</strong>"?</p>
-                        </div>
-                        <div className="save-search-modal-footer">
-                            <button
-                                className="save-search-cancel-btn"
-                                onClick={handleCancelDelete}
-                                type="button"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className="delete-search-confirm-btn"
-                                onClick={handleConfirmDelete}
-                                type="button"
-                            >
-                                Delete
-                            </button>
+            {
+                showDeleteModal && (
+                    <div className="save-search-modal">
+                        <div className="save-search-modal-content">
+                            <div className="save-search-modal-header">
+                                <h3>Delete Saved Search</h3>
+                            </div>
+                            <div className="save-search-modal-body">
+                                <p>Are you sure you want to delete "<strong>{deleteSearchName}</strong>"?</p>
+                            </div>
+                            <div className="save-search-modal-footer">
+                                <button
+                                    className="save-search-cancel-btn"
+                                    onClick={handleCancelDelete}
+                                    type="button"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className="delete-search-confirm-btn"
+                                    onClick={handleConfirmDelete}
+                                    type="button"
+                                >
+                                    Delete
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Tooltip */}
-            {hoveredSearchId && (
-                <div
-                    className="saved-search-tooltip"
-                    style={{
-                        position: 'fixed',
-                        left: `${tooltipPosition.x}px`,
-                        top: `${tooltipPosition.y}px`,
-                        transform: 'translate(-50%, -100%)',
-                        pointerEvents: 'none',
-                        zIndex: 1001
-                    }}
-                >
-                    {(() => {
-                        const search = savedSearches.find(s => s.id === hoveredSearchId);
-                        if (!search) return null;
-                        return (
-                            <div className="tooltip-content">
-                                <div className="tooltip-search-terms">
-                                    {search.searchTerm || 'No search terms'}
+            {
+                hoveredSearchId && (
+                    <div
+                        className="saved-search-tooltip"
+                        style={{
+                            position: 'fixed',
+                            left: `${tooltipPosition.x}px`,
+                            top: `${tooltipPosition.y}px`,
+                            transform: 'translate(-50%, -100%)',
+                            pointerEvents: 'none',
+                            zIndex: 1001
+                        }}
+                    >
+                        {(() => {
+                            const search = savedSearches.find(s => s.id === hoveredSearchId);
+                            if (!search) return null;
+                            return (
+                                <div className="tooltip-content">
+                                    <div className="tooltip-search-terms">
+                                        {search.searchTerm || 'No search terms'}
+                                    </div>
+                                    <div className="tooltip-filter-count">
+                                        {(() => {
+                                            const filterCount = countFilters(search);
+                                            if (filterCount === 0) return 'No filters';
+                                            if (filterCount === 1) return '1 filter';
+                                            return `${filterCount} filters`;
+                                        })()}
+                                    </div>
+                                    <div className="tooltip-last-used">
+                                        Last used: {formatLastUsed(search.dateLastUsed)}
+                                    </div>
                                 </div>
-                                <div className="tooltip-filter-count">
-                                    {(() => {
-                                        const filterCount = countFilters(search);
-                                        if (filterCount === 0) return 'No filters';
-                                        if (filterCount === 1) return '1 filter';
-                                        return `${filterCount} filters`;
-                                    })()}
-                                </div>
-                                <div className="tooltip-last-used">
-                                    Last used: {formatLastUsed(search.dateLastUsed)}
-                                </div>
-                            </div>
-                        );
-                    })()}
-                </div>
-            )}
+                            );
+                        })()}
+                    </div>
+                )
+            }
 
             {/* Inline Save Form */}
-            {activeView === 'filters' && showSaveModal && (
-                <div className="save-search-inline-form">
-                    <div className="save-search-inline-input-container">
-                        <input
-                            type="text"
-                            placeholder="name for your saved search"
-                            value={saveSearchName}
-                            onChange={(e) => setSaveSearchName(e.target.value)}
-                            className="save-search-inline-input"
-                            autoFocus
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    handleSaveSearchConfirm();
-                                } else if (e.key === 'Escape') {
-                                    handleSaveSearchCancel();
-                                }
-                            }}
-                        />
-                        <button
-                            className="save-search-inline-save-btn"
-                            type="button"
-                            onClick={handleSaveSearchConfirm}
-                            disabled={!saveSearchName.trim()}
-                        >
-                            Save
-                        </button>
+            {
+                activeView === 'filters' && showSaveModal && (
+                    <div className="save-search-inline-form">
+                        <div className="save-search-inline-input-container">
+                            <input
+                                type="text"
+                                placeholder="name for your saved search"
+                                value={saveSearchName}
+                                onChange={(e) => setSaveSearchName(e.target.value)}
+                                className="save-search-inline-input"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        handleSaveSearchConfirm();
+                                    } else if (e.key === 'Escape') {
+                                        handleSaveSearchCancel();
+                                    }
+                                }}
+                            />
+                            <button
+                                className="save-search-inline-save-btn"
+                                type="button"
+                                onClick={handleSaveSearchConfirm}
+                                disabled={!saveSearchName.trim()}
+                            >
+                                Save
+                            </button>
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Action Buttons */}
-            {activeView === 'filters' && (
-                <div className="facet-filter-buttons">
-                    <button
-                        className="facet-filter-apply-btn"
-                        type="button"
-                        onClick={showSaveModal ? handleSaveSearchCancel : handleApplyFilters}
-                    >
-                        <span className="facet-filter-apply-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <polygon points="3 4 21 4 14 14 14 21 10 21 10 14 3 4" />
-                            </svg>
-                        </span>
-                        <span className="facet-filter-apply-text">Apply</span>
-                    </button>
-                    <button
-                        className={`facet-filter-save-btn ${showSaveModal ? 'cancel-mode' : ''}`}
-                        type="button"
-                        onClick={showSaveModal ? handleSaveSearchCancel : handleSaveSearch}
-                    >
-                        <span className="facet-filter-save-icon">
-                            <img src={`${import.meta.env.BASE_URL}icons/save-icon.svg`} alt="Save" />
-                        </span>
-                        <span className="facet-filter-save-text">{showSaveModal ? 'Cancel' : 'Save Search'}</span>
-                    </button>
-                </div>
-            )}
+            {
+                activeView === 'filters' && (
+                    <div className="facet-filter-buttons">
+                        <button
+                            className="facet-filter-apply-btn"
+                            type="button"
+                            onClick={showSaveModal ? handleSaveSearchCancel : handleApplyFilters}
+                        >
+                            <span className="facet-filter-apply-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polygon points="3 4 21 4 14 14 14 21 10 21 10 14 3 4" />
+                                </svg>
+                            </span>
+                            <span className="facet-filter-apply-text">Apply</span>
+                        </button>
+                        <button
+                            className={`facet-filter-save-btn ${showSaveModal ? 'cancel-mode' : ''}`}
+                            type="button"
+                            onClick={showSaveModal ? handleSaveSearchCancel : handleSaveSearch}
+                        >
+                            <span className="facet-filter-save-icon">
+                                <img src={`${import.meta.env.BASE_URL}icons/save-icon.svg`} alt="Save" />
+                            </span>
+                            <span className="facet-filter-save-text">{showSaveModal ? 'Cancel' : 'Save Search'}</span>
+                        </button>
+                    </div>
+                )
+            }
         </>
     );
 };

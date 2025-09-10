@@ -212,7 +212,7 @@ export function populateAssetFromHit(hit: Record<string, unknown>): Asset {
         fadelJobId: fadelJobId,
         featuredAsset: featuredAsset,
         format: safeStringField(hit, 'dc-format'),
-        formatType: safeStringField(hit, 'dc-format-type'),
+        formatType: safeStringField(hit, 'dc-format-type'), // "Image" or "Video" or "Other"
         formatLabel: safeStringField(hit, 'dc-format-label'),
         formatedSize: formatFileSize(safeNumberField(hit, 'size')),
         fundingBuOrMarket: fundingBuOrMarket,
