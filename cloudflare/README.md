@@ -167,3 +167,12 @@ These secrets need to be configured in the CI (Github Actions) and are used for 
 | `CLOUDFLARE_API_TOKEN` | Cloudflare API token used to deploy workers and rotate secrets via [Github Actions](../.github/workflows/). |
 | `DM_CLIENT_ID` | Client ID for the DM IMS technical account used to access `DM_ORIGIN`.  From [Adobe developer console](http://developer.adobe.com/console) project with access to the right delivery environment and DM API access. |
 | `DM_CLIENT_SECRET` | Client secret for the DM IMS technical account used to access `DM_ORIGIN`.  From [Adobe developer console](http://developer.adobe.com/console) project with access to the right delivery environment and DM API access. |
+
+
+### CI variables
+
+These variables need to be configured in the Github actions variables on the repository:
+
+| Variable | Description |
+|----------|-------------|
+| `CLOUDFLARE_SECRET_STORE_ID` | Cloudflare [secret store](#secret-store) ID which holds the secrets. |
