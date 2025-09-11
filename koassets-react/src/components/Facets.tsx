@@ -41,6 +41,9 @@ const Facets: React.FC<FacetsProps> = ({
     setQuery
 }) => {
     const [expandedFacets, setExpandedFacets] = useState<ExpandedFacetsState>({}); // Keep track of expanded facets (from EXC)
+    const [expandedHierarchyItems, setExpandedHierarchyItems] = useState<ExpandedFacetsState>({}); // Keep track of expanded hierarchy items
+    const [facetSearchMode, setFacetSearchMode] = useState<ExpandedFacetsState>({}); // Keep track of search mode for each facet
+    const [facetSearchTerms, setFacetSearchTerms] = useState<{ [key: string]: string }>({}); // Keep track of search terms for each facet
     const [checked, setChecked] = useState<FacetCheckedState>({}); // Keep track of checked state of facets and nested facets if any
     const [dateRanges, setDateRanges] = useState<{ [key: string]: [number | undefined, number | undefined] }>({});
     const dateRangeRef = useRef<DateRangeRef>(null);
@@ -137,7 +140,74 @@ const Facets: React.FC<FacetsProps> = ({
     }, [combinedFacets, excFacets]);
 
     const toggle = useCallback((key: string) => {
-        setExpandedFacets(prev => ({ ...prev, [key]: !prev[key] }));
+        setExpandedFacets(prev => {
+            const newExpanded = { ...prev, [key]: !prev[key] };
+
+            // If we're collapsing the facet (was expanded, now collapsed), close search mode and clear search terms
+            if (prev[key] && !newExpanded[key]) {
+                setFacetSearchMode(prevSearch => ({ ...prevSearch, [key]: false }));
+                setFacetSearchTerms(prevTerms => ({ ...prevTerms, [key]: '' }));
+            }
+
+            return newExpanded;
+        });
+    }, []);
+
+    const toggleHierarchyItem = useCallback((key: string, facetTechId: string, fullPath: string, hierarchyData: { [level: number]: { [key: string]: number } }) => {
+        setExpandedHierarchyItems(prev => {
+            const newExpanded = { ...prev };
+            const isCurrentlyExpanded = prev[key];
+
+            // Toggle the current item
+            newExpanded[key] = !isCurrentlyExpanded;
+
+            // If we're collapsing (was expanded, now collapsed), recursively collapse all children
+            if (isCurrentlyExpanded && !newExpanded[key]) {
+                // Find and collapse all descendant items
+                const collapseDescendants = (parentPath: string, startLevel: number) => {
+                    // Go through all levels starting from the next level
+                    for (let level = startLevel + 1; level < 10; level++) { // Assume max 10 levels
+                        const levelData = hierarchyData[level];
+                        if (!levelData) continue;
+
+                        Object.keys(levelData).forEach(facetName => {
+                            // Check if this item is a descendant of the parent
+                            if (facetName.startsWith(parentPath + ' / ')) {
+                                const descendantKey = `${facetTechId}-${facetName}`;
+                                newExpanded[descendantKey] = false;
+                            }
+                        });
+                    }
+                };
+
+                // Find the level of the current item by checking hierarchy data
+                let currentLevel = 1;
+                for (let level = 1; level < 10; level++) {
+                    const levelData = hierarchyData[level];
+                    if (levelData && levelData[fullPath] !== undefined) {
+                        currentLevel = level;
+                        break;
+                    }
+                }
+
+                collapseDescendants(fullPath, currentLevel);
+            }
+
+            return newExpanded;
+        });
+    }, []);
+
+    const toggleFacetSearch = useCallback((facetTechId: string, event: React.MouseEvent) => {
+        event.stopPropagation();
+        setFacetSearchMode(prev => ({ ...prev, [facetTechId]: !prev[facetTechId] }));
+        // Clear search term when exiting search mode
+        if (facetSearchMode[facetTechId]) {
+            setFacetSearchTerms(prev => ({ ...prev, [facetTechId]: '' }));
+        }
+    }, [facetSearchMode]);
+
+    const handleFacetSearchChange = useCallback((facetTechId: string, searchTerm: string) => {
+        setFacetSearchTerms(prev => ({ ...prev, [facetTechId]: searchTerm }));
     }, []);
 
     // Handler for checkbox change
@@ -159,6 +229,41 @@ const Facets: React.FC<FacetsProps> = ({
         }));
     }, []);
 
+    // Helper function to check if hierarchy item should be shown based on search
+    const shouldShowHierarchyItem = useCallback((
+        hierarchyData: { [level: number]: { [key: string]: number } },
+        facetName: string,
+        searchTerm: string,
+        level: number
+    ): boolean => {
+        if (!searchTerm) return true;
+
+        const lowerSearchTerm = searchTerm.toLowerCase();
+
+        // Check if the full hierarchy path contains the search term
+        if (facetName.toLowerCase().includes(lowerSearchTerm)) {
+            return true;
+        }
+
+        // Check if any descendant items at deeper levels match the search term
+        for (let deeperLevel = level + 1; deeperLevel < 10; deeperLevel++) {
+            const deeperLevelData = hierarchyData[deeperLevel];
+            if (!deeperLevelData) continue;
+
+            for (const [deeperFacetName] of Object.entries(deeperLevelData)) {
+                // Check if this deeper item is a descendant of the current item
+                if (deeperFacetName.startsWith(facetName + ' / ')) {
+                    // Check if the descendant matches the search term
+                    if (deeperFacetName.toLowerCase().includes(lowerSearchTerm)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }, []);
+
     // Memoized function to render hierarchy levels
     const renderHierarchyLevel = useCallback((
         hierarchyData: { [level: number]: { [key: string]: number } },
@@ -169,12 +274,18 @@ const Facets: React.FC<FacetsProps> = ({
         const levelData = hierarchyData[level];
         if (!levelData) return [];
 
+        const searchTerm = facetSearchTerms[facetTechId] || '';
         const items: React.ReactNode[] = [];
 
         Object.entries(levelData).forEach(([facetName, count]) => {
             // Extract the last part of the hierarchy path for display
             const pathParts = facetName.split(' / ');
             const displayName = pathParts[pathParts.length - 1].trim();
+
+            // Filter based on search term - check full hierarchy path and descendants
+            if (searchTerm && !shouldShowHierarchyItem(hierarchyData, facetName, searchTerm, level)) {
+                return; // Skip this item if it doesn't match search
+            }
 
             // Only show items that match the parent path or are at the starting level (level 1)
             const currentPath = pathParts.slice(0, -1).join(' / ');
@@ -196,25 +307,38 @@ const Facets: React.FC<FacetsProps> = ({
                 ].filter(Boolean).join(' ');
 
                 const checkboxKey = `${facetTechId}.${HIERARCHY_PREFIX}${level}`;
+                const hierarchyItemKey = `${facetTechId}-${fullPath}`;
+                const isHierarchyItemExpanded = expandedHierarchyItems[hierarchyItemKey];
+
                 items.push(
                     <div key={itemKey} className={containerClasses}>
-                        <label className="facet-filter-checkbox-label">
-                            <input
-                                className="facet-filter-checkbox-input"
-                                type="checkbox"
-                                checked={!!checked[checkboxKey]?.[facetName]}
-                                onChange={() => handleCheckbox(checkboxKey, facetName)}
-                            /> {displayName}{count > 0 ? ` (${count})` : ''}
-                        </label>
-                        {/* Render child levels */}
-                        {renderHierarchyLevel(hierarchyData, facetTechId, level + 1, fullPath)}
+                        <div className="facet-filter-checkbox-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                            <label className="facet-filter-checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0, cursor: 'pointer', flex: 1 }}>
+                                <input
+                                    className="facet-filter-checkbox-input"
+                                    type="checkbox"
+                                    checked={!!checked[checkboxKey]?.[facetName]}
+                                    onChange={() => handleCheckbox(checkboxKey, facetName)}
+                                /> {displayName}{count > 0 ? ` (${count})` : ''}
+                            </label>
+                            {hasSubLevels && (
+                                <span
+                                    className="facet-filter-arrow-sub-level"
+                                    onClick={() => toggleHierarchyItem(hierarchyItemKey, facetTechId, fullPath, hierarchyData)}
+                                >
+                                    {isHierarchyItemExpanded ? '▼' : '▶'}
+                                </span>
+                            )}
+                        </div>
+                        {/* Render child levels only if expanded */}
+                        {hasSubLevels && isHierarchyItemExpanded && renderHierarchyLevel(hierarchyData, facetTechId, level + 1, fullPath)}
                     </div>
                 );
             }
         });
 
         return items;
-    }, [checked, handleCheckbox]);
+    }, [checked, handleCheckbox, expandedHierarchyItems, toggleHierarchyItem, facetSearchTerms, shouldShowHierarchyItem]);
 
     /**
      * Renders the facet checkboxes from search results
@@ -255,10 +379,20 @@ const Facets: React.FC<FacetsProps> = ({
         if (!expandedFacets[facetTechId] || !combinedFacets || !combinedFacets[facetTechId] || Object.keys(combinedFacets[facetTechId] || {}).length === 0) {
             return null;
         }
+
+        const searchTerm = facetSearchTerms[facetTechId] || '';
         const checkboxKey = `${facetTechId}`;
+
+        // Filter facet entries based on search term
+        const filteredEntries = Object.entries((combinedFacets && combinedFacets[facetTechId]) || {})
+            .filter(([facetName]) => {
+                if (!searchTerm) return true;
+                return facetName.toLowerCase().includes(searchTerm.toLowerCase());
+            });
+
         return (
             <div className="facet-filter-checkbox-list">
-                {Object.entries((combinedFacets && combinedFacets[facetTechId]) || {}).map(([facetName, count]) => (
+                {filteredEntries.map(([facetName, count]) => (
                     <label key={facetName} className="facet-filter-checkbox-label">
                         <input
                             type="checkbox"
@@ -269,7 +403,7 @@ const Facets: React.FC<FacetsProps> = ({
                 ))}
             </div>
         );
-    }, [expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, checked, handleCheckbox]);
+    }, [expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, checked, handleCheckbox, facetSearchTerms]);
 
     // Transform the checked object into an array of facet filters
     useEffect(() => {
@@ -351,12 +485,26 @@ const Facets: React.FC<FacetsProps> = ({
         return count;
     }, [checked]);
 
+    // Count all checked facets across all categories
+    const getTotalCheckedCount = useCallback((): number => {
+        let totalCount = 0;
+        Object.values(checked).forEach(facetChecked => {
+            Object.values(facetChecked).forEach(isChecked => {
+                if (isChecked) totalCount++;
+            });
+        });
+        return totalCount;
+    }, [checked]);
+
     const handleClearAllChecks = useCallback(() => {
         isUpdatingFromExternalRef.current = true;
         setChecked({});
         setSelectedFacetFilters([]);
         setDateRanges({});
         setExpandedFacets({}); // Collapse all facets
+        setExpandedHierarchyItems({}); // Collapse all hierarchy items
+        setFacetSearchMode({}); // Exit all search modes
+        setFacetSearchTerms({}); // Clear all search terms
         setSelectedNumericFilters([]);
         dateRangeRef.current?.reset();
     }, [setSelectedFacetFilters, setSelectedNumericFilters]);
@@ -415,11 +563,14 @@ const Facets: React.FC<FacetsProps> = ({
     const handleLoadSavedSearch = (savedSearch: SavedSearch) => {
         // Dismiss any open tooltip
         handleHideTooltip();
-        
+
         // Reset current filters
         setChecked({});
         setDateRanges({});
         setExpandedFacets({});
+        setExpandedHierarchyItems({});
+        setFacetSearchMode({});
+        setFacetSearchTerms({});
 
         // Load saved facet filters
         const newChecked: FacetCheckedState = {};
@@ -443,7 +594,7 @@ const Facets: React.FC<FacetsProps> = ({
             // Set flag to indicate we're updating from saved search loading
             isUpdatingFromExternalRef.current = true;
             setChecked(newChecked);
-            
+
             // Then update filters - this will trigger the auto-search useEffect in MainApp
             // which will use the updated query state
             setSelectedFacetFilters(savedSearch.facetFilters);
@@ -650,25 +801,46 @@ const Facets: React.FC<FacetsProps> = ({
                 <div className="facet-filter">
                     <div className="facet-filter-header">
                         <div className="facet-filter-tabs">
-                            <button
-                                className={`facet-filter-tab ${activeView === 'filters' ? 'active' : ''}`}
+                            <div
+                                className={`facet-filter-tab-group left ${activeView === 'filters' ? 'active' : ''}`}
                                 onClick={() => setActiveView('filters')}
-                                type="button"
+                                style={{ cursor: 'pointer' }}
                             >
-                                Filters
-                            </button>
-                            {activeView === 'filters' && (
-                                <button className="facet-filter-header-clear" onClick={handleClearAllChecks} type="button">
+                                <button
+                                    className={`facet-filter-tab ${activeView === 'filters' ? 'active' : ''}`}
+                                    onClick={() => setActiveView('filters')}
+                                    type="button"
+                                >
+                                    Filters
+                                    {getTotalCheckedCount() > 0 && (
+                                        <div className="assets-details-tag tccc-tag facet-filter-count-tag">{getTotalCheckedCount()}</div>
+                                    )}
+                                </button>
+                                <button
+                                    className={`facet-filter-tab clear`}
+                                    onClick={(e) => {
+                                        setActiveView('filters');
+                                        e.stopPropagation();
+                                        handleClearAllChecks();
+                                    }}
+                                    type="button"
+                                >
                                     CLEAR ALL
                                 </button>
-                            )}
-                            <button
-                                className={`facet-filter-tab ${activeView === 'saved' ? 'active' : ''}`}
+                            </div>
+                            <div
+                                className={`facet-filter-tab-group right ${activeView === 'saved' ? 'active' : ''}`}
                                 onClick={() => setActiveView('saved')}
-                                type="button"
+                                style={{ cursor: 'pointer' }}
                             >
-                                My Saved Searches
-                            </button>
+                                <button
+                                    className={`facet-filter-tab ${activeView === 'saved' ? 'active' : ''}`}
+                                    onClick={() => setActiveView('saved')}
+                                    type="button"
+                                >
+                                    My Saved Searches
+                                </button>
+                            </div>
                         </div>
                     </div>
                     {activeView === 'filters' ? (
@@ -680,24 +852,83 @@ const Facets: React.FC<FacetsProps> = ({
 
                                 return (
                                     <div key={facetTechId} className="facet-filter-section">
-                                        <button
-                                            className="facet-filter-button"
-                                            tabIndex={0}
-                                            onClick={() => toggle(facetTechId)}
-                                            aria-expanded={!!expandedFacets[facetTechId]}
-                                        >
-                                            <span className="facet-filter-label">{label}</span>
-                                            {checkedCount > 0 && (
-                                                <div className="assets-details-tag tccc-tag facet-filter-count-tag">{checkedCount}</div>
-                                            )}
-                                            <span className="facet-filter-arrow">{expandedFacets[facetTechId] ? '\u25B2' : '\u25BC'}</span>
-                                        </button>
+                                        {facetSearchMode[facetTechId] ? (
+                                            <div className="facet-filter-button facet-filter-button-search">
+                                                <div className="facet-search-container">
+                                                    <div className="facet-search-input-wrapper">
+                                                        <img
+                                                            src="/icons/search.svg"
+                                                            alt="Search"
+                                                            className="facet-search-icon-inside"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            className="facet-search-input"
+                                                            placeholder={`Search ${label}...`}
+                                                            value={facetSearchTerms[facetTechId] || ''}
+                                                            autoFocus
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            onChange={(e) => handleFacetSearchChange(facetTechId, e.target.value)}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Escape') {
+                                                                    setFacetSearchMode(prev => ({ ...prev, [facetTechId]: false }));
+                                                                    setFacetSearchTerms(prev => ({ ...prev, [facetTechId]: '' }));
+                                                                }
+                                                            }}
+                                                        />
+                                                        <img
+                                                            src="/icons/close-menu.svg"
+                                                            alt="Close"
+                                                            className="facet-search-close-icon"
+                                                            onClick={(e) => toggleFacetSearch(facetTechId, e)}
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="facet-filter-right-section">
+                                                    {checkedCount > 0 && (
+                                                        <div className="assets-details-tag tccc-tag facet-filter-count-tag">{checkedCount}</div>
+                                                    )}
+                                                    <span
+                                                        className={`facet-filter-arrow-top-level ${expandedFacets[facetTechId] ? 'expanded' : ''}`}
+                                                        onClick={() => toggle(facetTechId)}
+                                                    >
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div
+                                                className="facet-filter-button"
+                                                tabIndex={0}
+                                                aria-expanded={!!expandedFacets[facetTechId]}
+                                                onClick={() => toggle(facetTechId)}
+                                            >
+                                                <span
+                                                    className="facet-filter-label"
+                                                >{label}</span>
+                                                <div className="facet-filter-right-section">
+                                                    {checkedCount > 0 && (
+                                                        <div className="assets-details-tag tccc-tag facet-filter-count-tag">{checkedCount}</div>
+                                                    )}
+                                                    {expandedFacets[facetTechId] && (
+                                                        <img
+                                                            src="/icons/search.svg"
+                                                            alt="Search"
+                                                            className="facet-search-trigger"
+                                                            onClick={(e) => toggleFacetSearch(facetTechId, e)}
+                                                        />
+                                                    )}
+                                                    <span
+                                                        className={`facet-filter-arrow ${expandedFacets[facetTechId] ? 'expanded' : ''}`}
+                                                    ></span>
+                                                </div>
+                                            </div>
+                                        )}
                                         {/* For each facet retrieved from EXC, render the appropriate checkboxes and hierarchy if needed */}
                                         {renderFacetsFromSearchResult(facetTechId)}
-                                    </div>
+                                    </div >
                                 );
                             })}
-                        </div>
+                        </div >
                     ) : (
                         <div className="saved-searches-list">
                             {savedSearches.length === 0 ? (
@@ -790,182 +1021,192 @@ const Facets: React.FC<FacetsProps> = ({
                             )}
                         </div>
                     )}
-                </div>
-            </div>
+                </div >
+            </div >
 
             {/* Edit Saved Search Modal */}
-            {showEditLinkModal && (
-                <div className="save-search-modal">
-                    <div className="save-search-modal-content">
-                        <div className="save-search-modal-header">
-                            <h3>Edit Saved Search</h3>
-                        </div>
-                        <div className="save-search-modal-body">
-                            <div className="save-search-field">
-                                <label htmlFor="edit-search-name" className="save-search-field-label">Search Name:</label>
-                                <input
-                                    id="edit-search-name"
-                                    type="text"
-                                    value={editingSearchName}
-                                    onChange={(e) => setEditingSearchName(e.target.value)}
-                                    className="save-search-input"
-                                    placeholder="Enter search name"
-                                    autoFocus
-                                />
+            {
+                showEditLinkModal && (
+                    <div className="save-search-modal">
+                        <div className="save-search-modal-content">
+                            <div className="save-search-modal-header">
+                                <h3>Edit Saved Search</h3>
                             </div>
-                            <div className="save-search-field">
-                                <label className="save-search-field-label">Generated Link:</label>
-                                <textarea
-                                    className="save-search-input save-search-link-display"
-                                    value={editLinkText}
-                                    readOnly
-                                    rows={4}
-                                />
+                            <div className="save-search-modal-body">
+                                <div className="save-search-field">
+                                    <label htmlFor="edit-search-name" className="save-search-field-label">Search Name:</label>
+                                    <input
+                                        id="edit-search-name"
+                                        type="text"
+                                        value={editingSearchName}
+                                        onChange={(e) => setEditingSearchName(e.target.value)}
+                                        className="save-search-input"
+                                        placeholder="Enter search name"
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="save-search-field">
+                                    <label className="save-search-field-label">Generated Link:</label>
+                                    <textarea
+                                        className="save-search-input save-search-link-display"
+                                        value={editLinkText}
+                                        readOnly
+                                        rows={4}
+                                    />
+                                </div>
                             </div>
-                        </div>
-                        <div className="save-search-modal-footer">
-                            <button className="save-search-cancel-btn" onClick={handleCloseEditLink} type="button">Cancel</button>
-                            <button
-                                className="save-search-confirm-btn"
-                                onClick={handleConfirmEditLink}
-                                type="button"
-                                disabled={!editingSearchName.trim()}
-                            >
-                                Update
-                            </button>
+                            <div className="save-search-modal-footer">
+                                <button className="save-search-cancel-btn" onClick={handleCloseEditLink} type="button">Cancel</button>
+                                <button
+                                    className="save-search-confirm-btn"
+                                    onClick={handleConfirmEditLink}
+                                    type="button"
+                                    disabled={!editingSearchName.trim()}
+                                >
+                                    Update
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
 
 
             {/* Delete Confirmation Modal */}
-            {showDeleteModal && (
-                <div className="save-search-modal">
-                    <div className="save-search-modal-content">
-                        <div className="save-search-modal-header">
-                            <h3>Delete Saved Search</h3>
-                        </div>
-                        <div className="save-search-modal-body">
-                            <p>Are you sure you want to delete "<strong>{deleteSearchName}</strong>"?</p>
-                        </div>
-                        <div className="save-search-modal-footer">
-                            <button
-                                className="save-search-cancel-btn"
-                                onClick={handleCancelDelete}
-                                type="button"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className="delete-search-confirm-btn"
-                                onClick={handleConfirmDelete}
-                                type="button"
-                            >
-                                Delete
-                            </button>
+            {
+                showDeleteModal && (
+                    <div className="save-search-modal">
+                        <div className="save-search-modal-content">
+                            <div className="save-search-modal-header">
+                                <h3>Delete Saved Search</h3>
+                            </div>
+                            <div className="save-search-modal-body">
+                                <p>Are you sure you want to delete "<strong>{deleteSearchName}</strong>"?</p>
+                            </div>
+                            <div className="save-search-modal-footer">
+                                <button
+                                    className="save-search-cancel-btn"
+                                    onClick={handleCancelDelete}
+                                    type="button"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className="delete-search-confirm-btn"
+                                    onClick={handleConfirmDelete}
+                                    type="button"
+                                >
+                                    Delete
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Tooltip */}
-            {hoveredSearchId && (
-                <div
-                    className="saved-search-tooltip"
-                    style={{
-                        position: 'fixed',
-                        left: `${tooltipPosition.x}px`,
-                        top: `${tooltipPosition.y}px`,
-                        transform: 'translate(-50%, -100%)',
-                        pointerEvents: 'none',
-                        zIndex: 1001
-                    }}
-                >
-                    {(() => {
-                        const search = savedSearches.find(s => s.id === hoveredSearchId);
-                        if (!search) return null;
-                        return (
-                            <div className="tooltip-content">
-                                <div className="tooltip-search-terms">
-                                    {search.searchTerm || 'No search terms'}
+            {
+                hoveredSearchId && (
+                    <div
+                        className="saved-search-tooltip"
+                        style={{
+                            position: 'fixed',
+                            left: `${tooltipPosition.x}px`,
+                            top: `${tooltipPosition.y}px`,
+                            transform: 'translate(-50%, -100%)',
+                            pointerEvents: 'none',
+                            zIndex: 1001
+                        }}
+                    >
+                        {(() => {
+                            const search = savedSearches.find(s => s.id === hoveredSearchId);
+                            if (!search) return null;
+                            return (
+                                <div className="tooltip-content">
+                                    <div className="tooltip-search-terms">
+                                        {search.searchTerm || 'No search terms'}
+                                    </div>
+                                    <div className="tooltip-filter-count">
+                                        {(() => {
+                                            const filterCount = countFilters(search);
+                                            if (filterCount === 0) return 'No filters';
+                                            if (filterCount === 1) return '1 filter';
+                                            return `${filterCount} filters`;
+                                        })()}
+                                    </div>
+                                    <div className="tooltip-last-used">
+                                        Last used: {formatLastUsed(search.dateLastUsed)}
+                                    </div>
                                 </div>
-                                <div className="tooltip-filter-count">
-                                    {(() => {
-                                        const filterCount = countFilters(search);
-                                        if (filterCount === 0) return 'No filters';
-                                        if (filterCount === 1) return '1 filter';
-                                        return `${filterCount} filters`;
-                                    })()}
-                                </div>
-                                <div className="tooltip-last-used">
-                                    Last used: {formatLastUsed(search.dateLastUsed)}
-                                </div>
-                            </div>
-                        );
-                    })()}
-                </div>
-            )}
+                            );
+                        })()}
+                    </div>
+                )
+            }
 
             {/* Inline Save Form */}
-            {activeView === 'filters' && showSaveModal && (
-                <div className="save-search-inline-form">
-                    <div className="save-search-inline-input-container">
-                        <input
-                            type="text"
-                            placeholder="name for your saved search"
-                            value={saveSearchName}
-                            onChange={(e) => setSaveSearchName(e.target.value)}
-                            className="save-search-inline-input"
-                            autoFocus
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    handleSaveSearchConfirm();
-                                } else if (e.key === 'Escape') {
-                                    handleSaveSearchCancel();
-                                }
-                            }}
-                        />
-                        <button
-                            className="save-search-inline-save-btn"
-                            type="button"
-                            onClick={handleSaveSearchConfirm}
-                            disabled={!saveSearchName.trim()}
-                        >
-                            Save
-                        </button>
+            {
+                activeView === 'filters' && showSaveModal && (
+                    <div className="save-search-inline-form">
+                        <div className="save-search-inline-input-container">
+                            <input
+                                type="text"
+                                placeholder="name for your saved search"
+                                value={saveSearchName}
+                                onChange={(e) => setSaveSearchName(e.target.value)}
+                                className="save-search-inline-input"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        handleSaveSearchConfirm();
+                                    } else if (e.key === 'Escape') {
+                                        handleSaveSearchCancel();
+                                    }
+                                }}
+                            />
+                            <button
+                                className="save-search-inline-save-btn"
+                                type="button"
+                                onClick={handleSaveSearchConfirm}
+                                disabled={!saveSearchName.trim()}
+                            >
+                                Save
+                            </button>
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Action Buttons */}
-            {activeView === 'filters' && (
-                <div className="facet-filter-buttons">
-                    <button
-                        className="facet-filter-apply-btn"
-                        type="button"
-                        onClick={showSaveModal ? handleSaveSearchCancel : handleApplyFilters}
-                    >
-                        <span className="facet-filter-apply-icon">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <polygon points="3 4 21 4 14 14 14 21 10 21 10 14 3 4" />
-                            </svg>
-                        </span>
-                        <span className="facet-filter-apply-text">Apply</span>
-                    </button>
-                    <button
-                        className={`facet-filter-save-btn ${showSaveModal ? 'cancel-mode' : ''}`}
-                        type="button"
-                        onClick={showSaveModal ? handleSaveSearchCancel : handleSaveSearch}
-                    >
-                        <span className="facet-filter-save-icon">
-                            <img src={`${import.meta.env.BASE_URL}icons/save-icon.svg`} alt="Save" />
-                        </span>
-                        <span className="facet-filter-save-text">{showSaveModal ? 'Cancel' : 'Save Search'}</span>
-                    </button>
-                </div>
-            )}
+            {
+                activeView === 'filters' && (
+                    <div className="facet-filter-buttons">
+                        <button
+                            className="facet-filter-apply-btn"
+                            type="button"
+                            onClick={showSaveModal ? handleSaveSearchCancel : handleApplyFilters}
+                        >
+                            <span className="facet-filter-apply-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polygon points="3 4 21 4 14 14 14 21 10 21 10 14 3 4" />
+                                </svg>
+                            </span>
+                            <span className="facet-filter-apply-text">Apply</span>
+                        </button>
+                        <button
+                            className={`facet-filter-save-btn ${showSaveModal ? 'cancel-mode' : ''}`}
+                            type="button"
+                            onClick={showSaveModal ? handleSaveSearchCancel : handleSaveSearch}
+                        >
+                            <span className="facet-filter-save-icon">
+                                <img src={`${import.meta.env.BASE_URL}icons/save-icon.svg`} alt="Save" />
+                            </span>
+                            <span className="facet-filter-save-text">{showSaveModal ? 'Cancel' : 'Save Search'}</span>
+                        </button>
+                    </div>
+                )
+            }
         </>
     );
 };

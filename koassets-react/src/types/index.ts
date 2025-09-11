@@ -1,6 +1,72 @@
 // Asset-related types
 import React from 'react';
 
+// Rights-related interfaces
+export interface RightsData {
+    id: number;
+    rightId: number;
+    name: string;
+    enabled: boolean;
+    children?: RightsData[];
+}
+
+// Step form data interfaces for persistence
+export interface RequestDownloadStepData {
+    airDate?: import('@internationalized/date').CalendarDate | null;
+    pullDate?: import('@internationalized/date').CalendarDate | null;
+    markets: RightsData[];
+    mediaChannels: RightsData[];
+    selectedMarkets: Set<RightsData>;
+    selectedMediaChannels: Set<RightsData>;
+    marketSearchTerm: string;
+    dateValidationError: string;
+}
+
+// Cached rights data interfaces
+export interface CachedRightsData {
+    marketsData: RightsData[];
+    mediaChannelsData: RightsData[];
+    isLoaded: boolean;
+}
+
+export interface RightsCheckStepData {
+    downloadOptions: Record<string, {
+        assetId: string;
+        originalAsset: boolean;
+        allRenditions: boolean;
+    }>;
+    agreesToTerms: boolean;
+}
+
+export interface RequestRightsExtensionStepData {
+    restrictedAssets: Asset[];
+    agencyType?: string;
+    agencyName?: string;
+    contactName?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+    materialsNeeded?: string;
+    materialsRequiredDate?: import('@internationalized/date').CalendarDate | null;
+    formatsRequired?: string;
+    usageRightsRequired?: {
+        music: boolean;
+        talent: boolean;
+        photographer: boolean;
+        voiceover: boolean;
+        stockFootage: boolean;
+    };
+    adaptationIntention?: string;
+    budgetForMarket?: string;
+    exceptionOrNotes?: string;
+    agreesToTerms?: boolean;
+}
+
+export interface WorkflowStepData {
+    requestDownload?: RequestDownloadStepData;
+    rightsCheck?: RightsCheckStepData;
+    rightsExtension?: RequestRightsExtensionStepData;
+}
+
 export interface Rendition {
     name?: string;
     format?: string;
@@ -302,6 +368,11 @@ export interface ExternalParams {
     isBlockIntegration?: boolean;
     restrictedBrands?: RestrictedBrand[];
     presetFilters?: string[];
+    fadelParams?: [{
+        baseUrl?: string;
+        username?: string;
+        password?: string;
+    }];
 }
 
 // Image Gallery types
@@ -370,8 +441,9 @@ export enum WorkflowStep {
     CART = 'cart',
     REQUEST_DOWNLOAD = 'request-download',
     RIGHTS_CHECK = 'rights-check',
+    REQUEST_RIGHTS_EXTENSION = 'request-rights-extension',
     DOWNLOAD = 'download',
-    COMPLETE_DOWNLOAD = 'complete-download'
+    CLOSE_DOWNLOAD = 'close-download'
 }
 
 export enum FilteredItemsType {
@@ -382,26 +454,35 @@ export interface WorkflowStepStatuses {
     [WorkflowStep.CART]: StepStatus;
     [WorkflowStep.REQUEST_DOWNLOAD]: StepStatus;
     [WorkflowStep.RIGHTS_CHECK]: StepStatus;
+    [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: StepStatus;
     [WorkflowStep.DOWNLOAD]: StepStatus;
-    [WorkflowStep.COMPLETE_DOWNLOAD]: StepStatus;
+    [WorkflowStep.CLOSE_DOWNLOAD]: StepStatus;
 }
 
 export interface WorkflowStepIcons {
     [WorkflowStep.CART]: React.JSX.Element | string;
     [WorkflowStep.REQUEST_DOWNLOAD]: React.JSX.Element | string;
     [WorkflowStep.RIGHTS_CHECK]: React.JSX.Element | string;
+    [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: React.JSX.Element | string;
     [WorkflowStep.DOWNLOAD]: React.JSX.Element | string;
-    [WorkflowStep.COMPLETE_DOWNLOAD]: React.JSX.Element | string;
+    [WorkflowStep.CLOSE_DOWNLOAD]: React.JSX.Element | string;
 }
 
 export interface CartPanelAssetsProps {
     cartItems: CartItem[];
     setCartItems: React.Dispatch<React.SetStateAction<CartItem[]>>;
     onRemoveItem: (item: CartItem) => void;
-    onApproveAssets: (items: CartItem[]) => void;
-    onDownloadAssets: (items: CartItem[]) => void;
     onClose: () => void;
     onActiveStepChange: (step: WorkflowStep) => void;
+}
+
+export interface CartRequestRightsExtensionProps {
+    restrictedAssets: CartItem[];
+    intendedUse: RequestDownloadStepData;
+    onCancel: () => void;
+    onSendRightsExtensionRequest: (rightsExtensionData: RequestRightsExtensionStepData) => void;
+    onBack: (stepData: RequestRightsExtensionStepData) => void;
+    initialData?: RequestRightsExtensionStepData;
 }
 
 // Extended CartItem for authorization workflow
