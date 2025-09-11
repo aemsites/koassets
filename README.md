@@ -4,13 +4,15 @@ Astra Pilot for an Assets Share Portal built on Helix & Content Hub (Dynamic Med
 
 ## Environments
 
-Main site (cloudflare worker):
+### Main site (cloudflare worker):
 - Live: https://koassets.adobeaem.workers.dev
-- Branch: <https://{branch}-koassets.adobeaem.workers.dev>
-  - Note: for this URL to work, branch names must be shorter than ~50 characters and only include lowercase letters, numbers, and dashes characters. Due to [cloudflare worker alias limitations](https://developers.cloudflare.com/workers/configuration/previews/#rules-and-limitations).
-  - Note 2: for the IMS login to work, the branch name must be less than 20 chars and only contain letters and numbers (no dashes, no special chars).
+- Branch Live: <https://{branch}-koassets.adobeaem.workers.dev>
+- Preview: https://preview-koassets.adobeaem.workers.dev
+- Branch Preview: <https://{branch}-preview-koassets.adobeaem.workers.dev>
 
-Helix origin:
+Note: For branch URLs to work, the branch names must be short and only include lowercase letters, numbers, and dashes characters. Due to [cloudflare worker alias limitations](https://developers.cloudflare.com/workers/configuration/previews/#rules-and-limitations).
+
+### Helix origins
 - Live: https://main--koassets--aemsites.aem.live
 - Preview: https://main--koassets--aemsites.aem.page
 
@@ -55,16 +57,17 @@ npm run install-all
 
 ### Initial setup
 
-Add `cloudflare/.env` file with the following content:
+Add `cloudflare/.secrets` file with the [required secrets](cloudflare/README.md#secret-store), such as:
 
 ```
-# Local development config and secrets
+# Cookie authentication
+# For local development, not the same as production. generate using `openssl rand -base64 32`
+KOASSETS_COOKIE_SECRET="..."
 
-# Per-developer client secret from MS Entra app registration
-MICROSOFT_ENTRA_CLIENT_SECRET = "......"
-
-# generate locally using `openssl rand -base64 32`
-COOKIE_SECRET = "......"
+# DM IMS technical account token
+# Get from Adobe developer console project with access to DM_ORIGIN environment
+KOASSETS_DM_CLIENT_ID="..."
+KOASSETS_DM_CLIENT_SECRET="..."
 ```
 
 ### Run full stack locally
@@ -76,6 +79,8 @@ npm run dev
 This should open <http://localhost:8787> in your browser. Use `Ctrl+C` to stop it.
 
 This runs a local cloudflare worker (`wrangler dev`), local EDS (`aem up`) and does auto-rebuild of react code (using `vite build`).
+
+Note you will need to stop and restart `npm run dev` after 24 hours to renew the DM IMS technical account token.
 
 Environment variables supported by `npm run dev`:
 
@@ -108,3 +113,9 @@ Should work in each project folder:
 ```sh
 npm run lint
 ```
+
+## CI/CD
+
+[Github actions](.github/workflows/) build & lint the project, and automatically [deploy the cloudflare worker](cloudflare/README.md#deploying). They also automatically rotate secrets (running on a cron schedule).
+
+Github actions must be configured with these [secrets](cloudflare/README.md#ci-secrets) and [variables](cloudflare/README.md#ci-variables).

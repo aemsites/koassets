@@ -6,7 +6,7 @@ import {
   isValidUrl,
   setCookie,
   validateSignedCookie,
-} from './utils-http.js';
+} from './util/http.js';
 
 /* Configure the URL path prefix for auth flows here */
 const AUTH_PREFIX = '/auth';
@@ -18,7 +18,6 @@ const ORIGINAL_URL_PARAM = 'url';
 const REQUIRED_ENV_VARS = [
   'MICROSOFT_ENTRA_TENANT_ID',
   'MICROSOFT_ENTRA_CLIENT_ID',
-  'MICROSOFT_ENTRA_CLIENT_SECRET',
   'MICROSOFT_ENTRA_JWKS_URL',
   'COOKIE_SECRET',
 ];
@@ -35,7 +34,7 @@ async function createSessionJWT(request, idToken, env) {
     usertype: idToken.usertype,
   };
 
-  const key = new TextEncoder().encode(env.COOKIE_SECRET);
+  const key = new TextEncoder().encode(await env.COOKIE_SECRET.get());
 
   const jwt = new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
@@ -52,7 +51,7 @@ async function createSessionJWT(request, idToken, env) {
 
 async function validateSessionJWT(request, env, sessionJWT) {
   try {
-    const key = new TextEncoder().encode(env.COOKIE_SECRET);
+    const key = new TextEncoder().encode(await env.COOKIE_SECRET.get());
 
     const { payload } = await jwtVerify(sessionJWT, key, {
       issuer: request.uri.origin,
@@ -260,7 +259,7 @@ authRouter
 
     const response = redirect(authorizeUrl);
     // store state in signed cookie
-    await createSignedCookie(response, env.COOKIE_SECRET, COOKIE_STATE, state, {
+    await createSignedCookie(response, await env.COOKIE_SECRET.get(), COOKIE_STATE, state, {
       // SameSite=None in order to appear later in /auth/callback which is cross-site because it originates from the OIDC provider
       SameSite: 'None',
       // Chrome wants Secure with SameSite=None and ignores it for http://localhost. Safari does not like Secure on http://localhost (non SSL)
@@ -272,7 +271,7 @@ authRouter
   })
 
   .post('/callback', async (request, env) => {
-    const state = await validateSignedCookie(request, env.COOKIE_SECRET, COOKIE_STATE);
+    const state = await validateSignedCookie(request, await env.COOKIE_SECRET.get(), COOKIE_STATE);
     if (!state) {
       return unauthorized(request);
     }
@@ -322,7 +321,7 @@ authRouter
     });
   })
 
-  .get('/logout', (request, env) => {
+  .get('/logout', withAuthentication, (request, env) => {
     console.log('User logout:', request.session);
 
     // redirect to MS logout page
