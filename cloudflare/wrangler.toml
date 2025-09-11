@@ -65,4 +65,4 @@ secret_name = "KOASSETS_FADEL_PASSWORD"
 
 [[kv_namespaces]]
 binding = "AUTH_TOKENS"
-id = "koassets-auth-tokens"
+id = "975809e56a7a425aa006e156671bbecf"

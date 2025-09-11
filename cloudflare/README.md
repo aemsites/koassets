@@ -197,6 +197,6 @@ These variables need to be configured in the Github actions variables on the rep
 
 This worker uses the following [Cloudflare KV](https://developers.cloudflare.com/kv/) namespaces:
 
-| Namespace ID | Binding | Description |
-|--------------|---------|-------------|
-| `koassets-auth-tokens` | `env.AUTH_TOKENS` | Stores authentication tokens for various origins. |
+| Namespace Name | Namespace ID | Binding | Description |
+|----------------|--------------|---------|-------------|
+| `koassets-auth-tokens` | `975809e56a7a425aa006e156671bbecf` | `env.AUTH_TOKENS` | Stores authentication tokens for various origins. |
