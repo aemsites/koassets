@@ -24,7 +24,7 @@ async function createFadelToken(request, env) {
 }
 
 async function getFadelToken(request, env) {
-  let { value: token, metadata } = await env.AUTH_TOKENS.getWithMetadata("fadel-token");
+  const { value: token, metadata } = await env.AUTH_TOKENS.getWithMetadata("fadel-token");
   if (token && metadata?.expiryDate > (Date.now() + 10000)) {
     return token;
   } else {
