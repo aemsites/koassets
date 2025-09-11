@@ -14,7 +14,25 @@ export default defineConfig(({ mode }) => {
   console.log(`🌍 Loading environment: ${envMode}`);
 
   return {
-    plugins: [react()],
+    plugins: [
+      react(),
+      // Inject local config script in development mode
+      {
+        name: 'inject-local-config',
+        transformIndexHtml: {
+          enforce: 'pre',
+          transform(html) {
+            if (mode === 'development') {
+              return html.replace(
+                '<div id="root"></div>',
+                '<div id="root"></div>\n  <script src="/config.local.js" onerror="console.log(\'No local config found\')"></script>'
+              );
+            }
+            return html;
+          }
+        }
+      }
+    ],
     server: {
       port: 5173,
       open: '/tools/assets-browser/index.html'
