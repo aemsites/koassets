@@ -27,6 +27,7 @@ enabled = true
 # Configure origins here
 HELIX_ORIGIN = "https://main--koassets--aemsites.aem.live"
 DM_ORIGIN = "https://delivery-p64403-e544653.adobeaemcloud.com"
+FADEL_ORIGIN = "https://test.fadelarc.net"
 
 # Microsoft Entra IDP (config)
 MICROSOFT_ENTRA_TENANT_ID = "801ee00e-24ef-45c3-848b-b88400248100"
@@ -51,3 +52,17 @@ secret_name = "KOASSETS_DM_CLIENT_ID"
 store_id = "5d64b0d295964846b36569f507fb7b13"
 binding = "DM_ACCESS_TOKEN"
 secret_name = "KOASSETS_DM_ACCESS_TOKEN"
+
+[[secrets_store_secrets]]
+store_id = "5d64b0d295964846b36569f507fb7b13"
+binding = "FADEL_USER"
+secret_name = "KOASSETS_FADEL_USER"
+
+[[secrets_store_secrets]]
+store_id = "5d64b0d295964846b36569f507fb7b13"
+binding = "FADEL_PASSWORD"
+secret_name = "KOASSETS_FADEL_PASSWORD"
+
+[[kv_namespaces]]
+binding = "AUTH_TOKENS"
+id = "koassets-auth-tokens"
