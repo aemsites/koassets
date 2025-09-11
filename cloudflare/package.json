@@ -8,7 +8,7 @@
   "scripts": {
     "test": "echo SKIPPED: No tests specified. For Cloudflare workers we might want to look into https://developers.cloudflare.com/workers/testing/",
     "predev": "./scripts/update-local-secret-store.sh",
-    "dev": "wrangler dev --env-file .env",
+    "dev": "wrangler dev",
     "deploy": "./scripts/deploy.sh",
     "tail": "wrangler tail",
     "lint": "biome lint",

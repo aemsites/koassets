@@ -57,25 +57,15 @@ npm run install-all
 
 ### Initial setup
 
-⚠️ _Will move everything from `.env` file to `.secrets` file and drop the `.env` file_
-
-Add `cloudflare/.env` file with the following content:
+Add `cloudflare/.secrets` file with the [required secrets](cloudflare/README.md#secret-store), such as:
 
 ```
-# Local development config and secrets
+# Cookie authentication
+# For local development, not the same as production. generate using `openssl rand -base64 32`
+KOASSETS_COOKIE_SECRET="..."
 
-# Per-developer client secret from MS Entra app registration
-MICROSOFT_ENTRA_CLIENT_SECRET="..."
-
-# generate locally using `openssl rand -base64 32`
-COOKIE_SECRET="..."
-```
-
-Add `cloudflare/.secrets` file with the following content:
-
-```
 # DM IMS technical account token
-# (for local.sh, not worker code)
+# Get from Adobe developer console project with access to DM_ORIGIN environment
 KOASSETS_DM_CLIENT_ID="..."
 KOASSETS_DM_CLIENT_SECRET="..."
 ```

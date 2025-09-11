@@ -38,7 +38,7 @@ If you _only_ want to run the cloudflare worker locally:
 2. Run `npm run dev`
 
 To overwrite configurations locally, change them in `wrangler.toml` or create an `.env` file to overwrite (do not commit).
-For defining secrets they all go into the `.secrets` file.
+For defining secrets they must go into a `.secrets` file.
 
 ### Tests
 
@@ -122,36 +122,21 @@ Options:
 
 Most configuration is done via environment variables in the `wrangler.toml` file:
 
-| Variable | Default (in code) | Description |
+| Variable | Default in code | Description |
 |----------|---------|-------------|
 | `name` | - | Cloudflare worker name |
 | `account_id` | - | Cloudflare account ID |
 | `HELIX_ORIGIN_` | - | AEM EDS origin server such as `https://*.aem.live` |
 | `DM_ORIGIN` | - | AEM Content Hub/Dynamic Media environment URL such as `https://delivery-*.adobeaemcloud.com` |
 | `HELIX_PUSH_INVALIDATION` | not set (invalidation enabled) | If set to `disabled`, disable push invalidation to the AEN EDS origin server. |
-| `MICROSOFT_ENTRA_TENANT_ID` | - | Directory (tenant) ID from the app registration in Microsoft Entra admin center. |
-| `MICROSOFT_ENTRA_CLIENT_ID` | - | Application (client) ID from the app registration in Microsoft Entra admin center. |
+| `MICROSOFT_ENTRA_TENANT_ID` | - | Directory (tenant) ID from the app registration in [Microsoft Entra admin center](http://entra.microsoft.com). |
+| `MICROSOFT_ENTRA_CLIENT_ID` | - | Application (client) ID from the app registration in [Microsoft Entra admin center](http://entra.microsoft.com). |
 | `MICROSOFT_ENTRA_JWKS_URL` | `https://login.microsoftonline.com/common/discovery/keys` | The Microsoft Entra ID public keys URL. Get this from `https://login.microsoftonline.com/{MICROSOFT_ENTRA_TENANT_ID}/.well-known/openid-configuration` and json field `jwks_uri` |
 | `SESSION_COOKIE_EXPIRATION` | `6h` | The expiration time for the session cookie. Example: `1h` for 1 hour, or `10m` for 10 minutes. [Format documentation](https://github.com/panva/jose/blob/main/docs/jwt/sign/classes/SignJWT.md#setexpirationtime) |
 | `LOGIN_PAGE` | not set (go directly to MS login page) | The page to redirect to if the user is not authenticated. If not set, this will automatically go to the Microsoft login page. |
 | `DISABLE_AUTHENTICATION` | not set (enabled) | If set to `true`, disable authentication entirely. WARNING: be careful with this! |
 
 ## Secrets
-
-⚠️ _Need to migrate all worker secrets below to the Secret Store_
-
-### Worker Secrets
-
-These secrets must **not** be checked into git, and must be stored as [secrets in Cloudflare](https://developers.cloudflare.com/workers/configuration/secrets/).
-
-* Production: Add secrets via the Cloudflare dashboard or use `wrangler secret put`
-* Local development: store secrets (and other local config) in a `.env` local file before running `npm run dev`
-
-| Variable | Description |
-|----------|-------------|
-| `HELIX_ORIGIN_AUTHENTICATION` | AEM EDS authentication token. |
-| `MICROSOFT_ENTRA_CLIENT_SECRET` | Client secret from the app registration in Microsoft Entra admin center. |
-| `COOKIE_SECRET` | Secret used to sign the session cookie. Must be a cryptographically secure random string of characters. Can be generated on a command line using `openssl rand -base64 32`. |
 
 ### Secret Store
 
@@ -167,8 +152,11 @@ Secret Store ID: `5d64b0d295964846b36569f507fb7b13`
 
 | Name in Secret Store | Variable Name in Code | Description | Rotation |
 |----------------------|-----------------------|-------------|----------|
-| `KOASSETS_DM_CLIENT_ID` | `DM_CLIENT_ID` | Client ID for the DM IMS technical account used to access `DM_ORIGIN`. | Only changed if the DM IMS technical account is changed. |
-| `KOASSETS_DM_ACCESS_TOKEN` | `DM_ACCESS_TOKEN` | Access token from the DM IMS technical account used to access `DM_ORIGIN`. Valid 24 hours. | Automatically rotated every 6 hours using the `rotate-dm-token.yaml` Github Action.<br><br>Manually rotate by running<br><br>```./scripts/create-ims-token.sh $DM_CLIENT_ID $DM_CLIENT_SECRET "AdobeID,openid"```<br><br> and updating in secret store. |
+| `KOASSETS_COOKIE_SECRET` | `COOKIE_SECRET` | Secret used to sign the session cookie. Must be a cryptographically secure random string of characters, base64 encoded, 32 bytes or more. | TODO: weekly? need to implement 2 secrets for rotation.<br><br>Manually rotate by generating new secretvalue using `openssl rand -base64 32` and updating secret store. Note: will currently immediately end all existing sessions. |
+| `KOASSETS_DM_CLIENT_ID` | `DM_CLIENT_ID` | Client ID for the DM IMS technical account used to access `DM_ORIGIN`. From [Adobe developer console](http://developer.adobe.com/console) project with access to the right delivery environment and DM API access. | Only changed if the DM IMS technical account is changed. |
+| `KOASSETS_DM_ACCESS_TOKEN` | `DM_ACCESS_TOKEN` | Access token from the DM IMS technical account used to access `DM_ORIGIN`. Valid 24 hours. | Automatically rotated every 6 hours using the [rotate-dm-token.yaml](../.github/workflows/rotate-dm-token.yaml) Github Action. Created using `DM_CLIENT_ID` and `DM_CLIENT_SECRET`.<br><br>Manually rotate by running<br><br>```./scripts/create-ims-token.sh $DM_CLIENT_ID $DM_CLIENT_SECRET "AdobeID,openid"```<br><br> and updating in secret store. |
+| `KOASSETS_HELIX_ORIGIN_AUTHENTICATION` | `HELIX_ORIGIN_AUTHENTICATION` | AEM EDS authentication token. **NOT ENABLED YET.** | TODO: possible using Helix admin APIs? |
+
 
 ### CI secrets
 
@@ -177,5 +165,5 @@ These secrets need to be configured in the CI (Github Actions) and are used for 
 | Variable | Description |
 |----------|-------------|
 | `CLOUDFLARE_API_TOKEN` | Cloudflare API token used to deploy workers and rotate secrets via [Github Actions](../.github/workflows/). |
-| `DM_CLIENT_ID` | Client ID for the DM IMS technical account used to access `DM_ORIGIN`. |
-| `DM_CLIENT_SECRET` | Client secret for the DM IMS technical account used to access `DM_ORIGIN`. |
+| `DM_CLIENT_ID` | Client ID for the DM IMS technical account used to access `DM_ORIGIN`.  From [Adobe developer console](http://developer.adobe.com/console) project with access to the right delivery environment and DM API access. |
+| `DM_CLIENT_SECRET` | Client secret for the DM IMS technical account used to access `DM_ORIGIN`.  From [Adobe developer console](http://developer.adobe.com/console) project with access to the right delivery environment and DM API access. |
