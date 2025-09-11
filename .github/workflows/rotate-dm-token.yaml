@@ -1,8 +1,6 @@
 name: Rotate Dynamic Media Token
 
 on:
-  # TODO: for testing, remove before merging to main
-  push:
   schedule:
     # every 6 hours - token is valid 24 hours
     # this allows for ~3 failures to still rotate within 24h
