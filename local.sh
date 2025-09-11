@@ -2,18 +2,24 @@
 
 # shellcheck disable=SC2164
 
+# Run full local development stack
+
 AEM_PAGES_URL=${AEM_PAGES_URL:-https://main--koassets--aemsites.aem.page}
 DM_ORIGIN=${DM_ORIGIN:-https://delivery-p64403-e544653.adobeaemcloud.com}
 
 # https://www.aem.live/developer/cli-reference#general-options
 AEM_LOG_LEVEL=${AEM_LOG_LEVEL:-info}
 
-# No Color / Reset
-NC=$'\033[0m'
-# Background colors
+export FORCE_COLOR=1
+set -e
+set -o pipefail
+
+# ANSI background colors
 BG_YELLOW=$'\033[43m'
 BG_BLUE=$'\033[44m'
 BG_MAGENTA=$'\033[45m'
+# ANSI Reset
+NC=$'\033[0m'
 
 function prefix() {
   sed "s/^/${1}${2}$NC /"
@@ -29,8 +35,12 @@ function filter_cf_logs() {
 
 function run_cloudflare() {
   cd cloudflare
+
   # add "--live-reload" if auto-reload on cloudflare changes is needed
-  npx wrangler dev --env-file .env --var "HELIX_ORIGIN:http://localhost:3000" --var "DM_ORIGIN:${DM_ORIGIN}" 2>&1 | filter_cf_logs
+  npm run dev -- \
+    --var "HELIX_ORIGIN:http://localhost:3000" \
+    --var "DM_ORIGIN:${DM_ORIGIN}" \
+    2>&1 | filter_cf_logs
 }
 
 function run_aem() {
@@ -40,16 +50,15 @@ function run_aem() {
 
 function run_react_build() {
   cd koassets-react
-  npx chokidar "**" -i "dist/**" -c "npm run build-local-dev"
-}
 
-export FORCE_COLOR=1
-set -o pipefail
+  echo "[Vite Build] Watching for React code changes in koassets-react/* ..."
+  npm run auto-build
+}
 
 # cloudflare worker: http://localhost:8787
 (run_cloudflare 2>&1 | prefix $BG_YELLOW "[cfl]" ) &
 
-sleep 1
+sleep 4
 echo
 
 # aem: http://localhost:3000
@@ -62,6 +71,7 @@ echo
 (run_react_build 2>&1 | prefix $BG_BLUE "[vte]") &
 
 sleep 1
+echo
 
 open -a "${DEV_BROWSER:-Google Chrome}" http://localhost:8787
 

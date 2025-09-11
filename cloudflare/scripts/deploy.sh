@@ -60,7 +60,16 @@ if [ "$ci" = "true" ]; then
 
   tag="$branch"
   # last commit message
-  message=$(git log -1 --pretty=%B)
+  message=$(git log -1 --pretty="%cL: %s")
+
+  echo "================================================================"
+  echo "DEBUG: git diff --name-only origin/main..HEAD"
+  git diff --name-only origin/main..HEAD
+  echo "================================================================"
+
+  if git diff --name-only origin/main..HEAD | grep "^cloudflare\/"; then
+    message="[CF] $message"
+  fi
 
 else
   echo "Manual deployment"
@@ -70,11 +79,15 @@ else
   if [ -z "$message" ]; then
     if git diff --quiet .; then
       # no local changes, use last commit message
-      message=$(git log -1 --pretty=%B)
+      message=$(git log -1 --pretty="%cL: %s")
     else
       # local changes found
-      message="<local changes>"
+      message="$user: <local changes>"
     fi
+  fi
+
+  if git diff --name-only main | grep "^cloudflare\/"; then
+    message="[CF] $message"
   fi
 fi
 
@@ -90,25 +103,34 @@ if [ "$tag" = "preview" ]; then
   exit 1
 fi
 
-# 1. deploy branch url for EDS live content
-HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.live"
-upload_version "$tag" "$message"
-version=$(cat version.id)
-
-url="https://$tag-$WORKER.$WORKER_DOMAIN.workers.dev"
-
-# 2. deploy branch url for EDS preview content
-HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.page"
-upload_version "$tag-preview" "$message"
-
 if [ "$ci" = "true" ] && [ "$branch" = "main" ]; then
-  # 3. on CI and main branch, deploy to production (live content)
-  npx wrangler versions deploy -y "$version"
-
+  # production deployment
   url="https://$WORKER.adobeaem.workers.dev"
 
-  # 4. on CI and main branch, deploy to preview alias
+  # create main version
+  HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.live"
+  upload_version "$tag" "$message"
+  version=$(cat version.id)
+
+  # deploy main version as production
+  npx wrangler versions deploy -y "$version"
+
+  # create preview version pointing to aem.page
+  HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.page"
   upload_version "preview" "$message"
+
+else
+  # branch/local deployment
+  url="https://$tag-$WORKER.$WORKER_DOMAIN.workers.dev"
+
+  # create branch version
+  HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.live"
+  upload_version "$tag" "$message"
+  version=$(cat version.id)
+
+  # create branch preview version pointing to aem.page
+  HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.page"
+  upload_version "$tag-preview" "$message"
 fi
 
 rm version.id || true
