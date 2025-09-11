@@ -28,8 +28,8 @@ jobs:
           DM_ACCESS_TOKEN=$(./scripts/create-ims-token.sh "$DM_CLIENT_ID" "$DM_CLIENT_SECRET" "AdobeID,openid")
 
           # update secrets in cloudflare
-          echo "$DM_CLIENT_ID"    | npx wrangler secrets-store secret create ${{ vars.CLOUDFLARE_SECRET_STORE_ID }} --remote --scopes workers --name "KOASSETS_DM_CLIENT_ID"
-          echo "$DM_ACCESS_TOKEN" | npx wrangler secrets-store secret create ${{ vars.CLOUDFLARE_SECRET_STORE_ID }} --remote --scopes workers --name "KOASSETS_DM_ACCESS_TOKEN"
+          echo "$DM_CLIENT_ID"    | ./scripts/secret-store-update.sh ${{ vars.CLOUDFLARE_SECRET_STORE_ID }} "KOASSETS_DM_CLIENT_ID"
+          echo "$DM_ACCESS_TOKEN" | ./scripts/secret-store-update.sh ${{ vars.CLOUDFLARE_SECRET_STORE_ID }} "KOASSETS_DM_ACCESS_TOKEN"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           DM_CLIENT_ID: ${{ secrets.DM_CLIENT_ID }}
