@@ -19,7 +19,7 @@ if [ -z "$STORE_ID" ] || [ -z "$NAME" ]; then
   exit 1
 fi
 
-ID=$(npx wrangler secrets-store secret list $STORE_ID --remote 2>/dev/null | grep -F "$NAME" | cut -d '│' -f 3 | tr -d ' ')
+ID=$(npx wrangler secrets-store secret list $STORE_ID --remote 2>/dev/null | grep -F "$NAME" | awk '{print $4}')
 
 if [ -z "$ID" ]; then
   # if not found, create
