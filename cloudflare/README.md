@@ -8,6 +8,19 @@ A Cloudflare Worker that acts as outermost CDN for the KO Assets project with so
 - Preview: https://preview-koassets.adobeaem.workers.dev
 - Branch Preview: <https://{branch}-preview-koassets.adobeaem.workers.dev>
 
+## URL Paths
+
+Here are the various URL paths handled by the worker:
+
+| Path | Auth | Origin | Proxied Path |
+|------|------|--------|--------------|
+| `/auth/*` | - | Authentication flows, handled internally. | - |
+| `/api/adobe/assets/*` | yes | AdobeDynamic Media OpenAPI | Everything after `/api` |
+| `/api/fadel/*` | yes | Fadel API | Everything after `/api/fadel` |
+| `/public/*`<br>`/scripts/*`<br>`/styles/*` | no | Public content and code from Adobe Helix. [Full list](src/index.js#L44). | `/*` |
+| `/*` | yes | Adobe Helix content | `/*` |
+
+
 ## Setup
 
 - Node.js and npm installed
@@ -126,8 +139,9 @@ Most configuration is done via environment variables in the `wrangler.toml` file
 |----------|---------|-------------|
 | `name` | - | Cloudflare worker name |
 | `account_id` | - | Cloudflare account ID |
-| `HELIX_ORIGIN_` | - | AEM EDS origin server such as `https://*.aem.live` |
+| `HELIX_ORIGIN` | - | AEM EDS origin server such as `https://*.aem.live` |
 | `DM_ORIGIN` | - | AEM Content Hub/Dynamic Media environment URL such as `https://delivery-*.adobeaemcloud.com` |
+| `FADEL_ORIGIN` | - | Fadel environment URL such as `https://test.fadelarc.net` |
 | `HELIX_PUSH_INVALIDATION` | not set (invalidation enabled) | If set to `disabled`, disable push invalidation to the AEN EDS origin server. |
 | `MICROSOFT_ENTRA_TENANT_ID` | - | Directory (tenant) ID from the app registration in [Microsoft Entra admin center](http://entra.microsoft.com). |
 | `MICROSOFT_ENTRA_CLIENT_ID` | - | Application (client) ID from the app registration in [Microsoft Entra admin center](http://entra.microsoft.com). |
@@ -156,6 +170,8 @@ Secret Store ID: `5d64b0d295964846b36569f507fb7b13`
 | `KOASSETS_DM_CLIENT_ID` | `DM_CLIENT_ID` | Client ID for the DM IMS technical account used to access `DM_ORIGIN`. From [Adobe developer console](http://developer.adobe.com/console) project with access to the right delivery environment and DM API access. | Only changed if the DM IMS technical account is changed. |
 | `KOASSETS_DM_ACCESS_TOKEN` | `DM_ACCESS_TOKEN` | Access token from the DM IMS technical account used to access `DM_ORIGIN`. Valid 24 hours. | Automatically rotated every 6 hours using the [rotate-dm-token.yaml](../.github/workflows/rotate-dm-token.yaml) Github Action. Created using `DM_CLIENT_ID` and `DM_CLIENT_SECRET`.<br><br>Manually rotate by running<br><br>```./scripts/create-ims-token.sh $DM_CLIENT_ID $DM_CLIENT_SECRET "AdobeID,openid"```<br><br> and updating in secret store. |
 | `KOASSETS_HELIX_ORIGIN_AUTHENTICATION` | `HELIX_ORIGIN_AUTHENTICATION` | AEM EDS authentication token. **NOT ENABLED YET.** | TODO: possible using Helix admin APIs? |
+| `KOASSETS_FADEL_USER` | `FADEL_USER` | Fadel API username/email. | Only manually from Fadel |
+| `KOASSETS_FADEL_PASSWORD` | `FADEL_PASSWORD` | Fadel API password. | Only manually from Fadel |
 
 
 ### CI secrets
@@ -176,3 +192,11 @@ These variables need to be configured in the Github actions variables on the rep
 | Variable | Description |
 |----------|-------------|
 | `CLOUDFLARE_SECRET_STORE_ID` | Cloudflare [secret store](#secret-store) ID which holds the secrets. |
+
+## Cloudflare KV namespaces
+
+This worker uses the following [Cloudflare KV](https://developers.cloudflare.com/kv/) namespaces:
+
+| Namespace Name | Namespace ID | Binding | Description |
+|----------------|--------------|---------|-------------|
+| `koassets-auth-tokens` | `975809e56a7a425aa006e156671bbecf` | `env.AUTH_TOKENS` | Stores authentication tokens for various origins. |

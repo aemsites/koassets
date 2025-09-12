@@ -14,7 +14,8 @@ export FORCE_COLOR=1
 set -e
 set -o pipefail
 
-# ANSI background colors
+# ANSI colors
+RED=$'\033[31m'
 BG_YELLOW=$'\033[43m'
 BG_BLUE=$'\033[44m'
 BG_MAGENTA=$'\033[45m'
@@ -55,10 +56,20 @@ function run_react_build() {
   npm run auto-build
 }
 
+if nc -z "localhost" "8787" > /dev/null 2>&1; then
+  echo "${RED}Error: http://localhost:8787 is already in use${NC}"
+  echo
+  echo "Might be 'npm run dev' running already or some other process is listening on that port."
+  echo "Please stop the other process and try again."
+  exit 1
+fi
+
 # cloudflare worker: http://localhost:8787
 (run_cloudflare 2>&1 | prefix $BG_YELLOW "[cfl]" ) &
 
-sleep 4
+while ! nc -z "localhost" "8787" > /dev/null 2>&1; do
+  sleep 1
+done
 echo
 
 # aem: http://localhost:3000
