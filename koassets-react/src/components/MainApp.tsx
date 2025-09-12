@@ -236,7 +236,7 @@ function MainApp(): React.JSX.Element {
             facetFilters: selectedFacetFilters,
             numericFilters: selectedNumericFilters,
             filters: presetFilters,
-            hitsPerPage: HITS_PER_PAGE,
+            hitsPerPage: externalParams.hitsPerPage || HITS_PER_PAGE,
             page: page
         }).then((content) => processDMImages(content, isLoadingMore)).catch((error) => {
             // Prevent infinite execution when Network error occurs
@@ -256,7 +256,7 @@ function MainApp(): React.JSX.Element {
             }
         });
 
-    }, [dynamicMediaClient, processDMImages, selectedCollection, selectedFacetFilters, selectedNumericFilters, excFacets, presetFilters]);
+    }, [dynamicMediaClient, processDMImages, selectedCollection, selectedFacetFilters, selectedNumericFilters, excFacets, presetFilters, externalParams.hitsPerPage]);
 
     // Handler for loading more results (pagination)
     const handleLoadMoreResults = useCallback((): void => {

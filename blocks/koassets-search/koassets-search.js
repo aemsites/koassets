@@ -49,6 +49,7 @@ export default async function decorate(block) {
     isBlockIntegration: true,
     accordionTitle: blockObj.accordionTitle,
     accordionContent: blockObj.accordionContent,
+    hitsPerPage: stripHtmlAndNewlines(blockObj.hitsPerPage),
     excFacets: JSON.parse(stripHtmlAndNewlines(blockObj.excFacets)),
     restrictedBrands,
     presetFilters: convertHtmlListToArray(blockObj.presetFilters),
