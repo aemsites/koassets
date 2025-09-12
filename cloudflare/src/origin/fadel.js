@@ -24,18 +24,23 @@ async function createFadelToken(request, env) {
 }
 
 async function getFadelToken(request, env) {
+  // get cached token
   const { value: token, metadata } = await env.AUTH_TOKENS.getWithMetadata("fadel-token");
-  if (token && metadata?.expiryDate > (Date.now() + 10000)) {
+
+  // use token until 5 minutes before expiry
+  if (token && metadata?.expiryDate > (Date.now() + 5*60*1000)) {
     return token;
   } else {
     const tokenData = await createFadelToken(request, env);
 
+    // cache token in KV store
     await env.AUTH_TOKENS.put("fadel-token", tokenData.accessToken, {
       expiration: tokenData.expiryDate / 1000,
       metadata: {
         expiryDate: tokenData.expiryDate
       }
     });
+
     return tokenData.accessToken;
   }
 }

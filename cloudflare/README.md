@@ -167,11 +167,11 @@ Secret Store ID: `5d64b0d295964846b36569f507fb7b13`
 | Name in Secret Store | Variable Name in Code | Description | Rotation |
 |----------------------|-----------------------|-------------|----------|
 | `KOASSETS_COOKIE_SECRET` | `COOKIE_SECRET` | Secret used to sign the session cookie. Must be a cryptographically secure random string of characters, base64 encoded, 32 bytes or more. | TODO: weekly? need to implement 2 secrets for rotation.<br><br>Manually rotate by generating new secretvalue using `openssl rand -base64 32` and updating secret store. Note: will currently immediately end all existing sessions. |
-| `KOASSETS_DM_CLIENT_ID` | `DM_CLIENT_ID` | Client ID for the DM IMS technical account used to access `DM_ORIGIN`. From [Adobe developer console](http://developer.adobe.com/console) project with access to the right delivery environment and DM API access. | Only changed if the DM IMS technical account is changed. |
-| `KOASSETS_DM_ACCESS_TOKEN` | `DM_ACCESS_TOKEN` | Access token from the DM IMS technical account used to access `DM_ORIGIN`. Valid 24 hours. | Automatically rotated every 6 hours using the [rotate-dm-token.yaml](../.github/workflows/rotate-dm-token.yaml) Github Action. Created using `DM_CLIENT_ID` and `DM_CLIENT_SECRET`.<br><br>Manually rotate by running<br><br>```./scripts/create-ims-token.sh $DM_CLIENT_ID $DM_CLIENT_SECRET "AdobeID,openid"```<br><br> and updating in secret store. |
+| `KOASSETS_DM_CLIENT_ID` | `DM_CLIENT_ID` | Client ID for the DM IMS technical account used to access `DM_ORIGIN`. From [Adobe developer console](http://developer.adobe.com/console) project with access to the right delivery environment and DM API access. | Only changed if the DM IMS technical account is changed, e.g. new developer console project. |
+| `KOASSETS_DM_CLIENT_SECRET` | `DM_CLIENT_SECRET` | Client secret for the DM IMS technical account used to access `DM_ORIGIN`. From [Adobe developer console](http://developer.adobe.com/console) project with access to the right delivery environment and DM API access. | Manually rotate in [Adobe developer console](http://developer.adobe.com/console) and then update in secret store. |
 | `KOASSETS_HELIX_ORIGIN_AUTHENTICATION` | `HELIX_ORIGIN_AUTHENTICATION` | AEM EDS authentication token. **NOT ENABLED YET.** | TODO: possible using Helix admin APIs? |
-| `KOASSETS_FADEL_USER` | `FADEL_USER` | Fadel API username/email. | Only manually from Fadel |
-| `KOASSETS_FADEL_PASSWORD` | `FADEL_PASSWORD` | Fadel API password. | Only manually from Fadel |
+| `KOASSETS_FADEL_USER` | `FADEL_USER` | Fadel API username/email. | Only if user is changed in Fadel. |
+| `KOASSETS_FADEL_PASSWORD` | `FADEL_PASSWORD` | Fadel API password. | Manually rotate in Fadel and then update in secret store. |
 
 
 ### CI secrets
