@@ -142,6 +142,53 @@ async function createNavBar() {
     });
   }
 
+  const tools = nav.querySelector('.nav-tools');
+
+  // add shopping cart icon to nav-tools
+  if (tools) {
+    const cartIcon = document.createElement('div');
+    cartIcon.classList.add('nav-cart-icon');
+    cartIcon.innerHTML = `
+      <button type="button" aria-label="Shopping Cart">
+        <img src="/icons/shopping-cart-icon.svg" alt="Shopping Cart" />
+        <span class="cart-badge" style="display: none;"></span>
+      </button>
+    `;
+
+    // Add click handler for cart icon
+    cartIcon.addEventListener('click', () => {
+      if (window.openCart && typeof window.openCart === 'function') {
+        window.openCart();
+      } else {
+        console.log('Cart panel functionality not available');
+      }
+    });
+
+    tools.appendChild(cartIcon);
+
+    // Expose function to update cart badge
+    window.updateCartBadge = function (numCartItems) {
+      const badge = cartIcon.querySelector('.cart-badge');
+      if (badge) {
+        if (numCartItems && numCartItems > 0) {
+          badge.textContent = numCartItems;
+          badge.style.display = 'block';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+    };
+
+    // Update cart badge from localStorage
+    try {
+      const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
+      window.updateCartBadge(cartItems.length);
+    } catch (error) {
+      console.error('Error reading cart items from localStorage:', error);
+      window.updateCartBadge(0);
+    }
+  }
+
   // hamburger for mobile
   const hamburger = document.createElement('div');
   hamburger.classList.add('nav-hamburger');

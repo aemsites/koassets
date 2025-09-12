@@ -199,11 +199,6 @@ export interface CartItem extends Asset {
 }
 
 // Component prop types
-export interface CartIconProps {
-    itemCount: number;
-    onClick: () => void;
-}
-
 export interface AssetCardProps {
     image: Asset;
     handleCardDetailClick: (image: Asset, event: React.MouseEvent) => void;

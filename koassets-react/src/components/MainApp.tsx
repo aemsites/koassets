@@ -20,6 +20,15 @@ import { fetchOptimizedDeliveryBlob, removeBlobFromCache } from '../utils/blobCa
 import { getBucket, getExternalParams } from '../utils/config';
 import { AppConfigProvider } from './AppConfigProvider';
 
+// Extend window interface for cart functions
+declare global {
+    interface Window {
+        openCart?: () => void;
+        closeCart?: () => void;
+        toggleCart?: () => void;
+    }
+}
+
 // Components
 import Facets from './Facets';
 import HeaderBar from './HeaderBar';
@@ -128,6 +137,19 @@ function MainApp(): React.JSX.Element {
     const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
     // Mobile filter panel state
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false);
+
+    // Expose cart functions to window for EDS header integration
+    useEffect(() => {
+        window.openCart = () => setIsCartOpen(true);
+        window.closeCart = () => setIsCartOpen(false);
+        window.toggleCart = () => setIsCartOpen(prev => !prev);
+
+        return () => {
+            delete window.openCart;
+            delete window.closeCart;
+            delete window.toggleCart;
+        };
+    }, []);
 
     // Sort state
     const [selectedSortType, setSelectedSortType] = useState<string>('Date Created');
