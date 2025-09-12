@@ -27,24 +27,6 @@ rm -rf .wrangler/state/v3/secrets-store
 echo "Loading secrets from cloudflare/.secrets into local wrangler secret store..."
 ./scripts/load-secret-store.sh $SECRET_STORE_ID .secrets
 
-# BEGIN: additional dynamic secrets --------------------------------------------------------------------------
-
-# 1. create IMS token for DM
-echo "Generating IMS token for DM..."
-source .secrets
-if [ -z "$KOASSETS_DM_CLIENT_ID" ] || [ -z "$KOASSETS_DM_CLIENT_SECRET" ]; then
-  echo "Error: KOASSETS_DM_CLIENT_ID and KOASSETS_DM_CLIENT_SECRET are required in cloudflare/.secrets"
-  exit 1
-fi
-DM_TOKEN=$(./scripts/create-ims-token.sh "$KOASSETS_DM_CLIENT_ID" "$KOASSETS_DM_CLIENT_SECRET" "AdobeID,openid")
-
-echo "$DM_TOKEN" | WRANGLER_LOG=error \
-  npx wrangler secrets-store secret create $SECRET_STORE_ID \
-    --scopes workers \
-    --name KOASSETS_DM_ACCESS_TOKEN > /dev/null
-
-# END: additional dynamic secrets ----------------------------------------------------------------------------
-
 # for debugging: list all secrets (but wrangler dev will show secret store bindings as well)
 # npx wrangler secrets-store secret list $SECRET_STORE_ID
 
