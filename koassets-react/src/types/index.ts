@@ -368,6 +368,7 @@ export interface ExternalParams {
     isBlockIntegration?: boolean;
     restrictedBrands?: RestrictedBrand[];
     presetFilters?: string[];
+    hitsPerPage?: number;
     fadelParams?: [{
         baseUrl?: string;
         username?: string;
