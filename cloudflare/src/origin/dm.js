@@ -1,3 +1,60 @@
+// create IMS token using Oauth server-to-server credentials
+async function createIMSToken(request, clientId, clientSecret, scope) {
+  const response = await fetch('https://ims-na1.adobelogin.com/ims/token/v4', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': request.headers.get('user-agent'),
+    },
+    body: new URLSearchParams({
+      grant_type: 'client_credentials',
+      client_id: clientId,
+      client_secret: clientSecret,
+      scope: scope,
+    }),
+  });
+
+  if (response.ok) {
+    const data = await response.json();
+    if (data.access_token && data.expires_in) {
+      return data;
+    } else {
+      throw new Error(`Failed to generate IMS token: ${JSON.stringify(data)}`);
+    }
+  } else {
+    throw new Error(`Failed to generate IMS token: ${response.status} ${response.statusText} ${await response.text()}`);
+  }
+}
+
+async function getIMSToken(request, env) {
+  // get cached token
+  const { value: token, metadata } = await env.AUTH_TOKENS.getWithMetadata("dm-ims-token");
+
+  // use token until 5 minutes before expiry
+  if (token && metadata?.expiration > (Math.floor(Date.now() / 1000) + 5*60)) {
+    return token;
+  } else {
+    const clientId = await env.DM_CLIENT_ID.get();
+    const clientSecret = await env.DM_CLIENT_SECRET.get();
+    const scope = 'AdobeID,openid';
+
+    const tokenData = await createIMSToken(request, clientId, clientSecret, scope);
+
+    // seconds since epoch
+    const expiration = Math.floor(Date.now() / 1000) + tokenData.expires_in;
+
+    // cache token in KV store
+    await env.AUTH_TOKENS.put("dm-ims-token", tokenData.access_token, {
+      expiration,
+      metadata: {
+        expiration
+      }
+    });
+
+    return tokenData.access_token;
+  }
+}
+
 export async function originDynamicMedia(request, env) {
   // incoming url:
   //   <host>/api/adobe/assets/...
@@ -26,16 +83,16 @@ export async function originDynamicMedia(request, env) {
 
   req.headers.delete('cookie');
 
+  try {
+    req.headers.set('x-api-key', await env.DM_CLIENT_ID.get());
+    req.headers.set('Authorization', `Bearer ${await getIMSToken(request, env)}`);
+  } catch (error) {
+    console.error(error);
+    return new Response('Unauthorized', { status: 401 });
+  }
+
   req.headers.set('user-agent', req.headers.get('user-agent'));
   req.headers.set('x-forwarded-host', req.headers.get('host'));
-
-  if (env.DM_CLIENT_ID) {
-    req.headers.set('x-api-key', await env.DM_CLIENT_ID.get());
-  }
-
-  if (env.DM_ACCESS_TOKEN) {
-    req.headers.set('Authorization', `Bearer ${await env.DM_ACCESS_TOKEN.get()}`);
-  }
 
   // console.log('>>>', req.method, req.url, req.headers);
 

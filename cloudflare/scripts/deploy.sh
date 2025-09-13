@@ -107,17 +107,18 @@ if [ "$ci" = "true" ] && [ "$branch" = "main" ]; then
   # production deployment
   url="https://$WORKER.adobeaem.workers.dev"
 
+  # create preview version pointing to aem.page
+  HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.page"
+  upload_version "preview" "$message"
+
   # create main version
+  # do last so usually the latest == production version (and not the "preview-" above)
   HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.live"
   upload_version "$tag" "$message"
   version=$(cat version.id)
 
   # deploy main version as production
   npx wrangler versions deploy -y "$version"
-
-  # create preview version pointing to aem.page
-  HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.page"
-  upload_version "preview" "$message"
 
 else
   # branch/local deployment

@@ -526,8 +526,7 @@ header nav .nav-tools .nav-cart-icon button {
 }
 
 header nav .nav-tools .nav-cart-icon button img {
-  width: 25px;
-  height: 25px;
+  height: 30px;
   transition: opacity 0.2s ease;
 }
 
