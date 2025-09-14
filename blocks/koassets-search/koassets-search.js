@@ -44,15 +44,29 @@ export default async function decorate(block) {
 
   // Configure external parameters for block integration
   window.KOAssetsConfig = window.KOAssetsConfig || {};
+
+  // Helper function to safely parse JSON - returns empty object if not valid
+  const safeJsonParse = (jsonString) => {
+    if (!jsonString || jsonString.trim() === '') {
+      return {};
+    }
+    try {
+      return JSON.parse(stripHtmlAndNewlines(jsonString));
+    } catch (error) {
+      console.warn('Failed to parse JSON, using empty object:', error);
+      return {};
+    }
+  };
+
   /** @type {import('../../koassets-react/src/types/index.js').ExternalParams} */
   window.KOAssetsConfig.externalParams = {
     isBlockIntegration: true,
-    accordionTitle: blockObj.accordionTitle,
-    accordionContent: blockObj.accordionContent,
-    hitsPerPage: stripHtmlAndNewlines(blockObj.hitsPerPage),
-    excFacets: JSON.parse(stripHtmlAndNewlines(blockObj.excFacets)),
+    accordionTitle: blockObj.accordionTitle || '',
+    accordionContent: blockObj.accordionContent || '',
+    hitsPerPage: stripHtmlAndNewlines(blockObj.hitsPerPage) || '',
+    excFacets: safeJsonParse(blockObj.excFacets),
     restrictedBrands,
-    presetFilters: convertHtmlListToArray(blockObj.presetFilters),
+    presetFilters: blockObj.presetFilters ? convertHtmlListToArray(blockObj.presetFilters) : [],
     ...(window.KOAssetsConfig.externalParams || {}),
   };
 

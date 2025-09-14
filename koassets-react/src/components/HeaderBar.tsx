@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { useAppConfig } from '../hooks/useAppConfig';
-import type { HeaderBarProps } from '../types';
+// import type { HeaderBarProps } from '../types'; // COMMENTED OUT
 import AdobeSignInButton from './AdobeSignInButton.jsx';
-import CartPanel from './CartPanel';
+// import CartPanel from './CartPanel'; // REMOVED - moved to MainApp
 import './HeaderBar.css';
 
 // Extend window interface for cart badge function
@@ -12,14 +12,14 @@ declare global {
     }
 }
 
-const HeaderBar: React.FC<HeaderBarProps> = ({
-    cartItems,
-    setCartItems,
-    isCartOpen,
-    setIsCartOpen,
-    handleRemoveFromCart,
-    handleApproveAssets,
-    handleDownloadAssets,
+const HeaderBar: React.FC<any> = ({ // Changed from HeaderBarProps (commented out)
+    cartItems, // Keep for window.updateCartBadge
+    // setCartItems, // Removed - cart moved to MainApp
+    // isCartOpen, // Removed - cart moved to MainApp  
+    // setIsCartOpen, // Removed - cart moved to MainApp
+    // handleRemoveFromCart, // Removed - cart moved to MainApp
+    // handleApproveAssets, // Removed - cart moved to MainApp
+    // handleDownloadAssets, // Removed - cart moved to MainApp
     handleAuthenticated,
     handleSignOut
 }) => {
@@ -48,20 +48,8 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
                 />
             )}
 
-            {/* Header right controls: Cart and Sign In */}
+            {/* Header right controls: Sign In only (cart moved to MainApp) */}
             <div className="header-controls">
-                <div className="cart-container">
-                    <CartPanel
-                        isOpen={isCartOpen}
-                        onClose={() => setIsCartOpen(false)}
-                        cartItems={cartItems}
-                        setCartItems={setCartItems}
-                        onRemoveItem={handleRemoveFromCart}
-                        onApproveAssets={handleApproveAssets}
-                        onDownloadAssets={handleDownloadAssets}
-                    />
-                </div>
-
                 <div className="auth-container">
                     <AdobeSignInButton
                         onAuthenticated={handleAuthenticated}

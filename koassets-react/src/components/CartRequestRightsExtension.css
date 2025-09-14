@@ -334,32 +334,6 @@
     padding: 0 0 20px 0;
 }
 
-.cart-request-rights-extension-form-content .terms-agreement .checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: #333;
-    cursor: pointer;
-    font-family: "TCCC UnityText Regular", sans-serif;
-}
-
-.cart-request-rights-extension-form-content .terms-agreement .checkbox-label input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--primary-color);
-    cursor: pointer;
-}
-
-.cart-request-rights-extension-form-content .terms-link {
-    color: var(--primary-color);
-    text-decoration: none;
-}
-
-.cart-request-rights-extension-form-content .terms-link:hover {
-    text-decoration: underline;
-}
-
 /* Form Actions */
 .cart-request-rights-extension-form-content .form-actions {
     display: flex;

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAppConfig } from '../../hooks/useAppConfig';
 import type { AssetDetailsProps, Rendition } from '../../types';
 
@@ -343,13 +344,16 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                 </div>
             </div>
 
-            <DownloadRenditionsModal
-                isOpen={showDownloadRenditionsModal}
-                asset={selectedImage}
-                onClose={handleDownloadRenditionsModalClose}
-                renditions={renditions}
-                imagePresets={imagePresets}
-            />
+            {createPortal(
+                <DownloadRenditionsModal
+                    isOpen={showDownloadRenditionsModal}
+                    asset={selectedImage}
+                    onClose={handleDownloadRenditionsModalClose}
+                    renditions={renditions}
+                    imagePresets={imagePresets}
+                />,
+                document.body
+            )}
         </div>
     );
 };

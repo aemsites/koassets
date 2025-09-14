@@ -30,6 +30,8 @@ declare global {
 }
 
 // Components
+import { createPortal } from 'react-dom';
+import CartPanel from './CartPanel';
 import Facets from './Facets';
 import HeaderBar from './HeaderBar';
 import ImageGallery from './ImageGallery';
@@ -662,6 +664,21 @@ function MainApp(): React.JSX.Element {
                     handleAuthenticated={handleAuthenticated}
                     handleSignOut={handleSignOut}
                 />
+
+                {/* Cart Container - moved from HeaderBar, now uses Portal */}
+                {createPortal(
+                    <CartPanel
+                        isOpen={isCartOpen}
+                        onClose={() => setIsCartOpen(false)}
+                        cartItems={cartItems}
+                        setCartItems={setCartItems}
+                        onRemoveItem={handleRemoveFromCart}
+                        onApproveAssets={handleApproveAssets}
+                        onDownloadAssets={handleDownloadAssets}
+                    />,
+                    document.body
+                )}
+
                 {/* TODO: Update this once finalized */}
                 {window.location.pathname.includes('/tools/assets-browser/index.html') && (
                     <SearchBar

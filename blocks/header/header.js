@@ -1,5 +1,6 @@
 import { getMetadata } from '../../scripts/aem.js';
 import { loadFragment } from '../../scripts/scripts.js';
+import decorateKoAssetsSearch from '../koassets-search/koassets-search.js';
 import showProfileModal from './profile.js';
 
 // media query match that indicates mobile/tablet width
@@ -320,4 +321,21 @@ export default async function decorate(block) {
 
   block.append(createHeaderBar());
   block.append(await createNavBar());
+
+  // Create and render koassets-search block
+  const searchBlock = document.createElement('div');
+  searchBlock.className = 'koassets-search-hidden';
+
+  // Set empty HTML - koassets-search.js now handles optional configuration
+  searchBlock.innerHTML = '';
+
+  // Decorate the search block
+  try {
+    await decorateKoAssetsSearch(searchBlock);
+  } catch (error) {
+    console.error('Error decorating searchBlock:', error);
+  }
+
+  // Append the search block to the header (always hidden)
+  block.append(searchBlock);
 }

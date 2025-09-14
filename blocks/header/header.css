@@ -543,7 +543,7 @@ header nav .nav-tools .nav-cart-icon .cart-badge {
   font-weight: 600;
   right: 1em;
   line-height: normal;
-  top: 0;
+  top: 0.2em;
   white-space: nowrap;
   text-align: center;
   cursor: pointer;
@@ -556,4 +556,14 @@ header nav .nav-tools .nav-cart-icon .cart-badge {
   padding: 2px 4px !important;
   box-sizing: border-box;
   display: block;
+}
+
+/* Header with integrated koassets-search - always hidden */
+header .koassets-search-hidden {
+  width: 0 !important;
+  height: 0 !important;
+}
+
+header .koassets-search-hidden .main-content {
+  display: none !important;
 }
