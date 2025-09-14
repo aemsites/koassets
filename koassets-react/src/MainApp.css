@@ -63,14 +63,14 @@ button:disabled {
   }
 }
 
-.container .tccc-metadata-label {
+.tccc-metadata-label {
   color: #9a9a9a;
   font-size: .6875rem;
   font-weight: 400;
   line-height: .825rem;
 }
 
-.container .tccc-metadata-value {
+.tccc-metadata-value {
   font-family: "TCCC UnityHeadline", sans-serif;
   text-transform: uppercase;
   color: #0e202e;
@@ -79,7 +79,7 @@ button:disabled {
   line-height: normal;
 }
 
-.container .tccc-tag {
+.tccc-tag {
   background: rgba(247, 153, 0, .3);
   color: #1e1e1e;
   font-family: "TCCC UnityHeadline", sans-serif;
@@ -91,12 +91,12 @@ button:disabled {
   overflow-wrap: break-word;
 }
 
-.container h3 {
-  font-size: 1.2857rem;
-}
-
 .container a {
   text-decoration: none;
+}
+
+.container h3 {
+  font-size: 1.2857rem;
 }
 
 .container h3 a {
@@ -303,4 +303,39 @@ button:disabled:hover {
   flex: 1;
   min-height: 0;
   align-items: flex-start;
+}
+
+.portal-modal .modal-title {
+  overflow-wrap: break-word;
+  margin: 0;
+}
+
+.portal-modal .modal-description {
+  margin: 0;
+  font-size: 14px;
+  color: #1e1e1e;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+.portal-modal h1,
+.portal-modal h2,
+.portal-modal h3,
+.portal-modal h4,
+.portal-modal h5 {
+  font-weight: 700;
+  line-height: 1.2857em;
+}
+
+.portal-modal h3 {
+  font-size: 1.2857rem;
+}
+
+.portal-modal h3 a {
+  /* stylelint-disable-next-line font-family-no-missing-generic-family-keyword */
+  font-family: "TCCC UnityHeadline";
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 19px;
 }

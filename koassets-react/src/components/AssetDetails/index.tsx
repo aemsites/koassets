@@ -176,7 +176,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     if (!showModal || !selectedImage) return null;
 
     return (
-        <div className="asset-details-modal" onClick={handleOverlayClick}>
+        <div className="asset-details-modal portal-modal" onClick={handleOverlayClick}>
             <div className="asset-details-modal-inner" onClick={handleModalClick}>
                 <div className="asset-details-main-main-section">
                     <div className="asset-details-main-image-section">
@@ -209,11 +209,11 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                         ))}
                                     </div>
                                 )}
-                                <div className="asset-details-main-title">
+                                <div className="modal-title">
                                     {selectedImage.title}
                                 </div>
                                 {selectedImage?.description && (
-                                    <p className="asset-details-main-description">{selectedImage?.description}</p>
+                                    <p className="modal-description">{selectedImage?.description}</p>
                                 )}
                             </div>
 

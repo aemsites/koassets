@@ -77,7 +77,7 @@ const DownloadRenditionsModal: React.FC<DownloadRenditionsModalProps> = ({
     if (!isOpen || !asset) return null;
 
     return (
-        <div className="download-renditions-overlay" onClick={handleOverlayClick}>
+        <div className="download-renditions-overlay portal-modal" onClick={handleOverlayClick}>
             <div className="download-renditions-modal">
                 <div className="download-renditions-header">
                     <div className="download-renditions-header-title">Download</div>
