@@ -13,7 +13,6 @@
 .container,
 .container * {
   font-family: "TCCC UnityText Regular", "Helvetica Neue", Arial, Helvetica, sans-serif;
-  color: var(--secondary-color);
 }
 
 .main-content {
@@ -26,35 +25,16 @@
 
 /* Global button styling */
 button {
-  background-color: var(--primary-color);
-  color: white;
   border: none;
   border-radius: 4px;
   padding: 8px 16px;
   cursor: pointer;
-  font-weight: bold;
   transition: background-color 0.3s;
 }
 
 a.button:any-link,
 button {
   margin: 0;
-  background-color: transparent;
-  white-space: unset;
-}
-
-button:hover {
-  background-color: var(--primary-color-hover);
-}
-
-button:active {
-  background-color: var(--primary-color-active);
-}
-
-button:disabled {
-  background-color: var(--primary-color-disabled);
-  color: #f8f8f8;
-  cursor: not-allowed;
 }
 
 /* Responsive layout */
@@ -64,14 +44,14 @@ button:disabled {
   }
 }
 
-.container .tccc-metadata-label {
+.tccc-metadata-label {
   color: #9a9a9a;
   font-size: .6875rem;
   font-weight: 400;
   line-height: .825rem;
 }
 
-.container .tccc-metadata-value {
+.tccc-metadata-value {
   font-family: "TCCC UnityHeadline", sans-serif;
   text-transform: uppercase;
   color: #0e202e;
@@ -80,7 +60,7 @@ button:disabled {
   line-height: normal;
 }
 
-.container .tccc-tag {
+.tccc-tag {
   background: rgba(247, 153, 0, .3);
   color: #1e1e1e;
   font-family: "TCCC UnityHeadline", sans-serif;
@@ -92,12 +72,12 @@ button:disabled {
   overflow-wrap: break-word;
 }
 
-.container h3 {
-  font-size: 1.2857rem;
-}
-
 .container a {
   text-decoration: none;
+}
+
+.container h3 {
+  font-size: 1.2857rem;
 }
 
 .container h3 a {
@@ -165,124 +145,6 @@ button:disabled {
   animation: pop 0.3s cubic-bezier(0.4, 0.2, 0.2, 1);
 }
 
-.container input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  min-width: 16px;
-  max-width: 16px;
-  min-height: 16px;
-  max-height: 16px;
-  flex: 0 0 16px;
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background-color: white;
-  border: 2px solid #828181;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 3px;
-}
-
-.container input[type="checkbox"]:hover {
-  border: 2px solid var(--primary-color);
-}
-
-.container input[type="checkbox"]:checked {
-  background-color: var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-.container input[type="checkbox"]:checked::after {
-  content: '';
-  width: 4px;
-  height: 8px;
-  border: solid white;
-  border-width: 0 3px 3px 0;
-  transform: rotate(45deg) translateX(-1px) translateY(-1px);
-}
-
-.container .primary-button {
-  height: 42px;
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 25px;
-  font-weight: 700;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.2s, transform 0.1s;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 20px;
-}
-
-.container .primary-button:active {
-  transform: translateY(1px);
-}
-
-.container .primary-button:focus {
-  outline: none;
-}
-
-.container .primary-button:disabled {
-  background-color: var(--primary-color-disabled);
-  color: #f8f8f8;
-  cursor: not-allowed;
-}
-
-.container .primary-button:hover:not(:disabled) {
-  background-color: var(--primary-color-hover);
-}
-
-.container .secondary-button {
-  height: 42px;
-  background-color: #fff;
-  border: 1.5px solid #9a9a9a;
-  color: #1e1e1e;
-  font-weight: 700;
-  font-family: "TCCC UnityHeadline", sans-serif;
-  font-size: .875rem;
-  line-height: 140%;
-  border-radius: 2.5rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 20px;
-  transition: border-color 0.1s ease, color 0.1s ease;
-}
-
-.container .secondary-button:hover {
-  border-color: var(--primary-color);
-  color: var(--primary-color);
-}
-
-.container .secondary-button:active {
-  transform: translateY(1px);
-}
-
-.container .secondary-button:focus {
-  outline: none;
-}
-
-.container .secondary-button:disabled {
-  cursor: not-allowed;
-  opacity: .5;
-  pointer-events: none;
-  display: inline-flex;
-  font-family: "TCCC UnityHeadline", sans-serif;
-  font-size: 14px;
-  height: 42px;
-  justify-content: center;
-  line-height: 140%;
-  background-color: #fff;
-  border: 1.5px solid #9a9a9a;
-  color: #1e1e1e;
-}
 
 /* Breadcrumb navigation styles */
 .breadcrumbs {
@@ -385,7 +247,8 @@ button:disabled:hover {
   background-color: var(--primary-color-disabled);
 }
 
-:is(h1, h2, h3, h4, h5, h6)::after {
+:is(.container h1, .container h2, .container h3, .container h4, .container h5, .container h6)::after,
+:is(.portal-modal h1, .portal-modal h2, .portal-modal h3, .portal-modal h4, .portal-modal h5, .portal-modal h6)::after {
   content: inherit;
   display: inherit;
   width: inherit;
@@ -422,4 +285,39 @@ button:disabled:hover {
   flex: 1;
   min-height: 0;
   align-items: flex-start;
+}
+
+.portal-modal .modal-title {
+  overflow-wrap: break-word;
+  margin: 0;
+}
+
+.portal-modal .modal-description {
+  margin: 0;
+  font-size: 14px;
+  color: #1e1e1e;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+.portal-modal h1,
+.portal-modal h2,
+.portal-modal h3,
+.portal-modal h4,
+.portal-modal h5 {
+  font-weight: 700;
+  line-height: 1.2857em;
+}
+
+.portal-modal h3 {
+  font-size: 1.2857rem;
+}
+
+.portal-modal h3 a {
+  /* stylelint-disable-next-line font-family-no-missing-generic-family-keyword */
+  font-family: "TCCC UnityHeadline";
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 19px;
 }

@@ -42,7 +42,7 @@ const CartPanel: React.FC<CartPanelProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="cart-panel-overlay">
+        <div className="cart-panel-overlay portal-modal">
             <div className="cart-panel">
                 {/* Header with close button */}
                 <div className="cart-panel-header">

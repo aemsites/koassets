@@ -259,37 +259,6 @@
     background: #f8f8f8;
 }
 
-.checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    font-size: 13px;
-    color: #333;
-    flex: 1;
-    margin: 0;
-    font-weight: 400;
-    font-family: "TCCC UnityText Regular", sans-serif;
-}
-
-.checkbox-label input[type="checkbox"] {
-    margin: 0;
-    width: 16px;
-    height: 16px;
-    accent-color: var(--primary-color);
-    cursor: pointer;
-}
-
-.checkbox-label input[type="checkbox"]:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.checkbox-label:has(input[type="checkbox"]:disabled) {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
 .expand-button {
     background: transparent;
     border: none;
@@ -376,38 +345,6 @@
     gap: 12px;
     align-items: center;
 }
-
-/* Buttons */
-.cancel-btn,
-.request-authorization-btn {
-    padding: 12px 24px;
-    border-radius: 50px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    border: 1px solid;
-    font-family: "TCCC UnityText Regular", sans-serif;
-}
-
-.cancel-btn {
-    background: white;
-    color: #666;
-    border-color: #d9d9d9;
-}
-
-.cancel-btn:hover {
-    background: #f5f5f5;
-    border-color: #999;
-    color: #333;
-}
-
-.request-authorization-btn {
-    background: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-}
-
 
 /* Responsive Design */
 @media (max-width: 1200px) {

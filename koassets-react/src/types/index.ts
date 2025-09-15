@@ -199,11 +199,6 @@ export interface CartItem extends Asset {
 }
 
 // Component prop types
-export interface CartIconProps {
-    itemCount: number;
-    onClick: () => void;
-}
-
 export interface AssetCardProps {
     image: Asset;
     handleCardDetailClick: (image: Asset, event: React.MouseEvent) => void;
@@ -276,18 +271,18 @@ export interface CartPanelProps {
     onDownloadAssets: (items: CartItem[]) => void;
 }
 
-// Header Bar types
-export interface HeaderBarProps {
-    cartItems: CartItem[];
-    setCartItems: React.Dispatch<React.SetStateAction<CartItem[]>>;
-    isCartOpen: boolean;
-    setIsCartOpen: (isOpen: boolean) => void;
-    handleRemoveFromCart: (item: CartItem) => void;
-    handleApproveAssets: (items: CartItem[]) => void;
-    handleDownloadAssets: (items: CartItem[]) => void;
-    handleAuthenticated: (userData: string) => void;
-    handleSignOut: () => void;
-}
+// Header Bar types - COMMENTED OUT
+// export interface HeaderBarProps {
+//     cartItems: CartItem[];
+//     setCartItems: React.Dispatch<React.SetStateAction<CartItem[]>>;
+//     isCartOpen: boolean;
+//     setIsCartOpen: (isOpen: boolean) => void;
+//     handleRemoveFromCart: (item: CartItem) => void;
+//     handleApproveAssets: (items: CartItem[]) => void;
+//     handleDownloadAssets: (items: CartItem[]) => void;
+//     handleAuthenticated: (userData: string) => void;
+//     handleSignOut: () => void;
+// }
 
 // Asset Preview types
 export interface AssetPreviewProps {
