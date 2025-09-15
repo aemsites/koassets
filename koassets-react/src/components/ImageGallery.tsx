@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { DEFAULT_ACCORDION_CONFIG } from '../constants/accordion';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type { Asset, ImageGalleryProps } from '../types';
@@ -270,29 +271,35 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
             </div>
 
             {/* Asset Preview Modal */}
-            <AssetPreview
-                showModal={showPreviewModal}
-                selectedImage={selectedCard}
-                closeModal={closeCardPreviewModal}
-                handleAddToCart={handleAddToCart}
-                handleRemoveFromCart={onRemoveFromCart}
-                cartItems={cartItems}
-                renditions={selectedCard?.assetId ? assetRenditionsCache[selectedCard.assetId] : undefined}
-                fetchAssetRenditions={fetchAssetRenditions}
-            />
+            {createPortal(
+                <AssetPreview
+                    showModal={showPreviewModal}
+                    selectedImage={selectedCard}
+                    closeModal={closeCardPreviewModal}
+                    handleAddToCart={handleAddToCart}
+                    handleRemoveFromCart={onRemoveFromCart}
+                    cartItems={cartItems}
+                    renditions={selectedCard?.assetId ? assetRenditionsCache[selectedCard.assetId] : undefined}
+                    fetchAssetRenditions={fetchAssetRenditions}
+                />,
+                document.body
+            )}
 
             {/* Asset Details Modal */}
-            <AssetDetails
-                showModal={showFullScreenModal}
-                selectedImage={selectedCard}
-                closeModal={closeFullScreenModal}
-                handleAddToCart={handleAddToCart}
-                handleRemoveFromCart={onRemoveFromCart}
-                cartItems={cartItems}
-                imagePresets={imagePresets}
-                renditions={selectedCard?.assetId ? assetRenditionsCache[selectedCard.assetId] : undefined}
-                fetchAssetRenditions={fetchAssetRenditions}
-            />
+            {createPortal(
+                <AssetDetails
+                    showModal={showFullScreenModal}
+                    selectedImage={selectedCard}
+                    closeModal={closeFullScreenModal}
+                    handleAddToCart={handleAddToCart}
+                    handleRemoveFromCart={onRemoveFromCart}
+                    cartItems={cartItems}
+                    imagePresets={imagePresets}
+                    renditions={selectedCard?.assetId ? assetRenditionsCache[selectedCard.assetId] : undefined}
+                    fetchAssetRenditions={fetchAssetRenditions}
+                />,
+                document.body
+            )}
         </div>
     );
 };

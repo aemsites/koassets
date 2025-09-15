@@ -10,7 +10,7 @@
 }
 
 .download-renditions-table-header {
-    color: #6a6a6a;
+    color: var(--secondary-color);
     font-family: "TCCC UnityHeadline", sans-serif;
     font-size: 14px;
     font-weight: 400;
@@ -191,6 +191,7 @@
 /* Toggle button for collapse/expand - now inside select-all-item */
 .select-all-item .renditions-toggle-btn {
     background-image: url('/icons/arrow-down-nav-menu.svg');
+    background-color: transparent;
     border: none;
     width: 24px;
     height: 24px;
@@ -376,26 +377,6 @@
     margin-top: 16px;
 }
 
-.download-renditions-button {
-    padding: 12px 32px;
-    border-radius: 24px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    border: none;
-    transition: all 0.2s ease;
-}
-
-.download-renditions-button.cancel {
-    padding: 12px 32px;
-}
-
-.download-renditions-button.disabled {
-    background-color: var(--primary-color-disabled);
-    color: #f8f8f8;
-    cursor: not-allowed;
-}
-
 /* Responsive */
 @media (max-width: 768px) {
     .download-renditions-content {
@@ -416,9 +397,5 @@
 
     .download-renditions-actions {
         flex-direction: column;
-    }
-
-    .download-renditions-button {
-        width: 100%;
     }
 }

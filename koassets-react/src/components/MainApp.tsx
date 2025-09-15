@@ -20,7 +20,18 @@ import { fetchOptimizedDeliveryBlob, removeBlobFromCache } from '../utils/blobCa
 import { getBucket, getExternalParams } from '../utils/config';
 import { AppConfigProvider } from './AppConfigProvider';
 
+// Extend window interface for cart functions
+declare global {
+    interface Window {
+        openCart?: () => void;
+        closeCart?: () => void;
+        toggleCart?: () => void;
+    }
+}
+
 // Components
+import { createPortal } from 'react-dom';
+import CartPanel from './CartPanel';
 import Facets from './Facets';
 import HeaderBar from './HeaderBar';
 import ImageGallery from './ImageGallery';
@@ -128,6 +139,19 @@ function MainApp(): React.JSX.Element {
     const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
     // Mobile filter panel state
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false);
+
+    // Expose cart functions to window for EDS header integration
+    useEffect(() => {
+        window.openCart = () => setIsCartOpen(true);
+        window.closeCart = () => setIsCartOpen(false);
+        window.toggleCart = () => setIsCartOpen(prev => !prev);
+
+        return () => {
+            delete window.openCart;
+            delete window.closeCart;
+            delete window.toggleCart;
+        };
+    }, []);
 
     // Sort state
     const [selectedSortType, setSelectedSortType] = useState<string>('Date Created');
@@ -631,15 +655,24 @@ function MainApp(): React.JSX.Element {
             <div className="container">
                 <HeaderBar
                     cartItems={cartItems}
-                    setCartItems={setCartItems}
-                    isCartOpen={isCartOpen}
-                    setIsCartOpen={setIsCartOpen}
-                    handleRemoveFromCart={handleRemoveFromCart}
-                    handleApproveAssets={handleApproveAssets}
-                    handleDownloadAssets={handleDownloadAssets}
                     handleAuthenticated={handleAuthenticated}
                     handleSignOut={handleSignOut}
                 />
+
+                {/* Cart Container - moved from HeaderBar, now uses Portal */}
+                {createPortal(
+                    <CartPanel
+                        isOpen={isCartOpen}
+                        onClose={() => setIsCartOpen(false)}
+                        cartItems={cartItems}
+                        setCartItems={setCartItems}
+                        onRemoveItem={handleRemoveFromCart}
+                        onApproveAssets={handleApproveAssets}
+                        onDownloadAssets={handleDownloadAssets}
+                    />,
+                    document.body
+                )}
+
                 {/* TODO: Update this once finalized */}
                 {window.location.pathname.includes('/tools/assets-browser/index.html') && (
                     <SearchBar

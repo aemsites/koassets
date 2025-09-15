@@ -135,7 +135,7 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
     };
 
     return (
-        <div className="asset-preview-modal" onClick={handleOverlayClick}>
+        <div className="asset-preview-modal portal-modal" onClick={handleOverlayClick}>
             <div className="asset-preview-modal-inner" onClick={handleModalClick}>
                 <button className="modal-close-button" onClick={closeModal}>
                     ✕
