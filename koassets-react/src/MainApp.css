@@ -25,35 +25,16 @@
 
 /* Global button styling */
 button {
-  background-color: var(--primary-color);
-  color: white;
   border: none;
   border-radius: 4px;
   padding: 8px 16px;
   cursor: pointer;
-  font-weight: bold;
   transition: background-color 0.3s;
 }
 
 a.button:any-link,
 button {
   margin: 0;
-  background-color: transparent;
-  white-space: unset;
-}
-
-button:hover {
-  background-color: var(--primary-color-hover);
-}
-
-button:active {
-  background-color: var(--primary-color-active);
-}
-
-button:disabled {
-  background-color: var(--primary-color-disabled);
-  color: #f8f8f8;
-  cursor: not-allowed;
 }
 
 /* Responsive layout */
