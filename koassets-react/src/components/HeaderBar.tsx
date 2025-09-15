@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useAppConfig } from '../hooks/useAppConfig';
+import type { CartItem } from '../types';
 // import type { HeaderBarProps } from '../types'; // COMMENTED OUT
 import AdobeSignInButton from './AdobeSignInButton.jsx';
 // import CartPanel from './CartPanel'; // REMOVED - moved to MainApp
@@ -12,7 +13,14 @@ declare global {
     }
 }
 
-const HeaderBar: React.FC<any> = ({ // Changed from HeaderBarProps (commented out)
+// Simplified HeaderBar props interface
+interface HeaderBarPropsSimplified {
+    cartItems: CartItem[];
+    handleAuthenticated: (token: string) => void;
+    handleSignOut: () => void;
+}
+
+const HeaderBar: React.FC<HeaderBarPropsSimplified> = ({
     cartItems, // Keep for window.updateCartBadge
     // setCartItems, // Removed - cart moved to MainApp
     // isCartOpen, // Removed - cart moved to MainApp  

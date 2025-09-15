@@ -655,12 +655,6 @@ function MainApp(): React.JSX.Element {
             <div className="container">
                 <HeaderBar
                     cartItems={cartItems}
-                    setCartItems={setCartItems}
-                    isCartOpen={isCartOpen}
-                    setIsCartOpen={setIsCartOpen}
-                    handleRemoveFromCart={handleRemoveFromCart}
-                    handleApproveAssets={handleApproveAssets}
-                    handleDownloadAssets={handleDownloadAssets}
                     handleAuthenticated={handleAuthenticated}
                     handleSignOut={handleSignOut}
                 />
