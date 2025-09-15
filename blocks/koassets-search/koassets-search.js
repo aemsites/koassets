@@ -65,7 +65,7 @@ export default async function decorate(block) {
   loadReactApp(reactRoot);
 }
 
-function loadReactApp(rootElement) {
+function loadReactApp() {
   try {
     // Check if we already have the built assets
     const basePath = '/tools/assets-browser';
