@@ -357,16 +357,13 @@ main .section.center {
 }
 
 .slider {
-  background-color: rgb(228, 228, 228);
-  bottom: 0px;
+  background-color: rgb(228 228 228);
   cursor: pointer;
-  left: 0px;
   position: absolute;
-  right: 0px;
-  top: 0px;
+  inset: 0;
   border-width: 1px;
   border-style: solid;
-  border-color: rgb(237, 0, 0);
+  border-color: rgb(237 0 0);
   border-image: initial;
   border-radius: 20px;
   transition: 0.4s;
@@ -377,7 +374,7 @@ main .section.center {
 }
 
 .slider::before {
-  background-color: rgb(255, 255, 255);
+  background-color: rgb(255 255 255);
   bottom: 2px;
   content: "";
   height: 14px;
@@ -386,14 +383,14 @@ main .section.center {
   width: 14px;
   border-width: 1px;
   border-style: solid;
-  border-color: rgb(237, 0, 0);
+  border-color: rgb(237 0 0);
   border-image: initial;
   border-radius: 50%;
   transition: 0.4s;
 }
 
 input:checked+.slider {
-  background-color: rgb(237, 0, 0);
+  background-color: rgb(237 0 0);
 }
 
 input:checked+.slider::before {
@@ -490,8 +487,6 @@ input[type="checkbox"] {
   flex: 0 0 16px;
   cursor: pointer;
   appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
   background-color: white;
   border: 2px solid #828181;
   display: inline-flex;
