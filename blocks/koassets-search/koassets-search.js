@@ -30,15 +30,6 @@ export default async function decorate(block) {
   reactRoot.className = 'koassets-search-root';
   reactContainer.appendChild(reactRoot);
 
-  // Add loading indicator
-  const loadingIndicator = document.createElement('div');
-  loadingIndicator.className = 'koassets-loading';
-  loadingIndicator.innerHTML = `
-    <div class="loading-spinner"></div>
-    <p>Loading KO Assets...</p>
-  `;
-  reactContainer.appendChild(loadingIndicator);
-
   // Append container to block
   block.append(reactContainer);
 
@@ -71,10 +62,10 @@ export default async function decorate(block) {
   };
 
   // Load the built React app
-  loadReactApp(reactRoot, loadingIndicator);
+  loadReactApp(reactRoot);
 }
 
-function loadReactApp(rootElement, loadingElement) {
+function loadReactApp(rootElement) {
   try {
     // Check if we already have the built assets
     const basePath = '/tools/assets-browser';
@@ -85,21 +76,14 @@ function loadReactApp(rootElement, loadingElement) {
     // Then load the JavaScript bundle
     loadJS(`${basePath}/assets/index.js`)
       .then(() => {
-        // Remove loading indicator once app is loaded
-        loadingElement.remove();
+        // React app loaded successfully
         console.log('KO Assets Search app loaded successfully');
       })
       .catch((error) => {
         console.error('Failed to load React app:', error);
-        showError(
-          loadingElement,
-          'Failed to load KO Assets Search App',
-          'Please ensure the React app is built and deployed to /tools/assets-browser/',
-        );
       });
   } catch (error) {
     console.error('Error initializing React app:', error);
-    showError(loadingElement, 'Error Loading KO Assets Search', error.message);
   }
 }
 
@@ -120,19 +104,4 @@ function loadJS(src) {
     script.onerror = reject;
     document.head.appendChild(script);
   });
-}
-
-function showError(element, title, message) {
-  element.innerHTML = `
-    <div class="error-message">
-      <h3>${title}</h3>
-      <p>${message}</p>
-      <p><strong>To fix this:</strong></p>
-      <ol>
-        <li>Navigate to the koassets-react directory</li>
-        <li>Run: <code>npm run build-and-copy:koassets-react</code></li>
-        <li>Refresh this page</li>
-      </ol>
-    </div>
-  `;
 }

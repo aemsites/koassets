@@ -247,7 +247,8 @@ button:disabled:hover {
   background-color: var(--primary-color-disabled);
 }
 
-:is(h1, h2, h3, h4, h5, h6)::after {
+:is(.container h1, .container h2, .container h3, .container h4, .container h5, .container h6)::after,
+:is(.portal-modal h1, .portal-modal h2, .portal-modal h3, .portal-modal h4, .portal-modal h5, .portal-modal h6)::after {
   content: inherit;
   display: inherit;
   width: inherit;
