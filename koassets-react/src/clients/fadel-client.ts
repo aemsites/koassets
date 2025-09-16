@@ -1,8 +1,3 @@
-interface AuthResponse {
-    accessToken: string;
-    expiresIn?: number;
-}
-
 interface RightDetails {
     rightId: number;
     description: string;
@@ -87,26 +82,10 @@ export interface CheckRightsResponse {
 }
 
 export class FadelClient {
-    private baseUrl: string;
-    private username: string;
-    private password: string;
-    private accessToken: string | null = null;
-    private tokenExpiry: number | null = null;
-
+    private static baseUrl: string = `${window.location.origin}/api/fadel`;
     private static instance: FadelClient | null = null;
 
     constructor() {
-        const baseUrl = localStorage.getItem('FADEL_BASE_URL') || '';
-        const username = localStorage.getItem('FADEL_USERNAME') || '';
-        const password = localStorage.getItem('FADEL_PASSWORD') || '';
-
-        if (!baseUrl || !username || !password) {
-            throw new Error('Missing required Fadel configuration: FADEL_BASE_URL, FADEL_USERNAME, FADEL_PASSWORD');
-        }
-
-        this.baseUrl = baseUrl;
-        this.username = username;
-        this.password = password;
     }
 
     public static getInstance(): FadelClient {
@@ -116,67 +95,14 @@ export class FadelClient {
         return FadelClient.instance;
     }
 
-    private createAuthRequestToken(): string {
-        const credentials = `${this.username}:${this.password}`;
-        return btoa(credentials); // Base64 encode
-    }
-
-    async authenticate(): Promise<string> {
-        // Return cached token if still valid
-        if (this.accessToken && this.tokenExpiry && this.tokenExpiry > Date.now()) {
-            return this.accessToken;
-        }
-
-        const authUrl = `${this.baseUrl}/rc-api/authenticate`;
-        const authRequestToken = this.createAuthRequestToken();
-
-        try {
-            const response = await fetch(authUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    authRequestToken: authRequestToken
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`Authentication failed: ${response.status} ${response.statusText}`);
-            }
-
-            const authResponse: AuthResponse = await response.json();
-
-            if (!authResponse.accessToken) {
-                throw new Error('No access token received from authentication response');
-            }
-
-            this.accessToken = authResponse.accessToken;
-
-            // Set token expiry (default to 1 hour if not provided)
-            const expiresInMs = (authResponse.expiresIn || 3600) * 1000;
-            this.tokenExpiry = Date.now() + expiresInMs;
-
-            return this.accessToken;
-        } catch (error) {
-            console.error('Fadel authentication error:', error);
-            throw error;
-        }
-    }
-
-    async getAccessToken(): Promise<string> {
-        return this.authenticate();
-    }
 
     async fetchMediaRights(): Promise<MediaRightsResponse> {
-        const accessToken = await this.getAccessToken();
-        const url = `${this.baseUrl}/rc-api/rights/search/20`;
+        const url = `${FadelClient.baseUrl}/rc-api/rights/search/20`;
 
         try {
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    'Authorization': accessToken,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
@@ -196,14 +122,12 @@ export class FadelClient {
     }
 
     async fetchMarketRights(): Promise<MarketRightsResponse> {
-        const accessToken = await this.getAccessToken();
-        const url = `${this.baseUrl}/rc-api/rights/search/30`;
+        const url = `${FadelClient.baseUrl}/rc-api/rights/search/30`;
 
         try {
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    'Authorization': accessToken,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
@@ -223,14 +147,12 @@ export class FadelClient {
     }
 
     async checkRights(request: CheckRightsRequest): Promise<CheckRightsResponse> {
-        const accessToken = await this.getAccessToken();
-        const url = `${this.baseUrl}/rc-api/clearance/assetclearance`;
+        const url = `${FadelClient.baseUrl}/rc-api/clearance/assetclearance`;
 
         try {
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    'Authorization': accessToken,
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(request)
