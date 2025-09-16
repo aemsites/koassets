@@ -64,6 +64,9 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
         }
     };
 
+    // Remove the file extension from the asset name and encode for src/srcset attribute below
+    const fileName = encodeURIComponent(image.name?.replace(/\.[^/.]+$/, '') || 'thumbnail');
+
     return (
         <div className="asset-card-view-grid">
             <div className="asset-card-view-grid-inner">
@@ -89,12 +92,21 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                         </svg>
                     </button>
 
-                    <LazyImage
-                        asset={image}
-                        width={350}
-                        className="image-container"
-                        alt={image.alt || image.name}
-                    />
+                    {(window.user) ? (
+                        <div className="lazy-image-container image-container">
+                            <picture>
+                                <source type="image/webp" srcSet={`/api/adobe/assets/${image.assetId}/as/${fileName}.webp?width=350`} />
+                                <img className="lazy-image" loading="lazy" src={`/api/adobe/assets/${image.assetId}/as/${fileName}.jpg?width=350`} alt={image.alt || image.name} />
+                            </picture>
+                        </div>
+                    ) : (
+                        <LazyImage
+                            asset={image}
+                            width={350}
+                            className="image-container"
+                            alt={image.alt || image.name}
+                        />
+                    )}
                 </div>
 
                 <div className="product-info-container">

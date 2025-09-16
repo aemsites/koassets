@@ -263,6 +263,7 @@ export class DynamicMediaClient {
         }
 
         try {
+            console.trace('DynamicMediaClient.getMetadata() REQUEST');
             const response = await this.client.request(config);
             return response.data;
         } catch (error) {
@@ -360,7 +361,22 @@ export class DynamicMediaClient {
      * @returns Promise with search results
      */
     async searchAssets(query: string, options: SearchAssetsOptions = {}): Promise<unknown> {
+        console.trace('DynamicMediaClient.searchAssets() REQUEST');
+
         const algoliaQuery = this.transformToAlgoliaSearchAssets(query, options);
+
+        if (window.user) {
+            const response = await fetch(`/api/adobe/assets/search`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-ch-request': 'search',
+                    'x-adobe-accept-experimental': '1',
+                },
+                body: JSON.stringify(algoliaQuery)
+            });
+            return response.json();
+        }
 
         const config: AxiosRequestConfig = {
             url: '/adobe/assets/search',
@@ -397,6 +413,7 @@ export class DynamicMediaClient {
         };
 
         try {
+            console.trace('DynamicMediaClient.searchCollections() REQUEST');
             const response = await this.client.request(config);
             return response.data;
         } catch (error) {
@@ -414,6 +431,7 @@ export class DynamicMediaClient {
      */
     async getImageBase64(assetId: string): Promise<{ type: string, data: string; }> {
         try {
+            console.trace('DynamicMediaClient.getImageBase64() REQUEST');
             const response = await this.client.request({
                 url: `/adobe/assets/${assetId}`,
                 method: 'GET',
@@ -461,6 +479,7 @@ export class DynamicMediaClient {
         const processedRepoName = this.changeToSupportedPreview(repoName);
 
         try {
+            console.trace('DynamicMediaClient.getOptimizedDeliveryPreviewBlob() REQUEST');
             const response = await this.client.request({
                 url: `/adobe/assets/${assetId}/as/preview-${processedRepoName}`,
                 method: 'GET',
@@ -492,6 +511,7 @@ export class DynamicMediaClient {
 
     async getDownloadTokenResp(asset: Asset): Promise<{ token: string, expiryTime: number } | undefined> {
         try {
+            console.trace('DynamicMediaClient.getDownloadTokenResp() REQUEST');
             const response = await this.client.request({
                 url: `/adobe/assets/${asset?.assetId}/token`,
                 method: 'GET'
@@ -585,6 +605,7 @@ export class DynamicMediaClient {
 
         let blob: Blob;
         try {
+            console.trace('DynamicMediaClient.downloadAsset() REQUEST');
             const response = await this.client.request({
                 url: url,
                 method: 'GET',
@@ -609,6 +630,7 @@ export class DynamicMediaClient {
 
     async getAssetRenditions(asset: Asset): Promise<{ items?: Rendition[] }> {
         try {
+            console.trace('DynamicMediaClient.getAssetRenditions() REQUEST');
             const response = await this.client.request({
                 url: `/adobe/assets/${asset?.assetId}/renditions`,
                 method: 'GET'
@@ -625,6 +647,7 @@ export class DynamicMediaClient {
 
     async getAssetImagePresets(asset: Asset): Promise<{ items: Rendition[] }> {
         try {
+            console.trace('DynamicMediaClient.getAssetImagePresets() REQUEST');
             const response = await this.client.request({
                 url: `/adobe/assets/imagePresets`,
                 method: 'GET'
@@ -641,6 +664,7 @@ export class DynamicMediaClient {
 
     async getImagePresets(): Promise<{ items: Rendition[] }> {
         try {
+            console.trace('DynamicMediaClient.getImagePresets() REQUEST');
             const response = await this.client.request({
                 url: `/adobe/assets/imagePresets`,
                 method: 'GET'
@@ -664,6 +688,7 @@ export class DynamicMediaClient {
                 }))
             };
 
+            console.trace('DynamicMediaClient.downloadAssetsArchive() REQUEST');
             const response = await this.client.request({
                 url: `/adobe/assets/archives`,
                 method: 'POST',
@@ -707,6 +732,7 @@ export class DynamicMediaClient {
 
     async getAssetsArchiveStatus(archiveId: string): Promise<ArchiveStatus | undefined> {
         try {
+            console.trace('DynamicMediaClient.getAssetsArchiveStatus() REQUEST');
             const response = await this.client.request({
                 url: `/adobe/assets/archives/${archiveId}/status`,
                 method: 'GET'

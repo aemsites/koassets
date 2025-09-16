@@ -256,7 +256,7 @@ function MainApp(): React.JSX.Element {
             }
         });
 
-    }, [dynamicMediaClient, processDMImages, selectedCollection, selectedFacetFilters, selectedNumericFilters, excFacets, presetFilters, externalParams.hitsPerPage]);
+    }, [/* dynamicMediaClient, */ processDMImages, selectedCollection, selectedFacetFilters, selectedNumericFilters, excFacets, presetFilters, externalParams.hitsPerPage]);
 
     // Handler for loading more results (pagination)
     const handleLoadMoreResults = useCallback((): void => {
@@ -312,19 +312,19 @@ function MainApp(): React.JSX.Element {
                 console.warn('Error parsing URL search parameters:', error);
             }
         }
-    }, [dynamicMediaClient, setSelectedFacetFilters, setSelectedNumericFilters, performSearchImages]);
+    }, [/* dynamicMediaClient, */ setSelectedFacetFilters, setSelectedNumericFilters, performSearchImages]);
 
     useEffect(() => {
         dynamicMediaClient && window.history.replaceState({}, '', `${window.location.pathname}`);
-    }, [selectedQueryType, dynamicMediaClient]);
+    }, [selectedQueryType /* , dynamicMediaClient */]);
 
     // Auto-search with empty query on app load
     useEffect(() => {
-        if (dynamicMediaClient && accessToken && excFacets !== undefined) {
+        if (window.user || (dynamicMediaClient && accessToken && excFacets !== undefined)) {
             search();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dynamicMediaClient, accessToken, excFacets, selectedFacetFilters, selectedNumericFilters]);
+    }, [/* dynamicMediaClient, accessToken, */ excFacets, selectedFacetFilters, selectedNumericFilters]);
 
     useEffect(() => {
         if (accessToken && !settingsLoadedRef.current) {
@@ -402,14 +402,14 @@ function MainApp(): React.JSX.Element {
             console.error('Failed to fetch asset static renditions:', error);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dynamicMediaClient, imagePresets.items]);
+    }, [/* dynamicMediaClient, */ imagePresets.items]);
 
     // Add useEffect to trigger search when selectedCollection changes
     useEffect(() => {
         if (selectedCollection && dynamicMediaClient && excFacets !== undefined) {
             performSearchImages('', 0);
         }
-    }, [selectedCollection, dynamicMediaClient, excFacets, performSearchImages]);
+    }, [selectedCollection, /* dynamicMediaClient, */ excFacets, performSearchImages]);
 
     // Cart functions
     const handleAddToCart = async (image: Asset): Promise<void> => {
