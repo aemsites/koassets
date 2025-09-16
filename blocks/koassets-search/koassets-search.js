@@ -73,7 +73,6 @@ function loadReactApp(rootElement, loadingElement) {
       .then(() => {
         // Remove loading indicator once app is loaded
         loadingElement.remove();
-        console.log('KO Assets Search app loaded successfully');
       })
       .catch((error) => {
         console.error('Failed to load React app:', error);
