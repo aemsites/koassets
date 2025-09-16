@@ -8,7 +8,10 @@
 /* When popup modals are present, elevate the entire koassets-search container */
 .koassets-search:has(.cart-panel-overlay),
 .koassets-search:has(.asset-preview-modal),
-.koassets-search:has(.download-renditions-overlay) {
+.koassets-search:has(.download-renditions-overlay),
+.koassets-search-hidden:has(.cart-panel-overlay),
+.koassets-search-hidden:has(.asset-preview-modal),
+.koassets-search-hidden:has(.download-renditions-overlay) {
     z-index: 10;
 }
 
