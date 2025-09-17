@@ -20,12 +20,13 @@ import { fetchOptimizedDeliveryBlob, removeBlobFromCache } from '../utils/blobCa
 import { getBucket, getExternalParams } from '../utils/config';
 import { AppConfigProvider } from './AppConfigProvider';
 
-// Extend window interface for cart functions
+// Extend window interface for cart functions and user authentication
 declare global {
     interface Window {
         openCart?: () => void;
         closeCart?: () => void;
         toggleCart?: () => void;
+        user?: unknown; // Global user object for authentication
     }
 }
 
@@ -86,6 +87,14 @@ function MainApp(): React.JSX.Element {
             return '';
         }
     });
+
+    // Combined authentication state - covers both accessToken and window.user mechanisms
+    const [authenticated, setAuthenticated] = useState<boolean>(() => {
+        const hasAccessToken = Boolean(localStorage.getItem('accessToken'));
+        const hasWindowUser = Boolean(window.user);
+        return hasAccessToken || hasWindowUser;
+    });
+
     const [dynamicMediaClient, setDynamicMediaClient] = useState<DynamicMediaClient | null>(null);
 
     const [query, setQuery] = useState<string>('');
@@ -182,12 +191,34 @@ function MainApp(): React.JSX.Element {
         localStorage.setItem('cartItems', JSON.stringify(cartItems));
     }, [cartItems]);
 
+    // Keep authenticated state synchronized with accessToken and window.user changes
     useEffect(() => {
-        setDynamicMediaClient(new DynamicMediaClient({
-            bucket: bucket,
-            accessToken: accessToken,
-        }));
-    }, [accessToken, bucket]);
+        const hasAccessToken = Boolean(accessToken);
+        const hasWindowUser = Boolean(window.user);
+        setAuthenticated(hasAccessToken || hasWindowUser);
+    }, [accessToken]);
+
+    useEffect(() => {
+        // Only create client when authenticated (either via accessToken or window.user) and bucket is available
+        if (authenticated && bucket) {
+            if (accessToken && window.user) {
+                console.debug('🔑 Authenticated via IMS and Cookie. Using IMS route (during transition period)');
+            } else if (accessToken) {
+                console.debug('🔑 Authenticated via IMS only.');
+            } else if (window.user) {
+                console.debug('🔑 Authenticated via Cookie only.');
+            } else {
+                console.debug('🔑 Not authenticated (not IMS, nor Cookie)');
+            }
+            setDynamicMediaClient(new DynamicMediaClient({
+                bucket: bucket,
+                accessToken: accessToken || undefined, // Pass undefined if empty string
+            }));
+        } else {
+            console.debug('🔑 Not authenticated (not IMS, nor cookie)');
+            setDynamicMediaClient(null);
+        }
+    }, [authenticated, accessToken, bucket]);
 
     // Keep accessToken in sync with localStorage
     useEffect(() => {
@@ -280,7 +311,7 @@ function MainApp(): React.JSX.Element {
             }
         });
 
-    }, [/* dynamicMediaClient, */ processDMImages, selectedCollection, selectedFacetFilters, selectedNumericFilters, excFacets, presetFilters, externalParams.hitsPerPage]);
+    }, [dynamicMediaClient, processDMImages, selectedCollection, selectedFacetFilters, selectedNumericFilters, excFacets, presetFilters, externalParams.hitsPerPage]);
 
     // Handler for loading more results (pagination)
     const handleLoadMoreResults = useCallback((): void => {
@@ -336,22 +367,22 @@ function MainApp(): React.JSX.Element {
                 console.warn('Error parsing URL search parameters:', error);
             }
         }
-    }, [/* dynamicMediaClient, */ setSelectedFacetFilters, setSelectedNumericFilters, performSearchImages]);
+    }, [dynamicMediaClient, setSelectedFacetFilters, setSelectedNumericFilters, performSearchImages]);
 
     useEffect(() => {
         dynamicMediaClient && window.history.replaceState({}, '', `${window.location.pathname}`);
-    }, [selectedQueryType /* , dynamicMediaClient */]);
+    }, [selectedQueryType, dynamicMediaClient]);
 
     // Auto-search with empty query on app load
     useEffect(() => {
-        if (window.user || (dynamicMediaClient && accessToken && excFacets !== undefined)) {
+        if (authenticated && dynamicMediaClient && excFacets !== undefined) {
             search();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [/* dynamicMediaClient, accessToken, */ excFacets, selectedFacetFilters, selectedNumericFilters]);
+    }, [dynamicMediaClient, authenticated, excFacets, selectedFacetFilters, selectedNumericFilters]);
 
     useEffect(() => {
-        if (accessToken && !settingsLoadedRef.current) {
+        if (authenticated && !settingsLoadedRef.current) {
             setExcFacets(externalParams.excFacets || DEFAULT_FACETS);
             setPresetFilters(externalParams.presetFilters || []);
             settingsLoadedRef.current = true;
@@ -363,7 +394,7 @@ function MainApp(): React.JSX.Element {
             //     console.error('Error fetching facets:', error);
             // });
         }
-    }, [accessToken, externalParams.excFacets, externalParams.presetFilters]);
+    }, [authenticated, externalParams.excFacets, externalParams.presetFilters]);
 
 
 
@@ -426,14 +457,14 @@ function MainApp(): React.JSX.Element {
             console.error('Failed to fetch asset static renditions:', error);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [/* dynamicMediaClient, */ imagePresets.items]);
+    }, [dynamicMediaClient, imagePresets.items]);
 
     // Add useEffect to trigger search when selectedCollection changes
     useEffect(() => {
-        if (selectedCollection && dynamicMediaClient && excFacets !== undefined) {
+        if (selectedCollection && authenticated && dynamicMediaClient && excFacets !== undefined) {
             performSearchImages('', 0);
         }
-    }, [selectedCollection, /* dynamicMediaClient, */ excFacets, performSearchImages]);
+    }, [selectedCollection, authenticated, dynamicMediaClient, excFacets, performSearchImages]);
 
     // Cart functions
     const handleAddToCart = async (image: Asset): Promise<void> => {
@@ -562,7 +593,7 @@ function MainApp(): React.JSX.Element {
         setIsCartOpen(false);
     };
 
-    const handleAuthenticated = (token: string): void => {
+    const handleIMSAccessToken = (token: string): void => {
         setAccessToken(token);
     };
 
@@ -655,7 +686,7 @@ function MainApp(): React.JSX.Element {
             <div className="container">
                 <HeaderBar
                     cartItems={cartItems}
-                    handleAuthenticated={handleAuthenticated}
+                    handleAuthenticated={handleIMSAccessToken}
                     handleSignOut={handleSignOut}
                 />
 

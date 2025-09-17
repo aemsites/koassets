@@ -2,6 +2,13 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { AlgoliaSearchQuery, AlgoliaSearchRequest, Asset, Rendition } from '../types';
 import { mimeTypeToExtension } from '../utils/mimeTypeConverter';
 
+// Extend window interface for user authentication
+declare global {
+    interface Window {
+        user?: unknown; // Global user object for authentication
+    }
+}
+
 export const ORIGINAL_RENDITION = 'original';
 
 export interface AssetRenditionPair {
@@ -27,7 +34,7 @@ export interface ArchiveStatus {
 
 interface DynamicMediaClientConfig {
     bucket: string;
-    accessToken: string;
+    accessToken?: string;
     baseURL?: string;
     apiKey?: string;
 }
@@ -138,11 +145,11 @@ const apiKey: { [key: string]: string; } = {
 export class DynamicMediaClient {
     private readonly client: AxiosInstance;
     private readonly bucket: string;
-    private readonly accessToken: string;
+    private readonly accessToken?: string;
 
     constructor(config: DynamicMediaClientConfig) {
         this.bucket = config.bucket;
-        this.accessToken = config.accessToken.replace(/^Bearer /, '');
+        this.accessToken = config.accessToken?.replace(/^Bearer /, '');
 
         this.client = axios.create({
             baseURL: config.baseURL || `https://${this.bucket}.adobeaemcloud.com`,
@@ -153,6 +160,10 @@ export class DynamicMediaClient {
                 'x-adobe-accept-experimental': '1'
             }
         });
+    }
+
+    public isIMSAuthenticated(): boolean {
+        return this.accessToken !== undefined;
     }
 
     // Extract index name from bucket (e.g., delivery-p92206-e211033-cmstg -> 92206-211033)
@@ -361,11 +372,28 @@ export class DynamicMediaClient {
      * @returns Promise with search results
      */
     async searchAssets(query: string, options: SearchAssetsOptions = {}): Promise<unknown> {
-        console.trace('DynamicMediaClient.searchAssets() REQUEST');
-
         const algoliaQuery = this.transformToAlgoliaSearchAssets(query, options);
 
-        if (window.user) {
+        // for transition period, if logged in both ways, prefer IMS route
+        if (this.isIMSAuthenticated()) {
+            const config: AxiosRequestConfig = {
+                url: '/adobe/assets/search',
+                method: 'POST',
+                data: algoliaQuery,
+                headers: { 'x-ch-request': 'search' }
+            };
+
+            try {
+                const response = await this.client.request(config);
+                return response.data;
+            } catch (error) {
+                if (axios.isAxiosError(error)) {
+                    throw new Error(`Failed to search assets: ${error.message}`);
+                }
+                throw error;
+            }
+
+        } else /* if (window.user) */ {
             const response = await fetch(`/api/adobe/assets/search`, {
                 method: 'POST',
                 headers: {
@@ -376,23 +404,6 @@ export class DynamicMediaClient {
                 body: JSON.stringify(algoliaQuery)
             });
             return response.json();
-        }
-
-        const config: AxiosRequestConfig = {
-            url: '/adobe/assets/search',
-            method: 'POST',
-            data: algoliaQuery,
-            headers: { 'x-ch-request': 'search' }
-        };
-
-        try {
-            const response = await this.client.request(config);
-            return response.data;
-        } catch (error) {
-            if (axios.isAxiosError(error)) {
-                throw new Error(`Failed to search assets: ${error.message}`);
-            }
-            throw error;
         }
     }
 
@@ -474,12 +485,12 @@ export class DynamicMediaClient {
         return `${baseName}.${extension}`;
     }
 
+    // NOTE: this is only used if IMS authentication is used
     async getOptimizedDeliveryPreviewBlob(assetId: string, repoName: string, width: number = 350) {
         // Convert video extensions to avif for optimal delivery
         const processedRepoName = this.changeToSupportedPreview(repoName);
 
         try {
-            console.trace('DynamicMediaClient.getOptimizedDeliveryPreviewBlob() REQUEST');
             const response = await this.client.request({
                 url: `/adobe/assets/${assetId}/as/preview-${processedRepoName}`,
                 method: 'GET',
