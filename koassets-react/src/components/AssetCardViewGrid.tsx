@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type { AssetCardProps } from '../types';
+import { getBucket } from '../utils/config';
 import { formatCategory, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
 import ActionButton from './ActionButton';
 import { BUTTON_CONFIGS } from './ActionButtonConfigs';
@@ -71,7 +72,7 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
         const previewUrl = dynamicMediaClient && image.assetId && image.name
             ? dynamicMediaClient.getOptimizedDeliveryPreviewUrl(image.assetId, image.name, 350)
             : undefined;
-        const dmBucket = (dynamicMediaClient as any)?.bucket;
+        const dmBucket = dynamicMediaClient ? getBucket() : undefined;
         // Trigger global collection modal with asset data (including previewUrl)
         const event = new CustomEvent('openCollectionModal', {
             detail: {
