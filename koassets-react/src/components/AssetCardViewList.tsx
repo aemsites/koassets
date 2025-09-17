@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type { AssetCardProps } from '../types';
+import { getBucket } from '../utils/config';
 import { formatCategory, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
 import ActionButton from './ActionButton';
 import { BUTTON_CONFIGS } from './ActionButtonConfigs';
@@ -59,6 +60,24 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
         }
     };
 
+    // Handle add to collection click
+    const handleAddToCollection = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        // Build a stable preview URL using Dynamic Media client (for collections)
+        const previewUrl = dynamicMediaClient && image.assetId && image.name
+            ? dynamicMediaClient.getOptimizedDeliveryPreviewUrl(image.assetId, image.name, 350)
+            : undefined;
+        const dmBucket = dynamicMediaClient ? getBucket() : undefined;
+        // Trigger global collection modal with asset data (including previewUrl)
+        const event = new CustomEvent('openCollectionModal', {
+            detail: {
+                asset: { ...image, previewUrl, dmBucket },
+                assetPath: image.repositoryPath || image.assetId
+            }
+        });
+        window.dispatchEvent(event);
+    };
+
     return (
         <div className="asset-card-view-list">
             <div className="asset-card-view-list-inner">
@@ -83,6 +102,14 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
                             <path d="M159.997 116a12 12 0 0 1-12 12h-20v20a12 12 0 0 1-24 0v-20h-20a12 12 0 0 1 0-24h20V84a12 12 0 0 1 24 0v20h20a12 12 0 0 1 12 12Zm72.48 116.482a12 12 0 0 1-16.971 0l-40.679-40.678a96.105 96.105 0 1 1 16.972-16.97l40.678 40.678a12 12 0 0 1 0 16.97Zm-116.48-44.486a72 72 0 1 0-72-72 72.081 72.081 0 0 0 72 72Z" />
                         </svg>
                     </button>
+
+                    {/* Add to Collection Overlay */}
+                    <div className="add-to-collection-overlay" onClick={handleAddToCollection}>
+                        <div className="add-to-collection-content">
+                            <i className="icon add circle"></i>
+                            <span>Add to Collection</span>
+                        </div>
+                    </div>
 
                     <LazyImage
                         asset={image}
