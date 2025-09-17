@@ -1,0 +1,618 @@
+.my-collections {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    min-height: 100vh;
+    height: auto;
+}
+
+.my-collections-container {
+    width: 100%;
+}
+
+.title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.my-collections-title {
+    font-size: 2.5rem;
+    font-weight: 400;
+    color: #333;
+    margin: 0;
+    padding-bottom: 0.5rem;
+    display: inline-block;
+}
+
+.my-collections-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.showing-text {
+    font-size: 1rem;
+    font-weight: 400;
+}
+
+.create-new-collection-btn {
+    background-color: #e60012;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.create-new-collection-btn:hover {
+    background-color: #cc0010;
+}
+
+.search-container {
+    display: flex;
+    align-items: center;
+    max-width: 520px;
+    width: 100%;
+    gap: 0;
+    position: relative;
+}
+
+.search-input {
+    flex: 1;
+    padding: 0.5rem 1rem 0.5rem 2.5rem;
+    border: 1px solid #e0e0e0;
+    border-right: none;
+    border-radius: 20px 0 0 20px;
+    font-size: 0.9rem;
+    background-color: white;
+    outline: none;
+    height: 40px;
+    box-sizing: border-box;
+}
+
+/* Left search icon */
+.search-container::before {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    background: url('/icons/search.svg') center center / contain no-repeat;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.search-input::placeholder {
+    color: #aaa;
+    font-style: italic;
+}
+
+.search-input:focus {
+    border-color: #e60012;
+    background-color: white;
+}
+
+.search-btn {
+    background-color: #e60012;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0 20px 20px 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    height: 40px;
+    box-sizing: border-box;
+}
+
+.search-btn:hover {
+    background-color: #cc0010;
+}
+
+/* Modal Styles */
+.collection-modal,
+.delete-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgb(0 0 0 / 60%);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 30%);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2rem 2rem 1rem;
+    border-bottom: 1px solid #eee;
+}
+
+.modal-title {
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: #333;
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close:hover {
+    color: #333;
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.form-label {
+    display: block;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 0.5rem;
+    margin-top: 1.5rem;
+}
+
+.form-label:first-child {
+    margin-top: 0;
+}
+
+.form-input,
+.form-textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: #f9f9f9;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: #e60012;
+    background-color: white;
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1rem 2rem 2rem;
+    border-top: 1px solid #eee;
+}
+
+.btn-cancel {
+    background-color: white;
+    color: #333;
+    border: 1px solid #ddd;
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-cancel:hover {
+    background-color: #f5f5f5;
+    border-color: #ccc;
+}
+
+.btn-create {
+    background-color: #e60012;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.btn-create:hover {
+    background-color: #cc0010;
+}
+
+.btn-delete {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.btn-delete:hover {
+    background-color: #c82333;
+}
+
+/* Responsive design */
+@media (width <= 768px) {
+    .my-collections {
+        padding: 1rem;
+    }
+
+    .my-collections-title {
+        font-size: 2rem;
+    }
+
+    .my-collections-controls {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .search-container {
+        max-width: 100%;
+    }
+
+    .modal-content {
+        width: 95%;
+        margin: 1rem;
+    }
+
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding: 1.5rem;
+    }
+
+    .modal-footer {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .btn-cancel,
+    .btn-create,
+    .btn-delete {
+        width: 100%;
+    }
+}
+
+/* Toast Notification Styles */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100%);
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: white;
+    z-index: 10000;
+    opacity: 0;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+    min-width: 200px;
+    text-align: center;
+}
+
+.toast-success {
+    background-color: #28a745;
+    border: 1px solid #1e7e34;
+}
+
+.toast-info {
+    background-color: #17a2b8;
+    border: 1px solid #138496;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+@media (width <= 768px) {
+    .toast {
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        min-width: auto;
+        transform: translateY(100%);
+    }
+
+    .toast.show {
+        transform: translateY(0);
+    }
+}
+
+/* Collections List Styles */
+.collections-list {
+    margin-top: 2rem;
+    width: 100%;
+}
+
+.collections-empty {
+    text-align: center;
+    padding: 3rem 0;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.collections-header {
+    display: grid;
+    grid-template-columns: 80px 1fr 160px;
+    gap: 1rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid #dcd1d1;
+    margin-bottom: 1rem;
+}
+
+.header-cell {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.collections-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.collection-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 160px;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #dcd1d1;
+    transition: background-color 0.2s ease;
+}
+
+.collection-row:hover {
+    background-color: #fafafa;
+}
+
+.row-cell {
+    display: flex;
+    align-items: center;
+}
+
+.cell-preview {
+    justify-content: center;
+}
+
+.preview-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cell-name {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.collection-name-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.25rem;
+}
+
+.collection-name {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #333;
+    line-height: 1.2;
+}
+
+.collection-item-count {
+    font-size: 0.9rem;
+    font-weight: 400;
+    white-space: nowrap;
+    font-style: italic;
+}
+
+.collection-description {
+    font-size: 0.9rem;
+    color: #666;
+    line-height: 1.4;
+    margin-bottom: 0.5rem;
+    font-style: italic;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+.collection-date {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 400;
+}
+
+/* Calendar icon via CSS */
+.my-collections .collection-date::before {
+    content: '';
+    width: 18px;
+    height: 18px;
+    background: url('/icons/calendar.svg') center center / 100% 100% no-repeat;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.cell-action {
+    justify-content: center;
+}
+
+.action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.6rem;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-btn:hover {
+    background-color: #f0f0f0;
+}
+
+/* Ensure image-based icons render consistently */
+
+/* Generic image sizing no longer used for edit/share; kept for fallback */
+.my-collections .action-btn img {
+    width: 28px !important;
+    height: 28px !important;
+    display: block;
+    flex-shrink: 0;
+    object-fit: contain;
+}
+
+/* Delete button icon via CSS background (no inner <img>) */
+.my-collections .delete-btn {
+    position: relative;
+}
+
+.my-collections .delete-btn::before {
+    content: '';
+    width: 40px;
+    height: 40px;
+    background: url('/icons/delete-circle.svg') center center / 100% 100% no-repeat;
+    display: block;
+}
+
+/* Edit button icon via CSS background */
+.my-collections .edit-btn { position: relative; }
+
+.my-collections .edit-btn::before {
+    content: '';
+    width: 40px;
+    height: 40px;
+    background: url('/icons/edit-circle.svg') center center / 100% 100% no-repeat;
+    display: block;
+}
+
+/* Share button icon via CSS background */
+.my-collections .share-btn { position: relative; }
+
+.my-collections .share-btn::before {
+    content: '';
+    width: 28px;
+    height: 28px;
+    background: url('/icons/share.svg') center center / contain no-repeat;
+    display: block;
+}
+
+/* Responsive design for collections list */
+@media (width <= 768px) {
+    .collections-header {
+        grid-template-columns: 60px 1fr 140px;
+        gap: 0.5rem;
+    }
+
+    .collection-row {
+        grid-template-columns: 60px 1fr 140px;
+        gap: 0.5rem;
+        padding: 0.75rem 0;
+    }
+
+    .preview-placeholder svg {
+        width: 30px;
+        height: 30px;
+    }
+
+    .collection-name {
+        font-size: 0.9rem;
+    }
+
+    .collection-item-count {
+        font-size: 0.8rem;
+    }
+
+    .collection-description {
+        font-size: 0.8rem;
+        margin-bottom: 0.4rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .collection-date {
+        font-size: 0.8rem;
+    }
+
+    .action-btn {
+        padding: 0.25rem;
+    }
+
+    .my-collections .action-btn img {
+        width: 24px !important;
+        height: 24px !important;
+    }
+
+    .my-collections .delete-btn::before {
+        width: 24px;
+        height: 24px;
+        background-size: 100% 100%;
+    }
+
+    .my-collections .edit-btn::before,
+    .my-collections .share-btn::before {
+        width: 24px;
+        height: 24px;
+        background-size: 100% 100%;
+    }
+}

@@ -277,7 +277,7 @@ function createHeaderBar() {
         <li><a href="#">My Rights Requests</a></li>
         <li><a href="#">My Saved Templates</a></li>
         <li><a href="#">My Print Jobs</a></li>
-        <li><a href="#">My Collections</a></li>
+        <li><a href="/my-collections">My Collections</a></li>
         <li><a href="#">My Saved Searches</a></li>
         <li><a href="/auth/logout">Log Out</a></li>
       </ul>
