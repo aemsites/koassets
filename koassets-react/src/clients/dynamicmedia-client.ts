@@ -2,6 +2,13 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { AlgoliaSearchQuery, AlgoliaSearchRequest, Asset, Rendition } from '../types';
 import { mimeTypeToExtension } from '../utils/mimeTypeConverter';
 
+// Extend window interface for user authentication
+declare global {
+    interface Window {
+        user?: unknown; // Global user object for authentication
+    }
+}
+
 export const ORIGINAL_RENDITION = 'original';
 
 export interface AssetRenditionPair {
@@ -27,7 +34,7 @@ export interface ArchiveStatus {
 
 interface DynamicMediaClientConfig {
     bucket: string;
-    accessToken: string;
+    accessToken?: string;
     baseURL?: string;
     apiKey?: string;
 }
@@ -138,11 +145,11 @@ const apiKey: { [key: string]: string; } = {
 export class DynamicMediaClient {
     private readonly client: AxiosInstance;
     private readonly bucket: string;
-    private readonly accessToken: string;
+    private readonly accessToken?: string;
 
     constructor(config: DynamicMediaClientConfig) {
         this.bucket = config.bucket;
-        this.accessToken = config.accessToken.replace(/^Bearer /, '');
+        this.accessToken = config.accessToken?.replace(/^Bearer /, '');
 
         this.client = axios.create({
             baseURL: config.baseURL || `https://${this.bucket}.adobeaemcloud.com`,
@@ -153,6 +160,10 @@ export class DynamicMediaClient {
                 'x-adobe-accept-experimental': '1'
             }
         });
+    }
+
+    public isIMSAuthenticated(): boolean {
+        return this.accessToken !== undefined;
     }
 
     // Extract index name from bucket (e.g., delivery-p92206-e211033-cmstg -> 92206-211033)
@@ -263,6 +274,7 @@ export class DynamicMediaClient {
         }
 
         try {
+            console.trace('DynamicMediaClient.getMetadata() REQUEST');
             const response = await this.client.request(config);
             return response.data;
         } catch (error) {
@@ -362,21 +374,36 @@ export class DynamicMediaClient {
     async searchAssets(query: string, options: SearchAssetsOptions = {}): Promise<unknown> {
         const algoliaQuery = this.transformToAlgoliaSearchAssets(query, options);
 
-        const config: AxiosRequestConfig = {
-            url: '/adobe/assets/search',
-            method: 'POST',
-            data: algoliaQuery,
-            headers: { 'x-ch-request': 'search' }
-        };
+        // for transition period, if logged in both ways, prefer IMS route
+        if (this.isIMSAuthenticated()) {
+            const config: AxiosRequestConfig = {
+                url: '/adobe/assets/search',
+                method: 'POST',
+                data: algoliaQuery,
+                headers: { 'x-ch-request': 'search' }
+            };
 
-        try {
-            const response = await this.client.request(config);
-            return response.data;
-        } catch (error) {
-            if (axios.isAxiosError(error)) {
-                throw new Error(`Failed to search assets: ${error.message}`);
+            try {
+                const response = await this.client.request(config);
+                return response.data;
+            } catch (error) {
+                if (axios.isAxiosError(error)) {
+                    throw new Error(`Failed to search assets: ${error.message}`);
+                }
+                throw error;
             }
-            throw error;
+
+        } else /* if (window.user) */ {
+            const response = await fetch(`/api/adobe/assets/search`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-ch-request': 'search',
+                    'x-adobe-accept-experimental': '1',
+                },
+                body: JSON.stringify(algoliaQuery)
+            });
+            return response.json();
         }
     }
 
@@ -397,6 +424,7 @@ export class DynamicMediaClient {
         };
 
         try {
+            console.trace('DynamicMediaClient.searchCollections() REQUEST');
             const response = await this.client.request(config);
             return response.data;
         } catch (error) {
@@ -414,6 +442,7 @@ export class DynamicMediaClient {
      */
     async getImageBase64(assetId: string): Promise<{ type: string, data: string; }> {
         try {
+            console.trace('DynamicMediaClient.getImageBase64() REQUEST');
             const response = await this.client.request({
                 url: `/adobe/assets/${assetId}`,
                 method: 'GET',
@@ -456,6 +485,7 @@ export class DynamicMediaClient {
         return `${baseName}.${extension}`;
     }
 
+    // NOTE: this is only used if IMS authentication is used
     async getOptimizedDeliveryPreviewBlob(assetId: string, repoName: string, width: number = 350) {
         // Convert video extensions to avif for optimal delivery
         const processedRepoName = this.changeToSupportedPreview(repoName);
@@ -492,6 +522,7 @@ export class DynamicMediaClient {
 
     async getDownloadTokenResp(asset: Asset): Promise<{ token: string, expiryTime: number } | undefined> {
         try {
+            console.trace('DynamicMediaClient.getDownloadTokenResp() REQUEST');
             const response = await this.client.request({
                 url: `/adobe/assets/${asset?.assetId}/token`,
                 method: 'GET'
@@ -585,6 +616,7 @@ export class DynamicMediaClient {
 
         let blob: Blob;
         try {
+            console.trace('DynamicMediaClient.downloadAsset() REQUEST');
             const response = await this.client.request({
                 url: url,
                 method: 'GET',
@@ -609,6 +641,7 @@ export class DynamicMediaClient {
 
     async getAssetRenditions(asset: Asset): Promise<{ items?: Rendition[] }> {
         try {
+            console.trace('DynamicMediaClient.getAssetRenditions() REQUEST');
             const response = await this.client.request({
                 url: `/adobe/assets/${asset?.assetId}/renditions`,
                 method: 'GET'
@@ -625,6 +658,7 @@ export class DynamicMediaClient {
 
     async getAssetImagePresets(asset: Asset): Promise<{ items: Rendition[] }> {
         try {
+            console.trace('DynamicMediaClient.getAssetImagePresets() REQUEST');
             const response = await this.client.request({
                 url: `/adobe/assets/imagePresets`,
                 method: 'GET'
@@ -641,6 +675,7 @@ export class DynamicMediaClient {
 
     async getImagePresets(): Promise<{ items: Rendition[] }> {
         try {
+            console.trace('DynamicMediaClient.getImagePresets() REQUEST');
             const response = await this.client.request({
                 url: `/adobe/assets/imagePresets`,
                 method: 'GET'
@@ -664,6 +699,7 @@ export class DynamicMediaClient {
                 }))
             };
 
+            console.trace('DynamicMediaClient.downloadAssetsArchive() REQUEST');
             const response = await this.client.request({
                 url: `/adobe/assets/archives`,
                 method: 'POST',
@@ -707,6 +743,7 @@ export class DynamicMediaClient {
 
     async getAssetsArchiveStatus(archiveId: string): Promise<ArchiveStatus | undefined> {
         try {
+            console.trace('DynamicMediaClient.getAssetsArchiveStatus() REQUEST');
             const response = await this.client.request({
                 url: `/adobe/assets/archives/${archiveId}/status`,
                 method: 'GET'
