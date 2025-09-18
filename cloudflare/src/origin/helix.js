@@ -85,7 +85,7 @@ export async function originHelix(request, env) {
     req.headers.set('authorization', `token ${env.HELIX_ORIGIN_AUTHENTICATION}`);
   }
 
-  console.log('>>>', req.method, req.url /*, req.headers*/);
+  // console.log('>>>', req.method, req.url /*, req.headers*/);
 
   let resp = await fetch(req, {
     method: req.method,
@@ -101,8 +101,7 @@ export async function originHelix(request, env) {
     // },
   });
 
-  console.log('<<<', resp.status, resp.headers);
-  const originHeaders = JSON.stringify(Object.fromEntries(resp.headers));
+  // console.log('<<<', resp.status, resp.headers);
 
   resp = new Response(resp.body, resp);
   if (resp.status === 301 && savedSearch) {
@@ -117,7 +116,5 @@ export async function originHelix(request, env) {
   }
   resp.headers.delete('age');
   resp.headers.delete('x-robots-tag');
-
-  resp.headers.set('x-origin-headers', originHeaders);
   return resp;
 };
