@@ -266,7 +266,7 @@ authRouter
       // SameSite=None in order to appear later in /auth/callback which is cross-site because it originates from the OIDC provider
       SameSite: 'None',
       // Chrome wants Secure with SameSite=None and ignores it for http://localhost. Safari does not like Secure on http://localhost (non SSL)
-      Secure: userAgent?.includes('Chrome') || userAgent?.includes('Gecko') || request.uri.hostname !== 'localhost',
+      Secure: userAgent?.includes('Chrome') || userAgent?.includes('Firefox') || request.uri.hostname !== 'localhost',
       // extra safe guarding, 10 minutes for the login flow should be enough
       MaxAge: 60 * 10,
     });
