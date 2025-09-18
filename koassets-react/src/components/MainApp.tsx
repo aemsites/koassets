@@ -64,6 +64,14 @@ function transformExcFacetsToHierarchyArray(excFacets: ExcFacets): string[] {
     return facetKeys;
 }
 
+// temporary check for cookie auth - can be removed once we drop IMS
+// note: real check for is authenticated (with cookie) is if window.user is defined
+//       but has race condition between scripts.js and react index.js loading order
+function isCookieAuth(): boolean {
+    return window.location.origin.endsWith('adobeaem.workers.dev')
+        || window.location.origin === 'http://localhost:8787';
+}
+
 function MainApp(): React.JSX.Element {
     // External parameters from plain JavaScript
     const [externalParams] = useState<ExternalParams>(() => {
@@ -88,11 +96,10 @@ function MainApp(): React.JSX.Element {
         }
     });
 
-    // Combined authentication state - covers both accessToken and window.user mechanisms
+    // Authentication state - either IMS or cookie authenticated
     const [authenticated, setAuthenticated] = useState<boolean>(() => {
         const hasAccessToken = Boolean(localStorage.getItem('accessToken'));
-        const hasWindowUser = Boolean(window.user);
-        return hasAccessToken || hasWindowUser;
+        return hasAccessToken || isCookieAuth();
     });
 
     const [dynamicMediaClient, setDynamicMediaClient] = useState<DynamicMediaClient | null>(null);
@@ -191,21 +198,19 @@ function MainApp(): React.JSX.Element {
         localStorage.setItem('cartItems', JSON.stringify(cartItems));
     }, [cartItems]);
 
-    // Keep authenticated state synchronized with accessToken and window.user changes
     useEffect(() => {
         const hasAccessToken = Boolean(accessToken);
-        const hasWindowUser = Boolean(window.user);
-        setAuthenticated(hasAccessToken || hasWindowUser);
+        setAuthenticated(hasAccessToken || isCookieAuth());
     }, [accessToken]);
 
     useEffect(() => {
-        // Only create client when authenticated (either via accessToken or window.user) and bucket is available
+        // Only create client when authenticated (either mechanism) and bucket is available
         if (authenticated && bucket) {
-            if (accessToken && window.user) {
+            if (accessToken && isCookieAuth()) {
                 console.debug('🔑 Authenticated via IMS and Cookie. Using IMS route (during transition period)');
             } else if (accessToken) {
                 console.debug('🔑 Authenticated via IMS only.');
-            } else if (window.user) {
+            } else if (isCookieAuth()) {
                 console.debug('🔑 Authenticated via Cookie only.');
             } else {
                 console.debug('🔑 Not authenticated (not IMS, nor Cookie)');
