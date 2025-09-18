@@ -75,10 +75,6 @@ function loadReactApp() {
 
     // Then load the JavaScript bundle
     loadJS(`${basePath}/assets/index.js`)
-      .then(() => {
-        // React app loaded successfully
-        console.log('KO Assets Search app loaded successfully');
-      })
       .catch((error) => {
         console.error('Failed to load React app:', error);
       });

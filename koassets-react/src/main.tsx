@@ -33,7 +33,6 @@ const externalParams = getExternalParams();
 
 // Get isBlockIntegration from externalParams with fallback to false
 const isBlockIntegration = externalParams.isBlockIntegration || false;
-console.log('isBlockIntegration', isBlockIntegration);
 
 // Choose the appropriate router based on context
 const AppWithRouter = isBlockIntegration ? (

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type { AssetCardProps } from '../types';
+import { getBucket } from '../utils/config';
 import { formatCategory, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
 import ActionButton from './ActionButton';
 import { BUTTON_CONFIGS } from './ActionButtonConfigs';
@@ -64,6 +65,27 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
         }
     };
 
+    // Handle add to collection click
+    const handleAddToCollection = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        // Build a stable preview URL using Dynamic Media client (for collections)
+        const previewUrl = dynamicMediaClient && image.assetId && image.name
+            ? dynamicMediaClient.getOptimizedDeliveryPreviewUrl(image.assetId, image.name, 350)
+            : undefined;
+        const dmBucket = dynamicMediaClient ? getBucket() : undefined;
+        // Trigger global collection modal with asset data (including previewUrl)
+        const event = new CustomEvent('openCollectionModal', {
+            detail: {
+                asset: { ...image, previewUrl, dmBucket },
+                assetPath: image.repositoryPath || image.assetId
+            }
+        });
+        window.dispatchEvent(event);
+    };
+
+    // Remove the file extension from the asset name and encode for src/srcset attribute below
+    const fileName = encodeURIComponent(image.name?.replace(/\.[^/.]+$/, '') || 'thumbnail');
+
     return (
         <div className="asset-card-view-grid">
             <div className="asset-card-view-grid-inner">
@@ -89,12 +111,28 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                         </svg>
                     </button>
 
-                    <LazyImage
-                        asset={image}
-                        width={350}
-                        className="image-container"
-                        alt={image.alt || image.name}
-                    />
+                    {/* Add to Collection Overlay */}
+                    <div className="add-to-collection-overlay" onClick={handleAddToCollection}>
+                        <div className="add-to-collection-content">
+                            <i className="icon add circle"></i>
+                            <span>Add to Collection</span>
+                        </div>
+                    </div>
+
+                    {dynamicMediaClient?.isIMSAuthenticated() ? (
+                        <LazyImage
+                            asset={image}
+                            width={350}
+                            className="image-container"
+                            alt={image.alt || image.name}
+                        />
+                    ) : (
+                        <picture>
+                            <source type="image/webp" srcSet={`/api/adobe/assets/${image.assetId}/as/${fileName}.webp?width=350`} />
+                            <source type="image/jpg" srcSet={`/api/adobe/assets/${image.assetId}/as/${fileName}.jpg?width=350`} />
+                            <img loading="lazy" src={`/api/adobe/assets/${image.assetId}/as/${fileName}.jpg?width=350`} alt={image.alt || image.name} onError={(e) => {e.target.parentElement.classList.add('missing');}} />
+                        </picture>
+                    )}
                 </div>
 
                 <div className="product-info-container">

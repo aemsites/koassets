@@ -104,6 +104,23 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
         setShowDownloadRenditionsModal(true);
     };
 
+    // Add to Collection (opens EDS modal used by plain JS flows)
+    const handleAddToCollection = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!selectedImage) return;
+        try {
+            const previewUrl = dynamicMediaClient?.getOptimizedDeliveryPreviewUrl
+                ? dynamicMediaClient.getOptimizedDeliveryPreviewUrl(selectedImage.assetId || '', selectedImage.name || '', 350)
+                : undefined;
+            const assetForModal = previewUrl ? { ...selectedImage, previewUrl } : selectedImage;
+            const detail = { asset: assetForModal, assetPath: selectedImage.assetId } as unknown as Record<string, unknown>;
+            window.dispatchEvent(new CustomEvent('openCollectionModal', { detail }));
+        } catch (error) {
+            console.warn('Failed to open Add to Collection modal from AssetDetails:', error);
+        }
+    };
+
     const handleDownloadRenditionsModalClose = () => {
         setShowDownloadRenditionsModal(false);
     };
@@ -186,11 +203,20 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                 <p>Loading high resolution image...</p>
                             </div>
                         ) : (
-                            <img
-                                src={blobUrl || selectedImage.url}
-                                alt={selectedImage.alt || selectedImage.name}
-                                className="asset-details-main-image"
-                            />
+                            <div className="asset-details-image-wrapper">
+                                {/* Add to Collection Overlay */}
+                                <div className="add-to-collection-overlay" onClick={handleAddToCollection}>
+                                    <div className="add-to-collection-content">
+                                        <i className="icon add circle"></i>
+                                        <span>Add to Collection</span>
+                                    </div>
+                                </div>
+                                <img
+                                    src={blobUrl || selectedImage.url}
+                                    alt={selectedImage.alt || selectedImage.name}
+                                    className="asset-details-main-image"
+                                />
+                            </div>
                         )}
                     </div>
 

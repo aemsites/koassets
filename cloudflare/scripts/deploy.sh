@@ -28,6 +28,8 @@ WORKER_DOMAIN=adobeaem
 # Usage: upload_version <tag> <message>
 # Returns version id in version.id file
 function upload_version() {
+  echo "Deploying alias $1 with HELIX_ORIGIN = $HELIX_ORIGIN"
+
   npx wrangler versions upload \
     --preview-alias "$1" \
     --tag "$1" \
@@ -60,7 +62,7 @@ if [ "$ci" = "true" ]; then
 
   tag="$branch"
   # last commit message
-  message=$(git log -1 --pretty="%cL: %s")
+  message=$(git log -1 --pretty="%aL: %s")
 
   echo "================================================================"
   echo "DEBUG: git diff --name-only origin/main..HEAD"
@@ -79,7 +81,7 @@ else
   if [ -z "$message" ]; then
     if git diff --quiet .; then
       # no local changes, use last commit message
-      message=$(git log -1 --pretty="%cL: %s")
+      message=$(git log -1 --pretty="%aL: %s")
     else
       # local changes found
       message="$user: <local changes>"
