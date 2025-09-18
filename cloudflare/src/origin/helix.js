@@ -69,8 +69,6 @@ export async function originHelix(request, env) {
   url.protocol = protocolAndHost[0];
   url.host = protocolAndHost[1];
 
-  // console.log(`[origin] ${request.method} ${url.href}`);
-
   const req = new Request(url, {
     method: request.method,
     headers: request.headers,
@@ -86,6 +84,9 @@ export async function originHelix(request, env) {
   if (env.HELIX_ORIGIN_AUTHENTICATION) {
     req.headers.set('authorization', `token ${env.HELIX_ORIGIN_AUTHENTICATION}`);
   }
+
+  console.log('>>>', req.method, req.url /*, req.headers*/);
+
   let resp = await fetch(req, {
     method: req.method,
     cf: {
