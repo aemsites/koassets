@@ -28,6 +28,8 @@ WORKER_DOMAIN=adobeaem
 # Usage: upload_version <tag> <message>
 # Returns version id in version.id file
 function upload_version() {
+  echo "Deploying alias $1 with HELIX_ORIGIN = $HELIX_ORIGIN"
+
   npx wrangler versions upload \
     --preview-alias "$1" \
     --tag "$1" \
