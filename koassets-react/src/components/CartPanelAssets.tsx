@@ -74,6 +74,7 @@ interface CartActionsFooterProps {
     onOpenDownload: () => void;
     onOpenRequestDownload: () => void;
     onCloseDownload: () => void;
+    cartItems: Asset[];
 }
 
 const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
@@ -83,8 +84,19 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
     onClearCart,
     onOpenDownload,
     onOpenRequestDownload,
-    onCloseDownload
+    onCloseDownload,
+    cartItems
 }) => {
+    const handleAddToCollectionFromCart = (e: React.MouseEvent): void => {
+        e.preventDefault();
+        try {
+            if (!cartItems || cartItems.length === 0) return;
+            const detail = { assets: cartItems } as unknown as Record<string, unknown>;
+            window.dispatchEvent(new CustomEvent('openCollectionModal', { detail }));
+        } catch (err) {
+            console.warn('Failed to open Add to Collection modal from cart:', err);
+        }
+    };
     return (
         <div className="cart-actions-footer">
             <button className="action-btn secondary-button" onClick={onClose}>
@@ -96,7 +108,10 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
             <button className="action-btn secondary-button disabled" onClick={(e) => e.preventDefault()}>
                 Share Cart
             </button>
-            <button className="action-btn secondary-button disabled" onClick={(e) => e.preventDefault()}>
+            <button
+                className="action-btn secondary-button"
+                onClick={handleAddToCollectionFromCart}
+            >
                 Add To Collection
             </button>
 
@@ -970,6 +985,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                         onOpenDownload={handleOpenDownload}
                         onOpenRequestDownload={handleOpenRequestDownload}
                         onCloseDownload={handleCloseDownload}
+                        cartItems={cartItems}
                     />
                 </>
             )}
