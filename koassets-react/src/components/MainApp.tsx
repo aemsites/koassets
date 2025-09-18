@@ -299,7 +299,8 @@ function MainApp(): React.JSX.Element {
                         const checkRightsResponse = await fadelClient.checkRights(checkRightsRequest);
                         console.log('TTT checkRightsResponse', checkRightsResponse);
                         processedImages.forEach(image => {
-                            image.authorized = checkRightsResponse.restOfAssets.find(item => `urn:aaid:aem:${item.asset.assetExtId}` === image.assetId)?.available === true;
+                            const matchingItem = checkRightsResponse.restOfAssets.find(item => `urn:aaid:aem:${item.asset.assetExtId}` === image.assetId);
+                            image.authorized = matchingItem ? !(matchingItem.notAvailable === true || matchingItem.availableExcept === true) : true;
                         });
                         console.log('TTT processedImages', processedImages);
                     }

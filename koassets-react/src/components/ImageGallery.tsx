@@ -62,8 +62,14 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     // Select authorized state
     const [selectAuthorized, setSelectAuthorized] = useState<boolean>(false);
 
-    const displayedCount = images.length;
+    const [visibleImages, setVisibleImages] = useState<Asset[]>(images);
+
+    const displayedCount = visibleImages.length;
     const selectedCount = selectedCards.size;
+
+    useEffect(() => {
+        setVisibleImages(images.filter(image => image.authorized === undefined || image.authorized === true));
+    }, [images, selectAuthorized]);
 
     // Handle keyboard events for modals
     useEffect(() => {
@@ -136,7 +142,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     // Handle select all
     const handleSelectAll = (isChecked: boolean) => {
         if (isChecked) {
-            setSelectedCards(new Set(images.map(img => img.assetId || '')));
+            setSelectedCards(new Set(visibleImages.map(img => img.assetId || '')));
         } else {
             setSelectedCards(new Set());
         }
@@ -144,7 +150,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
     // Bulk actions handlers
     const handleBulkAddToCart = () => {
-        onBulkAddToCart(selectedCards, images);
+        onBulkAddToCart(selectedCards, visibleImages);
         setSelectedCards(new Set());
     };
 
@@ -158,8 +164,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
     const handleBulkAddToCollection = () => {
         // Get selected assets
-        const selectedAssets = images.filter(img => selectedCards.has(img.assetId || ''));
-        
+        const selectedAssets = visibleImages.filter(img => selectedCards.has(img.assetId || ''));
+
         if (selectedAssets.length === 0) {
             return;
         }
@@ -171,7 +177,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
             }
         });
         window.dispatchEvent(event);
-        
+
         // Clear selection after action
         setSelectedCards(new Set());
     };
@@ -247,14 +253,14 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                         <div className="loading-spinner"></div>
                         <p>Loading images...</p>
                     </div>
-                ) : images.length === 0 ? (
+                ) : visibleImages.length === 0 ? (
                     <div className="no-images">
                         <p>No images to display</p>
                     </div>
                 ) : (
                     <>
                         <div className={viewType === 'grid' ? 'image-grid' : 'image-grid-list'}>
-                            {images.map((image) => {
+                            {visibleImages.map((image) => {
                                 const CardComponent = viewType === 'grid' ? AssetCardViewGrid : AssetCardViewList;
                                 return (
                                     <CardComponent
