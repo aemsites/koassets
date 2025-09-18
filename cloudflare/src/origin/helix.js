@@ -102,6 +102,7 @@ export async function originHelix(request, env) {
   });
 
   console.log('<<<', resp.status, resp.headers);
+  const originHeaders = JSON.stringify(Object.fromEntries(resp.headers));
 
   resp = new Response(resp.body, resp);
   if (resp.status === 301 && savedSearch) {
@@ -116,5 +117,7 @@ export async function originHelix(request, env) {
   }
   resp.headers.delete('age');
   resp.headers.delete('x-robots-tag');
+
+  resp.headers.set('x-origin-headers', originHeaders);
   return resp;
 };
