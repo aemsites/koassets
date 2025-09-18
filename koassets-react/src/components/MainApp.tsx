@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { DateValue } from 'react-aria-components';
 import '../MainApp.css';
 
 import { DynamicMediaClient } from '../clients/dynamicmedia-client';
@@ -30,7 +31,9 @@ declare global {
 }
 
 // Components
+import { CalendarDate } from '@internationalized/date';
 import { createPortal } from 'react-dom';
+import { calendarDateToEpoch } from '../utils/formatters';
 import CartPanel from './CartPanel';
 import Facets from './Facets';
 import HeaderBar from './HeaderBar';
@@ -98,6 +101,23 @@ function MainApp(): React.JSX.Element {
     const [selectedQueryType, setSelectedQueryType] = useState<string>(QUERY_TYPES.ASSETS);
     const [selectedFacetFilters, setSelectedFacetFilters] = useState<string[][]>([]);
     const [selectedNumericFilters, setSelectedNumericFilters] = useState<string[]>([]);
+    const [searchDisabled, setSearchDisabled] = useState<boolean>(false);
+    const [isRightsSearch, setIsRightsSearch] = useState<boolean>(false);
+    const [rightsStartDate, setRightsStartDate] = useState<DateValue | null>(null);
+    const [rightsEndDate, setRightsEndDate] = useState<DateValue | null>(null);
+    const searchDisabledRef = useRef<boolean>(false);
+    const isRightsSearchRef = useRef<boolean>(false);
+
+    const handleSetSearchDisabled = useCallback((disabled: boolean) => {
+        searchDisabledRef.current = disabled; // Update ref immediately
+        setSearchDisabled(disabled);
+    }, []);
+
+    const handleSetIsRightsSearch = useCallback((isRights: boolean) => {
+        isRightsSearchRef.current = isRights; // Update ref immediately
+        setIsRightsSearch(isRights);
+    }, []);
+
     const [presetFilters, setPresetFilters] = useState<string[]>(() =>
         externalParams.presetFilters || []
     );
@@ -217,6 +237,10 @@ function MainApp(): React.JSX.Element {
                     // No longer download blobs upfront - just prepare metadata for lazy loading
                     // Each hit is transformed to match the Asset interface
                     const processedImages: Asset[] = hits.map(populateAssetFromHit);
+                    if (isRightsSearchRef.current) {
+                        console.log('TTT rightsDate', calendarDateToEpoch(rightsStartDate as CalendarDate), calendarDateToEpoch(rightsEndDate as CalendarDate));
+                        console.log('TTT selectedFacetFilters', selectedFacetFilters);
+                    }
 
                     if (isLoadingMore) {
                         // Append to existing images
@@ -237,7 +261,7 @@ function MainApp(): React.JSX.Element {
         }
         setLoading(prev => ({ ...prev, [LOADING.dmImages]: false }));
         setIsLoadingMore(false);
-    }, []);
+    }, [rightsStartDate, rightsEndDate, selectedFacetFilters]);
 
 
 
@@ -293,6 +317,9 @@ function MainApp(): React.JSX.Element {
 
     // Handler for searching
     const search = useCallback((searchQuery?: string): void => {
+        if (searchDisabledRef.current) {
+            return;
+        }
         setCurrentPage(0);
         // Search for assets or assets in a collection
         const queryToUse = searchQuery !== undefined ? searchQuery : query;
@@ -344,11 +371,11 @@ function MainApp(): React.JSX.Element {
 
     // Auto-search with empty query on app load
     useEffect(() => {
-        if (dynamicMediaClient && accessToken && excFacets !== undefined) {
+        if (!searchDisabled && dynamicMediaClient && accessToken && excFacets !== undefined) {
             search();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dynamicMediaClient, accessToken, excFacets, selectedFacetFilters, selectedNumericFilters]);
+    }, [dynamicMediaClient, accessToken, excFacets, selectedFacetFilters, selectedNumericFilters, searchDisabled]);
 
     useEffect(() => {
         if (accessToken && !settingsLoadedRef.current) {
@@ -638,6 +665,7 @@ function MainApp(): React.JSX.Element {
                     imagePresets={imagePresets}
                     assetRenditionsCache={assetRenditionsCache}
                     fetchAssetRenditions={fetchAssetRenditions}
+                    isRightsSearch={isRightsSearch}
                 />
             ) : (
                 <></>
@@ -702,6 +730,14 @@ function MainApp(): React.JSX.Element {
                                         setSelectedNumericFilters={setSelectedNumericFilters}
                                         query={query}
                                         setQuery={setQuery}
+                                        searchDisabled={searchDisabled}
+                                        setSearchDisabled={handleSetSearchDisabled}
+                                        isRightsSearch={isRightsSearch}
+                                        setIsRightsSearch={handleSetIsRightsSearch}
+                                        rightsStartDate={rightsStartDate}
+                                        setRightsStartDate={setRightsStartDate}
+                                        rightsEndDate={rightsEndDate}
+                                        setRightsEndDate={setRightsEndDate}
                                     />
                                 </div>
                             </div>

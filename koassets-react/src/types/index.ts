@@ -1,5 +1,6 @@
 // Asset-related types
 import React from 'react';
+import { DateValue } from 'react-aria-components';
 
 // Rights-related interfaces
 export interface RightsData {
@@ -327,16 +328,29 @@ export interface SavedSearch {
     favorite: boolean;
 }
 
+export interface FacetValue {
+    label: string;
+    type: string;
+}
+
 export interface FacetsProps {
     searchResults?: SearchResults['results'] | null;
     selectedFacetFilters?: string[][];
     setSelectedFacetFilters: (facetFilters: string[][]) => void;
     search: (query?: string) => void;
-    excFacets?: Record<string, unknown>;
+    excFacets?: Record<string, FacetValue>;
     selectedNumericFilters?: string[];
     setSelectedNumericFilters: (filters: string[]) => void;
     query: string;
     setQuery: (query: string) => void;
+    searchDisabled?: boolean;
+    setSearchDisabled?: (disabled: boolean) => void;
+    isRightsSearch?: boolean;
+    setIsRightsSearch?: (isRightsSearch: boolean) => void;
+    rightsStartDate?: DateValue | null;
+    setRightsStartDate?: (date: DateValue | null) => void;
+    rightsEndDate?: DateValue | null;
+    setRightsEndDate?: (date: DateValue | null) => void;
 }
 
 // Phase 3 Component Types
@@ -408,6 +422,7 @@ export interface ImageGalleryProps {
         }
     };
     fetchAssetRenditions?: (asset: Asset) => Promise<void>;
+    isRightsSearch?: boolean;
 }
 
 // Main App types (for the most complex component)
@@ -595,4 +610,7 @@ export interface SearchPanelProps {
     currentPage?: number;
     totalPages?: number;
     hasMorePages?: boolean;
+    selectAuthorized?: boolean;
+    onSelectAuthorized?: (isChecked: boolean) => void;
+    isRightsSearch?: boolean;
 }

@@ -27,7 +27,10 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
     showFullDetails,
     onShowFullDetailsChange,
     viewType,
-    onViewTypeChange
+    onViewTypeChange,
+    selectAuthorized,
+    onSelectAuthorized,
+    isRightsSearch = false
 }) => {
     const handleToggleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         onShowFullDetailsChange?.(e.target.checked);
@@ -124,15 +127,28 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
                         </div>
 
                         {/* Select All */}
-                        <div className="dropdown-select-section">
-                            <div className="dropdown-select-all">
+                        <div className="select-section">
+                            {isRightsSearch && (
+                                <div className="select-authorized">
+                                    <input
+                                        type="checkbox"
+                                        id="select-authorized"
+                                        checked={selectAuthorized || false}
+                                        onChange={(e) => onSelectAuthorized?.(e.target.checked)}
+                                    />
+                                    <label htmlFor="select-authorized">
+                                        Show only authorized assets {selectedCount > 0 && <span className="dropdown-count">({selectedCount})</span>}
+                                    </label>
+                                </div>
+                            )}
+                            <div className="select-all">
                                 <input
                                     type="checkbox"
-                                    id="dropdown-select-all"
+                                    id="select-all"
                                     checked={selectedCount > 0 && selectedCount === displayedCount}
                                     onChange={(e) => onSelectAll(e.target.checked)}
                                 />
-                                <label htmlFor="dropdown-select-all">
+                                <label htmlFor="select-all">
                                     Select All {selectedCount > 0 && <span className="dropdown-count">({selectedCount})</span>}
                                 </label>
                             </div>

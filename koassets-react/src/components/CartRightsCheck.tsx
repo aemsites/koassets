@@ -2,6 +2,7 @@ import type { CalendarDate } from '@internationalized/date';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FadelClient, type CheckRightsRequest } from '../clients/fadel-client';
 import type { Asset, RequestDownloadStepData, RightsCheckStepData } from '../types';
+import { calendarDateToEpoch } from '../utils/formatters';
 import './CartRightsCheck.css';
 import DownloadRenditionsContent from './DownloadRenditionsContent';
 import ThumbnailImage from './ThumbnailImage';
@@ -55,13 +56,6 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
         ),
         [cartItems, newlyAuthorizedAssetIds]
     );
-
-    // Helper function to convert CalendarDate to epoch time
-    const calendarDateToEpoch = useCallback((calendarDate: CalendarDate | null | undefined): number => {
-        if (!calendarDate) return 0;
-        const date = new Date(calendarDate.year, calendarDate.month - 1, calendarDate.day);
-        return date.getTime();
-    }, []);
 
     // Sync authorized assets when cartItems changes (in case items are added/removed from outside)
     useEffect(() => {
@@ -167,8 +161,7 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
         intendedUse.pullDate,
         intendedUse.selectedMediaChannels,
         intendedUse.selectedMarkets,
-        restrictedAssets,
-        calendarDateToEpoch
+        restrictedAssets
     ]);
 
     const formatDate = (calendarDate: CalendarDate | null | undefined): string => {

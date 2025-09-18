@@ -36,7 +36,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     isLoadingMore = false,
     imagePresets = {},
     assetRenditionsCache = {},
-    fetchAssetRenditions
+    fetchAssetRenditions,
+    isRightsSearch = false
 }: ImageGalleryProps) => {
     // Get external params from context
     const { externalParams } = useAppConfig();
@@ -58,6 +59,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
     // Title expansion state
     const [isTitleExpanded, setIsTitleExpanded] = useState<boolean>(false);
+    // Select authorized state
+    const [selectAuthorized, setSelectAuthorized] = useState<boolean>(false);
 
     const displayedCount = images.length;
     const selectedCount = selectedCards.size;
@@ -162,6 +165,10 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         setIsTitleExpanded(!isTitleExpanded);
     };
 
+    const handleSelectAuthorized = (isChecked: boolean) => {
+        setSelectAuthorized(isChecked);
+    };
+
     // Calculate statistics
     const totalCount = searchResult && searchResult.nbHits ? searchResult.nbHits.toString() : '0';
 
@@ -213,6 +220,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 hasMorePages={hasMorePages}
                 currentPage={(searchResult?.page as number) || 0}
                 totalPages={(searchResult?.nbPages as number) || 0}
+                selectAuthorized={selectAuthorized}
+                onSelectAuthorized={handleSelectAuthorized}
+                isRightsSearch={isRightsSearch}
             />
 
             <div className="image-grid-wrapper">
