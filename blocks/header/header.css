@@ -564,6 +564,6 @@ header .koassets-search-hidden {
   height: 0 !important;
 }
 
-header .koassets-search-hidden .main-content {
+header .koassets-search-hidden .container {
   display: none !important;
 }
