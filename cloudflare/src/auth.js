@@ -258,12 +258,15 @@ authRouter
       });
 
     const response = redirect(authorizeUrl);
+
+    const userAgent = request.headers.get('User-Agent');
+
     // store state in signed cookie
     await createSignedCookie(response, await env.COOKIE_SECRET.get(), COOKIE_STATE, state, {
       // SameSite=None in order to appear later in /auth/callback which is cross-site because it originates from the OIDC provider
       SameSite: 'None',
       // Chrome wants Secure with SameSite=None and ignores it for http://localhost. Safari does not like Secure on http://localhost (non SSL)
-      Secure: request.headers.get('User-Agent')?.includes('Chrome') || request.uri.hostname !== 'localhost',
+      Secure: userAgent?.includes('Chrome') || userAgent?.includes('Gecko') || request.uri.hostname !== 'localhost',
       // extra safe guarding, 10 minutes for the login flow should be enough
       MaxAge: 60 * 10,
     });
