@@ -89,13 +89,16 @@ export async function originHelix(request, env) {
 
   let resp = await fetch(req, {
     method: req.method,
-    cf: {
-      // disable caching until we get cache invalidation working
-      // https://www.aem.live/docs/byo-cdn-cloudflare-worker-setup#setup-push-invalidation-for-cloudflare
-      cache: 'no-cache',
-      // cf doesn't cache html by default: need to override the default behavior
-      // cacheEverything: true,
-    },
+
+    // disable caching as long as we are using workers.dev directly without a domain/zone
+    // because that does not support cache invalidation
+    // https://www.aem.live/docs/byo-cdn-cloudflare-worker-setup#setup-push-invalidation-for-cloudflare
+    cache: 'no-store',
+
+    // cf: {
+    //   // cf doesn't cache html by default: need to override the default behavior
+    //   cacheEverything: true,
+    // },
   });
   resp = new Response(resp.body, resp);
   if (resp.status === 301 && savedSearch) {
