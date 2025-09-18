@@ -100,6 +100,9 @@ export async function originHelix(request, env) {
     //   cacheEverything: true,
     // },
   });
+
+  console.log('<<<', resp.status, resp.headers);
+
   resp = new Response(resp.body, resp);
   if (resp.status === 301 && savedSearch) {
     const location = resp.headers.get('location');
