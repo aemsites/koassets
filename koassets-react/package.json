@@ -21,7 +21,7 @@
     "copy-to-eds": "rm dist/index.html; cp -r dist/* ../tools/assets-browser/",
     "build-and-copy:koassets-react": "npm run build:koassets-react && npm run copy-to-eds",
     "build-local-dev": "VITE_ADOBE_CLIENT_ID=ko-assets-ims VITE_BUCKET=delivery-p64403-e544653 VITE_EXC_BASE_URL=https://exc-unifiedcontent.experience.adobe.net vite build && npm run copy-to-eds",
-    "auto-build": "npx chokidar '**' -i 'dist/**' -c 'npm run build-local-dev'"
+    "auto-build": "npx chokidar '**' -i 'dist/**' -d 5000 -c 'npm run build-local-dev'"
   },
   "engines": {
     "node": ">=18.0.0"
