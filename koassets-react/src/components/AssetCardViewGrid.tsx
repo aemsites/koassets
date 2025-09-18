@@ -100,24 +100,11 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                             alt={image.alt || image.name}
                         />
                     ) : (
-                        <div className="image-container">
-                            <picture className="image-container">
-                                <source type="image/webp" srcSet={`/api/adobe/assets/${image.assetId}/as/${fileName}.webp?width=350`} />
-                                <source type="image/jpg" srcSet={`/api/adobe/assets/${image.assetId}/as/${fileName}.jpg?width=350`} />
-                                <img
-                                    className="lazy-image"
-                                    loading="lazy"
-                                    src={`/api/adobe/assets/${image.assetId}/as/${fileName}.jpg?width=350`}
-                                    alt={image.alt || image.name}
-                                    onError={(e) => {
-                                        const fallback = document.createElement('source');
-                                        fallback.srcset = '/icons/missing-image.svg';
-                                        e.target.parentElement.prepend(fallback);
-                                        e.target.style.objectFit = 'cover';
-                                    }}
-                                />
-                            </picture>
-                        </div>
+                        <picture>
+                            <source type="image/webp" srcSet={`/api/adobe/assets/${image.assetId}/as/${fileName}.webp?width=350`} />
+                            <source type="image/jpg" srcSet={`/api/adobe/assets/${image.assetId}/as/${fileName}.jpg?width=350`} />
+                            <img loading="lazy" src={`/api/adobe/assets/${image.assetId}/as/${fileName}.jpg?width=350`} alt={image.alt || image.name} onError={(e) => {e.target.parentElement.classList.add('missing');}} />
+                        </picture>
                     )}
                 </div>
 
