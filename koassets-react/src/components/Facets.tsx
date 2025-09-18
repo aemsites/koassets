@@ -1,7 +1,7 @@
 import { ToastQueue } from '@react-spectrum/toast';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DateValue } from 'react-aria-components';
-import type { FacetCheckedState, FacetsProps, FacetValue, RightsData, SavedSearch, SearchResult } from '../types';
+import type { FacetCheckedState, FacetsProps, FacetValue, SavedSearch, SearchResult } from '../types';
 import DateRange, { DateRangeRef } from './DateRange';
 import './Facets.css';
 import Markets from './Markets';
@@ -69,8 +69,10 @@ const Facets: React.FC<FacetsProps> = ({
     setRightsStartDate,
     rightsEndDate,
     setRightsEndDate,
-    mediaRightsMap,
-    marketRightsMap
+    selectedMarkets,
+    setSelectedMarkets,
+    selectedMediaChannels,
+    setSelectedMediaChannels
 }) => {
     const [expandedFacets, setExpandedFacets] = useState<ExpandedFacetsState>({}); // Keep track of expanded facets (from EXC)
     const [expandedHierarchyItems, setExpandedHierarchyItems] = useState<ExpandedFacetsState>({}); // Keep track of expanded hierarchy items
@@ -80,10 +82,6 @@ const Facets: React.FC<FacetsProps> = ({
     const [dateRanges, setDateRanges] = useState<{ [key: string]: [number | undefined, number | undefined] }>({});
     const dateRangeRef = useRef<DateRangeRef>(null);
     const isUpdatingFromExternalRef = useRef(false);
-
-    // States for Markets and MediaChannels components
-    const [selectedMarkets, setSelectedMarkets] = useState<Set<RightsData>>(new Set());
-    const [selectedMediaChannels, setSelectedMediaChannels] = useState<Set<RightsData>>(new Set());
 
     // Function to load selected facet filters into checked state
     const loadSelectedFacetFilters = useCallback((selectedFacetFilters: string[][] | undefined): FacetCheckedState => {
@@ -514,21 +512,12 @@ const Facets: React.FC<FacetsProps> = ({
                             type="checkbox"
                             checked={!!checked[checkboxKey]?.[facetName]}
                             onChange={() => handleCheckbox(checkboxKey, facetName)}
-                        /> {(() => {
-                            // Display rights description for market/media covered facets
-                            if (facetTechId === 'tccc-marketCovered' && marketRightsMap) {
-                                return marketRightsMap[facetName] || facetName;
-                            }
-                            if (facetTechId === 'tccc-mediaCovered' && mediaRightsMap) {
-                                return mediaRightsMap[facetName] || facetName;
-                            }
-                            return facetName;
-                        })()}{count > 0 ? ` (${count})` : ''}
+                        /> {facetName}{count > 0 ? ` (${count})` : ''}
                     </label>
                 ))}
             </div>
         );
-    }, [expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, checked, handleCheckbox, facetSearchTerms, handleClearRightsStartDate, handleRightsStartDateChange, rightsStartDate, handleClearRightsEndDate, handleRightsEndDateChange, rightsEndDate, marketRightsMap, mediaRightsMap, selectedMarkets, selectedMediaChannels]);
+    }, [expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, checked, handleCheckbox, facetSearchTerms, handleClearRightsStartDate, handleRightsStartDateChange, rightsStartDate, handleClearRightsEndDate, handleRightsEndDateChange, rightsEndDate, selectedMarkets, selectedMediaChannels, setSelectedMarkets, setSelectedMediaChannels]);
 
     // Transform the checked object into an array of facet filters
     useEffect(() => {
@@ -621,7 +610,9 @@ const Facets: React.FC<FacetsProps> = ({
         setRightsStartDate?.(null); // Clear rights start date
         setRightsEndDate?.(null); // Clear rights end date
         dateRangeRef.current?.reset();
-    }, [setSelectedFacetFilters, setSelectedNumericFilters, setRightsStartDate, setRightsEndDate]);
+        setSelectedMarkets(new Set());
+        setSelectedMediaChannels(new Set());
+    }, [setSelectedFacetFilters, setSelectedNumericFilters, setRightsStartDate, setRightsEndDate, setSelectedMarkets, setSelectedMediaChannels]);
 
     const handleApplyFilters = useCallback(() => {
         search();
@@ -632,18 +623,6 @@ const Facets: React.FC<FacetsProps> = ({
        isIncomplete: some but not all 4 parameters have data
        isComplete: ALL 4 parameters have data */
     const rightsValidationState = useMemo(() => {
-        if (!selectedFacetFilters) return { isNone: true, isIncomplete: false, isComplete: false };
-
-        const mediaCoveredParams = ['tccc-mediaCovered', 'tccc-marketCovered'];
-        const flatFilters = selectedFacetFilters.flat();
-
-        // Check if media/market covered parameters are complete (both selected)
-        const presentMediaCovered = mediaCoveredParams.filter(param =>
-            flatFilters.some(filter => filter.startsWith(param + ':'))
-        );
-        const isMediaCoveredComplete = presentMediaCovered.length === 2;
-        const hasAnyMediaCovered = presentMediaCovered.length > 0;
-
         // Check if rights date parameters are complete (both set)
         const hasRightsStartDate = !!rightsStartDate;
         const hasRightsEndDate = !!rightsEndDate;
@@ -651,13 +630,13 @@ const Facets: React.FC<FacetsProps> = ({
         const hasAnyRightsDate = hasRightsStartDate || hasRightsEndDate;
 
         // Calculate states
-        const hasAnyRightsData = hasAnyMediaCovered || hasAnyRightsDate;
-        const isComplete = isMediaCoveredComplete && isRightsDateComplete;
+        const hasAnyRightsData = selectedMarkets.size > 0 || selectedMediaChannels.size > 0 || hasAnyRightsDate;
+        const isComplete = selectedMarkets.size > 0 && selectedMediaChannels.size > 0 && isRightsDateComplete;
         const isIncomplete = hasAnyRightsData && !isComplete;
         const isNone = !hasAnyRightsData;
 
         return { isNone, isIncomplete, isComplete };
-    }, [selectedFacetFilters, rightsStartDate, rightsEndDate]);
+    }, [selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate]);
 
 
     // Update parent's isRightsSearch state when rights parameters completeness changes

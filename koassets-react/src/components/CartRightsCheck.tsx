@@ -36,6 +36,8 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
 }) => {
     const [downloadOptions] = useState<Record<string, DownloadOptions>>(initialData?.downloadOptions || {});
     const isCheckingRightsRef = useRef(false);
+    const hasPerformedRightsCheckRef = useRef(false);
+    const previousRestrictedAssetsRef = useRef<Asset[]>([]);
 
     // Keep track of newly authorized asset IDs from rights check
     const [newlyAuthorizedAssetIds, setNewlyAuthorizedAssetIds] = useState<Set<string>>(new Set());
@@ -72,6 +74,22 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
             if (isCheckingRightsRef.current) {
                 console.log('Rights check already in progress, skipping');
                 return;
+            }
+
+            // Check if restrictedAssets have changed
+            const restrictedAssetsChanged = JSON.stringify(previousRestrictedAssetsRef.current) !== JSON.stringify(restrictedAssets);
+
+            // Only perform rights check on first change of restrictedAssets
+            if (hasPerformedRightsCheckRef.current && restrictedAssetsChanged) {
+                console.log('Rights check already performed and restrictedAssets changed, skipping subsequent checks');
+                setIsRightsCheckLoading(false);
+                return;
+            }
+
+            // Mark that we're about to perform the rights check
+            if (restrictedAssetsChanged) {
+                hasPerformedRightsCheckRef.current = true;
+                previousRestrictedAssetsRef.current = [...restrictedAssets];
             }
 
             if (!intendedUse.airDate || !intendedUse.pullDate || restrictedAssets.length === 0) {

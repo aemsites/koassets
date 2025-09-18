@@ -184,6 +184,7 @@ export interface Asset {
         items?: Rendition[];
         'repo:name'?: string;
     };
+    authorized?: boolean;
     [key: string]: unknown; // For additional Algolia hit properties
 }
 
@@ -330,23 +331,24 @@ export interface FacetValue {
 export interface FacetsProps {
     searchResults?: SearchResults['results'] | null;
     selectedFacetFilters?: string[][];
-    setSelectedFacetFilters: (facetFilters: string[][]) => void;
-    search: (query?: string) => void;
+    setSelectedFacetFilters: React.Dispatch<React.SetStateAction<string[][]>>;
+    search: (searchQuery?: string) => void;
     excFacets?: Record<string, FacetValue>;
     selectedNumericFilters?: string[];
-    setSelectedNumericFilters: (filters: string[]) => void;
+    setSelectedNumericFilters: React.Dispatch<React.SetStateAction<string[]>>;
     query: string;
-    setQuery: (query: string) => void;
-    searchDisabled?: boolean;
-    setSearchDisabled?: (disabled: boolean) => void;
-    isRightsSearch?: boolean;
-    setIsRightsSearch?: (isRightsSearch: boolean) => void;
-    rightsStartDate?: DateValue | null;
-    setRightsStartDate?: (date: DateValue | null) => void;
-    rightsEndDate?: DateValue | null;
-    setRightsEndDate?: (date: DateValue | null) => void;
-    mediaRightsMap?: Record<string, string> | null;
-    marketRightsMap?: Record<string, string> | null;
+    setQuery: React.Dispatch<React.SetStateAction<string>>;
+    searchDisabled: boolean;
+    setSearchDisabled: (disabled: boolean) => void;
+    setIsRightsSearch: (isRightsSearch: boolean) => void;
+    rightsStartDate: DateValue | null;
+    setRightsStartDate: React.Dispatch<React.SetStateAction<DateValue | null>>;
+    rightsEndDate: DateValue | null;
+    setRightsEndDate: React.Dispatch<React.SetStateAction<DateValue | null>>;
+    selectedMarkets: Set<RightsData>;
+    setSelectedMarkets: React.Dispatch<React.SetStateAction<Set<RightsData>>>;
+    selectedMediaChannels: Set<RightsData>;
+    setSelectedMediaChannels: React.Dispatch<React.SetStateAction<Set<RightsData>>>;
 }
 
 // Phase 3 Component Types

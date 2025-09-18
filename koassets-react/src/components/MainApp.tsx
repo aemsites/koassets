@@ -12,6 +12,7 @@ import type {
     ExternalParams,
     LoadingState,
     Rendition,
+    RightsData,
     SearchResult,
     SearchResults
 } from '../types';
@@ -32,9 +33,9 @@ declare global {
 }
 
 // Components
-import { CheckRightsRequest, FadelClient, createMarketRightsMap, createMediaRightsMap } from '../clients/fadel-client';
 import { CalendarDate } from '@internationalized/date';
 import { createPortal } from 'react-dom';
+import { CheckRightsRequest, FadelClient } from '../clients/fadel-client';
 import { calendarDateToEpoch } from '../utils/formatters';
 import CartPanel from './CartPanel';
 import Facets from './Facets';
@@ -122,8 +123,8 @@ function MainApp(): React.JSX.Element {
     const [isRightsSearch, setIsRightsSearch] = useState<boolean>(false);
     const [rightsStartDate, setRightsStartDate] = useState<DateValue | null>(null);
     const [rightsEndDate, setRightsEndDate] = useState<DateValue | null>(null);
-    const [mediaRightsMap, setMediaRightsMap] = useState<Record<string, string> | null>(null);
-    const [marketRightsMap, setMarketRightsMap] = useState<Record<string, string> | null>(null);
+    const [selectedMarkets, setSelectedMarkets] = useState<Set<RightsData>>(new Set());
+    const [selectedMediaChannels, setSelectedMediaChannels] = useState<Set<RightsData>>(new Set());
     const searchDisabledRef = useRef<boolean>(false);
     const isRightsSearchRef = useRef<boolean>(false);
 
@@ -282,35 +283,25 @@ function MainApp(): React.JSX.Element {
                         console.log('TTT rightsDate', calendarDateToEpoch(rightsStartDate as CalendarDate), calendarDateToEpoch(rightsEndDate as CalendarDate));
                         console.log('TTT selectedFacetFilters', JSON.stringify(selectedFacetFilters));
                         console.log('TTT processedImages', processedImages);
-                        const selectedRights: CheckRightsRequest['selectedRights'] = {
-                            "20": [],
-                            "30": []
-                        };
-                        if (selectedFacetFilters && selectedFacetFilters.length > 0) {
-                            selectedFacetFilters.forEach((filterGroup: string[]) => {
-                                filterGroup.forEach((filter: string) => {
-                                    const colonIndex = filter.indexOf(':');
-                                    const key = colonIndex > -1 ? filter.substring(0, colonIndex) : filter;
-                                    const value = colonIndex > -1 ? filter.substring(colonIndex + 1) : '';
-                                    if (key && value) {
-                                        if (key === 'tccc-mediaCovered') {
-                                            selectedRights['20'].push(Number(value));
-                                        } else if (key === 'tccc-marketCovered') {
-                                            selectedRights['30'].push(Number(value));
-                                        }
-                                    }
-                                });
-                            });
-                        }
+                        console.log('TTT selectedMarkets', selectedMarkets);
+                        console.log('TTT selectedMediaChannels', selectedMediaChannels);
                         const checkRightsRequest: CheckRightsRequest = {
                             inDate: calendarDateToEpoch(rightsStartDate as CalendarDate),
                             outDate: calendarDateToEpoch(rightsEndDate as CalendarDate),
                             selectedExternalAssets: processedImages.map(image => image.assetId).filter((id): id is string => Boolean(id)).map(id => id.replace('urn:aaid:aem:', '')),
                             selectedRights: {
-                                "20": [],
-                                "30": []
+                                "20": Array.from(selectedMediaChannels).map(channel => channel.id),
+                                "30": Array.from(selectedMarkets).map(market => market.id)
                             }
                         };
+                        console.log('TTT checkRightsRequest', checkRightsRequest);
+                        const fadelClient = FadelClient.getInstance();
+                        const checkRightsResponse = await fadelClient.checkRights(checkRightsRequest);
+                        console.log('TTT checkRightsResponse', checkRightsResponse);
+                        processedImages.forEach(image => {
+                            image.authorized = checkRightsResponse.restOfAssets.find(item => `urn:aaid:aem:${item.asset.assetExtId}` === image.assetId)?.available === true;
+                        });
+                        console.log('TTT processedImages', processedImages);
                     }
 
                     if (isLoadingMore) {
@@ -332,7 +323,7 @@ function MainApp(): React.JSX.Element {
         }
         setLoading(prev => ({ ...prev, [LOADING.dmImages]: false }));
         setIsLoadingMore(false);
-    }, [rightsStartDate, rightsEndDate, selectedFacetFilters]);
+    }, [rightsStartDate, rightsEndDate, selectedFacetFilters, selectedMarkets, selectedMediaChannels]);
 
 
 
@@ -462,31 +453,7 @@ function MainApp(): React.JSX.Element {
         }
     }, [authenticated, externalParams.excFacets, externalParams.presetFilters]);
 
-    // Fetch media rights and market rights
-    useEffect(() => {
-        const fetchRightsData = async () => {
-            try {
-                const fadelClient = FadelClient.getInstance();
-
-                // Fetch both media rights and market rights in parallel
-                const [mediaRightsData, marketRightsData] = await Promise.all([
-                    fadelClient.fetchMediaRights(),
-                    fadelClient.fetchMarketRights()
-                ]);
-
-                // Convert responses to maps for easier lookup
-                const mediaMap = createMediaRightsMap(mediaRightsData);
-                const marketMap = createMarketRightsMap(marketRightsData);
-
-                setMediaRightsMap(mediaMap);
-                setMarketRightsMap(marketMap);
-            } catch (error) {
-                console.error('Failed to fetch rights data:', error);
-            }
-        };
-
-        fetchRightsData();
-    }, []);
+    // Rights data fetching moved to individual Markets and MediaChannels components
 
 
 
@@ -599,26 +566,6 @@ function MainApp(): React.JSX.Element {
             const image = images.find(img => img.assetId === imageId);
             if (!image || cartItems.some(item => item.assetId === image.assetId)) {
                 return null;
-            }
-
-            // Cache the image in parallel
-            if (dynamicMediaClient && image.assetId) {
-                try {
-                    const cacheKey = `${image.assetId}-350`;
-                    await fetchOptimizedDeliveryBlob(
-                        dynamicMediaClient,
-                        image,
-                        350,
-                        {
-                            cache: false,
-                            cacheKey: cacheKey,
-                            fallbackUrl: image.url
-                        }
-                    );
-                    console.log(`Cached bulk image for cart: ${image.assetId}`);
-                } catch (error) {
-                    console.warn(`Failed to cache bulk image for cart ${image.assetId}:`, error);
-                }
             }
 
             return image;
@@ -828,14 +775,15 @@ function MainApp(): React.JSX.Element {
                                         setQuery={setQuery}
                                         searchDisabled={searchDisabled}
                                         setSearchDisabled={handleSetSearchDisabled}
-                                        isRightsSearch={isRightsSearch}
                                         setIsRightsSearch={handleSetIsRightsSearch}
                                         rightsStartDate={rightsStartDate}
                                         setRightsStartDate={setRightsStartDate}
                                         rightsEndDate={rightsEndDate}
                                         setRightsEndDate={setRightsEndDate}
-                                        mediaRightsMap={mediaRightsMap}
-                                        marketRightsMap={marketRightsMap}
+                                        selectedMarkets={selectedMarkets}
+                                        setSelectedMarkets={setSelectedMarkets}
+                                        selectedMediaChannels={selectedMediaChannels}
+                                        setSelectedMediaChannels={setSelectedMediaChannels}
                                     />
                                 </div>
                             </div>
