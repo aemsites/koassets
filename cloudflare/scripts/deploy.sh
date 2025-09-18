@@ -62,7 +62,7 @@ if [ "$ci" = "true" ]; then
 
   tag="$branch"
   # last commit message
-  message=$(git log -1 --pretty="%cL: %s")
+  message=$(git log -1 --pretty="%aL: %s")
 
   echo "================================================================"
   echo "DEBUG: git diff --name-only origin/main..HEAD"
@@ -81,7 +81,7 @@ else
   if [ -z "$message" ]; then
     if git diff --quiet .; then
       # no local changes, use last commit message
-      message=$(git log -1 --pretty="%cL: %s")
+      message=$(git log -1 --pretty="%aL: %s")
     else
       # local changes found
       message="$user: <local changes>"
