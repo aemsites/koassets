@@ -513,12 +513,12 @@ export class DynamicMediaClient {
         }
     }
 
-    async getOptimizedDeliveryPreviewUrl(assetId: string, repoName: string, width: number = 350) {
-        // Convert video extensions to avif for optimal delivery
-        const processedRepoName = this.changeToSupportedPreview(repoName);
+    // async getOptimizedDeliveryPreviewUrl(assetId: string, repoName: string, width: number = 350) {
+    //     // Convert video extensions to avif for optimal delivery
+    //     const processedRepoName = this.changeToSupportedPreview(repoName);
 
-        return `https://${this.bucket}.adobeaemcloud.com/adobe/assets/${assetId}/as/preview-${processedRepoName}?width=${width}&preferwebp=true`;
-    }
+    //     return `https://${this.bucket}.adobeaemcloud.com/adobe/assets/${assetId}/as/preview-${processedRepoName}?width=${width}&preferwebp=true`;
+    // }
 
     async getDownloadTokenResp(asset: Asset): Promise<{ token: string, expiryTime: number } | undefined> {
         try {
