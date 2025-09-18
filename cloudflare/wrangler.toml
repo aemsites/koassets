@@ -30,7 +30,7 @@ DM_ORIGIN = "https://delivery-p64403-e544653.adobeaemcloud.com"
 FADEL_ORIGIN = "https://test.fadelarc.net"
 
 # keep disabled as long as we are using workers.dev directly without a domain/zone
-# HELIX_PUSH_INVALIDATION = "disabled"
+HELIX_PUSH_INVALIDATION = "disabled"
 
 # Microsoft Entra IDP (config)
 MICROSOFT_ENTRA_TENANT_ID = "801ee00e-24ef-45c3-848b-b88400248100"
