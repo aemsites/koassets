@@ -3,7 +3,8 @@
  * Listens for custom events from React components and shows collection selection modal
  */
 
-let currentAsset = null;
+let currentAsset = null; // legacy single asset support
+let currentAssets = [];
 let collectionsModal = null;
 
 // Initialize the modal system
@@ -19,16 +20,31 @@ function initAddToCollectionModal() {
 
 // Handle the custom event from React components
 function handleOpenCollectionModal(event) {
-  const { asset, assetPath } = event.detail;
-  currentAsset = { ...asset, assetPath };
+  const { asset, assets, assetPath } = event.detail || {};
+  if (Array.isArray(assets)) {
+    currentAssets = assets.slice();
+  } else if (asset) {
+    currentAssets = [asset];
+  } else {
+    currentAssets = [];
+  }
+  if (currentAssets[0]) {
+    currentAsset = { ...currentAssets[0], assetPath: assetPath || currentAssets[0].assetPath };
+  } else {
+    currentAsset = null;
+  }
   try {
     // Log asset details when opening the modal to inspect available fields
     // Using JSON.stringify for readable formatting
     // eslint-disable-next-line no-console
-    console.log('[Collections] openCollectionModal asset details:', JSON.stringify(currentAsset, null, 2));
+    if (currentAssets.length > 1) {
+      console.log('[Collections] openCollectionModal assets count:', currentAssets.length);
+    } else {
+      console.log('[Collections] openCollectionModal asset details:', JSON.stringify(currentAsset, null, 2));
+    }
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.log('[Collections] openCollectionModal asset (raw):', currentAsset);
+    console.log('[Collections] openCollectionModal assets (raw):', currentAssets);
   }
   showCollectionsModal();
 }
@@ -101,6 +117,7 @@ function showCollectionsModal() {
 function hideCollectionsModal() {
   collectionsModal.style.display = 'none';
   currentAsset = null;
+  currentAssets = [];
 }
 
 // Load collections and create checkboxes
@@ -183,10 +200,14 @@ function handleAddToSelectedCollections() {
   // Dump the full currentAsset JSON at the time of add for debugging
   try {
     // eslint-disable-next-line no-console
-    console.log('[Collections] handleAddToSelectedCollections currentAsset:', JSON.stringify(currentAsset, null, 2));
+    if (currentAssets.length > 1) {
+      console.log('[Collections] handleAddToSelectedCollections assets count:', currentAssets.length);
+    } else {
+      console.log('[Collections] handleAddToSelectedCollections currentAsset:', JSON.stringify(currentAsset, null, 2));
+    }
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.log('[Collections] handleAddToSelectedCollections currentAsset (raw):', currentAsset);
+    console.log('[Collections] handleAddToSelectedCollections assets (raw):', currentAssets);
   }
   const checkboxes = collectionsModal.querySelectorAll('.collection-checkbox:checked');
 
@@ -203,50 +224,55 @@ function handleAddToSelectedCollections() {
 
     const updatedCollections = collections.map((collection) => {
       if (selectedCollectionIds.includes(collection.id)) {
-        // Initialize contents array if it doesn't exist
         if (!collection.contents) {
           collection.contents = [];
         }
 
-        // Check if asset is already in collection
-        const assetPath = currentAsset.assetPath || currentAsset.assetId;
-        const exists = collection.contents.some((item) => (typeof item === 'string' ? item : item.assetPath || item.assetId) === assetPath);
+        const asString = (v) => {
+          if (!v) return '';
+          if (typeof v === 'string') return v;
+          if (typeof v === 'object') {
+            if (typeof v.url === 'string') return v.url;
+            if (typeof v.src === 'string') return v.src;
+          }
+          return '';
+        };
 
-        if (!exists) {
-          // Resolve a preview/thumbnail URL from available fields on the asset
-          const asString = (v) => {
-            if (!v) return '';
-            if (typeof v === 'string') return v;
-            if (typeof v === 'object') {
-              // common shapes { url: '...' } or { src: '...' }
-              if (typeof v.url === 'string') return v.url;
-              if (typeof v.src === 'string') return v.src;
-            }
-            return '';
-          };
-          // Prefer stable previewUrl if present, then other likely candidates
-          const thumbnailUrl = asString(currentAsset.previewUrl)
-            || asString(currentAsset.thumbnail)
-            || asString(currentAsset.url)
-            || asString(currentAsset.imageUrl)
-            || asString(currentAsset.thumbnailUrl)
-            || asString(currentAsset.preview_image_url);
+        let assets;
+        if (currentAssets.length > 0) {
+          assets = currentAssets;
+        } else if (currentAsset) {
+          assets = [currentAsset];
+        } else {
+          assets = [];
+        }
+        assets.forEach((a) => {
+          const ap = a.assetPath || a.assetId;
+          const exists = collection.contents.some((item) => (typeof item === 'string' ? item : item.assetPath || item.assetId) === ap);
+          if (exists) return;
 
-          // Add asset to collection
+          const thumbnailUrl = asString(a.previewUrl)
+            || asString(a.thumbnail)
+            || asString(a.url)
+            || asString(a.imageUrl)
+            || asString(a.thumbnailUrl)
+            || asString(a.preview_image_url);
+
           collection.contents.push({
-            assetId: currentAsset.assetId,
-            assetPath,
-            title: currentAsset.title || currentAsset.name,
-            repoName: currentAsset.name || (currentAsset.renditions && currentAsset.renditions['repo:name']) || '',
+            assetId: a.assetId,
+            assetPath: ap,
+            title: a.title || a.name,
+            repoName: a.name || (a.renditions && a.renditions['repo:name']) || '',
             thumbnail: thumbnailUrl || '',
             previewUrl: thumbnailUrl || '',
             addedDate: new Date().toISOString(),
           });
-          // eslint-disable-next-line no-console
-          console.log('[Collections] Saved thumbnail/previewUrl:', thumbnailUrl);
+          updatedCount += 1;
+        });
+
+        if (updatedCount > 0) {
           collection.lastUpdated = new Date().toISOString();
           collection.dateLastUsed = Date.now();
-          updatedCount += 1;
         }
       }
       return collection;
