@@ -26,6 +26,11 @@
     height: 100%;
 }
 
+/* Image wrapper needs position relative for absolute positioned overlays */
+.asset-card-view-grid .image-wrapper {
+    position: relative;
+}
+
 .asset-card-view-grid .image-preview-button {
     position: absolute;
     top: 20px;
@@ -188,6 +193,67 @@
     }
 }
 
+/* Add to Collection Badge */
+.asset-card-view-grid .add-to-collection-overlay {
+    position: absolute;
+    bottom: 10px;
+    left: 0;
+    background-color: rgba(0, 0, 0, 0.9);
+    border-radius: 0;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    z-index: 20;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
+}
+
+.asset-card-view-grid:hover .add-to-collection-overlay,
+.asset-card-view-grid .image-wrapper:hover .add-to-collection-overlay {
+    opacity: 1;
+    visibility: visible;
+}
+
+.asset-card-view-grid .add-to-collection-content {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    color: white !important;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: center;
+    height: 100%;
+}
+
+.asset-card-view-grid .add-to-collection-content span {
+    color: white !important;
+}
+
+.asset-card-view-grid .icon.add.circle::before {
+    content: "";
+    cursor: pointer;
+    display: inline-block;
+    height: 16px;
+    width: 16px;
+    background: url('/icons/add-to-collection.svg') 50% center no-repeat !important;
+    background-size: 16px 16px;
+    flex-shrink: 0;
+    vertical-align: middle;
+    line-height: 1;
+}
+
+.asset-card-view-grid .add-to-collection-overlay:hover {
+    background-color: rgba(0, 0, 0, 1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
 .asset-card-view-grid .image-wrapper > picture {
   width: 100%;
   height: 300px;
@@ -231,4 +297,3 @@
 .asset-card-view-grid .image-wrapper > picture.missing img {
   display: none;
 }
-

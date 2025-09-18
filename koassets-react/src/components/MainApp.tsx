@@ -375,7 +375,13 @@ function MainApp(): React.JSX.Element {
     }, [dynamicMediaClient, setSelectedFacetFilters, setSelectedNumericFilters, performSearchImages]);
 
     useEffect(() => {
-        dynamicMediaClient && window.history.replaceState({}, '', `${window.location.pathname}`);
+        if (!dynamicMediaClient) return;
+        const url = new URL(window.location.href);
+        // Only strip app-specific params; preserve others like id
+        ['query', 'selectedQueryType', 'fulltext', 'facetFilters', 'numericFilters']
+            .forEach((key) => url.searchParams.delete(key));
+        const next = url.pathname + (url.search ? `?${url.searchParams.toString()}` : '');
+        window.history.replaceState({}, '', next);
     }, [selectedQueryType, dynamicMediaClient]);
 
     // Auto-search with empty query on app load

@@ -127,7 +127,16 @@ async function loadLazy(doc) {
   loadFooter(doc.querySelector('footer'));
 
   loadCSS(`${window.hlx.codeBasePath}/styles/lazy-styles.css`);
+  loadCSS(`${window.hlx.codeBasePath}/styles/add-to-collection-modal.css`);
   loadFonts();
+
+  // Initialize add to collection modal functionality
+  import('./add-to-collection-modal.js').then(({ initAddToCollectionModal }) => {
+    initAddToCollectionModal();
+  }).catch(() => {
+    // Fallback for environments where the module might not be available
+    console.log('Add to collection modal not available');
+  });
 }
 
 /**
