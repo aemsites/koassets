@@ -1,7 +1,6 @@
 import { ToastQueue } from '@react-spectrum/toast';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DateValue } from 'react-aria-components';
-import { createMarketRightsMap, createMediaRightsMap, FadelClient } from '../clients/fadel-client';
 import type { FacetCheckedState, FacetsProps, FacetValue, SavedSearch, SearchResult } from '../types';
 import DateRange, { DateRangeRef } from './DateRange';
 import './Facets.css';
@@ -59,7 +58,9 @@ const Facets: React.FC<FacetsProps> = ({
     rightsStartDate,
     setRightsStartDate,
     rightsEndDate,
-    setRightsEndDate
+    setRightsEndDate,
+    mediaRightsMap,
+    marketRightsMap
 }) => {
     const [expandedFacets, setExpandedFacets] = useState<ExpandedFacetsState>({}); // Keep track of expanded facets (from EXC)
     const [expandedHierarchyItems, setExpandedHierarchyItems] = useState<ExpandedFacetsState>({}); // Keep track of expanded hierarchy items
@@ -67,8 +68,6 @@ const Facets: React.FC<FacetsProps> = ({
     const [facetSearchTerms, setFacetSearchTerms] = useState<{ [key: string]: string }>({}); // Keep track of search terms for each facet
     const [checked, setChecked] = useState<FacetCheckedState>({}); // Keep track of checked state of facets and nested facets if any
     const [dateRanges, setDateRanges] = useState<{ [key: string]: [number | undefined, number | undefined] }>({});
-    const [mediaRightsMap, setMediaRightsMap] = useState<Record<string, string> | null>(null);
-    const [marketRightsMap, setMarketRightsMap] = useState<Record<string, string> | null>(null);
     const dateRangeRef = useRef<DateRangeRef>(null);
     const isUpdatingFromExternalRef = useRef(false);
 
@@ -553,31 +552,6 @@ const Facets: React.FC<FacetsProps> = ({
         }
     }, [selectedFacetFilters, loadSelectedFacetFilters]);
 
-    // Fetch media rights and market rights on component mount
-    useEffect(() => {
-        const fetchRightsData = async () => {
-            try {
-                const fadelClient = FadelClient.getInstance();
-
-                // Fetch both media rights and market rights in parallel
-                const [mediaRightsData, marketRightsData] = await Promise.all([
-                    fadelClient.fetchMediaRights(),
-                    fadelClient.fetchMarketRights()
-                ]);
-
-                // Convert responses to maps for easier lookup
-                const mediaMap = createMediaRightsMap(mediaRightsData);
-                const marketMap = createMarketRightsMap(marketRightsData);
-
-                setMediaRightsMap(mediaMap);
-                setMarketRightsMap(marketMap);
-            } catch (error) {
-                console.error('Failed to fetch rights data:', error);
-            }
-        };
-
-        fetchRightsData();
-    }, []);
 
     // Count checked facets for a specific facetTechId
     const getCheckedCount = useCallback((facetTechId: string): number => {

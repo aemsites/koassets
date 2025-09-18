@@ -32,6 +32,7 @@ declare global {
 }
 
 // Components
+import { CheckRightsRequest, FadelClient, createMarketRightsMap, createMediaRightsMap } from '../clients/fadel-client';
 import { CalendarDate } from '@internationalized/date';
 import { createPortal } from 'react-dom';
 import { calendarDateToEpoch } from '../utils/formatters';
@@ -121,6 +122,8 @@ function MainApp(): React.JSX.Element {
     const [isRightsSearch, setIsRightsSearch] = useState<boolean>(false);
     const [rightsStartDate, setRightsStartDate] = useState<DateValue | null>(null);
     const [rightsEndDate, setRightsEndDate] = useState<DateValue | null>(null);
+    const [mediaRightsMap, setMediaRightsMap] = useState<Record<string, string> | null>(null);
+    const [marketRightsMap, setMarketRightsMap] = useState<Record<string, string> | null>(null);
     const searchDisabledRef = useRef<boolean>(false);
     const isRightsSearchRef = useRef<boolean>(false);
 
@@ -273,9 +276,41 @@ function MainApp(): React.JSX.Element {
                     // No longer download blobs upfront - just prepare metadata for lazy loading
                     // Each hit is transformed to match the Asset interface
                     const processedImages: Asset[] = hits.map(populateAssetFromHit);
+
+                    // When performing a rights search, we need to check the rights of the assets
                     if (isRightsSearchRef.current) {
                         console.log('TTT rightsDate', calendarDateToEpoch(rightsStartDate as CalendarDate), calendarDateToEpoch(rightsEndDate as CalendarDate));
-                        console.log('TTT selectedFacetFilters', selectedFacetFilters);
+                        console.log('TTT selectedFacetFilters', JSON.stringify(selectedFacetFilters));
+                        console.log('TTT processedImages', processedImages);
+                        const selectedRights: CheckRightsRequest['selectedRights'] = {
+                            "20": [],
+                            "30": []
+                        };
+                        if (selectedFacetFilters && selectedFacetFilters.length > 0) {
+                            selectedFacetFilters.forEach((filterGroup: string[]) => {
+                                filterGroup.forEach((filter: string) => {
+                                    const colonIndex = filter.indexOf(':');
+                                    const key = colonIndex > -1 ? filter.substring(0, colonIndex) : filter;
+                                    const value = colonIndex > -1 ? filter.substring(colonIndex + 1) : '';
+                                    if (key && value) {
+                                        if (key === 'tccc-mediaCovered') {
+                                            selectedRights['20'].push(Number(value));
+                                        } else if (key === 'tccc-marketCovered') {
+                                            selectedRights['30'].push(Number(value));
+                                        }
+                                    }
+                                });
+                            });
+                        }
+                        const checkRightsRequest: CheckRightsRequest = {
+                            inDate: calendarDateToEpoch(rightsStartDate as CalendarDate),
+                            outDate: calendarDateToEpoch(rightsEndDate as CalendarDate),
+                            selectedExternalAssets: processedImages.map(image => image.assetId).filter((id): id is string => Boolean(id)).map(id => id.replace('urn:aaid:aem:', '')),
+                            selectedRights: {
+                                "20": [],
+                                "30": []
+                            }
+                        };
                     }
 
                     if (isLoadingMore) {
@@ -424,15 +459,34 @@ function MainApp(): React.JSX.Element {
             setExcFacets(externalParams.excFacets || DEFAULT_FACETS);
             setPresetFilters(externalParams.presetFilters || []);
             settingsLoadedRef.current = true;
-            // const excClient = new ExcClient({ accessToken });
-            // // Get facets from EXC
-            // excClient.getExcFacets({}).then(facets => {
-            //     setExcFacets(facets);
-            // }).catch(error => {
-            //     console.error('Error fetching facets:', error);
-            // });
         }
     }, [authenticated, externalParams.excFacets, externalParams.presetFilters]);
+
+    // Fetch media rights and market rights
+    useEffect(() => {
+        const fetchRightsData = async () => {
+            try {
+                const fadelClient = FadelClient.getInstance();
+
+                // Fetch both media rights and market rights in parallel
+                const [mediaRightsData, marketRightsData] = await Promise.all([
+                    fadelClient.fetchMediaRights(),
+                    fadelClient.fetchMarketRights()
+                ]);
+
+                // Convert responses to maps for easier lookup
+                const mediaMap = createMediaRightsMap(mediaRightsData);
+                const marketMap = createMarketRightsMap(marketRightsData);
+
+                setMediaRightsMap(mediaMap);
+                setMarketRightsMap(marketMap);
+            } catch (error) {
+                console.error('Failed to fetch rights data:', error);
+            }
+        };
+
+        fetchRightsData();
+    }, []);
 
 
 
@@ -780,6 +834,8 @@ function MainApp(): React.JSX.Element {
                                         setRightsStartDate={setRightsStartDate}
                                         rightsEndDate={rightsEndDate}
                                         setRightsEndDate={setRightsEndDate}
+                                        mediaRightsMap={mediaRightsMap}
+                                        marketRightsMap={marketRightsMap}
                                     />
                                 </div>
                             </div>

@@ -23,12 +23,6 @@ export interface RequestDownloadStepData {
     dateValidationError: string;
 }
 
-// Cached rights data interfaces
-export interface CachedRightsData {
-    marketsData: RightsData[];
-    mediaChannelsData: RightsData[];
-    isLoaded: boolean;
-}
 
 export interface RightsCheckStepData {
     downloadOptions: Record<string, {
@@ -351,6 +345,8 @@ export interface FacetsProps {
     setRightsStartDate?: (date: DateValue | null) => void;
     rightsEndDate?: DateValue | null;
     setRightsEndDate?: (date: DateValue | null) => void;
+    mediaRightsMap?: Record<string, string> | null;
+    marketRightsMap?: Record<string, string> | null;
 }
 
 // Phase 3 Component Types

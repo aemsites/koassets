@@ -1,17 +1,13 @@
-import { ToastQueue } from '@react-spectrum/toast';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FadelClient, type RightsAttribute } from '../clients/fadel-client';
 import { restrictedBrandsWarning, smrWarnings } from '../constants/warnings';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type {
     Asset,
     AuthorizedCartItem,
-    CachedRightsData,
     CartPanelAssetsProps,
     RequestDownloadStepData,
     RequestRightsExtensionStepData,
     RightsCheckStepData,
-    RightsData,
     WorkflowStepData,
     WorkflowStepIcons,
     WorkflowStepStatuses
@@ -264,117 +260,6 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         agreesToTerms: false
     });
 
-    // State for cached rights data
-    const [cachedRightsData, setCachedRightsData] = useState<CachedRightsData>({
-        marketsData: [],
-        mediaChannelsData: [],
-        isLoaded: false
-    });
-
-    // TEMP DEBUG: Initialize debug data on component load
-    // useEffect(() => {
-    //     // Set debug data immediately with placeholder data
-    //     const todayDate = new Date();
-    //     const tomorrowDate = new Date(todayDate);
-    //     tomorrowDate.setDate(todayDate.getDate() + 1);
-
-    //     const todayCalendar = new CalendarDate(todayDate.getFullYear(), todayDate.getMonth() + 1, todayDate.getDate());
-    //     const tomorrowCalendar = new CalendarDate(tomorrowDate.getFullYear(), tomorrowDate.getMonth() + 1, tomorrowDate.getDate());
-
-    //     // Create placeholder "All" options
-    //     const placeholderAllMarket: RightsData = { rightId: 0, name: 'All', enabled: true };
-    //     const placeholderAllMediaChannel: RightsData = { rightId: 0, name: 'All', enabled: true };
-
-    //     setStepData(prevStepData => ({
-    //         ...prevStepData,
-    //         requestDownload: {
-    //             airDate: todayCalendar,
-    //             pullDate: tomorrowCalendar,
-    //             markets: [placeholderAllMarket],
-    //             mediaChannels: [placeholderAllMediaChannel],
-    //             selectedMarkets: new Set([placeholderAllMarket]),
-    //             selectedMediaChannels: new Set([placeholderAllMediaChannel]),
-    //             marketSearchTerm: '',
-    //             dateValidationError: ''
-    //         }
-    //     }));
-    // }, []); // Empty dependency array - runs only on mount
-
-
-    // Transform RightsAttribute[] to RightsData[] - copied from CartRequestDownload
-    const transformRightsAttributesToRightsData = useCallback((rightsAttributes: RightsAttribute[]): RightsData[] => {
-        if (!rightsAttributes || rightsAttributes.length === 0) {
-            return [];
-        }
-
-        const rootAttribute = rightsAttributes[0]; // The root "All" element
-
-        const transformAttribute = (attr: RightsAttribute): RightsData => ({
-            id: attr.id,
-            rightId: attr.right.rightId,
-            name: attr.right.description,
-            enabled: attr.enabled,
-            children: attr.childrenLst?.map(transformAttribute) || []
-        });
-
-        // First element is "All" from the root
-        const allElement: RightsData = {
-            id: rootAttribute.id,
-            rightId: rootAttribute.right.rightId,
-            name: rootAttribute.right.description,
-            enabled: rootAttribute.enabled,
-            children: []
-        };
-
-        // Other elements are from root's childrenLst
-        const childElements = rootAttribute.childrenLst?.map(transformAttribute) || [];
-
-        return [allElement, ...childElements];
-    }, []);
-
-    // Fetch and cache rights data
-    const fetchRightsData = useCallback(async () => {
-        if (cachedRightsData.isLoaded) {
-            return; // Already loaded, no need to fetch again
-        }
-
-        try {
-            const fadelClient = FadelClient.getInstance();
-            // Fetch both market rights and media rights in parallel
-            const [marketRightsResponse, mediaRightsResponse] = await Promise.all([
-                fadelClient.fetchMarketRights(),
-                fadelClient.fetchMediaRights()
-                // Promise.resolve({ attribute: [] }) // TEMP DEBUG: enable
-            ]);
-
-            const marketsData = transformRightsAttributesToRightsData(marketRightsResponse.attribute);
-            const mediaChannelsData = transformRightsAttributesToRightsData(mediaRightsResponse.attribute);
-
-            setCachedRightsData({
-                marketsData,
-                mediaChannelsData,
-                isLoaded: true
-            });
-        } catch (error) {
-            console.error('Failed to fetch rights data:', error);
-            ToastQueue.negative('Failed to fetch Rights Data', { timeout: 2000 });
-
-            // Set empty data but mark as loaded to prevent infinite retries
-            setCachedRightsData({
-                marketsData: [],
-                mediaChannelsData: [],
-                isLoaded: true
-            });
-        }
-    }, [cachedRightsData.isLoaded, transformRightsAttributesToRightsData]);
-
-    // Effect to fetch rights data when component mounts or when moving to REQUEST_DOWNLOAD step
-    useEffect(() => {
-        if (activeStep === WorkflowStep.REQUEST_DOWNLOAD && !cachedRightsData.isLoaded) {
-            fetchRightsData();
-        }
-    }, [activeStep, fetchRightsData, cachedRightsData.isLoaded]);
-
     // Notify parent when activeStep changes
     useEffect(() => {
         onActiveStepChange(activeStep);
@@ -383,7 +268,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     // Monitor stepStatus changes and handle each status for all steps
     useEffect(() => {
         Object.entries(stepStatus).forEach(([step, status]) => {
-            console.log(`Step "${step}" status changed to: ${status}`);
+            console.debug(`Step "${step}" status changed to: ${status}`);
 
             switch (step as WorkflowStep) {
                 case WorkflowStep.CART:
@@ -867,7 +752,6 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                         }));
                     }}
                     initialData={stepData.requestDownload}
-                    cachedRightsData={cachedRightsData}
                 />
             ) : activeStep === WorkflowStep.RIGHTS_CHECK ? (
                 <CartRightsCheck
