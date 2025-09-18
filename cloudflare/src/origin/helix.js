@@ -90,8 +90,11 @@ export async function originHelix(request, env) {
   let resp = await fetch(req, {
     method: req.method,
     cf: {
+      // disable caching until we get cache invalidation working
+      // https://www.aem.live/docs/byo-cdn-cloudflare-worker-setup#setup-push-invalidation-for-cloudflare
+      cache: 'no-cache',
       // cf doesn't cache html by default: need to override the default behavior
-      cacheEverything: true,
+      // cacheEverything: true,
     },
   });
   resp = new Response(resp.body, resp);
