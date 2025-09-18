@@ -520,26 +520,6 @@ function MainApp(): React.JSX.Element {
                 return null;
             }
 
-            // Cache the image in parallel
-            if (dynamicMediaClient && image.assetId) {
-                try {
-                    const cacheKey = `${image.assetId}-350`;
-                    await fetchOptimizedDeliveryBlob(
-                        dynamicMediaClient,
-                        image,
-                        350,
-                        {
-                            cache: false,
-                            cacheKey: cacheKey,
-                            fallbackUrl: image.url
-                        }
-                    );
-                    console.log(`Cached bulk image for cart: ${image.assetId}`);
-                } catch (error) {
-                    console.warn(`Failed to cache bulk image for cart ${image.assetId}:`, error);
-                }
-            }
-
             return image;
         };
 
