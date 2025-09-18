@@ -157,7 +157,23 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     };
 
     const handleBulkAddToCollection = () => {
-        console.log('Bulk add to collection:', Array.from(selectedCards));
+        // Get selected assets
+        const selectedAssets = images.filter(img => selectedCards.has(img.assetId || ''));
+        
+        if (selectedAssets.length === 0) {
+            return;
+        }
+
+        // Dispatch the global collection modal event with multiple assets
+        const event = new CustomEvent('openCollectionModal', {
+            detail: {
+                assets: selectedAssets // Pass array of assets for bulk operation
+            }
+        });
+        window.dispatchEvent(event);
+        
+        // Clear selection after action
+        setSelectedCards(new Set());
     };
 
     // Handle title expansion toggle

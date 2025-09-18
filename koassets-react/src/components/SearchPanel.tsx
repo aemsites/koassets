@@ -13,7 +13,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
     onBulkAddToCart,
     // onBulkDownload,
     // onBulkShare,
-    // onBulkAddToCollection,
+    onBulkAddToCollection,
     onSortByTopResults,
     onSortByDateCreated,
     onSortByLastModified,
@@ -157,8 +157,8 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
                         {/* Actions Button */}
                         <ActionDropdown
                             className="dropdown-actions-section"
-                            items={['Add to cart']} // , 'Download'
-                            handlers={[onBulkAddToCart]} // , onBulkDownload
+                            items={['Add to cart', 'Add to Collection']} // , 'Download'
+                            handlers={[onBulkAddToCart, onBulkAddToCollection]} // , onBulkDownload
                             show={selectedCount > 0}
                             label="Actions"
                             selectedItem={undefined}
