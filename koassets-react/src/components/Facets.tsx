@@ -1,9 +1,11 @@
 import { ToastQueue } from '@react-spectrum/toast';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DateValue } from 'react-aria-components';
-import type { FacetCheckedState, FacetsProps, FacetValue, SavedSearch, SearchResult } from '../types';
+import type { FacetCheckedState, FacetsProps, FacetValue, RightsData, SavedSearch, SearchResult } from '../types';
 import DateRange, { DateRangeRef } from './DateRange';
 import './Facets.css';
+import Markets from './Markets';
+import MediaChannels from './MediaChannels';
 import MyDatePicker from './MyDatePicker';
 
 interface ExpandedFacetsState {
@@ -23,7 +25,7 @@ const loadSavedSearches = (): SavedSearch[] => {
     }
 };
 
-const rightsFacetsDates: Record<string, FacetValue> = {
+const rightsFacets: Record<string, FacetValue> = {
     'tccc-rightsStartDate': {
         label: 'Rights Start Date',
         type: 'date'
@@ -31,6 +33,14 @@ const rightsFacetsDates: Record<string, FacetValue> = {
     'tccc-rightsEndDate': {
         label: 'Rights End Date',
         type: 'date'
+    },
+    'tccc-marketCovered': {
+        label: 'Market Covered',
+        type: 'checkbox'
+    },
+    'tccc-mediaCovered': {
+        label: 'Media Covered',
+        type: 'checkbox'
     }
 }
 
@@ -70,6 +80,10 @@ const Facets: React.FC<FacetsProps> = ({
     const [dateRanges, setDateRanges] = useState<{ [key: string]: [number | undefined, number | undefined] }>({});
     const dateRangeRef = useRef<DateRangeRef>(null);
     const isUpdatingFromExternalRef = useRef(false);
+
+    // States for Markets and MediaChannels components
+    const [selectedMarkets, setSelectedMarkets] = useState<Set<RightsData>>(new Set());
+    const [selectedMediaChannels, setSelectedMediaChannels] = useState<Set<RightsData>>(new Set());
 
     // Function to load selected facet filters into checked state
     const loadSelectedFacetFilters = useCallback((selectedFacetFilters: string[][] | undefined): FacetCheckedState => {
@@ -447,6 +461,23 @@ const Facets: React.FC<FacetsProps> = ({
             />;
         }
 
+        // Render Markets
+        if (facetTechId === 'tccc-marketCovered') {
+            return <Markets
+                includeSearchBox={false}
+                selectedMarkets={selectedMarkets}
+                setSelectedMarkets={setSelectedMarkets}
+            />;
+        }
+
+        // Render Media Channels
+        if (facetTechId === 'tccc-mediaCovered') {
+            return <MediaChannels
+                selectedMediaChannels={selectedMediaChannels}
+                setSelectedMediaChannels={setSelectedMediaChannels}
+            />;
+        }
+
         // Get hierarchy data for this facet if it exists
         const hierarchyData = hierarchyDataByFacet[facetTechId];
         const isHierarchyFacet = !!hierarchyData;
@@ -497,7 +528,7 @@ const Facets: React.FC<FacetsProps> = ({
                 ))}
             </div>
         );
-    }, [expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, checked, handleCheckbox, facetSearchTerms, handleClearRightsStartDate, handleRightsStartDateChange, rightsStartDate, handleClearRightsEndDate, handleRightsEndDateChange, rightsEndDate, marketRightsMap, mediaRightsMap]);
+    }, [expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, checked, handleCheckbox, facetSearchTerms, handleClearRightsStartDate, handleRightsStartDateChange, rightsStartDate, handleClearRightsEndDate, handleRightsEndDateChange, rightsEndDate, marketRightsMap, mediaRightsMap, selectedMarkets, selectedMediaChannels]);
 
     // Transform the checked object into an array of facet filters
     useEffect(() => {
@@ -967,18 +998,14 @@ const Facets: React.FC<FacetsProps> = ({
                         <div className="facet-filter-list">
                             {/* Render facets that retrieved from EXC */}
                             {(() => {
-                                const priorityFacets = ['tccc-marketCovered', 'tccc-mediaCovered'];
                                 const excEntries = Object.entries(excFacets);
 
                                 // Separate priority and regular facets
-                                const regularFacets = excEntries.filter(([key]) => !priorityFacets.includes(key));
-                                const bottomFacets = excEntries.filter(([key]) => priorityFacets.includes(key));
+                                const regularFacets = excEntries.filter(([key]) => !Object.keys(rightsFacets).includes(key));
 
-                                // Combine: regular facets + rightsFacets + bottom priority facets
                                 return [
                                     ...regularFacets,
-                                    ...Object.entries(rightsFacetsDates),
-                                    ...bottomFacets
+                                    ...Object.entries(rightsFacets),
                                 ];
                             })().map(([facetTechId, facet]) => {
                                 const label = facet.label || facetTechId;

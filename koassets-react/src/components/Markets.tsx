@@ -4,11 +4,13 @@ import { FadelClient, type RightsAttribute } from '../clients/fadel-client';
 import type { RightsData } from '../types';
 
 interface MarketsProps {
+    includeSearchBox: boolean;
     selectedMarkets: Set<RightsData>;
     setSelectedMarkets: React.Dispatch<React.SetStateAction<Set<RightsData>>>;
 }
 
 const Markets: React.FC<MarketsProps> = ({
+    includeSearchBox = true,
     selectedMarkets,
     setSelectedMarkets
 }) => {
@@ -198,15 +200,17 @@ const Markets: React.FC<MarketsProps> = ({
     return (
         <>
             {/* Search Markets */}
-            <div className="search-markets">
-                <input
-                    type="text"
-                    placeholder="Search Markets"
-                    value={marketSearchTerm}
-                    onChange={(e) => setMarketSearchTerm(e.target.value)}
-                    className="search-input"
-                />
-            </div>
+            {includeSearchBox && (
+                <div className="search-markets">
+                    <input
+                        type="text"
+                        placeholder="Search Markets"
+                        value={marketSearchTerm}
+                        onChange={(e) => setMarketSearchTerm(e.target.value)}
+                        className="search-input"
+                    />
+                </div>
+            )}
 
             {/* Markets List */}
             <div className="markets-list">
