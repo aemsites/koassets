@@ -78,25 +78,35 @@ export async function originHelix(request, env) {
   req.headers.set('user-agent', req.headers.get('user-agent'));
   req.headers.set('x-forwarded-host', req.headers.get('host'));
   req.headers.set('x-byo-cdn-type', 'cloudflare');
-  if (env.HELIX_PUSH_INVALIDATION !== 'disabled') {
-    req.headers.set('x-push-invalidation', 'enabled');
-  }
   if (env.HELIX_ORIGIN_AUTHENTICATION) {
     req.headers.set('authorization', `token ${env.HELIX_ORIGIN_AUTHENTICATION}`);
   }
+  const pushInvalidation = env.HELIX_PUSH_INVALIDATION !== 'disabled';
+  if (pushInvalidation) {
+    req.headers.set('x-push-invalidation', 'enabled');
+  }
 
-  console.log('>>>', req.method, req.url /*, req.headers*/);
+  // console.log('>>>', req.method, req.url /*, req.headers*/);
 
-  let resp = await fetch(req, {
+  const options = {
     method: req.method,
-    cf: {
-      // disable caching until we get cache invalidation working
-      // https://www.aem.live/docs/byo-cdn-cloudflare-worker-setup#setup-push-invalidation-for-cloudflare
-      cache: 'no-cache',
+  };
+
+  if (pushInvalidation) {
+    options.cf = {
       // cf doesn't cache html by default: need to override the default behavior
-      // cacheEverything: true,
-    },
-  });
+      cacheEverything: true,
+    };
+  } else {
+    // disable caching if no push invalidation is happening
+    // e.g. when using workers.dev directly without a domain/zone
+    options.cache = 'no-store';
+  }
+
+  let resp = await fetch(req, options);
+
+  // console.log('<<<', resp.status, resp.headers);
+
   resp = new Response(resp.body, resp);
   if (resp.status === 301 && savedSearch) {
     const location = resp.headers.get('location');
