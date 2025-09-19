@@ -127,35 +127,38 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 
     useEffect(() => {
         if (showModal && selectedImage && dynamicMediaClient) {
-            setImageLoading(true);
             setBlobUrl(null);
             setActionButtonEnable(false);
             setWatermarkRendition(undefined);
 
-            const fetchHighResImage = async () => {
-                try {
-                    // Just fetch high-res image directly, no caching for viewing
-                    const blobUrl = await fetchOptimizedDeliveryBlob(
-                        dynamicMediaClient,
-                        selectedImage,
-                        1200,
-                        {
-                            cache: false,
-                            cacheKey: `${selectedImage.assetId}-1200`,
-                            fallbackUrl: selectedImage.url
-                        }
-                    );
-                    setBlobUrl(blobUrl);
-                } catch (error) {
-                    console.error(`Error getting optimized delivery blob for asset ${selectedImage.assetId}: ${error}`);
-                    // Fallback to original URL
-                    setBlobUrl(selectedImage.url);
-                } finally {
-                    setImageLoading(false);
-                }
-            };
+            if (dynamicMediaClient.isIMSAuthenticated()) {
+                setImageLoading(true);
 
-            fetchHighResImage();
+                const fetchHighResImage = async () => {
+                    try {
+                        // Just fetch high-res image directly, no caching for viewing
+                        const blobUrl = await fetchOptimizedDeliveryBlob(
+                            dynamicMediaClient,
+                            selectedImage,
+                            1200,
+                            {
+                                cache: false,
+                                cacheKey: `${selectedImage.assetId}-1200`,
+                                fallbackUrl: selectedImage.url
+                            }
+                        );
+                        setBlobUrl(blobUrl);
+                    } catch (error) {
+                        console.error(`Error getting optimized delivery blob for asset ${selectedImage.assetId}: ${error}`);
+                        // Fallback to original URL
+                        setBlobUrl(selectedImage.url);
+                    } finally {
+                        setImageLoading(false);
+                    }
+                };
+                fetchHighResImage();
+            }
+
         }
     }, [showModal, selectedImage, dynamicMediaClient]);
 
@@ -192,6 +195,8 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 
     if (!showModal || !selectedImage) return null;
 
+    const fileName = encodeURIComponent(selectedImage.name?.replace(/\.[^/.]+$/, '') || 'thumbnail');
+
     return (
         <div className="asset-details-modal portal-modal" onClick={handleOverlayClick}>
             <div className="asset-details-modal-inner" onClick={handleModalClick}>
@@ -211,11 +216,19 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                         <span>Add to Collection</span>
                                     </div>
                                 </div>
-                                <img
-                                    src={blobUrl || selectedImage.url}
-                                    alt={selectedImage.alt || selectedImage.name}
-                                    className="asset-details-main-image"
-                                />
+                                {dynamicMediaClient?.isIMSAuthenticated() ? (
+                                    <img
+                                        src={blobUrl || selectedImage.url}
+                                        alt={selectedImage.alt || selectedImage.name}
+                                        className="asset-details-main-image"
+                                    />
+                                ) : (
+                                    <picture>
+                                        <source type="image/webp" srcSet={`/api/adobe/assets/${selectedImage.assetId}/as/${fileName}.webp?width=1200`} />
+                                        <source type="image/jpg" srcSet={`/api/adobe/assets/${selectedImage.assetId}/as/${fileName}.jpg?width=1200`} />
+                                        <img className="asset-details-main-image" loading="lazy" src={`/api/adobe/assets/${selectedImage.assetId}/as/${fileName}.jpg?width=1200`} alt={selectedImage.alt || selectedImage.name} onError={(e) => {e.target.parentElement.classList.add('missing');}} />
+                                    </picture>
+                                )}
                             </div>
                         )}
                     </div>
