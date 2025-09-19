@@ -494,13 +494,6 @@ export interface CartRequestRightsExtensionProps {
     initialData?: RequestRightsExtensionStepData;
 }
 
-// Extended CartItem for authorization workflow
-export interface AuthorizedCartItem extends CartItem {
-    authorized?: boolean;
-    authorizedDate?: string;
-    copyright?: unknown;
-}
-
 // MainApp types (most complex component)
 export const CURRENT_VIEW = {
     images: 'images',

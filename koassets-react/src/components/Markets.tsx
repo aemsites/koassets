@@ -4,7 +4,7 @@ import { FadelClient, type RightsAttribute } from '../clients/fadel-client';
 import type { RightsData } from '../types';
 
 interface MarketsProps {
-    includeSearchBox: boolean;
+    includeSearchBox?: boolean;
     selectedMarkets: Set<RightsData>;
     setSelectedMarkets: React.Dispatch<React.SetStateAction<Set<RightsData>>>;
 }

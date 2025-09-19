@@ -3,7 +3,6 @@ import { restrictedBrandsWarning, smrWarnings } from '../constants/warnings';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type {
     Asset,
-    AuthorizedCartItem,
     CartPanelAssetsProps,
     RequestDownloadStepData,
     RequestRightsExtensionStepData,
@@ -28,10 +27,8 @@ interface CartItemRowProps {
 }
 
 const CartItemRow: React.FC<CartItemRowProps> = ({ item, onRemoveItem }) => {
-    const authorizedItem = item as AuthorizedCartItem;
-
     return (
-        <div className={`cart-item-row ${authorizedItem.authorized === false ? 'disabled' : ''}`}>
+        <div className={`cart-item-row`}>
             <div className="col-thumbnail">
                 <ThumbnailImage item={item} />
             </div>
