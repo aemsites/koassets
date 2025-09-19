@@ -1,3 +1,4 @@
+import { ToastQueue } from '@react-spectrum/toast';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { DateValue } from 'react-aria-components';
 import '../MainApp.css';
@@ -492,8 +493,9 @@ function MainApp(): React.JSX.Element {
                     asset.imagePresets = presets;
                     console.log('Successfully fetched image presets');
                 } catch (error) {
+                    ToastQueue.negative('Failed to get all renditions info', { timeout: 2000 });
                     console.error('Failed to fetch image presets:', error);
-                    setImagePresets({});
+                    setImagePresets({ items: [] }); // Set empty items array to prevent infinite loop
                 } finally {
                     fetchingImagePresetsRef.current = false;
                 }

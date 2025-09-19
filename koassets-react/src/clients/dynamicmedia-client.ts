@@ -477,16 +477,21 @@ export class DynamicMediaClient {
         }
 
         try {
+            console.trace('DynamicMediaClient.getMetadata() REQUEST');
             return await this.makeRequest<Asset>({
                 url: `/adobe/assets/${assetId}/metadata`,
                 method: 'GET',
                 headers
             });
         } catch (error) {
-            if (error instanceof Error && error.message.includes('304')) {
-                throw new Error('Asset metadata not modified');
+            if (error instanceof Error && error.message.includes('Request failed')) {
+                // Check if it's a 304 status by examining the error message
+                if (error.message.includes('Not Modified')) {
+                    throw new Error('Asset metadata not modified');
+                }
+                throw new Error(`Failed to fetch metadata for assetId "${assetId}": ${error.message}`);
             }
-            throw new Error(`Failed to fetch metadata for assetId "${assetId}": ${error instanceof Error ? error.message : 'Unknown error'}`);
+            throw error;
         }
     }
 
@@ -576,15 +581,36 @@ export class DynamicMediaClient {
     async searchAssets(query: string, options: SearchAssetsOptions = {}): Promise<unknown> {
         const algoliaQuery = this.transformToAlgoliaSearchAssets(query, options);
 
-        try {
-            return await this.makeRequest<unknown>({
+        // for transition period, if logged in both ways, prefer IMS route
+        if (this.isIMSAuthenticated()) {
+            const config: AxiosRequestConfig = {
                 url: '/adobe/assets/search',
                 method: 'POST',
                 data: algoliaQuery,
                 headers: { 'x-ch-request': 'search' }
+            };
+
+            try {
+                const response = await this.client.request(config);
+                return response.data;
+            } catch (error) {
+                if (axios.isAxiosError(error)) {
+                    throw new Error(`Failed to search assets: ${error.message}`);
+                }
+                throw error;
+            }
+
+        } else /* if (window.user) */ {
+            const response = await fetch(`/api/adobe/assets/search`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-ch-request': 'search',
+                    'x-adobe-accept-experimental': '1',
+                },
+                body: JSON.stringify(algoliaQuery)
             });
-        } catch (error) {
-            throw new Error(`Failed to search assets: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            return response.json();
         }
     }
 
@@ -597,41 +623,22 @@ export class DynamicMediaClient {
     async searchCollections(query: string, options: SearchCollectionsOptions = {}): Promise<CollectionSearchResults> {
         const algoliaQuery = this.transformToAlgoliaSearchCollections(query, options);
 
+        const config: AxiosRequestConfig = {
+            url: '/adobe/assets/search',
+            method: 'POST',
+            data: algoliaQuery,
+            headers: { 'x-ch-request': 'search' }
+        };
+
         try {
-            return await this.makeRequest<CollectionSearchResults>({
-                url: '/adobe/assets/search',
-                method: 'POST',
-                data: algoliaQuery,
-                headers: { 'x-ch-request': 'search' }
-            });
+            console.trace('DynamicMediaClient.searchCollections() REQUEST');
+            const response = await this.client.request(config);
+            return response.data;
         } catch (error) {
-            throw new Error(`Failed to search collections: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-    }
-
-    /**
-     * Get image inline using assetId
-     * @param assetId - The asset ID
-     * @returns The image data as base64 string with type
-     */
-    async getImageBase64(assetId: string): Promise<{ type: string, data: string; }> {
-        try {
-            const blob = await this.makeRequestBlob({
-                url: `/adobe/assets/${assetId}`,
-                method: 'GET'
-            });
-
-            const arrayBuffer = await blob.arrayBuffer();
-            const bytes = new Uint8Array(arrayBuffer);
-            const binaryString = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
-            const base64 = btoa(binaryString);
-
-            return {
-                type: blob.type,
-                data: `data:${blob.type};base64,${base64}`
-            };
-        } catch (error) {
-            throw new Error(`Failed to fetch assetId "${assetId}": ${error instanceof Error ? error.message : 'Unknown error'}`);
+            if (axios.isAxiosError(error)) {
+                throw new Error(`Failed to search collections: ${error.message}`);
+            }
+            throw error;
         }
     }
 
@@ -653,12 +660,13 @@ export class DynamicMediaClient {
         return `${baseName}.${extension}`;
     }
 
+    // NOTE: this is only used if IMS authentication is used
     async getOptimizedDeliveryPreviewBlob(assetId: string, repoName: string, width: number = 350) {
         // Convert video extensions to avif for optimal delivery
         const processedRepoName = this.changeToSupportedPreview(repoName);
 
         try {
-            return await this.makeRequestBlob({
+            const response = await this.client.request({
                 url: `/adobe/assets/${assetId}/as/preview-${processedRepoName}`,
                 method: 'GET',
                 params: {
@@ -667,10 +675,16 @@ export class DynamicMediaClient {
                 },
                 headers: {
                     'x-ch-request': 'delivery'
-                }
+                },
+                responseType: 'blob'
             });
+
+            return response.data as Blob;
         } catch (error) {
-            throw new Error(`Failed to fetch assetId "${assetId}": ${error instanceof Error ? error.message : 'Unknown error'}`);
+            if (axios.isAxiosError(error)) {
+                throw new Error(`Failed to fetch assetId "${assetId}": ${error.message}`);
+            }
+            throw error;
         }
     }
 
@@ -682,15 +696,12 @@ export class DynamicMediaClient {
     }
 
     async getDownloadTokenResp(asset: Asset): Promise<{ token: string, expiryTime: number } | undefined> {
-        try {
-            return await this.makeRequest<{ token: string, expiryTime: number }>({
-                url: `/adobe/assets/${asset?.assetId}/token`,
-                method: 'GET',
-                allowUndefinedResponse: true
-            });
-        } catch (error) {
-            throw new Error(`Failed to get download token for asset: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
+        console.trace('DynamicMediaClient.getDownloadTokenResp() REQUEST');
+        return await this.makeRequest<{ token: string, expiryTime: number }>({
+            url: `/adobe/assets/${asset?.assetId}/token`,
+            method: 'GET',
+            allowUndefinedResponse: true
+        });
     }
 
     async downloadAsset(asset: Asset, rendition: Rendition = { name: ORIGINAL_RENDITION }, isImagePreset: boolean = false) {
@@ -772,13 +783,17 @@ export class DynamicMediaClient {
 
         let blob: Blob;
         try {
+            console.trace('DynamicMediaClient.downloadAsset() REQUEST');
             blob = await this.makeRequestBlob({
                 url: url,
                 method: 'GET',
                 params: queryParams
             });
         } catch (error) {
-            throw new Error(`Failed to download assetId "${asset?.assetId}": ${error instanceof Error ? error.message : 'Unknown error'}`);
+            if (error instanceof Error) {
+                throw new Error(`Failed to download assetId "${asset?.assetId}": ${error.message}`);
+            }
+            throw error;
         }
 
         // Trigger download using reusable method
@@ -789,48 +804,56 @@ export class DynamicMediaClient {
 
     async getAssetRenditions(asset: Asset): Promise<{ items?: Rendition[] }> {
         try {
+            console.trace('DynamicMediaClient.getAssetRenditions() REQUEST');
             return await this.makeRequest<{ items?: Rendition[] }>({
                 url: `/adobe/assets/${asset?.assetId}/renditions`,
                 method: 'GET'
             });
         } catch (error) {
-            throw new Error(`Failed to fetch assetId "${asset?.assetId}": ${error instanceof Error ? error.message : 'Unknown error'}`);
+            if (error instanceof Error) {
+                throw new Error(`Failed to fetch assetId "${asset?.assetId}": ${error.message}`);
+            }
+            throw error;
         }
     }
 
     async getImagePresets(): Promise<{ items: Rendition[] }> {
         try {
+            console.trace('DynamicMediaClient.getImagePresets() REQUEST');
             return await this.makeRequest<{ items: Rendition[] }>({
                 url: `/adobe/assets/imagePresets`,
                 method: 'GET'
             });
         } catch (error) {
-            throw new Error(`Failed to fetch image presets: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            if (error instanceof Error) {
+                throw new Error(`Failed to fetch image presets: ${error.message}`);
+            }
+            throw error;
         }
     }
 
     async downloadAssetsArchive(assetRenditionPairs: AssetRenditionPair[]): Promise<boolean> {
-        const payload = {
-            items: assetRenditionPairs.map(pair => ({
-                assetId: pair.asset.assetId,
-                includeRenditions: pair.renditions.map(rendition => rendition.name)
-            }))
-        };
-
         try {
-            // Create the archive
-            const response = await this.makeRequest<{ id: string }>({
+            const payload = {
+                items: assetRenditionPairs.map(pair => ({
+                    assetId: pair.asset.assetId,
+                    includeRenditions: pair.renditions.map(rendition => rendition.name)
+                }))
+            };
+
+            console.trace('DynamicMediaClient.downloadAssetsArchive() REQUEST');
+            const responseData = await this.makeRequest<{ id: string }>({
                 url: `/adobe/assets/archives`,
                 method: 'POST',
                 data: payload,
                 allowUndefinedResponse: true
             });
 
-            if (!response) {
+            if (!responseData) {
                 return false;
             }
 
-            const archiveId = response.id;
+            const archiveId = responseData.id;
 
             // Poll for status until no longer processing
             let archiveStatus: ArchiveStatus | undefined;
@@ -863,15 +886,12 @@ export class DynamicMediaClient {
     }
 
     async getAssetsArchiveStatus(archiveId: string): Promise<ArchiveStatus | undefined> {
-        try {
-            return await this.makeRequest<ArchiveStatus>({
-                url: `/adobe/assets/archives/${archiveId}/status`,
-                method: 'GET',
-                allowUndefinedResponse: true
-            });
-        } catch (error) {
-            throw new Error(`Failed to get archive status: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
+        console.trace('DynamicMediaClient.getAssetsArchiveStatus() REQUEST');
+        return await this.makeRequest<ArchiveStatus>({
+            url: `/adobe/assets/archives/${archiveId}/status`,
+            method: 'GET',
+            allowUndefinedResponse: true
+        });
     }
 
     /**
