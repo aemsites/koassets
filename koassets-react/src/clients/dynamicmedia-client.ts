@@ -166,6 +166,180 @@ export class DynamicMediaClient {
         return this.accessToken !== undefined;
     }
 
+    /**
+     * Generic request method that handles both IMS and fetch authentication patterns
+     * @private
+     */
+    private async makeRequest<T = unknown>(config: {
+        url: string;
+        method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+        data?: unknown;
+        params?: Record<string, unknown>;
+        headers?: Record<string, string>;
+        allowUndefinedResponse?: boolean; // For methods that return undefined on certain status codes
+    }): Promise<T> {
+        const {
+            url,
+            method = 'GET',
+            data,
+            params,
+            headers = {},
+            allowUndefinedResponse = false
+        } = config;
+
+        // for transition period, if logged in both ways, prefer IMS route
+        if (this.isIMSAuthenticated()) {
+            try {
+                const axiosConfig: AxiosRequestConfig = {
+                    url,
+                    method,
+                    data,
+                    params,
+                    headers
+                };
+
+                const response = await this.client.request(axiosConfig);
+                return response.data;
+            } catch (error) {
+                if (axios.isAxiosError(error)) {
+                    if (allowUndefinedResponse && error.response?.status !== 200) {
+                        return undefined as T;
+                    }
+                    throw new Error(`Request failed: ${error.message}`);
+                }
+                throw error;
+            }
+
+        } else /* if (window.user) */ {
+            try {
+                const fetchHeaders: HeadersInit = {
+                    'x-adobe-accept-experimental': '1',
+                    ...headers
+                };
+
+                if (method === 'POST' || method === 'PUT') {
+                    fetchHeaders['Content-Type'] = 'application/json';
+                }
+
+                const fetchConfig: RequestInit = {
+                    method,
+                    headers: fetchHeaders
+                };
+
+                if (data) {
+                    fetchConfig.body = JSON.stringify(data);
+                }
+
+                // Construct URL with params
+                let fetchUrl = `/api${url}`;
+                if (params) {
+                    const searchParams = new URLSearchParams();
+                    Object.entries(params).forEach(([key, value]) => {
+                        if (value !== undefined) {
+                            searchParams.append(key, String(value));
+                        }
+                    });
+                    if (searchParams.toString()) {
+                        fetchUrl += `?${searchParams.toString()}`;
+                    }
+                }
+
+                const response = await fetch(fetchUrl, fetchConfig);
+
+                if (!response.ok) {
+                    if (allowUndefinedResponse && response.status !== 200) {
+                        return undefined as T;
+                    }
+                    throw new Error(`Request failed: ${response.statusText}`);
+                }
+
+                return response.json();
+            } catch (error) {
+                if (error instanceof Error) {
+                    throw error;
+                }
+                throw new Error(`Request failed`);
+            }
+        }
+    }
+
+    /**
+     * Request method for blob responses
+     * @private
+     */
+    private async makeRequestBlob(config: {
+        url: string;
+        method?: 'GET' | 'POST';
+        params?: Record<string, unknown>;
+        headers?: Record<string, string>;
+    }): Promise<Blob> {
+        const {
+            url,
+            method = 'GET',
+            params,
+            headers = {}
+        } = config;
+
+        // for transition period, if logged in both ways, prefer IMS route
+        if (this.isIMSAuthenticated()) {
+            try {
+                const axiosConfig: AxiosRequestConfig = {
+                    url,
+                    method,
+                    params,
+                    headers,
+                    responseType: 'blob'
+                };
+
+                const response = await this.client.request(axiosConfig);
+                return response.data as Blob;
+            } catch (error) {
+                if (axios.isAxiosError(error)) {
+                    throw new Error(`Request failed: ${error.message}`);
+                }
+                throw error;
+            }
+
+        } else /* if (window.user) */ {
+            try {
+                const fetchHeaders: HeadersInit = {
+                    'x-adobe-accept-experimental': '1',
+                    ...headers
+                };
+
+                // Construct URL with params
+                let fetchUrl = `/api${url}`;
+                if (params) {
+                    const searchParams = new URLSearchParams();
+                    Object.entries(params).forEach(([key, value]) => {
+                        if (value !== undefined) {
+                            searchParams.append(key, String(value));
+                        }
+                    });
+                    if (searchParams.toString()) {
+                        fetchUrl += `?${searchParams.toString()}`;
+                    }
+                }
+
+                const response = await fetch(fetchUrl, {
+                    method,
+                    headers: fetchHeaders
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Request failed: ${response.statusText}`);
+                }
+
+                return response.blob();
+            } catch (error) {
+                if (error instanceof Error) {
+                    throw error;
+                }
+                throw new Error(`Request failed`);
+            }
+        }
+    }
+
     // Extract index name from bucket (e.g., delivery-p92206-e211033-cmstg -> 92206-211033)
     private getIndexName(): string {
         const match = this.bucket?.match(/p(\d+)-e(\d+)/);
@@ -196,9 +370,9 @@ export class DynamicMediaClient {
         const indexName = this.getIndexName();
         const nonExpiredAssetsFilter = this.getNonExpiredAssetsFilter();
         const filtersList = [`${nonExpiredAssetsFilter}`, ...filters]
-          .filter(Boolean)                         // remove null/undefined/empty strings
-          .map(f => `(${f})`)                      // wrap each condition in parentheses
-          .join(" AND ")
+            .filter(Boolean)                         // remove null/undefined/empty strings
+            .map(f => `(${f})`)                      // wrap each condition in parentheses
+            .join(" AND ")
 
 
         return {
@@ -262,29 +436,22 @@ export class DynamicMediaClient {
     }
 
     async getMetadata(assetId: string, ifNoneMatch?: string): Promise<Asset> {
-        const config: AxiosRequestConfig = {
-            url: `/adobe/assets/${assetId}/metadata`,
-            method: 'GET'
-        };
-
+        const headers: Record<string, string> = {};
         if (ifNoneMatch) {
-            config.headers = {
-                'If-None-Match': ifNoneMatch
-            };
+            headers['If-None-Match'] = ifNoneMatch;
         }
 
         try {
-            console.trace('DynamicMediaClient.getMetadata() REQUEST');
-            const response = await this.client.request(config);
-            return response.data;
+            return await this.makeRequest<Asset>({
+                url: `/adobe/assets/${assetId}/metadata`,
+                method: 'GET',
+                headers
+            });
         } catch (error) {
-            if (axios.isAxiosError(error)) {
-                if (error.response?.status === 304) {
-                    throw new Error('Asset metadata not modified');
-                }
-                throw new Error(`Failed to fetch metadata for assetId "${assetId}": ${error.message}`);
+            if (error instanceof Error && error.message.includes('304')) {
+                throw new Error('Asset metadata not modified');
             }
-            throw error;
+            throw new Error(`Failed to fetch metadata for assetId "${assetId}": ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
@@ -374,36 +541,15 @@ export class DynamicMediaClient {
     async searchAssets(query: string, options: SearchAssetsOptions = {}): Promise<unknown> {
         const algoliaQuery = this.transformToAlgoliaSearchAssets(query, options);
 
-        // for transition period, if logged in both ways, prefer IMS route
-        if (this.isIMSAuthenticated()) {
-            const config: AxiosRequestConfig = {
+        try {
+            return await this.makeRequest<unknown>({
                 url: '/adobe/assets/search',
                 method: 'POST',
                 data: algoliaQuery,
                 headers: { 'x-ch-request': 'search' }
-            };
-
-            try {
-                const response = await this.client.request(config);
-                return response.data;
-            } catch (error) {
-                if (axios.isAxiosError(error)) {
-                    throw new Error(`Failed to search assets: ${error.message}`);
-                }
-                throw error;
-            }
-
-        } else /* if (window.user) */ {
-            const response = await fetch(`/api/adobe/assets/search`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-ch-request': 'search',
-                    'x-adobe-accept-experimental': '1',
-                },
-                body: JSON.stringify(algoliaQuery)
             });
-            return response.json();
+        } catch (error) {
+            throw new Error(`Failed to search assets: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
@@ -416,22 +562,15 @@ export class DynamicMediaClient {
     async searchCollections(query: string, options: SearchCollectionsOptions = {}): Promise<CollectionSearchResults> {
         const algoliaQuery = this.transformToAlgoliaSearchCollections(query, options);
 
-        const config: AxiosRequestConfig = {
-            url: '/adobe/assets/search',
-            method: 'POST',
-            data: algoliaQuery,
-            headers: { 'x-ch-request': 'search' }
-        };
-
         try {
-            console.trace('DynamicMediaClient.searchCollections() REQUEST');
-            const response = await this.client.request(config);
-            return response.data;
+            return await this.makeRequest<CollectionSearchResults>({
+                url: '/adobe/assets/search',
+                method: 'POST',
+                data: algoliaQuery,
+                headers: { 'x-ch-request': 'search' }
+            });
         } catch (error) {
-            if (axios.isAxiosError(error)) {
-                throw new Error(`Failed to search collections: ${error.message}`);
-            }
-            throw error;
+            throw new Error(`Failed to search collections: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
@@ -442,14 +581,11 @@ export class DynamicMediaClient {
      */
     async getImageBase64(assetId: string): Promise<{ type: string, data: string; }> {
         try {
-            console.trace('DynamicMediaClient.getImageBase64() REQUEST');
-            const response = await this.client.request({
+            const blob = await this.makeRequestBlob({
                 url: `/adobe/assets/${assetId}`,
-                method: 'GET',
-                responseType: 'blob'
+                method: 'GET'
             });
 
-            const blob = response.data as Blob;
             const arrayBuffer = await blob.arrayBuffer();
             const bytes = new Uint8Array(arrayBuffer);
             const binaryString = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
@@ -460,10 +596,7 @@ export class DynamicMediaClient {
                 data: `data:${blob.type};base64,${base64}`
             };
         } catch (error) {
-            if (axios.isAxiosError(error)) {
-                throw new Error(`Failed to fetch assetId "${assetId}": ${error.message}`);
-            }
-            throw error;
+            throw new Error(`Failed to fetch assetId "${assetId}": ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
@@ -485,13 +618,12 @@ export class DynamicMediaClient {
         return `${baseName}.${extension}`;
     }
 
-    // NOTE: this is only used if IMS authentication is used
     async getOptimizedDeliveryPreviewBlob(assetId: string, repoName: string, width: number = 350) {
         // Convert video extensions to avif for optimal delivery
         const processedRepoName = this.changeToSupportedPreview(repoName);
 
         try {
-            const response = await this.client.request({
+            return await this.makeRequestBlob({
                 url: `/adobe/assets/${assetId}/as/preview-${processedRepoName}`,
                 method: 'GET',
                 params: {
@@ -500,16 +632,10 @@ export class DynamicMediaClient {
                 },
                 headers: {
                     'x-ch-request': 'delivery'
-                },
-                responseType: 'blob'
+                }
             });
-
-            return response.data as Blob;
         } catch (error) {
-            if (axios.isAxiosError(error)) {
-                throw new Error(`Failed to fetch assetId "${assetId}": ${error.message}`);
-            }
-            throw error;
+            throw new Error(`Failed to fetch assetId "${assetId}": ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
@@ -522,18 +648,13 @@ export class DynamicMediaClient {
 
     async getDownloadTokenResp(asset: Asset): Promise<{ token: string, expiryTime: number } | undefined> {
         try {
-            console.trace('DynamicMediaClient.getDownloadTokenResp() REQUEST');
-            const response = await this.client.request({
+            return await this.makeRequest<{ token: string, expiryTime: number }>({
                 url: `/adobe/assets/${asset?.assetId}/token`,
-                method: 'GET'
+                method: 'GET',
+                allowUndefinedResponse: true
             });
-
-            return response.data;
         } catch (error) {
-            if (axios.isAxiosError(error) && error.response?.status !== 200) {
-                return undefined;
-            }
-            throw error;
+            throw new Error(`Failed to get download token for asset: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
@@ -616,7 +737,6 @@ export class DynamicMediaClient {
 
         let blob: Blob;
         try {
-            console.trace('DynamicMediaClient.downloadAsset() REQUEST');
             const response = await this.client.request({
                 url: url,
                 method: 'GET',
@@ -641,72 +761,48 @@ export class DynamicMediaClient {
 
     async getAssetRenditions(asset: Asset): Promise<{ items?: Rendition[] }> {
         try {
-            console.trace('DynamicMediaClient.getAssetRenditions() REQUEST');
-            const response = await this.client.request({
+            return await this.makeRequest<{ items?: Rendition[] }>({
                 url: `/adobe/assets/${asset?.assetId}/renditions`,
                 method: 'GET'
             });
-
-            return response.data;
         } catch (error) {
-            if (axios.isAxiosError(error)) {
-                throw new Error(`Failed to fetch assetId "${asset?.assetId}": ${error.message}`);
-            }
-            throw error;
-        }
-    }
-
-    async getAssetImagePresets(asset: Asset): Promise<{ items: Rendition[] }> {
-        try {
-            console.trace('DynamicMediaClient.getAssetImagePresets() REQUEST');
-            const response = await this.client.request({
-                url: `/adobe/assets/imagePresets`,
-                method: 'GET'
-            });
-
-            return response.data;
-        } catch (error) {
-            if (axios.isAxiosError(error)) {
-                throw new Error(`Failed to fetch assetId "${asset?.assetId}": ${error.message}`);
-            }
-            throw error;
+            throw new Error(`Failed to fetch assetId "${asset?.assetId}": ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
     async getImagePresets(): Promise<{ items: Rendition[] }> {
         try {
-            console.trace('DynamicMediaClient.getImagePresets() REQUEST');
-            const response = await this.client.request({
+            return await this.makeRequest<{ items: Rendition[] }>({
                 url: `/adobe/assets/imagePresets`,
                 method: 'GET'
             });
-
-            return response.data;
         } catch (error) {
-            if (axios.isAxiosError(error)) {
-                throw new Error(`Failed to fetch image presets: ${error.message}`);
-            }
-            throw error;
+            throw new Error(`Failed to fetch image presets: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
     async downloadAssetsArchive(assetRenditionPairs: AssetRenditionPair[]): Promise<boolean> {
-        try {
-            const payload = {
-                items: assetRenditionPairs.map(pair => ({
-                    assetId: pair.asset.assetId,
-                    includeRenditions: pair.renditions.map(rendition => rendition.name)
-                }))
-            };
+        const payload = {
+            items: assetRenditionPairs.map(pair => ({
+                assetId: pair.asset.assetId,
+                includeRenditions: pair.renditions.map(rendition => rendition.name)
+            }))
+        };
 
-            console.trace('DynamicMediaClient.downloadAssetsArchive() REQUEST');
-            const response = await this.client.request({
+        try {
+            // Create the archive
+            const response = await this.makeRequest<{ id: string }>({
                 url: `/adobe/assets/archives`,
                 method: 'POST',
-                data: payload
+                data: payload,
+                allowUndefinedResponse: true
             });
 
-            const archiveId = response.data.id;
+            if (!response) {
+                return false;
+            }
+
+            const archiveId = response.id;
 
             // Poll for status until no longer processing
             let archiveStatus: ArchiveStatus | undefined;
@@ -734,27 +830,19 @@ export class DynamicMediaClient {
 
             return false;
         } catch (error) {
-            if (axios.isAxiosError(error) && error.response?.status !== 200) {
-                return false;
-            }
-            throw error;
+            return false;
         }
     }
 
     async getAssetsArchiveStatus(archiveId: string): Promise<ArchiveStatus | undefined> {
         try {
-            console.trace('DynamicMediaClient.getAssetsArchiveStatus() REQUEST');
-            const response = await this.client.request({
+            return await this.makeRequest<ArchiveStatus>({
                 url: `/adobe/assets/archives/${archiveId}/status`,
-                method: 'GET'
+                method: 'GET',
+                allowUndefinedResponse: true
             });
-
-            return response.data;
         } catch (error) {
-            if (axios.isAxiosError(error) && error.response?.status !== 200) {
-                return undefined;
-            }
-            throw error;
+            throw new Error(`Failed to get archive status: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
