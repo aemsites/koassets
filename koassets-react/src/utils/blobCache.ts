@@ -131,7 +131,6 @@ export const removeBlobFromCache = (assetId: string): void => {
             localStorage.removeItem(key);
         });
 
-        console.log(`Removed ${keysToRemove.length} cached blobs for asset: ${assetId}`);
     } catch (error) {
         console.warn('Failed to remove cached blobs:', error);
     }

@@ -35,7 +35,7 @@ declare global {
 // Components
 import { CalendarDate } from '@internationalized/date';
 import { createPortal } from 'react-dom';
-import { CheckRightsRequest, FadelClient } from '../clients/fadel-client';
+import { AuthorizationStatus, CheckRightsRequest, FadelClient } from '../clients/fadel-client';
 import { calendarDateToEpoch } from '../utils/formatters';
 import CartPanel from './CartPanel';
 import Facets from './Facets';
@@ -280,31 +280,27 @@ function MainApp(): React.JSX.Element {
 
                     // When performing a rights search, we need to check the rights of the assets
                     if (isRightsSearchRef.current) {
-                        console.log('TTT rightsDate', calendarDateToEpoch(rightsStartDate as CalendarDate), calendarDateToEpoch(rightsEndDate as CalendarDate));
-                        console.log('TTT selectedFacetFilters', JSON.stringify(selectedFacetFilters));
-                        console.log('TTT processedImages', processedImages);
-                        console.log('TTT selectedMarkets', selectedMarkets);
-                        console.log('TTT selectedMediaChannels', selectedMediaChannels);
                         const checkRightsRequest: CheckRightsRequest = {
                             inDate: calendarDateToEpoch(rightsStartDate as CalendarDate),
                             outDate: calendarDateToEpoch(rightsEndDate as CalendarDate),
-                            selectedExternalAssets: processedImages.map(image => image.assetId).filter((id): id is string => Boolean(id)).map(id => id.replace('urn:aaid:aem:', '')),
+                            selectedExternalAssets: processedImages.filter(image => image.readyToUse?.toLowerCase() !== 'yes').map(image => image.assetId).filter((id): id is string => Boolean(id)).map(id => id.replace('urn:aaid:aem:', '')),
                             selectedRights: {
                                 "20": Array.from(selectedMediaChannels).map(channel => channel.id),
                                 "30": Array.from(selectedMarkets).map(market => market.id)
                             }
                         };
-                        console.log('TTT checkRightsRequest', checkRightsRequest);
                         const fadelClient = FadelClient.getInstance();
                         const checkRightsResponse = await fadelClient.checkRights(checkRightsRequest);
-                        console.log('TTT checkRightsResponse', checkRightsResponse);
+                        // Assets that are not in the response are considered authorized
                         processedImages.forEach(image => {
                             const matchingItem = checkRightsResponse.restOfAssets.find(item => `urn:aaid:aem:${item.asset.assetExtId}` === image.assetId);
-                            image.authorized = matchingItem ? !(matchingItem.notAvailable === true || matchingItem.availableExcept === true) : true;
+                            image.authorized = matchingItem ? (matchingItem.notAvailable ? AuthorizationStatus.NOT_AVAILABLE
+                                : (matchingItem.availableExcept ? AuthorizationStatus.AVAILABLE_EXCEPT : AuthorizationStatus.AVAILABLE))
+                                : AuthorizationStatus.AVAILABLE;
                         });
-                        console.log('TTT processedImages', processedImages);
                     }
 
+                    // Update state after processing (with or without rights check)
                     if (isLoadingMore) {
                         // Append to existing images
                         setDmImages(prev => [...prev, ...processedImages]);
@@ -324,7 +320,7 @@ function MainApp(): React.JSX.Element {
         }
         setLoading(prev => ({ ...prev, [LOADING.dmImages]: false }));
         setIsLoadingMore(false);
-    }, [rightsStartDate, rightsEndDate, selectedFacetFilters, selectedMarkets, selectedMediaChannels]);
+    }, [rightsStartDate, rightsEndDate, selectedMarkets, selectedMediaChannels]);
 
 
 
@@ -340,7 +336,6 @@ function MainApp(): React.JSX.Element {
             setCurrentPage(0);
         }
         setCurrentView(CURRENT_VIEW.images);
-
         dynamicMediaClient.searchAssets(query.trim(), {
             collectionId: selectedCollection?.collectionId,
             facets: excFacets ? transformExcFacetsToHierarchyArray(excFacets) : [],
@@ -388,6 +383,10 @@ function MainApp(): React.JSX.Element {
         const queryToUse = searchQuery !== undefined ? searchQuery : query;
         performSearchImages(queryToUse, 0);
     }, [performSearchImages, query]);
+
+
+
+
 
     // Read query and selectedQueryType from URL on mount
     useEffect(() => {
@@ -444,7 +443,7 @@ function MainApp(): React.JSX.Element {
             search();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dynamicMediaClient, authenticated, excFacets, selectedFacetFilters, selectedNumericFilters, searchDisabled]);
+    }, [dynamicMediaClient, authenticated, excFacets, selectedFacetFilters, selectedNumericFilters, searchDisabled, selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate]);
 
     useEffect(() => {
         if (authenticated && !settingsLoadedRef.current) {

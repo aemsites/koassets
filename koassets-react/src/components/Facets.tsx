@@ -151,20 +151,35 @@ const Facets: React.FC<FacetsProps> = ({
     }, [searchResults]);
 
     // Clean up checked state when facets are no longer available or have zero counts
+    // BUT preserve facets that are currently applied as filters (user-selected)
     useEffect(() => {
         setChecked(prevChecked => {
             const updatedChecked = { ...prevChecked };
             let hasChanges = false;
 
+            // Get currently applied facet filters to preserve them
+            const appliedFacets = new Set<string>();
+            selectedFacetFilters?.forEach(filterGroup => {
+                filterGroup.forEach(filter => {
+                    appliedFacets.add(filter);
+                });
+            });
+
             // For each entry of checked of (facetTechId, value)
             Object.entries(prevChecked).forEach(([facetTechId, value]) => {
                 // For each entry of value of (facetName, isChecked)
                 Object.entries(value).forEach(([facetName, isChecked]) => {
+                    const facetFilter = `${facetTechId}:${facetName}`;
+
+                    // Don't clean up facets that are currently applied as filters
+                    const isCurrentlyApplied = appliedFacets.has(facetFilter);
+
                     // If facetTechId not in combinedFacets.keys or facetName not in combinedFacets[facetTechId] or combinedFacets[facetTechId][facetName] === 0
-                    if (!combinedFacets ||
-                        !(facetTechId in combinedFacets) ||
-                        !(facetName in (combinedFacets[facetTechId] || {})) ||
-                        (combinedFacets[facetTechId] && combinedFacets[facetTechId][facetName] === 0)) {
+                    if (!isCurrentlyApplied &&
+                        (!combinedFacets ||
+                            !(facetTechId in combinedFacets) ||
+                            !(facetName in (combinedFacets[facetTechId] || {})) ||
+                            (combinedFacets[facetTechId] && combinedFacets[facetTechId][facetName] === 0))) {
                         // Set checked[facetTechId][facetName] to false
                         if (isChecked) {
                             updatedChecked[facetTechId] = {
@@ -179,7 +194,7 @@ const Facets: React.FC<FacetsProps> = ({
 
             return hasChanges ? updatedChecked : prevChecked;
         });
-    }, [combinedFacets]);
+    }, [combinedFacets, selectedFacetFilters]);
 
     // Memoized hierarchy data computation for all facets
     const hierarchyDataByFacet = useMemo(() => {

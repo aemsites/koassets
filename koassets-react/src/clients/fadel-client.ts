@@ -28,6 +28,12 @@ export interface RightsAttribute {
     orgLst: RightsAttributeOrg[];
 }
 
+export enum AuthorizationStatus {
+    AVAILABLE = 'available',
+    NOT_AVAILABLE = 'not_available',
+    AVAILABLE_EXCEPT = 'available_except'
+}
+
 export interface MediaRightsResponse {
     attribute: RightsAttribute[];
 }

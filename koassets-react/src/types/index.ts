@@ -184,7 +184,7 @@ export interface Asset {
         items?: Rendition[];
         'repo:name'?: string;
     };
-    authorized?: boolean;
+    authorized?: string;
     [key: string]: unknown; // For additional Algolia hit properties
 }
 

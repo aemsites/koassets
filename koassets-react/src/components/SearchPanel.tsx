@@ -137,7 +137,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
                                         onChange={(e) => onSelectAuthorized?.(e.target.checked)}
                                     />
                                     <label htmlFor="select-authorized">
-                                        Show only authorized assets {selectedCount > 0 && <span className="dropdown-count">({selectedCount})</span>}
+                                        Show only authorized assets
                                     </label>
                                 </div>
                             )}

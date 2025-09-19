@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { AuthorizationStatus } from '../clients/fadel-client';
 import { DEFAULT_ACCORDION_CONFIG } from '../constants/accordion';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type { Asset, ImageGalleryProps } from '../types';
@@ -68,8 +69,17 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     const selectedCount = selectedCards.size;
 
     useEffect(() => {
-        setVisibleImages(images.filter(image => image.authorized === undefined || image.authorized === true));
+        selectAuthorized ? setVisibleImages(images.filter(image => image.authorized === undefined || image.authorized === AuthorizationStatus.AVAILABLE)) : setVisibleImages(images);
+
+        // Clear selection when filter changes to avoid showing incorrect counts
+        setSelectedCards(new Set());
     }, [images, selectAuthorized]);
+
+    // Reset select-authorized checkbox when new search results come in
+    useEffect(() => {
+        // Reset select-authorized checkbox (selectedCards is already cleared by the effect above)
+        setSelectAuthorized(false);
+    }, [images]);
 
     // Handle keyboard events for modals
     useEffect(() => {
@@ -260,18 +270,18 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 ) : (
                     <>
                         <div className={viewType === 'grid' ? 'image-grid' : 'image-grid-list'}>
-                            {visibleImages.map((image) => {
+                            {visibleImages.map((visibleImage) => {
                                 const CardComponent = viewType === 'grid' ? AssetCardViewGrid : AssetCardViewList;
                                 return (
                                     <CardComponent
-                                        key={image.assetId}
-                                        image={image}
+                                        key={visibleImage.assetId}
+                                        image={visibleImage}
                                         handleCardDetailClick={handleCardDetailClick}
                                         handlePreviewClick={handleCardPreviewClick}
                                         handleAddToCart={handleAddToCart}
                                         handleRemoveFromCart={onRemoveFromCart}
                                         cartItems={cartItems}
-                                        isSelected={selectedCards.has(image.assetId || '')}
+                                        isSelected={selectedCards.has(visibleImage.assetId || '')}
                                         onCheckboxChange={handleCheckboxChange}
                                         showFullDetails={showFullDetails}
                                     />

@@ -140,6 +140,12 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
                     const newlyAuthorizedAssets: Asset[] = [];
                     const newAuthorizedIds = new Set<string>();
 
+                    // Create a Set of asset IDs that are in the response for quick lookup
+                    const responseAssetIds = new Set(
+                        response.restOfAssets.map(item => item.asset.assetExtId)
+                    );
+
+                    // Process assets that ARE in response.restOfAssets with available: true
                     response.restOfAssets.forEach(item => {
                         if (item.available === true) {
                             // Find the matching asset in restrictedAssets by comparing assetExtId with cleaned assetId
@@ -151,7 +157,20 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
                             if (matchingAsset && matchingAsset.assetId) {
                                 newlyAuthorizedAssets.push(matchingAsset);
                                 newAuthorizedIds.add(matchingAsset.assetId);
-                                console.log(`Moving asset ${matchingAsset.assetId} from restricted to authorized`);
+                                console.log(`Moving asset ${matchingAsset.assetId} from restricted to authorized (available in response)`);
+                            }
+                        }
+                    });
+
+                    // Process assets that are NOT in response.restOfAssets - these should also be authorized
+                    restrictedAssets.forEach(asset => {
+                        const cleanedAssetId = asset.assetId?.replace('urn:aaid:aem:', '');
+                        if (cleanedAssetId && !responseAssetIds.has(cleanedAssetId)) {
+                            // Asset is not in the response, so it should be authorized
+                            if (asset.assetId && !newAuthorizedIds.has(asset.assetId)) {
+                                newlyAuthorizedAssets.push(asset);
+                                newAuthorizedIds.add(asset.assetId);
+                                console.log(`Moving asset ${asset.assetId} from restricted to authorized (not in response - presumed authorized)`);
                             }
                         }
                     });
