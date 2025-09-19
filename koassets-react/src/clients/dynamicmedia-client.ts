@@ -253,7 +253,42 @@ export class DynamicMediaClient {
                     throw new Error(`Request failed: ${response.statusText}`);
                 }
 
-                return response.json();
+                // Handle different response types intelligently
+                const contentType = response.headers.get('content-type');
+                const contentLength = response.headers.get('content-length');
+
+                // Handle empty responses
+                if (contentLength === '0' || response.status === 204) {
+                    return allowUndefinedResponse ? undefined as T : {} as T;
+                }
+
+                // Handle JSON responses
+                if (contentType && contentType.includes('application/json')) {
+                    return response.json();
+                }
+
+                // Handle text responses
+                if (contentType && (contentType.includes('text/') || contentType.includes('application/text'))) {
+                    const text = await response.text();
+                    // Try to parse as JSON if it looks like JSON
+                    if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+                        try {
+                            return JSON.parse(text);
+                        } catch {
+                            // If parsing fails, return text as-is or undefined
+                            return allowUndefinedResponse ? undefined as T : text as T;
+                        }
+                    }
+                    return allowUndefinedResponse ? undefined as T : text as T;
+                }
+
+                // For unknown content types, attempt JSON parsing as fallback
+                try {
+                    return response.json();
+                } catch {
+                    // If all else fails, return appropriate fallback
+                    return allowUndefinedResponse ? undefined as T : {} as T;
+                }
             } catch (error) {
                 if (error instanceof Error) {
                     throw error;
@@ -737,20 +772,13 @@ export class DynamicMediaClient {
 
         let blob: Blob;
         try {
-            const response = await this.client.request({
+            blob = await this.makeRequestBlob({
                 url: url,
                 method: 'GET',
-                params: queryParams,
-                responseType: 'blob'
+                params: queryParams
             });
-
-            // Get binary data as blob
-            blob = response.data as Blob;
         } catch (error) {
-            if (axios.isAxiosError(error)) {
-                throw new Error(`Failed to download assetId "${asset?.assetId}": ${error.message}`);
-            }
-            throw error;
+            throw new Error(`Failed to download assetId "${asset?.assetId}": ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
 
         // Trigger download using reusable method
