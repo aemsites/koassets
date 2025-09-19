@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FacetCheckedState, FacetsProps, SavedSearch, SearchResult } from '../types';
 import DateRange, { DateRangeRef } from './DateRange';
 import './Facets.css';
+import buildSavedSearchUrl from '../../../scripts/saved-search-utils.js';
 
 interface ExpandedFacetsState {
     [key: string]: boolean;
@@ -680,28 +681,10 @@ const Facets: React.FC<FacetsProps> = ({
         return facetFilterCount + numericFilterCount;
     };
 
-    // Helpers to generate a shareable link-like string for a saved search
-    const buildSavedSearchLink = (savedSearch: SavedSearch): string => {
-        const params = new URLSearchParams();
-        if (savedSearch.searchTerm) {
-            params.set('fulltext', savedSearch.searchTerm);
-        }
-        if (savedSearch.facetFilters?.length) {
-            params.set('facetFilters', encodeURIComponent(JSON.stringify(savedSearch.facetFilters)));
-        }
-        if (savedSearch.numericFilters?.length) {
-            params.set('numericFilters', encodeURIComponent(JSON.stringify(savedSearch.numericFilters)));
-        }
-
-        // Build complete URL with current host and path
-        const currentUrl = new URL(window.location.href);
-        const baseUrl = `${currentUrl.protocol}//${currentUrl.host}${currentUrl.pathname}`;
-        return `${baseUrl}?${params.toString()}`;
-    };
 
     const handleCopySavedSearch = async (savedSearch: SavedSearch) => {
         try {
-            const link = buildSavedSearchLink(savedSearch);
+            const link = buildSavedSearchUrl(savedSearch);
             await navigator.clipboard.writeText(link);
             const now = Date.now();
             const updated = savedSearches.map(s => s.id === savedSearch.id ? { ...s, dateLastUsed: now } : s);
@@ -713,7 +696,7 @@ const Facets: React.FC<FacetsProps> = ({
         } catch (e) {
             console.warn('[SavedSearch] clipboard copy failed, falling back to prompt');
             // Fallback
-            window.prompt('Copy this link', buildSavedSearchLink(savedSearch));
+            window.prompt('Copy this link', buildSavedSearchUrl(savedSearch));
             const now = Date.now();
             const updated = savedSearches.map(s => s.id === savedSearch.id ? { ...s, dateLastUsed: now } : s);
             setSavedSearches(updated);
@@ -739,7 +722,7 @@ const Facets: React.FC<FacetsProps> = ({
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
     const handleOpenEditLink = (savedSearch: SavedSearch) => {
-        const link = buildSavedSearchLink(savedSearch);
+        const link = buildSavedSearchUrl(savedSearch);
         setEditLinkText(link);
         setEditingSearchName(savedSearch.name);
         setEditingSearchId(savedSearch.id);
