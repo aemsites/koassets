@@ -120,20 +120,12 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                         </div>
                     </div>
 
-                    {dynamicMediaClient?.isIMSAuthenticated() ? (
-                        <LazyImage
-                            asset={image}
-                            width={350}
-                            className="image-container"
-                            alt={image.alt || image.name}
-                        />
-                    ) : (
-                        <picture>
-                            <source type="image/webp" srcSet={`/api/adobe/assets/${image.assetId}/as/${fileName}.webp?width=350`} />
-                            <source type="image/jpg" srcSet={`/api/adobe/assets/${image.assetId}/as/${fileName}.jpg?width=350`} />
-                            <img loading="lazy" src={`/api/adobe/assets/${image.assetId}/as/${fileName}.jpg?width=350`} alt={image.alt || image.name} onError={(e) => { (e.target as HTMLImageElement).parentElement?.classList.add('missing'); }} />
-                        </picture>
-                    )}
+                    <LazyImage
+                        asset={image}
+                        width={350}
+                        className="image-container"
+                        alt={image.alt || image.name}
+                    />
                 </div>
 
                 <div className="product-info-container">
