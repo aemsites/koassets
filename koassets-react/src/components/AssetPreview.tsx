@@ -160,11 +160,14 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                                 <p>Loading optimized image...</p>
                             </div>
                         ) : (
-                            <img
-                                src={blobUrl || selectedImage.url}
-                                alt={selectedImage.alt || selectedImage.name}
-                                className="modal-image"
-                            />
+                            <div className="preview-image">
+                                <img
+                                    src={blobUrl || selectedImage.url}
+                                    alt={selectedImage.alt || selectedImage.name}
+                                    className="modal-image"
+                                    onError={(e) => { (e.target as HTMLImageElement)?.parentElement?.classList.add('missing'); }}
+                                />
+                            </div>
                         )}
                     </div>
 

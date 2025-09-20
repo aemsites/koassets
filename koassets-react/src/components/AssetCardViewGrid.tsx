@@ -84,9 +84,6 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
         window.dispatchEvent(event);
     };
 
-    // Remove the file extension from the asset name and encode for src/srcset attribute below
-    const fileName = encodeURIComponent(image.name?.replace(/\.[^/.]+$/, '') || 'thumbnail');
-
     return (
         <div className="asset-card-view-grid" id={image.assetId}>
             <div className="asset-card-view-grid-inner">

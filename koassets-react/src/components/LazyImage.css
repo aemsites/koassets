@@ -26,10 +26,6 @@
     display: none;
 }
 
-.lazy-image.loaded {
-    display: block;
-}
-
 /* Hover effect - applied by parent card */
 .asset-card-view-grid:hover .lazy-image {
     transform: scale(1.1);

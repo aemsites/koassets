@@ -110,11 +110,14 @@ const LazyImage: React.FC<LazyImageProps> = ({
             )}
 
             {imageUrl && !isError && (
-                <img
-                    src={imageUrl}
-                    alt={alt || asset.alt || asset.name}
-                    className={`lazy-image ${isLoading ? 'loading' : 'loaded'}`}
-                />
+                <div className="preview-image">
+                    <img
+                        src={imageUrl}
+                        alt={alt || asset.alt || asset.name}
+                        className={`lazy-image ${isLoading && 'loading'}`}
+                        onError={(e) => { (e.target as HTMLImageElement)?.parentElement?.classList.add('missing'); }}
+                    />
+                </div>
             )}
 
             {!isVisible && !isLoading && !isError && (
