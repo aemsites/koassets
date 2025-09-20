@@ -212,11 +212,14 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                         <span>Add to Collection</span>
                                     </div>
                                 </div>
-                                <img
-                                    src={blobUrl || selectedImage.url}
-                                    alt={selectedImage.alt || selectedImage.name}
-                                    className="asset-details-main-image"
-                                />
+                                <div className="preview-image">
+                                    <img
+                                        src={blobUrl || selectedImage.url}
+                                        alt={selectedImage.alt || selectedImage.name}
+                                        className="asset-details-main-image"
+                                        onError={(e) => { (e.target as HTMLImageElement)?.parentElement?.classList.add('missing'); }}
+                                    />
+                                </div>
                             </div>
                         )}
                     </div>
