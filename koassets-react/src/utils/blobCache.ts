@@ -27,6 +27,10 @@ export async function fetchOptimizedDeliveryBlob(
         return options.fallbackUrl || null;
     }
 
+    if (!dynamicMediaClient.isIMSAuthenticated()) { // use window.user
+        return dynamicMediaClient.getOptimizedDeliveryPreviewUrl(asset.assetId || '', asset.name || '', width);
+    }
+
     try {
         // Check cache first if caching is enabled
         if (options.cache && options.cacheKey) {

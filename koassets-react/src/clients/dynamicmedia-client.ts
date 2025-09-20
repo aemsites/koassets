@@ -692,7 +692,7 @@ export class DynamicMediaClient {
         // Convert video extensions to avif for optimal delivery
         const processedRepoName = this.changeToSupportedPreview(repoName);
 
-        return `https://${this.bucket}.adobeaemcloud.com/adobe/assets/${assetId}/as/preview-${processedRepoName}?width=${width}&preferwebp=true`;
+        return `/api/adobe/assets/${assetId}/as/preview-${processedRepoName}?width=${width}&preferwebp=true`;
     }
 
     async getDownloadTokenResp(asset: Asset): Promise<{ token: string, expiryTime: number } | undefined> {
