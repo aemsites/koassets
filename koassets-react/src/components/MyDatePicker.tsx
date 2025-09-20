@@ -7,15 +7,16 @@ interface MyDatePickerProps<T extends DateValue> extends DatePickerProps<T> {
     description?: string;
     errorMessage?: string | ((validation: ValidationResult) => string);
     showClearButton?: boolean;
+    className?: string;
     onClear?: () => void;
 }
 
 export default function MyDatePicker<T extends DateValue>(
-    { description, errorMessage, showClearButton = false, onClear, ...props }:
+    { description, errorMessage, showClearButton = false, onClear, className, ...props }:
         MyDatePickerProps<T>
 ) {
     return (
-        <DatePicker {...props} className="my-date-picker">
+        <DatePicker {...props} className={`my-date-picker ${className}`}>
             {/* <Label>{label}</Label> */}
             <div className="date-picker-wrapper">
                 <Group>

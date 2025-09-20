@@ -1,17 +1,13 @@
-import { ToastQueue } from '@react-spectrum/toast';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FadelClient, type RightsAttribute } from '../clients/fadel-client';
+import { AuthorizationStatus } from '../clients/fadel-client';
 import { restrictedBrandsWarning, smrWarnings } from '../constants/warnings';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type {
     Asset,
-    AuthorizedCartItem,
-    CachedRightsData,
     CartPanelAssetsProps,
     RequestDownloadStepData,
     RequestRightsExtensionStepData,
     RightsCheckStepData,
-    RightsData,
     WorkflowStepData,
     WorkflowStepIcons,
     WorkflowStepStatuses
@@ -32,10 +28,8 @@ interface CartItemRowProps {
 }
 
 const CartItemRow: React.FC<CartItemRowProps> = ({ item, onRemoveItem }) => {
-    const authorizedItem = item as AuthorizedCartItem;
-
     return (
-        <div className={`cart-item-row ${authorizedItem.authorized === false ? 'disabled' : ''}`}>
+        <div className={`cart-item-row`}>
             <div className="col-thumbnail">
                 <ThumbnailImage item={item} />
             </div>
@@ -264,117 +258,6 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         agreesToTerms: false
     });
 
-    // State for cached rights data
-    const [cachedRightsData, setCachedRightsData] = useState<CachedRightsData>({
-        marketsData: [],
-        mediaChannelsData: [],
-        isLoaded: false
-    });
-
-    // TEMP DEBUG: Initialize debug data on component load
-    // useEffect(() => {
-    //     // Set debug data immediately with placeholder data
-    //     const todayDate = new Date();
-    //     const tomorrowDate = new Date(todayDate);
-    //     tomorrowDate.setDate(todayDate.getDate() + 1);
-
-    //     const todayCalendar = new CalendarDate(todayDate.getFullYear(), todayDate.getMonth() + 1, todayDate.getDate());
-    //     const tomorrowCalendar = new CalendarDate(tomorrowDate.getFullYear(), tomorrowDate.getMonth() + 1, tomorrowDate.getDate());
-
-    //     // Create placeholder "All" options
-    //     const placeholderAllMarket: RightsData = { rightId: 0, name: 'All', enabled: true };
-    //     const placeholderAllMediaChannel: RightsData = { rightId: 0, name: 'All', enabled: true };
-
-    //     setStepData(prevStepData => ({
-    //         ...prevStepData,
-    //         requestDownload: {
-    //             airDate: todayCalendar,
-    //             pullDate: tomorrowCalendar,
-    //             markets: [placeholderAllMarket],
-    //             mediaChannels: [placeholderAllMediaChannel],
-    //             selectedMarkets: new Set([placeholderAllMarket]),
-    //             selectedMediaChannels: new Set([placeholderAllMediaChannel]),
-    //             marketSearchTerm: '',
-    //             dateValidationError: ''
-    //         }
-    //     }));
-    // }, []); // Empty dependency array - runs only on mount
-
-
-    // Transform RightsAttribute[] to RightsData[] - copied from CartRequestDownload
-    const transformRightsAttributesToRightsData = useCallback((rightsAttributes: RightsAttribute[]): RightsData[] => {
-        if (!rightsAttributes || rightsAttributes.length === 0) {
-            return [];
-        }
-
-        const rootAttribute = rightsAttributes[0]; // The root "All" element
-
-        const transformAttribute = (attr: RightsAttribute): RightsData => ({
-            id: attr.id,
-            rightId: attr.right.rightId,
-            name: attr.right.description,
-            enabled: attr.enabled,
-            children: attr.childrenLst?.map(transformAttribute) || []
-        });
-
-        // First element is "All" from the root
-        const allElement: RightsData = {
-            id: rootAttribute.id,
-            rightId: rootAttribute.right.rightId,
-            name: rootAttribute.right.description,
-            enabled: rootAttribute.enabled,
-            children: []
-        };
-
-        // Other elements are from root's childrenLst
-        const childElements = rootAttribute.childrenLst?.map(transformAttribute) || [];
-
-        return [allElement, ...childElements];
-    }, []);
-
-    // Fetch and cache rights data
-    const fetchRightsData = useCallback(async () => {
-        if (cachedRightsData.isLoaded) {
-            return; // Already loaded, no need to fetch again
-        }
-
-        try {
-            const fadelClient = FadelClient.getInstance();
-            // Fetch both market rights and media rights in parallel
-            const [marketRightsResponse, mediaRightsResponse] = await Promise.all([
-                fadelClient.fetchMarketRights(),
-                fadelClient.fetchMediaRights()
-                // Promise.resolve({ attribute: [] }) // TEMP DEBUG: enable
-            ]);
-
-            const marketsData = transformRightsAttributesToRightsData(marketRightsResponse.attribute);
-            const mediaChannelsData = transformRightsAttributesToRightsData(mediaRightsResponse.attribute);
-
-            setCachedRightsData({
-                marketsData,
-                mediaChannelsData,
-                isLoaded: true
-            });
-        } catch (error) {
-            console.error('Failed to fetch rights data:', error);
-            ToastQueue.negative('Failed to fetch Rights Data', { timeout: 2000 });
-
-            // Set empty data but mark as loaded to prevent infinite retries
-            setCachedRightsData({
-                marketsData: [],
-                mediaChannelsData: [],
-                isLoaded: true
-            });
-        }
-    }, [cachedRightsData.isLoaded, transformRightsAttributesToRightsData]);
-
-    // Effect to fetch rights data when component mounts or when moving to REQUEST_DOWNLOAD step
-    useEffect(() => {
-        if (activeStep === WorkflowStep.REQUEST_DOWNLOAD && !cachedRightsData.isLoaded) {
-            fetchRightsData();
-        }
-    }, [activeStep, fetchRightsData, cachedRightsData.isLoaded]);
-
     // Notify parent when activeStep changes
     useEffect(() => {
         onActiveStepChange(activeStep);
@@ -383,7 +266,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     // Monitor stepStatus changes and handle each status for all steps
     useEffect(() => {
         Object.entries(stepStatus).forEach(([step, status]) => {
-            console.log(`Step "${step}" status changed to: ${status}`);
+            console.debug(`Step "${step}" status changed to: ${status}`);
 
             switch (step as WorkflowStep) {
                 case WorkflowStep.CART:
@@ -539,7 +422,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     useEffect(() => {
         setFilteredItems(prev => ({
             ...prev,
-            [FilteredItemsType.READY_TO_USE]: cartItems.filter(item => item?.readyToUse?.toLowerCase() === 'yes')
+            [FilteredItemsType.READY_TO_USE]: cartItems.filter(item => item?.readyToUse?.toLowerCase() === 'yes' || item?.authorized === AuthorizationStatus.AVAILABLE)
         }));
     }, [cartItems]);
 
@@ -688,14 +571,13 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             // Remove successfully downloaded assets from cart
             if (successfulAssets && successfulAssets.length > 0) {
                 const successfulAssetIds = successfulAssets.map(asset => asset.assetId);
-                setCartItems(prevItems =>
-                    prevItems.filter(item => !successfulAssetIds.includes(item.assetId))
-                );
+                const newCartItems = cartItems.filter(item => !successfulAssetIds.includes(item.assetId));
+                setCartItems(newCartItems);
             }
         } else {
             setStepStatus(prev => ({ ...prev, [WorkflowStep.DOWNLOAD]: StepStatus.FAILURE }));
         }
-    }, [setCartItems]);
+    }, [setCartItems, cartItems]);
 
     // Helper function to render step icon - simply returns the stepIcon for that step
     const renderStepIcon = useCallback((step: WorkflowStep, defaultIcon?: string): React.JSX.Element | string => {
@@ -759,7 +641,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     }, [cartItems]);
 
     const hasAllItemsReadyToUse = useMemo(() => {
-        return cartItems.every(item => item?.readyToUse?.toLowerCase() === 'yes');
+        return cartItems.every(item => item?.readyToUse?.toLowerCase() === 'yes' || item?.authorized === AuthorizationStatus.AVAILABLE);
     }, [cartItems]);
 
     // Memoized download assets data for DownloadRenditionsContent
@@ -867,11 +749,11 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                         }));
                     }}
                     initialData={stepData.requestDownload}
-                    cachedRightsData={cachedRightsData}
                 />
             ) : activeStep === WorkflowStep.RIGHTS_CHECK ? (
                 <CartRightsCheck
                     cartItems={cartItems}
+                    setCartItems={setCartItems}
                     intendedUse={stepData.requestDownload || {
                         airDate: null,
                         pullDate: null,

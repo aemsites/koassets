@@ -1,4 +1,6 @@
+import { ToastQueue } from '@react-spectrum/toast';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { DateValue } from 'react-aria-components';
 import '../MainApp.css';
 
 import { DynamicMediaClient } from '../clients/dynamicmedia-client';
@@ -11,6 +13,7 @@ import type {
     ExternalParams,
     LoadingState,
     Rendition,
+    RightsData,
     SearchResult,
     SearchResults
 } from '../types';
@@ -31,7 +34,10 @@ declare global {
 }
 
 // Components
+import { CalendarDate } from '@internationalized/date';
 import { createPortal } from 'react-dom';
+import { AuthorizationStatus, CheckRightsRequest, FadelClient } from '../clients/fadel-client';
+import { calendarDateToEpoch } from '../utils/formatters';
 import CartPanel from './CartPanel';
 import Facets from './Facets';
 import HeaderBar from './HeaderBar';
@@ -114,6 +120,25 @@ function MainApp(): React.JSX.Element {
     const [selectedQueryType, setSelectedQueryType] = useState<string>(QUERY_TYPES.ASSETS);
     const [selectedFacetFilters, setSelectedFacetFilters] = useState<string[][]>([]);
     const [selectedNumericFilters, setSelectedNumericFilters] = useState<string[]>([]);
+    const [searchDisabled, setSearchDisabled] = useState<boolean>(false);
+    const [isRightsSearch, setIsRightsSearch] = useState<boolean>(false);
+    const [rightsStartDate, setRightsStartDate] = useState<DateValue | null>(null);
+    const [rightsEndDate, setRightsEndDate] = useState<DateValue | null>(null);
+    const [selectedMarkets, setSelectedMarkets] = useState<Set<RightsData>>(new Set());
+    const [selectedMediaChannels, setSelectedMediaChannels] = useState<Set<RightsData>>(new Set());
+    const searchDisabledRef = useRef<boolean>(false);
+    const isRightsSearchRef = useRef<boolean>(false);
+
+    const handleSetSearchDisabled = useCallback((disabled: boolean) => {
+        searchDisabledRef.current = disabled; // Update ref immediately
+        setSearchDisabled(disabled);
+    }, []);
+
+    const handleSetIsRightsSearch = useCallback((isRights: boolean) => {
+        isRightsSearchRef.current = isRights; // Update ref immediately
+        setIsRightsSearch(isRights);
+    }, []);
+
     const [presetFilters, setPresetFilters] = useState<string[]>(() =>
         externalParams.presetFilters || []
     );
@@ -252,8 +277,33 @@ function MainApp(): React.JSX.Element {
                 if (hits.length > 0) {
                     // No longer download blobs upfront - just prepare metadata for lazy loading
                     // Each hit is transformed to match the Asset interface
-                    const processedImages: Asset[] = hits.map(populateAssetFromHit);
+                    let processedImages: Asset[] = hits.map(populateAssetFromHit);
 
+                    // When performing a rights search, we need to check the rights of the assets
+                    if (isRightsSearchRef.current) {
+                        const checkRightsRequest: CheckRightsRequest = {
+                            inDate: calendarDateToEpoch(rightsStartDate as CalendarDate),
+                            outDate: calendarDateToEpoch(rightsEndDate as CalendarDate),
+                            selectedExternalAssets: processedImages.filter(image => image.readyToUse?.toLowerCase() !== 'yes').map(image => image.assetId).filter((id): id is string => Boolean(id)).map(id => id.replace('urn:aaid:aem:', '')),
+                            selectedRights: {
+                                "20": Array.from(selectedMediaChannels).map(channel => channel.id),
+                                "30": Array.from(selectedMarkets).map(market => market.id)
+                            }
+                        };
+                        const fadelClient = FadelClient.getInstance();
+                        const checkRightsResponse = await fadelClient.checkRights(checkRightsRequest);
+                        // Assets that are not in the response are considered authorized
+                        // Use immutable update pattern instead of direct mutation
+                        processedImages = processedImages.map(image => {
+                            const matchingItem = checkRightsResponse.restOfAssets.find(item => `urn:aaid:aem:${item.asset.assetExtId}` === image.assetId);
+                            const authorized = matchingItem ? (matchingItem.notAvailable ? AuthorizationStatus.NOT_AVAILABLE
+                                : (matchingItem.availableExcept ? AuthorizationStatus.AVAILABLE_EXCEPT : AuthorizationStatus.AVAILABLE))
+                                : AuthorizationStatus.AVAILABLE;
+                            return { ...image, authorized };
+                        });
+                    }
+
+                    // Update state after processing (with or without rights check)
                     if (isLoadingMore) {
                         // Append to existing images
                         setDmImages(prev => [...prev, ...processedImages]);
@@ -273,7 +323,7 @@ function MainApp(): React.JSX.Element {
         }
         setLoading(prev => ({ ...prev, [LOADING.dmImages]: false }));
         setIsLoadingMore(false);
-    }, []);
+    }, [rightsStartDate, rightsEndDate, selectedMarkets, selectedMediaChannels]);
 
 
 
@@ -289,7 +339,6 @@ function MainApp(): React.JSX.Element {
             setCurrentPage(0);
         }
         setCurrentView(CURRENT_VIEW.images);
-
         dynamicMediaClient.searchAssets(query.trim(), {
             collectionId: selectedCollection?.collectionId,
             facets: excFacets ? transformExcFacetsToHierarchyArray(excFacets) : [],
@@ -329,11 +378,18 @@ function MainApp(): React.JSX.Element {
 
     // Handler for searching
     const search = useCallback((searchQuery?: string): void => {
+        if (searchDisabledRef.current) {
+            return;
+        }
         setCurrentPage(0);
         // Search for assets or assets in a collection
         const queryToUse = searchQuery !== undefined ? searchQuery : query;
         performSearchImages(queryToUse, 0);
     }, [performSearchImages, query]);
+
+
+
+
 
     // Read query and selectedQueryType from URL on mount
     useEffect(() => {
@@ -386,26 +442,21 @@ function MainApp(): React.JSX.Element {
 
     // Auto-search with empty query on app load
     useEffect(() => {
-        if (authenticated && dynamicMediaClient && excFacets !== undefined) {
+        if (!searchDisabled && authenticated && dynamicMediaClient && excFacets !== undefined) {
             search();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dynamicMediaClient, authenticated, excFacets, selectedFacetFilters, selectedNumericFilters]);
+    }, [dynamicMediaClient, authenticated, excFacets, selectedFacetFilters, selectedNumericFilters, searchDisabled, selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate]);
 
     useEffect(() => {
         if (authenticated && !settingsLoadedRef.current) {
             setExcFacets(externalParams.excFacets || DEFAULT_FACETS);
             setPresetFilters(externalParams.presetFilters || []);
             settingsLoadedRef.current = true;
-            // const excClient = new ExcClient({ accessToken });
-            // // Get facets from EXC
-            // excClient.getExcFacets({}).then(facets => {
-            //     setExcFacets(facets);
-            // }).catch(error => {
-            //     console.error('Error fetching facets:', error);
-            // });
         }
     }, [authenticated, externalParams.excFacets, externalParams.presetFilters]);
+
+    // Rights data fetching moved to individual Markets and MediaChannels components
 
 
 
@@ -444,8 +495,9 @@ function MainApp(): React.JSX.Element {
                     asset.imagePresets = presets;
                     console.log('Successfully fetched image presets');
                 } catch (error) {
+                    ToastQueue.negative('Failed to get all renditions info', { timeout: 2000 });
                     console.error('Failed to fetch image presets:', error);
-                    setImagePresets({});
+                    setImagePresets({ items: [] }); // Set empty items array to prevent infinite loop
                 } finally {
                     fetchingImagePresetsRef.current = false;
                 }
@@ -660,6 +712,7 @@ function MainApp(): React.JSX.Element {
                     imagePresets={imagePresets}
                     assetRenditionsCache={assetRenditionsCache}
                     fetchAssetRenditions={fetchAssetRenditions}
+                    isRightsSearch={isRightsSearch}
                 />
             ) : (
                 <></>
@@ -724,6 +777,17 @@ function MainApp(): React.JSX.Element {
                                         setSelectedNumericFilters={setSelectedNumericFilters}
                                         query={query}
                                         setQuery={setQuery}
+                                        searchDisabled={searchDisabled}
+                                        setSearchDisabled={handleSetSearchDisabled}
+                                        setIsRightsSearch={handleSetIsRightsSearch}
+                                        rightsStartDate={rightsStartDate}
+                                        setRightsStartDate={setRightsStartDate}
+                                        rightsEndDate={rightsEndDate}
+                                        setRightsEndDate={setRightsEndDate}
+                                        selectedMarkets={selectedMarkets}
+                                        setSelectedMarkets={setSelectedMarkets}
+                                        selectedMediaChannels={selectedMediaChannels}
+                                        setSelectedMediaChannels={setSelectedMediaChannels}
                                     />
                                 </div>
                             </div>
