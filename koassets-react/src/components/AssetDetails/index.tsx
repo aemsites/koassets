@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useAppConfig } from '../../hooks/useAppConfig';
 import type { AssetDetailsProps, Rendition } from '../../types';
 
+import { AuthorizationStatus } from '../../clients/fadel-client';
 import { fetchOptimizedDeliveryBlob } from '../../utils/blobCache';
 import { removeHyphenTitleCase } from '../../utils/formatters';
 import ActionButton from '../ActionButton';
@@ -48,7 +49,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     const [actionButtonEnable, setActionButtonEnable] = useState<boolean>(false);
     const [watermarkRendition, setWatermarkRendition] = useState<Rendition | undefined>(undefined);
 
-    const rightsFree: boolean = selectedImage?.readyToUse?.toLowerCase() === 'yes' ? true : false;
+    const rightsFree: boolean = (selectedImage?.readyToUse?.toLowerCase() === 'yes' || selectedImage?.authorized === AuthorizationStatus.AVAILABLE) ? true : false;
 
     const handleToggleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setCollapseAll(e.target.checked);

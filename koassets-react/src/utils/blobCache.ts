@@ -27,6 +27,10 @@ export async function fetchOptimizedDeliveryBlob(
         return options.fallbackUrl || null;
     }
 
+    if (!dynamicMediaClient.isIMSAuthenticated()) { // use window.user
+        return dynamicMediaClient.getOptimizedDeliveryPreviewUrl(asset.assetId || '', asset.name || '', width);
+    }
+
     try {
         // Check cache first if caching is enabled
         if (options.cache && options.cacheKey) {
@@ -131,7 +135,6 @@ export const removeBlobFromCache = (assetId: string): void => {
             localStorage.removeItem(key);
         });
 
-        console.log(`Removed ${keysToRemove.length} cached blobs for asset: ${assetId}`);
     } catch (error) {
         console.warn('Failed to remove cached blobs:', error);
     }

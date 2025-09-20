@@ -113,7 +113,7 @@
 
 .asset-card-view-grid .product-title {
     width: fit-content;
-    margin: 0 0 8px 0;
+    margin: 0;
     font-size: 14px;
     font-weight: 600;
     line-height: 1.4;
@@ -254,46 +254,61 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-.asset-card-view-grid .image-wrapper > picture {
-  width: 100%;
-  height: 300px;
-  position: relative;
-  display: block;
+.asset-card-view-grid .image-wrapper>picture {
+    width: 100%;
+    height: 300px;
+    position: relative;
+    display: block;
 }
 
-.asset-card-view-grid .image-wrapper > picture img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  background-color: white;
-  overflow-wrap: break-word;
-  box-sizing: border-box;
-  transition: transform 0.3s ease;
+.asset-card-view-grid .image-wrapper>picture img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background-color: white;
+    overflow-wrap: break-word;
+    box-sizing: border-box;
+    transition: transform 0.3s ease;
 }
 
 /* Hover effect - applied by parent card */
-.asset-card-view-grid:hover .image-wrapper > picture img {
-  transform: scale(1.1);
+.asset-card-view-grid:hover .image-wrapper>picture img {
+    transform: scale(1.1);
 }
 
-.asset-card-view-grid .image-wrapper > picture.missing {
-  background-color: #ffccc7;
-  position: relative;
-  display: block;
+.asset-card-view-grid .image-wrapper>picture.missing {
+    background-color: #ffccc7;
+    position: relative;
+    display: block;
 }
 
-.asset-card-view-grid .image-wrapper > picture.missing::before {
-  content: "Image not available";
-  color: #f5222d;
-  font-family: "TCCC UnityText Regular", sans-serif;
-  text-align: center;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  white-space: nowrap;
+.asset-card-view-grid .image-wrapper>picture.missing::before {
+    content: "Image not available";
+    color: #f5222d;
+    font-family: "TCCC UnityText Regular", sans-serif;
+    text-align: center;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
 }
 
-.asset-card-view-grid .image-wrapper > picture.missing img {
-  display: none;
+.asset-card-view-grid .image-wrapper>picture.missing img {
+    display: none;
+}
+
+.asset-card-view-grid .product-authorized-status {
+    font-family: TCCC UnityHeadline !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    line-height: 12.6px !important;
+}
+
+.asset-card-view-grid .product-authorized-status.green {
+    color: #239c5d !important;
+}
+
+.asset-card-view-grid .product-authorized-status.red {
+    color: #c9372c !important;
 }
