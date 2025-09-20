@@ -277,7 +277,7 @@ function MainApp(): React.JSX.Element {
                 if (hits.length > 0) {
                     // No longer download blobs upfront - just prepare metadata for lazy loading
                     // Each hit is transformed to match the Asset interface
-                    const processedImages: Asset[] = hits.map(populateAssetFromHit);
+                    let processedImages: Asset[] = hits.map(populateAssetFromHit);
 
                     // When performing a rights search, we need to check the rights of the assets
                     if (isRightsSearchRef.current) {
@@ -293,11 +293,13 @@ function MainApp(): React.JSX.Element {
                         const fadelClient = FadelClient.getInstance();
                         const checkRightsResponse = await fadelClient.checkRights(checkRightsRequest);
                         // Assets that are not in the response are considered authorized
-                        processedImages.forEach(image => {
+                        // Use immutable update pattern instead of direct mutation
+                        processedImages = processedImages.map(image => {
                             const matchingItem = checkRightsResponse.restOfAssets.find(item => `urn:aaid:aem:${item.asset.assetExtId}` === image.assetId);
-                            image.authorized = matchingItem ? (matchingItem.notAvailable ? AuthorizationStatus.NOT_AVAILABLE
+                            const authorized = matchingItem ? (matchingItem.notAvailable ? AuthorizationStatus.NOT_AVAILABLE
                                 : (matchingItem.availableExcept ? AuthorizationStatus.AVAILABLE_EXCEPT : AuthorizationStatus.AVAILABLE))
                                 : AuthorizationStatus.AVAILABLE;
+                            return { ...image, authorized };
                         });
                     }
 

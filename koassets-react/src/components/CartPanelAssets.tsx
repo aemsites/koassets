@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { AuthorizationStatus } from '../clients/fadel-client';
 import { restrictedBrandsWarning, smrWarnings } from '../constants/warnings';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type {
@@ -421,7 +422,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     useEffect(() => {
         setFilteredItems(prev => ({
             ...prev,
-            [FilteredItemsType.READY_TO_USE]: cartItems.filter(item => item?.readyToUse?.toLowerCase() === 'yes')
+            [FilteredItemsType.READY_TO_USE]: cartItems.filter(item => item?.readyToUse?.toLowerCase() === 'yes' || item?.authorized === AuthorizationStatus.AVAILABLE)
         }));
     }, [cartItems]);
 
@@ -570,14 +571,13 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             // Remove successfully downloaded assets from cart
             if (successfulAssets && successfulAssets.length > 0) {
                 const successfulAssetIds = successfulAssets.map(asset => asset.assetId);
-                setCartItems(prevItems =>
-                    prevItems.filter(item => !successfulAssetIds.includes(item.assetId))
-                );
+                const newCartItems = cartItems.filter(item => !successfulAssetIds.includes(item.assetId));
+                setCartItems(newCartItems);
             }
         } else {
             setStepStatus(prev => ({ ...prev, [WorkflowStep.DOWNLOAD]: StepStatus.FAILURE }));
         }
-    }, [setCartItems]);
+    }, [setCartItems, cartItems]);
 
     // Helper function to render step icon - simply returns the stepIcon for that step
     const renderStepIcon = useCallback((step: WorkflowStep, defaultIcon?: string): React.JSX.Element | string => {
@@ -641,7 +641,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     }, [cartItems]);
 
     const hasAllItemsReadyToUse = useMemo(() => {
-        return cartItems.every(item => item?.readyToUse?.toLowerCase() === 'yes');
+        return cartItems.every(item => item?.readyToUse?.toLowerCase() === 'yes' || item?.authorized === AuthorizationStatus.AVAILABLE);
     }, [cartItems]);
 
     // Memoized download assets data for DownloadRenditionsContent
@@ -753,6 +753,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             ) : activeStep === WorkflowStep.RIGHTS_CHECK ? (
                 <CartRightsCheck
                     cartItems={cartItems}
+                    setCartItems={setCartItems}
                     intendedUse={stepData.requestDownload || {
                         airDate: null,
                         pullDate: null,

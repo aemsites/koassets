@@ -1,6 +1,6 @@
 import type { CalendarDate } from '@internationalized/date';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FadelClient, type CheckRightsRequest } from '../clients/fadel-client';
+import { AuthorizationStatus, FadelClient, type CheckRightsRequest } from '../clients/fadel-client';
 import type { Asset, RequestDownloadStepData, RightsCheckStepData } from '../types';
 import { calendarDateToEpoch } from '../utils/formatters';
 import './CartRightsCheck.css';
@@ -9,6 +9,7 @@ import ThumbnailImage from './ThumbnailImage';
 
 interface CartRightsCheckProps {
     cartItems: Asset[];
+    setCartItems: React.Dispatch<React.SetStateAction<Asset[]>>;
     intendedUse: RequestDownloadStepData;
     onCancel: () => void;
     onOpenRequestRightsExtension: (restrictedAssets: Asset[], requestDownloadData: RequestDownloadStepData) => void;
@@ -27,6 +28,7 @@ interface DownloadOptions {
 
 const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
     cartItems,
+    setCartItems,
     intendedUse,
     onCancel,
     onOpenRequestRightsExtension,
@@ -47,7 +49,7 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
 
     // Local state for authorized assets (so we can modify it when downloads complete)
     const [authorizedAssets, setAuthorizedAssets] = useState<Asset[]>(() =>
-        cartItems.filter(item => item?.readyToUse?.toLowerCase() === 'yes')
+        cartItems.filter(item => item?.readyToUse?.toLowerCase() === 'yes' || item?.authorized === AuthorizationStatus.AVAILABLE)
     );
 
     // Memoize restrictedAssets to prevent unnecessary re-renders, excluding newly authorized assets
@@ -59,10 +61,24 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
         [cartItems, newlyAuthorizedAssetIds]
     );
 
+    // Update authorization status for newly authorized assets
+    useEffect(() => {
+        if (newlyAuthorizedAssetIds.size > 0) {
+            setCartItems(prevCartItems =>
+                prevCartItems.map(item => {
+                    if (item.assetId && newlyAuthorizedAssetIds.has(item.assetId)) {
+                        return { ...item, authorized: AuthorizationStatus.AVAILABLE };
+                    }
+                    return item;
+                })
+            );
+        }
+    }, [newlyAuthorizedAssetIds, setCartItems]);
+
     // Sync authorized assets when cartItems changes (in case items are added/removed from outside)
     useEffect(() => {
         const newAuthorizedAssets = cartItems.filter(item =>
-            item?.readyToUse?.toLowerCase() === 'yes'
+            item?.readyToUse?.toLowerCase() === 'yes' || item?.authorized === AuthorizationStatus.AVAILABLE
         );
         setAuthorizedAssets(newAuthorizedAssets);
     }, [cartItems]);
