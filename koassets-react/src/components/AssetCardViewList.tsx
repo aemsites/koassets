@@ -1,4 +1,5 @@
 import React from 'react';
+import { AuthorizationStatus } from '../clients/fadel-client';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type { AssetCardProps } from '../types';
 import { getBucket } from '../utils/config';
@@ -79,7 +80,7 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
     };
 
     return (
-        <div className="asset-card-view-list">
+        <div className="asset-card-view-list" id={image.assetId}>
             <div className="asset-card-view-list-inner">
                 <div className="image-wrapper"
                     onClick={(e) => handleCardDetailClick(image, e)}
@@ -134,6 +135,14 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
                             >
                                 {image.title}
                             </div>
+                            <>
+                                {(image.authorized === AuthorizationStatus.AVAILABLE) && (
+                                    <span className="product-authorized-status green">AUTHORIZED</span>
+                                )}
+                                {(image.authorized === AuthorizationStatus.NOT_AVAILABLE || image.authorized === AuthorizationStatus.AVAILABLE_EXCEPT) && (
+                                    <span className="product-authorized-status red">EXTENSION REQUIRED</span>
+                                )}
+                            </>
                         </div>
 
                         {showFullDetails && (

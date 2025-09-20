@@ -147,6 +147,7 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
+
 .asset-card-view-list .asset-checkbox {
     position: absolute;
     top: 10px;
@@ -161,7 +162,6 @@
     font-size: 14px;
     font-weight: 600;
     line-height: 19px;
-    margin-bottom: 4px;
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
@@ -328,4 +328,19 @@
     border: solid white;
     border-width: 0 3px 3px 0;
     display: block;
+}
+
+.asset-card-view-list .product-authorized-status {
+    font-family: TCCC UnityHeadline !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    line-height: 12.6px !important;
+}
+
+.asset-card-view-list .product-authorized-status.green {
+    color: #239c5d !important;
+}
+
+.asset-card-view-list .product-authorized-status.red {
+    color: #c9372c !important;
 }

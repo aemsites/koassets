@@ -1,7 +1,9 @@
 import { CalendarDate } from '@internationalized/date';
 import React, { useCallback, useState } from 'react';
-import type { Asset, CachedRightsData, RequestDownloadStepData, RightsData } from '../types';
+import type { Asset, RequestDownloadStepData, RightsData } from '../types';
 import './CartRequestDownload.css';
+import Markets from './Markets';
+import MediaChannels from './MediaChannels';
 import MyDatePicker from './MyDatePicker';
 import ThumbnailImage from './ThumbnailImage';
 
@@ -11,7 +13,6 @@ interface CartRequestDownloadProps {
     onOpenRightsCheck: (stepData: RequestDownloadStepData) => void;
     onBack: (stepData: RequestDownloadStepData) => void;
     initialData?: RequestDownloadStepData;
-    cachedRightsData: CachedRightsData;
 }
 
 
@@ -34,8 +35,7 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
     onCancel,
     onOpenRightsCheck,
     onBack,
-    initialData,
-    cachedRightsData
+    initialData
 }) => {
     const [airDate, setAirDate] = useState<CalendarDate | null>(initialData?.airDate || null);
     const [pullDate, setPullDate] = useState<CalendarDate | null>(initialData?.pullDate || null);
@@ -47,16 +47,6 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
         initialData?.selectedMediaChannels ||
         (initialData?.mediaChannels ? new Set(initialData.mediaChannels) : new Set())
     );
-    const [marketSearchTerm, setMarketSearchTerm] = useState(initialData?.marketSearchTerm || '');
-    const [expandedRegions, setExpandedRegions] = useState<Set<number>>(new Set());
-
-    // Use cached rights data from parent
-    const marketsData = cachedRightsData.marketsData;
-    const mediaChannelsData = cachedRightsData.mediaChannelsData;
-    const isLoadingMarkets = !cachedRightsData.isLoaded;
-    const isLoadingMediaChannels = !cachedRightsData.isLoaded;
-    const marketsError = '';
-    const mediaChannelsError = '';
 
     // Add validation error message state
     const [dateValidationError, setDateValidationError] = useState<string>(initialData?.dateValidationError || '');
@@ -79,168 +69,6 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
         }
     }, []);
 
-    // Get the "All" option (first item in the list)
-    const getAllOption = useCallback(() => {
-        return marketsData.length > 0 ? marketsData[0] : null;
-    }, [marketsData]);
-
-    // Helper function to check if a parent market is selected
-    const isParentMarketSelected = useCallback((childRightId: number) => {
-        // Find which parent market contains this child
-        const parentMarket = marketsData.find(market =>
-            market.children?.some(child => child.rightId === childRightId)
-        );
-
-        if (!parentMarket) return false;
-
-        // Check if the parent is selected
-        return Array.from(selectedMarkets).some(m => m.rightId === parentMarket.rightId);
-    }, [marketsData, selectedMarkets]);
-
-    // Filter markets based on search term
-    const filteredMarkets = marketsData.filter(market =>
-        market.name.toLowerCase().includes(marketSearchTerm.toLowerCase()) ||
-        market.children?.some(child =>
-            child.name.toLowerCase().includes(marketSearchTerm.toLowerCase())
-        )
-    );
-
-    const handleMarketToggle = useCallback((market: RightsData) => {
-        // Don't allow toggling disabled items
-        if (!market.enabled) {
-            return;
-        }
-
-        // Don't allow toggling children if their parent is selected
-        if (isParentMarketSelected(market.rightId)) {
-            return;
-        }
-
-        const allOption = getAllOption();
-        setSelectedMarkets(prev => {
-            const newSet = new Set(prev);
-
-            if (allOption && market.rightId === allOption.rightId) {
-                // If selecting 'all', clear everything and only keep 'all'
-                const hasAllOption = Array.from(newSet).some(m => m.rightId === allOption.rightId);
-                if (hasAllOption) {
-                    // Remove all option
-                    newSet.forEach(m => {
-                        if (m.rightId === allOption.rightId) {
-                            newSet.delete(m);
-                        }
-                    });
-                } else {
-                    newSet.clear();
-                    newSet.add(allOption);
-                }
-            } else {
-                // If selecting any other market, remove 'all' if it's selected
-                if (allOption) {
-                    newSet.forEach(m => {
-                        if (m.rightId === allOption.rightId) {
-                            newSet.delete(m);
-                        }
-                    });
-                }
-
-                // Toggle the selected market
-                const existingMarket = Array.from(newSet).find(m => m.rightId === market.rightId);
-                if (existingMarket) {
-                    newSet.delete(existingMarket);
-                } else {
-                    // When selecting a parent market, remove any of its children that are selected
-                    if (market.children && market.children.length > 0) {
-                        market.children.forEach(child => {
-                            const selectedChild = Array.from(newSet).find(m => m.rightId === child.rightId);
-                            if (selectedChild) {
-                                newSet.delete(selectedChild);
-                            }
-                        });
-                    }
-
-                    newSet.add(market);
-                }
-            }
-
-            return newSet;
-        });
-    }, [getAllOption, isParentMarketSelected]);
-
-    // Get the "All" option for media channels (first item in the list)
-    const getAllMediaChannelOption = useCallback(() => {
-        return mediaChannelsData.length > 0 ? mediaChannelsData[0] : null;
-    }, [mediaChannelsData]);
-
-    // Helper functions to check if "All" is selected
-    const isAllMarketsSelected = useCallback(() => {
-        const allOption = getAllOption();
-        return allOption ? Array.from(selectedMarkets).some(m => m.rightId === allOption.rightId) : false;
-    }, [selectedMarkets, getAllOption]);
-
-    const isAllMediaChannelsSelected = useCallback(() => {
-        const allOption = getAllMediaChannelOption();
-        return allOption ? Array.from(selectedMediaChannels).some(c => c.rightId === allOption.rightId) : false;
-    }, [selectedMediaChannels, getAllMediaChannelOption]);
-
-    const handleMediaChannelToggle = useCallback((channel: RightsData) => {
-        // Don't allow toggling disabled items
-        if (!channel.enabled) {
-            return;
-        }
-
-        const allOption = getAllMediaChannelOption();
-        setSelectedMediaChannels(prev => {
-            const newSet = new Set(prev);
-
-            if (allOption && channel.rightId === allOption.rightId) {
-                // If selecting 'All', clear everything and only keep 'All'
-                const hasAllOption = Array.from(newSet).some(c => c.rightId === allOption.rightId);
-                if (hasAllOption) {
-                    // Remove all option
-                    newSet.forEach(c => {
-                        if (c.rightId === allOption.rightId) {
-                            newSet.delete(c);
-                        }
-                    });
-                } else {
-                    newSet.clear();
-                    newSet.add(allOption);
-                }
-            } else {
-                // If selecting any other media channel, remove 'All' if it's selected
-                if (allOption) {
-                    newSet.forEach(c => {
-                        if (c.rightId === allOption.rightId) {
-                            newSet.delete(c);
-                        }
-                    });
-                }
-
-                // Toggle the selected channel
-                const existingChannel = Array.from(newSet).find(c => c.rightId === channel.rightId);
-                if (existingChannel) {
-                    newSet.delete(existingChannel);
-                } else {
-                    newSet.add(channel);
-                }
-            }
-
-            return newSet;
-        });
-    }, [getAllMediaChannelOption]);
-
-    const handleRegionToggle = useCallback((regionId: number) => {
-        setExpandedRegions(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(regionId)) {
-                newSet.delete(regionId);
-            } else {
-                newSet.add(regionId);
-            }
-            return newSet;
-        });
-    }, []);
 
     // Helper function to get current step data
     const getCurrentStepData = useCallback((): RequestDownloadStepData => ({
@@ -250,9 +78,9 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
         mediaChannels: Array.from(selectedMediaChannels),
         selectedMarkets,
         selectedMediaChannels,
-        marketSearchTerm,
+        marketSearchTerm: '',
         dateValidationError
-    }), [airDate, pullDate, selectedMarkets, selectedMediaChannels, marketSearchTerm, dateValidationError]);
+    }), [airDate, pullDate, selectedMarkets, selectedMediaChannels, dateValidationError]);
 
 
     // Validation logic for form completion
@@ -363,82 +191,10 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
                                 Please do not select a region or Operating Unit unless you will be airing in all markets found within that region or operating unit. Selecting an OU will automatically disable its associated markets. You can choose either OUs or individual markets, but not both.
                             </div>
 
-                            {/* Search Markets */}
-                            <div className="search-markets">
-                                <input
-                                    type="text"
-                                    placeholder="Search Markets"
-                                    value={marketSearchTerm}
-                                    onChange={(e) => setMarketSearchTerm(e.target.value)}
-                                    className="search-input"
-                                />
-                            </div>
-
-                            {/* Markets List */}
-                            <div className="markets-list">
-                                {isLoadingMarkets ? (
-                                    <div className="loading-container">
-                                        <div className="loading-spinner"></div>
-                                        <span>Loading markets...</span>
-                                    </div>
-                                ) : marketsError ? (
-                                    <div className="error-message">{marketsError}</div>
-                                ) : (
-                                    filteredMarkets.map((market, index) => (
-                                        <React.Fragment key={market.rightId}>
-                                            <div className="market-item">
-                                                <div className="market-main">
-                                                    <label className={`checkbox-label ${!market.enabled ? 'disabled' : ''}`}>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={Array.from(selectedMarkets).some(m => m.rightId === market.rightId)}
-                                                            disabled={!market.enabled || (() => {
-                                                                const allOption = getAllOption();
-                                                                return Boolean(allOption && market.rightId !== allOption.rightId && isAllMarketsSelected());
-                                                            })()}
-                                                            onChange={() => handleMarketToggle(market)}
-                                                        />
-                                                        {market.name}
-                                                    </label>
-                                                    {market.children && market.children.length > 0 && (
-                                                        <button
-                                                            className="expand-button"
-                                                            onClick={() => handleRegionToggle(market.rightId)}
-                                                            type="button"
-                                                        >
-                                                            {expandedRegions.has(market.rightId) ? '▲' : '▼'}
-                                                        </button>
-                                                    )}
-                                                </div>
-
-                                                {/* Child Markets */}
-                                                {market.children && market.children.length > 0 && expandedRegions.has(market.rightId) && (
-                                                    <div className="market-children">
-                                                        {market.children
-                                                            .filter(child =>
-                                                                !marketSearchTerm ||
-                                                                child.name.toLowerCase().includes(marketSearchTerm.toLowerCase())
-                                                            )
-                                                            .map((child) => (
-                                                                <label key={child.rightId} className={`checkbox-label child-market ${!child.enabled || isParentMarketSelected(child.rightId) ? 'disabled' : ''}`}>
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={Array.from(selectedMarkets).some(m => m.rightId === child.rightId)}
-                                                                        disabled={!child.enabled || isAllMarketsSelected() || isParentMarketSelected(child.rightId)}
-                                                                        onChange={() => handleMarketToggle(child)}
-                                                                    />
-                                                                    {child.name}
-                                                                </label>
-                                                            ))
-                                                        }
-                                                    </div>
-                                                )}
-                                            </div>
-                                            {index === 0 && <div className="horizontal-separator" />}
-                                        </React.Fragment>
-                                    ))
-                                )}
-                            </div>
+                            <Markets
+                                selectedMarkets={selectedMarkets}
+                                setSelectedMarkets={setSelectedMarkets}
+                            />
                         </div>
 
                         {/* Media Channels Selection */}
@@ -451,34 +207,10 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
                                 Please refer to the TCCC media terms and definitions found on KO Assets to determine. Choosing other media types disables 'Internal Use'. Select either 'Internal Use' or others, not both.
                             </div>
 
-                            <div className="media-channels-list">
-                                {isLoadingMediaChannels ? (
-                                    <div className="loading-container">
-                                        <div className="loading-spinner"></div>
-                                        <span>Loading media channels...</span>
-                                    </div>
-                                ) : mediaChannelsError ? (
-                                    <div className="error-message">{mediaChannelsError}</div>
-                                ) : (
-                                    mediaChannelsData.map((channel, index) => (
-                                        <React.Fragment key={channel.rightId}>
-                                            <label className={`checkbox-label ${!channel.enabled ? 'disabled' : ''}`}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={Array.from(selectedMediaChannels).some(c => c.rightId === channel.rightId)}
-                                                    disabled={!channel.enabled || (() => {
-                                                        const allOption = getAllMediaChannelOption();
-                                                        return Boolean(allOption && channel.rightId !== allOption.rightId && isAllMediaChannelsSelected());
-                                                    })()}
-                                                    onChange={() => handleMediaChannelToggle(channel)}
-                                                />
-                                                {channel.name}
-                                            </label>
-                                            {index === 0 && <div className="horizontal-separator" />}
-                                        </React.Fragment>
-                                    ))
-                                )}
-                            </div>
+                            <MediaChannels
+                                selectedMediaChannels={selectedMediaChannels}
+                                setSelectedMediaChannels={setSelectedMediaChannels}
+                            />
                         </div>
                     </div>
 

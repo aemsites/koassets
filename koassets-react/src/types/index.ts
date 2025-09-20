@@ -1,5 +1,6 @@
 // Asset-related types
 import React from 'react';
+import { DateValue } from 'react-aria-components';
 
 // Rights-related interfaces
 export interface RightsData {
@@ -22,12 +23,6 @@ export interface RequestDownloadStepData {
     dateValidationError: string;
 }
 
-// Cached rights data interfaces
-export interface CachedRightsData {
-    marketsData: RightsData[];
-    mediaChannelsData: RightsData[];
-    isLoaded: boolean;
-}
 
 export interface RightsCheckStepData {
     downloadOptions: Record<string, {
@@ -189,6 +184,7 @@ export interface Asset {
         items?: Rendition[];
         'repo:name'?: string;
     };
+    authorized?: string;
     [key: string]: unknown; // For additional Algolia hit properties
 }
 
@@ -327,16 +323,32 @@ export interface SavedSearch {
     favorite: boolean;
 }
 
+export interface FacetValue {
+    label: string;
+    type: string;
+}
+
 export interface FacetsProps {
     searchResults?: SearchResults['results'] | null;
     selectedFacetFilters?: string[][];
-    setSelectedFacetFilters: (facetFilters: string[][]) => void;
-    search: (query?: string) => void;
-    excFacets?: Record<string, unknown>;
+    setSelectedFacetFilters: React.Dispatch<React.SetStateAction<string[][]>>;
+    search: (searchQuery?: string) => void;
+    excFacets?: Record<string, FacetValue>;
     selectedNumericFilters?: string[];
-    setSelectedNumericFilters: (filters: string[]) => void;
+    setSelectedNumericFilters: React.Dispatch<React.SetStateAction<string[]>>;
     query: string;
-    setQuery: (query: string) => void;
+    setQuery: React.Dispatch<React.SetStateAction<string>>;
+    searchDisabled: boolean;
+    setSearchDisabled: (disabled: boolean) => void;
+    setIsRightsSearch: (isRightsSearch: boolean) => void;
+    rightsStartDate: DateValue | null;
+    setRightsStartDate: React.Dispatch<React.SetStateAction<DateValue | null>>;
+    rightsEndDate: DateValue | null;
+    setRightsEndDate: React.Dispatch<React.SetStateAction<DateValue | null>>;
+    selectedMarkets: Set<RightsData>;
+    setSelectedMarkets: React.Dispatch<React.SetStateAction<Set<RightsData>>>;
+    selectedMediaChannels: Set<RightsData>;
+    setSelectedMediaChannels: React.Dispatch<React.SetStateAction<Set<RightsData>>>;
 }
 
 // Phase 3 Component Types
@@ -408,6 +420,7 @@ export interface ImageGalleryProps {
         }
     };
     fetchAssetRenditions?: (asset: Asset) => Promise<void>;
+    isRightsSearch?: boolean;
 }
 
 // Main App types (for the most complex component)
@@ -479,13 +492,6 @@ export interface CartRequestRightsExtensionProps {
     onSendRightsExtensionRequest: (rightsExtensionData: RequestRightsExtensionStepData) => void;
     onBack: (stepData: RequestRightsExtensionStepData) => void;
     initialData?: RequestRightsExtensionStepData;
-}
-
-// Extended CartItem for authorization workflow
-export interface AuthorizedCartItem extends CartItem {
-    authorized?: boolean;
-    authorizedDate?: string;
-    copyright?: unknown;
 }
 
 // MainApp types (most complex component)
@@ -595,4 +601,7 @@ export interface SearchPanelProps {
     currentPage?: number;
     totalPages?: number;
     hasMorePages?: boolean;
+    selectAuthorized?: boolean;
+    onSelectAuthorized?: (isChecked: boolean) => void;
+    isRightsSearch?: boolean;
 }

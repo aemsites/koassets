@@ -192,7 +192,6 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
         if (assets.length > 0 && fetchAssetRenditions) {
             const fetchPromises = assets.map(async ({ asset }) => {
                 const assetId = asset.assetId || '';
-
                 try {
                     await fetchAssetRenditions(asset);
                     console.log(`Renditions fetched for asset ${assetId}:`, asset.renditions?.items?.length || 0);
@@ -251,12 +250,11 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
             return;
         }
 
-        const count = totalSelectedCount;
         setIsDownloading(true);
         let closeProcessingToast;
 
         try {
-            if (count === 1) {
+            if (totalSelectedCount === 1) {
                 // Find the single selected rendition and its asset directly
                 let rendition: Rendition | null = null;
                 let assetForRendition: Asset | null = null;
@@ -281,7 +279,7 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                 }
             } else {
                 // Multiple assets archive download - show toast notifications
-                closeProcessingToast = ToastQueue.info(`Processing download request for ${count} renditions. Refreshing the page will cancel the download.`);
+                closeProcessingToast = ToastQueue.info(`Processing download request for ${totalSelectedCount} renditions. Refreshing the page will cancel the download.`);
 
                 // Collect all assets with their selected renditions
                 const assetsWithRenditions = [];
@@ -308,19 +306,19 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
 
                 if (success) {
                     closeProcessingToast?.();
-                    ToastQueue.positive(`Successfully started downloading ${count} renditions.`, { timeout: 1000 });
+                    ToastQueue.positive(`Successfully started downloading ${totalSelectedCount} renditions.`, { timeout: 1000 });
                     onDownloadCompleted?.(true, successfulAssets);
                     onClose();
                 } else {
                     closeProcessingToast?.();
-                    ToastQueue.negative(`Failed to create archive for ${count} renditions.`, { timeout: 1000 });
+                    ToastQueue.negative(`Failed to create archive for ${totalSelectedCount} renditions.`, { timeout: 1000 });
                     onDownloadCompleted?.(false, []);
                 }
             }
         } catch (error) {
             console.error('Failed to download asset:', error);
             closeProcessingToast?.();
-            ToastQueue.negative(`Unexpected error occurred while downloading ${count} renditions.`, { timeout: 1000 });
+            ToastQueue.negative(`Unexpected error occurred while downloading ${totalSelectedCount} renditions.`, { timeout: 1000 });
             onDownloadCompleted?.(false, []);
         } finally {
             setIsDownloading(false);
