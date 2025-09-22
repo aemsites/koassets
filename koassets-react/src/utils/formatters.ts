@@ -1,3 +1,5 @@
+import type { CalendarDate } from '@internationalized/date';
+
 // Helper to convert markdown to HTML
 export const markdownToHtml = (markdown: string): string => {
     if (!markdown) return '';
@@ -124,30 +126,30 @@ export const formatCategory = (categories: string | string[] | undefined): strin
 // Helper function to format date from epoch time
 export const formatDate = (epochTime: string | number | undefined): string => {
     if (!epochTime) return '';
-    
+
     // Convert epoch time to milliseconds if it's in seconds
     const timestamp = typeof epochTime === 'string' ? parseInt(epochTime) : epochTime;
     const date = new Date(timestamp < 10000000000 ? timestamp * 1000 : timestamp);
-    
+
     // Check if date is valid
     if (isNaN(date.getTime())) return '';
-    
+
     const months = [
         'Jan.', 'Feb.', 'Mar.', 'Apr.', 'May', 'Jun.',
         'Jul.', 'Aug.', 'Sep.', 'Oct.', 'Nov.', 'Dec.'
     ];
-    
+
     const day = date.getDate().toString().padStart(2, '0');
     const month = months[date.getMonth()];
     const year = date.getFullYear();
-    
+
     return `${day} ${month} ${year}`;
 };
 
 // Helper function to remove hyphens and convert to title case
 export const removeHyphenTitleCase = (text: string | undefined): string => {
     if (!text || typeof text !== 'string') return '';
-    
+
     return text
         .split('-')
         .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -163,4 +165,11 @@ export const formatDimensions = (dimensions?: { width: number; height: number })
 // Helper function to format format name
 export const formatFormatName = (format: string): string => {
     return format.toUpperCase().replace('IMAGE/', '').replace('VND.ADOBE.', '');
+};
+
+// Helper function to convert CalendarDate to epoch timestamp
+export const calendarDateToEpoch = (calendarDate: CalendarDate | null | undefined): number => {
+    if (!calendarDate) return 0;
+    const date = new Date(calendarDate.year, calendarDate.month - 1, calendarDate.day);
+    return date.getTime();
 }; 

@@ -79,7 +79,13 @@ const ThumbnailImage: React.FC<ThumbnailImageProps> = ({ item }) => {
 
     return (
         <div className="item-thumbnail">
-            <img src={imageUrl} alt={item.name || 'Asset'} />
+            <div className="preview-image">
+                <img
+                    src={imageUrl}
+                    alt={item.name || 'Asset'}
+                    onError={(e) => { (e.target as HTMLImageElement)?.parentElement?.classList.add('missing'); }}
+                />
+            </div>
         </div>
     );
 };
