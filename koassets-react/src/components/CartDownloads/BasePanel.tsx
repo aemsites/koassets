@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { WorkflowStep } from '../types';
+import { WorkflowStep } from '../../types';
 import './BasePanel.css';
 
 export interface BasePanelProps {
@@ -11,7 +11,6 @@ export interface BasePanelProps {
         label: string;
         count?: number;
     }>;
-    showTabsCondition?: boolean;
     children: React.ReactNode;
     panelClassName?: string;
 }
@@ -21,7 +20,6 @@ const BasePanel: React.FC<BasePanelProps> = ({
     onClose,
     title,
     tabs = [],
-    showTabsCondition = true,
     children,
     panelClassName = 'cart-panel'
 }) => {
@@ -65,7 +63,7 @@ const BasePanel: React.FC<BasePanelProps> = ({
                 </div>
 
                 {/* Tabs - conditionally shown */}
-                {showTabsCondition && tabs.length > 0 && (
+                {tabs.length > 0 && activeStep === WorkflowStep.CART && (
                     <div className="base-panel-tabs">
                         {tabs.map((tab) => (
                             <button

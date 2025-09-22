@@ -146,6 +146,129 @@ html.base-panel-open {
     flex-direction: column;
 }
 
+/* Workflow Progress Styles */
+.base-panel .workflow-progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 30px 40px 0;
+    flex-shrink: 0;
+}
+
+.base-panel .workflow-step {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 12px;
+    position: relative;
+}
+
+.base-panel .workflow-step.active {
+    color: var(--primary-color);
+}
+
+.base-panel .workflow-step.completed {
+    color: #4CAF50;
+}
+
+.base-panel .workflow-step.failure {
+    color: #f44336;
+}
+
+.base-panel .workflow-step.success {
+    color: #4CAF50;
+}
+
+.base-panel .step-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.base-panel .workflow-step.active .step-icon {
+    color: white;
+}
+
+.base-panel .workflow-step.completed .step-icon {
+    background-color: transparent;
+}
+
+.base-panel .step-loading-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.base-panel .step-icon img {
+    width: 32px;
+    height: 32px;
+}
+
+.base-panel .step-label {
+    bottom: -25px;
+    color: #707070;
+    font-size: 14px;
+    font-weight: 600;
+    position: absolute;
+    white-space: nowrap;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.base-panel .step-label::before {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 1px;
+}
+
+.base-panel .horizontal-line {
+    background-color: #e4e4e4;
+    height: 2px;
+    width: 200px;
+    margin: 0 -1px;
+    align-self: center;
+}
+
+/* Workflow Status Messages */
+.base-panel .workflow-status {
+    padding: 0 30px;
+    min-height: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.base-panel .status-message {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+}
+
+.base-panel .status-message.processing {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.base-panel .status-message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.base-panel .status-message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
 /* Common animations */
 @keyframes slideIn {
     from {

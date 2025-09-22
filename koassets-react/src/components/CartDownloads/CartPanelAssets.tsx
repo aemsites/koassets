@@ -1,25 +1,27 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AuthorizationStatus } from '../clients/fadel-client';
-import { restrictedBrandsWarning, smrWarnings } from '../constants/warnings';
-import { useAppConfig } from '../hooks/useAppConfig';
+import { AuthorizationStatus } from '../../clients/fadel-client';
+import { restrictedBrandsWarning, smrWarnings } from '../../constants/warnings';
+import { useAppConfig } from '../../hooks/useAppConfig';
 import type {
     Asset,
     CartPanelAssetsProps,
     RequestDownloadStepData,
     RequestRightsExtensionStepData,
+    RestrictedBrand,
     RightsCheckStepData,
     WorkflowStepData,
     WorkflowStepIcons,
     WorkflowStepStatuses
-} from '../types';
-import { FilteredItemsType, StepStatus, WorkflowStep } from '../types';
-import { removeBlobFromCache } from '../utils/blobCache';
+} from '../../types';
+import { FilteredItemsType, StepStatus, WorkflowStep } from '../../types';
+import { removeBlobFromCache } from '../../utils/blobCache';
+import DownloadRenditionsContent from '../DownloadRenditionsContent';
+import ThumbnailImage from '../ThumbnailImage';
 import './CartPanelAssets.css';
 import CartRequestDownload from './CartRequestDownload';
 import CartRequestRightsExtension from './CartRequestRightsExtension';
 import CartRightsCheck from './CartRightsCheck';
-import DownloadRenditionsContent from './DownloadRenditionsContent';
-import ThumbnailImage from './ThumbnailImage';
+import { WorkflowProgress } from './WorkflowProgress';
 
 // Component for rendering individual cart item row
 interface CartItemRowProps {
@@ -133,67 +135,6 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
     );
 };
 
-// Component for rendering workflow progress steps
-interface WorkflowProgressProps {
-    activeStep: WorkflowStep;
-    hasAllItemsReadyToUse: boolean;
-    getStepClassName: (step: WorkflowStep, isActive: boolean) => string;
-    renderStepIcon: (step: WorkflowStep) => React.ReactNode;
-}
-
-const WorkflowProgress: React.FC<WorkflowProgressProps> = ({
-    activeStep,
-    hasAllItemsReadyToUse,
-    getStepClassName,
-    renderStepIcon
-}) => {
-    return (
-        <div className="workflow-progress">
-            <div className={getStepClassName(WorkflowStep.CART, activeStep === WorkflowStep.CART)}>
-                <div className="step-icon">
-                    {renderStepIcon(WorkflowStep.CART)}
-                </div>
-                <span className="step-label">Cart</span>
-            </div>
-            <div className="horizontal-line"></div>
-            {!hasAllItemsReadyToUse && (
-                <>
-                    <div className={getStepClassName(WorkflowStep.REQUEST_DOWNLOAD, activeStep === WorkflowStep.REQUEST_DOWNLOAD)}>
-                        <div className="step-icon">
-                            {renderStepIcon(WorkflowStep.REQUEST_DOWNLOAD)}
-                        </div>
-                        <span className="step-label">Request Download</span>
-                    </div>
-                    <div className="horizontal-line"></div>
-                    <div className={getStepClassName(WorkflowStep.RIGHTS_CHECK, activeStep === WorkflowStep.RIGHTS_CHECK)}>
-                        <div className="step-icon">
-                            {renderStepIcon(WorkflowStep.RIGHTS_CHECK)}
-                        </div>
-                        <span className="step-label">Rights Check</span>
-                    </div>
-                    <div className="horizontal-line"></div>
-                    {activeStep === WorkflowStep.REQUEST_RIGHTS_EXTENSION && (
-                        <>
-                            <div className={getStepClassName(WorkflowStep.REQUEST_RIGHTS_EXTENSION, activeStep === WorkflowStep.REQUEST_RIGHTS_EXTENSION)}>
-                                <div className="step-icon">
-                                    {renderStepIcon(WorkflowStep.REQUEST_RIGHTS_EXTENSION)}
-                                </div>
-                                <span className="step-label">Request Rights Extension</span>
-                            </div>
-                            <div className="horizontal-line"></div>
-                        </>
-                    )}
-                </>
-            )}
-            <div className={getStepClassName(WorkflowStep.DOWNLOAD, activeStep === WorkflowStep.DOWNLOAD)}>
-                <div className="step-icon">
-                    {renderStepIcon(WorkflowStep.DOWNLOAD)}
-                </div>
-                <span className="step-label">Download</span>
-            </div>
-        </div>
-    );
-};
 
 const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     cartItems,
@@ -579,26 +520,6 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         }
     }, [setCartItems, cartItems]);
 
-    // Helper function to render step icon - simply returns the stepIcon for that step
-    const renderStepIcon = useCallback((step: WorkflowStep, defaultIcon?: string): React.JSX.Element | string => {
-        return stepIcon[step] || defaultIcon || '';
-    }, [stepIcon]);
-
-    // Helper function to get step class names
-    const getStepClassName = useCallback((step: WorkflowStep, isCurrentStep: boolean): string => {
-        const status = stepStatus[step];
-        const baseClass = 'workflow-step';
-
-        if (isCurrentStep) {
-            return `${baseClass} active`;
-        } else if (status === StepStatus.SUCCESS) {
-            return `${baseClass} completed success`;
-        } else if (status === StepStatus.FAILURE) {
-            return `${baseClass} completed failure`;
-        } else {
-            return baseClass;
-        }
-    }, [stepStatus]);
 
     // Memoized computed values
     const cartItemsCount = useMemo(() => cartItems.length, [cartItems.length]);
@@ -662,7 +583,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
 
         // Get all restricted brand values (case-insensitive)
         const restrictedBrandValues = restrictedBrands
-            .map(rb => rb.value?.toLowerCase().trim())
+            .map((rb: RestrictedBrand) => rb.value?.toLowerCase().trim())
             .filter(Boolean);
 
         if (restrictedBrandValues.length === 0) {
@@ -718,8 +639,8 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             <WorkflowProgress
                 activeStep={activeStep}
                 hasAllItemsReadyToUse={hasAllItemsReadyToUse}
-                getStepClassName={getStepClassName}
-                renderStepIcon={renderStepIcon}
+                stepStatus={stepStatus}
+                stepIcon={stepIcon}
             />
 
             {/* Direct Download */}

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { CartItem } from '../types';
+import type { CartItem } from '../../types';
 import './CartPanelTemplates.css';
 
 interface CartPanelTemplatesProps {

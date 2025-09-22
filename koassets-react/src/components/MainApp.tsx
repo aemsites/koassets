@@ -5,6 +5,19 @@ import '../MainApp.css';
 
 import { DynamicMediaClient } from '../clients/dynamicmedia-client';
 import { DEFAULT_FACETS, type ExcFacets } from '../constants/facets';
+// Extend Window interface to include our custom functions
+declare global {
+    interface Window {
+        openCart?: () => void;
+        closeCart?: () => void;
+        toggleCart?: () => void;
+        openDownloadPanel?: () => void;
+        closeDownloadPanel?: () => void;
+        toggleDownloadPanel?: () => void;
+        addToDownload?: (asset: Asset) => Promise<void>;
+    }
+}
+
 import type {
     Asset,
     CartItem,
@@ -41,8 +54,8 @@ import { CalendarDate } from '@internationalized/date';
 import { createPortal } from 'react-dom';
 import { AuthorizationStatus, CheckRightsRequest, FadelClient } from '../clients/fadel-client';
 import { calendarDateToEpoch } from '../utils/formatters';
-import CartPanel from './CartPanel';
-import DownloadPanel from './DownloadPanel';
+import CartPanel from './CartDownloads/CartPanel';
+import DownloadPanel from './CartDownloads/DownloadPanel';
 import Facets from './Facets';
 import HeaderBar from './HeaderBar';
 import ImageGallery from './ImageGallery';
@@ -197,6 +210,14 @@ function MainApp(): React.JSX.Element {
     // Mobile filter panel state
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false);
 
+    // Download functions
+    const handleAddToDownload = useCallback(async (image: Asset): Promise<void> => {
+        if (!downloadItems.some(item => item.assetId === image.assetId)) {
+            setDownloadItems(prev => [...prev, image as CartItem]);
+            console.log('Added to downloads:', image.title || image.name);
+        }
+    }, [downloadItems]);
+
     // Expose cart and download panel functions to window for EDS header integration
     useEffect(() => {
         window.openCart = () => setIsCartOpen(true);
@@ -205,6 +226,7 @@ function MainApp(): React.JSX.Element {
         window.openDownloadPanel = () => setIsDownloadPanelOpen(true);
         window.closeDownloadPanel = () => setIsDownloadPanelOpen(false);
         window.toggleDownloadPanel = () => setIsDownloadPanelOpen(prev => !prev);
+        window.addToDownload = handleAddToDownload;
 
         return () => {
             delete window.openCart;
@@ -213,8 +235,9 @@ function MainApp(): React.JSX.Element {
             delete window.openDownloadPanel;
             delete window.closeDownloadPanel;
             delete window.toggleDownloadPanel;
+            delete window.addToDownload;
         };
-    }, []);
+    }, [handleAddToDownload]);
 
     // Sort state
     const [selectedSortType, setSelectedSortType] = useState<string>('Date Created');
@@ -618,13 +641,6 @@ function MainApp(): React.JSX.Element {
         }
     };
 
-    // Download functions (prefixed with _ to indicate future use)
-    const _handleAddToDownload = async (image: Asset): Promise<void> => {
-        if (!downloadItems.some(item => item.assetId === image.assetId)) {
-            setDownloadItems(prev => [...prev, image as CartItem]);
-            console.log('Added to downloads:', image.title || image.name);
-        }
-    };
 
     const handleRemoveFromDownload = (image: Asset): void => {
         setDownloadItems(prev => prev.filter(item => item.assetId !== image.assetId));

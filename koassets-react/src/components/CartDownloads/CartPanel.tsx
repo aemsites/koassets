@@ -1,6 +1,6 @@
 import React from 'react';
-import type { CartPanelProps } from '../types';
-import { WorkflowStep } from '../types';
+import type { CartPanelProps } from '../../types';
+import { WorkflowStep } from '../../types';
 import BasePanel from './BasePanel';
 import './BasePanel.css'; // Base panel styles 
 import './CartPanel.css'; // Cart-specific styles
@@ -63,7 +63,6 @@ const CartPanel: React.FC<CartPanelProps> = ({
             onClose={onClose}
             title="Cart"
             tabs={tabs}
-            showTabsCondition={true} // Always show tabs for Cart
             panelClassName="cart-panel"
         >
             <CartPanelContent

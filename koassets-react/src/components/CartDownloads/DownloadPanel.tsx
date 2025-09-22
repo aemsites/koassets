@@ -1,6 +1,6 @@
 import React from 'react';
-import type { DownloadPanelProps } from '../types';
-import { WorkflowStep } from '../types';
+import type { DownloadPanelProps } from '../../types';
+import { WorkflowStep } from '../../types';
 import BasePanel from './BasePanel';
 import './BasePanel.css'; // Base panel styles
 import './DownloadPanel.css'; // Download-specific styles
@@ -54,7 +54,6 @@ const DownloadPanel: React.FC<DownloadPanelProps> = ({
             onClose={onClose}
             title="Downloads"
             tabs={tabs}
-            showTabsCondition={true}
             panelClassName="download-panel"
         >
             <DownloadPanelContent

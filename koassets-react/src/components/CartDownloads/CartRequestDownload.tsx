@@ -1,11 +1,11 @@
 import { CalendarDate } from '@internationalized/date';
 import React, { useCallback, useState } from 'react';
-import type { Asset, RequestDownloadStepData, RightsData } from '../types';
+import Markets from '../Markets';
+import MediaChannels from '../MediaChannels';
+import MyDatePicker from '../MyDatePicker';
+import ThumbnailImage from '../ThumbnailImage';
+import type { Asset, RequestDownloadStepData, RightsData } from '../../types';
 import './CartRequestDownload.css';
-import Markets from './Markets';
-import MediaChannels from './MediaChannels';
-import MyDatePicker from './MyDatePicker';
-import ThumbnailImage from './ThumbnailImage';
 
 interface CartRequestDownloadProps {
     cartItems: Asset[];

@@ -1,6 +1,7 @@
 import React from 'react';
-import type { CartItem } from '../types';
+import { WorkflowStep, type CartItem } from '../../types';
 import './DownloadPanelAssets.css';
+import { WorkflowProgress } from './WorkflowProgress';
 
 interface DownloadPanelAssetsProps {
     downloadItems: CartItem[];
@@ -11,6 +12,8 @@ const DownloadPanelAssets: React.FC<DownloadPanelAssetsProps> = ({
     downloadItems,
     onRemoveItem
 }) => {
+    void onRemoveItem; // keep in props for future use
+
     return (
         <div className="download-panel-assets-content">
             {downloadItems.length === 0 ? (
@@ -20,8 +23,12 @@ const DownloadPanelAssets: React.FC<DownloadPanelAssetsProps> = ({
                     </div>
                 </div>
             ) : (
-                <>
-                </>
+                <div className="download-panel-assets-wrapper">
+                    <WorkflowProgress
+                        activeStep={WorkflowStep.DOWNLOAD}
+                        hasAllItemsReadyToUse={true}
+                    />
+                </div>
             )}
         </div>
     );

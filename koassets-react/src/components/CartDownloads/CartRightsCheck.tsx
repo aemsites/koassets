@@ -1,11 +1,11 @@
 import type { CalendarDate } from '@internationalized/date';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AuthorizationStatus, FadelClient, type CheckRightsRequest } from '../clients/fadel-client';
-import type { Asset, RequestDownloadStepData, RightsCheckStepData } from '../types';
-import { calendarDateToEpoch } from '../utils/formatters';
+import { AuthorizationStatus, FadelClient, type CheckRightsRequest, type RestOfAssetsItem } from '../../clients/fadel-client';
+import type { Asset, RequestDownloadStepData, RightsCheckStepData } from '../../types';
+import { calendarDateToEpoch } from '../../utils/formatters';
+import DownloadRenditionsContent from '../DownloadRenditionsContent';
+import ThumbnailImage from '../ThumbnailImage';
 import './CartRightsCheck.css';
-import DownloadRenditionsContent from './DownloadRenditionsContent';
-import ThumbnailImage from './ThumbnailImage';
 
 interface CartRightsCheckProps {
     cartItems: Asset[];
@@ -158,11 +158,11 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
 
                     // Create a Set of asset IDs that are in the response for quick lookup
                     const responseAssetIds = new Set(
-                        response.restOfAssets.map(item => item.asset.assetExtId)
+                        response.restOfAssets.map((item: RestOfAssetsItem) => item.asset.assetExtId)
                     );
 
                     // Process assets that ARE in response.restOfAssets with available: true
-                    response.restOfAssets.forEach(item => {
+                    response.restOfAssets.forEach((item: RestOfAssetsItem) => {
                         if (item.available === true) {
                             // Find the matching asset in restrictedAssets by comparing assetExtId with cleaned assetId
                             const matchingAsset = restrictedAssets.find(asset => {
