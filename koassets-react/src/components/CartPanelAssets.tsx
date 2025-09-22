@@ -698,11 +698,11 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     }, [cartItems, restrictedBrands, setCartItems]);
 
     // Close cart when all items are removed
-    useEffect(() => {
-        if (cartItems.length === 0) {
-            onClose();
-        }
-    }, [cartItems.length, onClose]);
+    // useEffect(() => {
+    //     if (cartItems.length === 0) {
+    //         onClose();
+    //     }
+    // }, [cartItems.length, onClose]);
 
     if (cartItemsCount === 0) {
         return (

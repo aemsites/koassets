@@ -263,8 +263,14 @@ export interface CartPanelProps {
     cartItems: CartItem[];
     setCartItems: React.Dispatch<React.SetStateAction<CartItem[]>>;
     onRemoveItem: (item: CartItem) => void;
-    onApproveAssets: (items: CartItem[]) => void;
-    onDownloadAssets: (items: CartItem[]) => void;
+}
+
+// Download Panel types
+export interface DownloadPanelProps {
+    isOpen: boolean;
+    onClose: () => void;
+    downloadItems: CartItem[]; // Could be same as CartItem or create DownloadItem type
+    onRemoveItem: (item: CartItem) => void;
 }
 
 // Header Bar types - COMMENTED OUT

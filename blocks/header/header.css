@@ -501,8 +501,10 @@ header nav .nav-tools {
   }
 }
 
-header nav .nav-tools .nav-cart-icon {
-  padding: 10px 10px 10px 0;
+header nav .nav-tools .nav-icons-wrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
   position: fixed;
   right: 24px;
   top: calc(var(--header-bar-height) + (var(--nav-bar-height) / 2));
@@ -510,13 +512,19 @@ header nav .nav-tools .nav-cart-icon {
   z-index: 10;
 }
 
+header nav .nav-tools .nav-cart-icon,
+header nav .nav-tools .nav-download-icon {
+  padding: 10px 10px 10px 0;
+}
+
 @media (width >=900px) {
-  header nav .nav-tools .nav-cart-icon {
+  header nav .nav-tools .nav-icons-wrapper {
     right: 0;
   }
 }
 
-header nav .nav-tools .nav-cart-icon button {
+header nav .nav-tools .nav-cart-icon button,
+header nav .nav-tools .nav-download-icon button {
   position: relative;
   background: none;
   border: none;
@@ -524,7 +532,8 @@ header nav .nav-tools .nav-cart-icon button {
   padding: 10px 10px 0 0;
 }
 
-header nav .nav-tools .nav-cart-icon button img {
+header nav .nav-tools .nav-cart-icon button img,
+header nav .nav-tools .nav-download-icon button img {
   height: 30px;
   transition: opacity 0.2s ease;
 }
@@ -533,9 +542,13 @@ header nav .nav-tools .nav-cart-icon button:hover img {
   content: url("/icons/shopping_cart_icon_red.svg");
 }
 
-header nav .nav-tools .nav-cart-icon .cart-badge {
+header nav .nav-tools .nav-download-icon button:hover img {
+  content: url("/icons/download_icon_red.svg");
+}
+
+header nav .nav-tools .nav-cart-icon .cart-badge,
+header nav .nav-tools .nav-download-icon .download-badge {
   position: absolute;
-  background-color: var(--primary-color);
   color: white;
   font-family: TCCC-UnityText, sans-serif;
   font-size: 10px;
@@ -547,7 +560,6 @@ header nav .nav-tools .nav-cart-icon .cart-badge {
   white-space: nowrap;
   text-align: center;
   cursor: pointer;
-  border-color: var(--primary-color);
   border-radius: 10px;
   min-width: 15px;
   min-height: 15px;
@@ -556,6 +568,16 @@ header nav .nav-tools .nav-cart-icon .cart-badge {
   padding: 2px 4px !important;
   box-sizing: border-box;
   display: block;
+}
+
+header nav .nav-tools .nav-cart-icon .cart-badge {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+header nav .nav-tools .nav-download-icon .download-badge {
+  background-color: var(--color-secondary-light-sky-blue);
+  border-color: var(--color-secondary-light-sky-blue);
 }
 
 /* Header with integrated koassets-search - always hidden */

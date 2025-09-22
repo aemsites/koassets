@@ -145,8 +145,13 @@ async function createNavBar() {
 
   const tools = nav.querySelector('.nav-tools');
 
-  // add shopping cart icon to nav-tools
+  // add shopping cart and download icons to nav-tools
   if (tools) {
+    // Create wrapper div with flex layout
+    const iconsWrapper = document.createElement('div');
+    iconsWrapper.classList.add('nav-icons-wrapper');
+
+    // Create cart icon
     const cartIcon = document.createElement('div');
     cartIcon.classList.add('nav-cart-icon');
     cartIcon.innerHTML = `
@@ -165,7 +170,31 @@ async function createNavBar() {
       }
     });
 
-    tools.appendChild(cartIcon);
+    // Create download icon
+    const downloadIcon = document.createElement('div');
+    downloadIcon.classList.add('nav-download-icon');
+    downloadIcon.innerHTML = `
+      <button type="button" aria-label="Download">
+        <img src="/icons/download-icon.svg" alt="Download" />
+        <span class="download-badge" style="display: none;"></span>
+      </button>
+    `;
+
+    // Add click handler for download icon
+    downloadIcon.addEventListener('click', () => {
+      if (window.openDownloadPanel && typeof window.openDownloadPanel === 'function') {
+        window.openDownloadPanel();
+      } else {
+        console.log('Download functionality not available');
+      }
+    });
+
+    // Append icons to wrapper (download icon first, then cart icon)
+    iconsWrapper.appendChild(downloadIcon);
+    iconsWrapper.appendChild(cartIcon);
+
+    // Append wrapper to tools
+    tools.appendChild(iconsWrapper);
 
     // Expose function to update cart badge
     window.updateCartBadge = function (numCartItems) {
@@ -180,6 +209,19 @@ async function createNavBar() {
       }
     };
 
+    // Expose function to update download badge
+    window.updateDownloadBadge = function (numDownloadItems) {
+      const badge = downloadIcon.querySelector('.download-badge');
+      if (badge) {
+        if (numDownloadItems && numDownloadItems > 0) {
+          badge.textContent = numDownloadItems;
+          badge.style.display = 'block';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+    };
+
     // Update cart badge from localStorage
     try {
       const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
@@ -187,6 +229,15 @@ async function createNavBar() {
     } catch (error) {
       console.error('Error reading cart items from localStorage:', error);
       window.updateCartBadge(0);
+    }
+
+    // Update download badge from sessionStorage
+    try {
+      const downloadItems = JSON.parse(sessionStorage.getItem('downloadItems') || '[]');
+      window.updateDownloadBadge(downloadItems.length);
+    } catch (error) {
+      console.error('Error reading download items from sessionStorage:', error);
+      window.updateDownloadBadge(0);
     }
   }
 

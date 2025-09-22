@@ -23,12 +23,15 @@ import { fetchOptimizedDeliveryBlob, removeBlobFromCache } from '../utils/blobCa
 import { getBucket, getExternalParams } from '../utils/config';
 import { AppConfigProvider } from './AppConfigProvider';
 
-// Extend window interface for cart functions and user authentication
+// Extend window interface for cart functions, download functions and user authentication
 declare global {
     interface Window {
         openCart?: () => void;
         closeCart?: () => void;
         toggleCart?: () => void;
+        openDownloadPanel?: () => void;
+        closeDownloadPanel?: () => void;
+        toggleDownloadPanel?: () => void;
         user?: unknown; // Global user object for authentication
     }
 }
@@ -39,6 +42,7 @@ import { createPortal } from 'react-dom';
 import { AuthorizationStatus, CheckRightsRequest, FadelClient } from '../clients/fadel-client';
 import { calendarDateToEpoch } from '../utils/formatters';
 import CartPanel from './CartPanel';
+import DownloadPanel from './DownloadPanel';
 import Facets from './Facets';
 import HeaderBar from './HeaderBar';
 import ImageGallery from './ImageGallery';
@@ -178,19 +182,37 @@ function MainApp(): React.JSX.Element {
         }
     });
     const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+
+    // Download panel state
+    const [downloadItems, setDownloadItems] = useState<CartItem[]>(() => {
+        try {
+            const stored = localStorage.getItem('downloadItems');
+            return stored ? JSON.parse(stored) : [];
+        } catch {
+            return [];
+        }
+    });
+    const [isDownloadPanelOpen, setIsDownloadPanelOpen] = useState<boolean>(false);
+
     // Mobile filter panel state
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false);
 
-    // Expose cart functions to window for EDS header integration
+    // Expose cart and download panel functions to window for EDS header integration
     useEffect(() => {
         window.openCart = () => setIsCartOpen(true);
         window.closeCart = () => setIsCartOpen(false);
         window.toggleCart = () => setIsCartOpen(prev => !prev);
+        window.openDownloadPanel = () => setIsDownloadPanelOpen(true);
+        window.closeDownloadPanel = () => setIsDownloadPanelOpen(false);
+        window.toggleDownloadPanel = () => setIsDownloadPanelOpen(prev => !prev);
 
         return () => {
             delete window.openCart;
             delete window.closeCart;
             delete window.toggleCart;
+            delete window.openDownloadPanel;
+            delete window.closeDownloadPanel;
+            delete window.toggleDownloadPanel;
         };
     }, []);
 
@@ -222,6 +244,11 @@ function MainApp(): React.JSX.Element {
     useEffect(() => {
         localStorage.setItem('cartItems', JSON.stringify(cartItems));
     }, [cartItems]);
+
+    // Save download items to localStorage when they change
+    useEffect(() => {
+        localStorage.setItem('downloadItems', JSON.stringify(downloadItems));
+    }, [downloadItems]);
 
     useEffect(() => {
         const hasAccessToken = Boolean(accessToken);
@@ -591,6 +618,19 @@ function MainApp(): React.JSX.Element {
         }
     };
 
+    // Download functions (prefixed with _ to indicate future use)
+    const _handleAddToDownload = async (image: Asset): Promise<void> => {
+        if (!downloadItems.some(item => item.assetId === image.assetId)) {
+            setDownloadItems(prev => [...prev, image as CartItem]);
+            console.log('Added to downloads:', image.title || image.name);
+        }
+    };
+
+    const handleRemoveFromDownload = (image: Asset): void => {
+        setDownloadItems(prev => prev.filter(item => item.assetId !== image.assetId));
+        console.log('Removed from downloads:', image.title || image.name);
+    };
+
     // Sort handlers
     const handleSortByTopResults = (): void => {
         console.log('Sort by Top Results');
@@ -623,18 +663,6 @@ function MainApp(): React.JSX.Element {
         // TODO: Implement actual sorting logic
     };
 
-    const handleApproveAssets = (): void => {
-        if (cartItems.length === 0) {
-            return;
-        }
-    };
-
-    const handleDownloadAssets = (): void => {
-        if (cartItems.length === 0) {
-            return;
-        }
-        setIsCartOpen(false);
-    };
 
     const handleIMSAccessToken = (token: string): void => {
         setAccessToken(token);
@@ -742,8 +770,17 @@ function MainApp(): React.JSX.Element {
                         cartItems={cartItems}
                         setCartItems={setCartItems}
                         onRemoveItem={handleRemoveFromCart}
-                        onApproveAssets={handleApproveAssets}
-                        onDownloadAssets={handleDownloadAssets}
+                    />,
+                    document.body
+                )}
+
+                {/* Download Panel - similar to Cart Panel */}
+                {createPortal(
+                    <DownloadPanel
+                        isOpen={isDownloadPanelOpen}
+                        onClose={() => setIsDownloadPanelOpen(false)}
+                        downloadItems={downloadItems}
+                        onRemoveItem={handleRemoveFromDownload}
                     />,
                     document.body
                 )}
