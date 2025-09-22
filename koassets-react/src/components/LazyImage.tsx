@@ -103,12 +103,6 @@ const LazyImage: React.FC<LazyImageProps> = ({
                 </div>
             )}
 
-            {isError && (
-                <div className="lazy-image-placeholder error">
-                    <span>Image not available</span>
-                </div>
-            )}
-
             {imageUrl && !isError && (
                 <div className="preview-image">
                     <img
