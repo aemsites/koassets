@@ -1,4 +1,5 @@
 import React from 'react';
+import { AuthorizationStatus } from '../clients/fadel-client';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type { AssetCardProps } from '../types';
 import { getBucket } from '../utils/config';
@@ -83,11 +84,8 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
         window.dispatchEvent(event);
     };
 
-    // Remove the file extension from the asset name and encode for src/srcset attribute below
-    const fileName = encodeURIComponent(image.name?.replace(/\.[^/.]+$/, '') || 'thumbnail');
-
     return (
-        <div className="asset-card-view-grid">
+        <div className="asset-card-view-grid" id={image.assetId}>
             <div className="asset-card-view-grid-inner">
                 <div className="image-wrapper"
                     onClick={(e) => handleCardDetailClick(image, e)}
@@ -119,20 +117,12 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                         </div>
                     </div>
 
-                    {dynamicMediaClient?.isIMSAuthenticated() ? (
-                        <LazyImage
-                            asset={image}
-                            width={350}
-                            className="image-container"
-                            alt={image.alt || image.name}
-                        />
-                    ) : (
-                        <picture>
-                            <source type="image/webp" srcSet={`/api/adobe/assets/${image.assetId}/as/${fileName}.webp?width=350`} />
-                            <source type="image/jpg" srcSet={`/api/adobe/assets/${image.assetId}/as/${fileName}.jpg?width=350`} />
-                            <img loading="lazy" src={`/api/adobe/assets/${image.assetId}/as/${fileName}.jpg?width=350`} alt={image.alt || image.name} onError={(e) => {e.target.parentElement.classList.add('missing');}} />
-                        </picture>
-                    )}
+                    <LazyImage
+                        asset={image}
+                        width={350}
+                        className="image-container"
+                        alt={image.alt || image.name}
+                    />
                 </div>
 
                 <div className="product-info-container">
@@ -150,6 +140,14 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                             >
                                 {image.title}
                             </h3>
+                            <>
+                                {(image.authorized === AuthorizationStatus.AVAILABLE) && (
+                                    <span className="product-authorized-status green">AUTHORIZED</span>
+                                )}
+                                {(image.authorized === AuthorizationStatus.NOT_AVAILABLE || image.authorized === AuthorizationStatus.AVAILABLE_EXCEPT) && (
+                                    <span className="product-authorized-status red">EXTENSION REQUIRED</span>
+                                )}
+                            </>
                         </div>
 
                         {showFullDetails && (

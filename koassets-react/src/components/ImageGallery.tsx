@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { AuthorizationStatus } from '../clients/fadel-client';
 import { DEFAULT_ACCORDION_CONFIG } from '../constants/accordion';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type { Asset, ImageGalleryProps } from '../types';
@@ -36,7 +37,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     isLoadingMore = false,
     imagePresets = {},
     assetRenditionsCache = {},
-    fetchAssetRenditions
+    fetchAssetRenditions,
+    isRightsSearch = false
 }: ImageGalleryProps) => {
     // Get external params from context
     const { externalParams } = useAppConfig();
@@ -58,9 +60,26 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
     // Title expansion state
     const [isTitleExpanded, setIsTitleExpanded] = useState<boolean>(false);
+    // Select authorized state
+    const [selectAuthorized, setSelectAuthorized] = useState<boolean>(false);
 
-    const displayedCount = images.length;
+    const [visibleImages, setVisibleImages] = useState<Asset[]>(images);
+
+    const displayedCount = visibleImages.length;
     const selectedCount = selectedCards.size;
+
+    useEffect(() => {
+        selectAuthorized ? setVisibleImages(images.filter(image => image.authorized === undefined || image.authorized === AuthorizationStatus.AVAILABLE)) : setVisibleImages(images);
+
+        // Clear selection when filter changes to avoid showing incorrect counts
+        setSelectedCards(new Set());
+    }, [images, selectAuthorized]);
+
+    // Reset select-authorized checkbox when new search results come in
+    useEffect(() => {
+        // Reset select-authorized checkbox (selectedCards is already cleared by the effect above)
+        setSelectAuthorized(false);
+    }, [images]);
 
     // Handle keyboard events for modals
     useEffect(() => {
@@ -133,7 +152,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     // Handle select all
     const handleSelectAll = (isChecked: boolean) => {
         if (isChecked) {
-            setSelectedCards(new Set(images.map(img => img.assetId || '')));
+            setSelectedCards(new Set(visibleImages.map(img => img.assetId || '')));
         } else {
             setSelectedCards(new Set());
         }
@@ -141,7 +160,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
     // Bulk actions handlers
     const handleBulkAddToCart = () => {
-        onBulkAddToCart(selectedCards, images);
+        onBulkAddToCart(selectedCards, visibleImages);
         setSelectedCards(new Set());
     };
 
@@ -155,8 +174,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
     const handleBulkAddToCollection = () => {
         // Get selected assets
-        const selectedAssets = images.filter(img => selectedCards.has(img.assetId || ''));
-        
+        const selectedAssets = visibleImages.filter(img => selectedCards.has(img.assetId || ''));
+
         if (selectedAssets.length === 0) {
             return;
         }
@@ -168,7 +187,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
             }
         });
         window.dispatchEvent(event);
-        
+
         // Clear selection after action
         setSelectedCards(new Set());
     };
@@ -176,6 +195,10 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     // Handle title expansion toggle
     const handleTitleToggle = () => {
         setIsTitleExpanded(!isTitleExpanded);
+    };
+
+    const handleSelectAuthorized = (isChecked: boolean) => {
+        setSelectAuthorized(isChecked);
     };
 
     // Calculate statistics
@@ -229,6 +252,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 hasMorePages={hasMorePages}
                 currentPage={(searchResult?.page as number) || 0}
                 totalPages={(searchResult?.nbPages as number) || 0}
+                selectAuthorized={selectAuthorized}
+                onSelectAuthorized={handleSelectAuthorized}
+                isRightsSearch={isRightsSearch}
             />
 
             <div className="image-grid-wrapper">
@@ -237,25 +263,25 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                         <div className="loading-spinner"></div>
                         <p>Loading images...</p>
                     </div>
-                ) : images.length === 0 ? (
+                ) : visibleImages.length === 0 ? (
                     <div className="no-images">
                         <p>No images to display</p>
                     </div>
                 ) : (
                     <>
                         <div className={viewType === 'grid' ? 'image-grid' : 'image-grid-list'}>
-                            {images.map((image) => {
+                            {visibleImages.map((visibleImage) => {
                                 const CardComponent = viewType === 'grid' ? AssetCardViewGrid : AssetCardViewList;
                                 return (
                                     <CardComponent
-                                        key={image.assetId}
-                                        image={image}
+                                        key={visibleImage.assetId}
+                                        image={visibleImage}
                                         handleCardDetailClick={handleCardDetailClick}
                                         handlePreviewClick={handleCardPreviewClick}
                                         handleAddToCart={handleAddToCart}
                                         handleRemoveFromCart={onRemoveFromCart}
                                         cartItems={cartItems}
-                                        isSelected={selectedCards.has(image.assetId || '')}
+                                        isSelected={selectedCards.has(visibleImage.assetId || '')}
                                         onCheckboxChange={handleCheckboxChange}
                                         showFullDetails={showFullDetails}
                                     />
