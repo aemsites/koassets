@@ -563,7 +563,7 @@ a.terms-link:hover {
 }
 
 .preview-image.missing::before {
-  content: "Image not available";
+  content: "Preview not available";
   color: #f5222d;
   font-family: "TCCC UnityText Regular", sans-serif;
   text-align: center;
