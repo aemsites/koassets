@@ -96,8 +96,10 @@ const LazyImage: React.FC<LazyImageProps> = ({
 
     return (
         <div ref={imgRef} className={`lazy-image-container ${className}`} onClick={onClick}>
-            {isLoading && (
-                <div className="lazy-image-placeholder loading">
+            {(isLoading || !imageUrl) && (
+                <div className="lazy-image-placeholder loading" 
+                    data-testid={`lazy-image-placeholder-loading-${isLoading}-${isVisible}-${imageUrl}`}
+                >
                     <div className="loading-spinner"></div>
                     <span>Loading...</span>
                 </div>
@@ -111,12 +113,6 @@ const LazyImage: React.FC<LazyImageProps> = ({
                         className={`lazy-image ${isLoading && 'loading'}`}
                         onError={(e) => { (e.target as HTMLImageElement)?.parentElement?.classList.add('missing'); }}
                     />
-                </div>
-            )}
-
-            {!isVisible && !isLoading && !isError && (
-                <div className="lazy-image-placeholder">
-                    <span>📷</span>
                 </div>
             )}
         </div>
