@@ -507,6 +507,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     const handleDownloadCompleted = useCallback((success: boolean, successfulAssets?: Asset[]) => {
         if (success) {
             setStepStatus(prev => ({ ...prev, [WorkflowStep.DOWNLOAD]: StepStatus.SUCCESS }));
+            setActiveStep(WorkflowStep.CLOSE_DOWNLOAD);
             console.log('Download completed successfully for assets:', successfulAssets);
 
             // Remove successfully downloaded assets from cart

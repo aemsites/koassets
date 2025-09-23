@@ -832,7 +832,7 @@ export class DynamicMediaClient {
         }
     }
 
-    async downloadAssetsArchive(assetRenditionPairs: AssetRenditionPair[]): Promise<boolean> {
+    async downloadAssetsArchive(assetRenditionPairs: AssetRenditionPair[]): Promise<string | null> {
         try {
             const payload = {
                 items: assetRenditionPairs.map(pair => ({
@@ -850,38 +850,13 @@ export class DynamicMediaClient {
             });
 
             if (!responseData) {
-                return false;
+                return null;
             }
 
             const archiveId = responseData.id;
-
-            // Poll for status until no longer processing
-            let archiveStatus: ArchiveStatus | undefined;
-            const maxRetries = 60; // Maximum 5 minutes (60 * 5s intervals)
-            let retryCount = 0;
-
-            do {
-                archiveStatus = await this.getAssetsArchiveStatus(archiveId);
-
-                if (archiveStatus?.data?.status === 'FAILED') {
-                    return false;
-                } else if (archiveStatus?.data?.status === 'COMPLETED') {
-                    // Download all file URLs in parallel
-                    archiveStatus.data.files.forEach(fileUrl => {
-                        this.downloadFromUrl(fileUrl);
-                    });
-                    return true;
-                }
-
-                // Wait 5 seconds before next poll
-                await new Promise(resolve => setTimeout(resolve, 5000));
-                retryCount++;
-
-            } while (retryCount < maxRetries && archiveStatus?.data?.status === 'PROCESSING');
-
-            return false;
+            return archiveId;
         } catch (error) {
-            return false;
+            return null;
         }
     }
 

@@ -1,9 +1,9 @@
 import React from 'react';
-import type { CartItem } from '../../types';
+import type { DownloadArchiveEntry } from '../../types';
 import './DownloadPanelTemplates.css';
 
 interface DownloadPanelTemplatesProps {
-    downloadItems: CartItem[];
+    downloadItems: DownloadArchiveEntry[];
 }
 
 const DownloadPanelTemplates: React.FC<DownloadPanelTemplatesProps> = ({

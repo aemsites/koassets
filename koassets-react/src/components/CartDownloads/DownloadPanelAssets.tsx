@@ -1,11 +1,11 @@
 import React from 'react';
-import { WorkflowStep, type CartItem } from '../../types';
+import { WorkflowStep, type Asset, type DownloadArchiveEntry } from '../../types';
 import './DownloadPanelAssets.css';
 import { WorkflowProgress } from './WorkflowProgress';
 
 interface DownloadPanelAssetsProps {
-    downloadItems: CartItem[];
-    onRemoveItem: (item: CartItem) => void;
+    downloadItems: DownloadArchiveEntry[];
+    onRemoveItem: (item: Asset) => void;
 }
 
 const DownloadPanelAssets: React.FC<DownloadPanelAssetsProps> = ({

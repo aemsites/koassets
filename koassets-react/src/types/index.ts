@@ -269,8 +269,8 @@ export interface CartPanelProps {
 export interface DownloadPanelProps {
     isOpen: boolean;
     onClose: () => void;
-    downloadItems: CartItem[]; // Could be same as CartItem or create DownloadItem type
-    onRemoveItem: (item: CartItem) => void;
+    downloadItems: DownloadArchiveEntry[];
+    onRemoveItem: (item: Asset) => void; // Still accepts Asset for removal logic
 }
 
 // Header Bar types - COMMENTED OUT
@@ -610,4 +610,14 @@ export interface SearchPanelProps {
     selectAuthorized?: boolean;
     onSelectAuthorized?: (isChecked: boolean) => void;
     isRightsSearch?: boolean;
+}
+
+// Download archive data structure for sessionStorage
+export interface DownloadArchiveEntry {
+    assetsRenditions: {
+        assetId: string;
+        assetName: string;
+        renditions: string[];
+    }[];
+    archiveId: string;
 }

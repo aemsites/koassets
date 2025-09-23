@@ -23,6 +23,7 @@ import type {
     CartItem,
     Collection,
     CurrentView,
+    DownloadArchiveEntry,
     ExternalParams,
     LoadingState,
     Rendition,
@@ -197,9 +198,9 @@ function MainApp(): React.JSX.Element {
     const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
 
     // Download panel state
-    const [downloadItems, setDownloadItems] = useState<CartItem[]>(() => {
+    const [downloadItems, setDownloadItems] = useState<DownloadArchiveEntry[]>(() => {
         try {
-            const stored = localStorage.getItem('downloadItems');
+            const stored = sessionStorage.getItem('downloadArchives');
             return stored ? JSON.parse(stored) : [];
         } catch {
             return [];
@@ -212,8 +213,23 @@ function MainApp(): React.JSX.Element {
 
     // Download functions
     const handleAddToDownload = useCallback(async (image: Asset): Promise<void> => {
-        if (!downloadItems.some(item => item.assetId === image.assetId)) {
-            setDownloadItems(prev => [...prev, image as CartItem]);
+        // Check if the asset is already in any archive entry
+        const assetExists = downloadItems.some(entry =>
+            entry.assetsRenditions.some(item => item.assetId === image.assetId)
+        );
+
+        if (!assetExists) {
+            // Create a new DownloadArchiveEntry with the asset
+            const newDownloadEntry: DownloadArchiveEntry = {
+                assetsRenditions: [{
+                    assetId: image.assetId || '',
+                    assetName: image.name || image.title || 'Unknown Asset',
+                    renditions: [] // Empty renditions array - will be populated when user selects renditions
+                }],
+                archiveId: `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` // Temporary ID for pending download
+            };
+
+            setDownloadItems(prev => [...prev, newDownloadEntry]);
             console.log('Added to downloads:', image.title || image.name);
         }
     }, [downloadItems]);
@@ -268,9 +284,9 @@ function MainApp(): React.JSX.Element {
         localStorage.setItem('cartItems', JSON.stringify(cartItems));
     }, [cartItems]);
 
-    // Save download items to localStorage when they change
+    // Save download items to sessionStorage when they change
     useEffect(() => {
-        localStorage.setItem('downloadItems', JSON.stringify(downloadItems));
+        sessionStorage.setItem('downloadArchives', JSON.stringify(downloadItems));
     }, [downloadItems]);
 
     useEffect(() => {
@@ -643,8 +659,11 @@ function MainApp(): React.JSX.Element {
 
 
     const handleRemoveFromDownload = (image: Asset): void => {
-        setDownloadItems(prev => prev.filter(item => item.assetId !== image.assetId));
-        console.log('Removed from downloads:', image.title || image.name);
+        // Remove archive entries that contain this asset
+        setDownloadItems(prev => prev.filter(entry =>
+            !entry.assetsRenditions.some(item => item.assetId === image.assetId)
+        ));
+        console.log('Removed archive entries containing:', image.title || image.name);
     };
 
     // Sort handlers

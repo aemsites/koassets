@@ -63,7 +63,7 @@ const BasePanel: React.FC<BasePanelProps> = ({
                 </div>
 
                 {/* Tabs - conditionally shown */}
-                {tabs.length > 0 && activeStep === WorkflowStep.CART && (
+                {tabs.length > 0 && (activeStep === WorkflowStep.CART || activeStep === WorkflowStep.CLOSE_DOWNLOAD) && (
                     <div className="base-panel-tabs">
                         {tabs.map((tab) => (
                             <button

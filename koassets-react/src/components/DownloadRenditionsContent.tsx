@@ -279,10 +279,10 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                 }
             } else {
                 // Multiple assets archive download - show toast notifications
-                closeProcessingToast = ToastQueue.info(`Processing download request for ${totalSelectedCount} renditions. Refreshing the page will cancel the download.`);
+                closeProcessingToast = ToastQueue.info(`Processing download request for ${totalSelectedCount} renditions.`);
 
                 // Collect all assets with their selected renditions
-                const assetsWithRenditions = [];
+                const assetsRenditions = [];
                 const successfulAssets: Asset[] = [];
                 for (const [assetId, assetRenditions] of selectedRenditions) {
                     const assetData = assets.find(assetData => assetData.asset.assetId === assetId);
@@ -294,7 +294,7 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                             return { name: renditionName };
                         });
 
-                        assetsWithRenditions.push({
+                        assetsRenditions.push({
                             asset: assetData.asset,
                             renditions: renditionsForThisAsset
                         });
@@ -302,11 +302,22 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                     }
                 }
 
-                const success = await dynamicMediaClient.downloadAssetsArchive(assetsWithRenditions);
+                const archiveId = await dynamicMediaClient.downloadAssetsArchive(assetsRenditions);
 
-                if (success) {
+                if (archiveId) {
+                    // Store and track archiveId in sessionStorage
+                    const existingDownloads = JSON.parse(sessionStorage.getItem('downloadArchives') || '[]');
+                    existingDownloads.push({
+                        assetsRenditions: assetsRenditions.map(item => ({
+                            assetId: item.asset.assetId,
+                            assetName: item.asset.name || item.asset.title || 'Unknown Asset',
+                            renditions: item.renditions.map(rendition => rendition.name)
+                        })),
+                        archiveId
+                    });
+                    sessionStorage.setItem('downloadArchives', JSON.stringify(existingDownloads));
+
                     closeProcessingToast?.();
-                    ToastQueue.positive(`Successfully started downloading ${totalSelectedCount} renditions.`, { timeout: 1000 });
                     onDownloadCompleted?.(true, successfulAssets);
                     onClose();
                 } else {
