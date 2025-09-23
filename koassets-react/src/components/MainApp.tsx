@@ -20,11 +20,11 @@ declare global {
 
 import type {
     Asset,
-    CartItem,
+    CartAssetItem,
     CartTemplateItem,
     Collection,
     CurrentView,
-    DownloadArchiveEntry,
+    DownloadArchiveItem,
     DownloadTemplateItem,
     ExternalParams,
     LoadingState,
@@ -189,9 +189,9 @@ function MainApp(): React.JSX.Element {
     const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
 
     // Cart state
-    const [cartAssetItems, setCartAssetItems] = useState<CartItem[]>(() => {
+    const [cartAssetItems, setCartAssetItems] = useState<CartAssetItem[]>(() => {
         try {
-            const stored = localStorage.getItem('cartItems');
+            const stored = localStorage.getItem('cartAssetItems');
             return stored ? JSON.parse(stored) : [];
         } catch {
             return [];
@@ -202,7 +202,7 @@ function MainApp(): React.JSX.Element {
     const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
 
     // Download panel state
-    const [downloadAssetItems, setDownloadAssetItems] = useState<DownloadArchiveEntry[]>(() => {
+    const [downloadAssetItems, setDownloadAssetItems] = useState<DownloadArchiveItem[]>(() => {
         try {
             const stored = sessionStorage.getItem('downloadArchives');
             return stored ? JSON.parse(stored) : [];
@@ -224,8 +224,8 @@ function MainApp(): React.JSX.Element {
         );
 
         if (!assetExists) {
-            // Create a new DownloadArchiveEntry with the asset
-            const newDownloadEntry: DownloadArchiveEntry = {
+            // Create a new DownloadArchiveItem with the asset
+            const newDownloadEntry: DownloadArchiveItem = {
                 assetsRenditions: [{
                     assetId: image.assetId || '',
                     assetName: image.name || image.title || 'Unknown Asset',
@@ -286,7 +286,7 @@ function MainApp(): React.JSX.Element {
 
     // Save cart items to localStorage when they change
     useEffect(() => {
-        localStorage.setItem('cartItems', JSON.stringify(cartAssetItems));
+        localStorage.setItem('cartAssetItems', JSON.stringify(cartAssetItems));
     }, [cartAssetItems]);
 
     // Save download items to sessionStorage when they change
@@ -759,7 +759,7 @@ function MainApp(): React.JSX.Element {
                     loading={loading[LOADING.dmImages]}
                     onAddToCart={handleAddToCart}
                     onRemoveFromCart={handleRemoveFromCart}
-                    cartItems={cartAssetItems}
+                    cartAssetItems={cartAssetItems}
                     searchResult={searchResults?.[0] || null}
                     onToggleMobileFilter={handleToggleMobileFilter}
                     isMobileFilterOpen={isMobileFilterOpen}
@@ -797,7 +797,8 @@ function MainApp(): React.JSX.Element {
         >
             <div className="container">
                 <HeaderBar
-                    cartItems={cartAssetItems}
+                    cartAssetItems={cartAssetItems}
+                    downloadAssetItems={downloadAssetItems}
                     handleAuthenticated={handleIMSAccessToken}
                     handleSignOut={handleSignOut}
                 />

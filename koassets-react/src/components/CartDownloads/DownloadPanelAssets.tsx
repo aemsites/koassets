@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import type {
     Asset,
-    DownloadArchiveEntry,
+    DownloadArchiveItem,
     WorkflowStepStatuses
 } from '../../types';
 
@@ -19,7 +19,7 @@ enum DownloadStatus {
 }
 
 interface DownloadPanelAssetsProps {
-    downloadItems: DownloadArchiveEntry[];
+    downloadItems: DownloadArchiveItem[];
     onRemoveItem: (item: Asset) => void;
 }
 
@@ -73,7 +73,7 @@ const DownloadPanelAssets: React.FC<DownloadPanelAssetsProps> = ({
     };
 
     // Handle remove archive
-    const handleRemoveArchive = (archiveEntry: DownloadArchiveEntry) => {
+    const handleRemoveArchive = (archiveEntry: DownloadArchiveItem) => {
         // Remove all assets from this archive
         archiveEntry.assetsRenditions.forEach(assetRendition => {
             // Find the asset to remove - we only have assetId, so we need to create a mock Asset
@@ -93,7 +93,7 @@ const DownloadPanelAssets: React.FC<DownloadPanelAssetsProps> = ({
     ), []);
 
     // Download item row component
-    const DownloadItemRow: React.FC<{ item: DownloadArchiveEntry }> = ({ item }) => {
+    const DownloadItemRow: React.FC<{ item: DownloadArchiveItem }> = ({ item }) => {
         const status = getArchiveStatus(item.archiveId);
         const fileCount = item.assetsRenditions.length;
 

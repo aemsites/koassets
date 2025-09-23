@@ -13,7 +13,7 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
     closeModal,
     handleAddToCart,
     handleRemoveFromCart,
-    cartItems = [],
+    cartAssetItems = [],
     renditions = {},
     fetchAssetRenditions
 }) => {
@@ -25,7 +25,7 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
     const [watermarkRendition, setWatermarkRendition] = useState<Rendition | undefined>(undefined);
 
     // Check if this item is already in the cart
-    const isInCart = selectedImage ? cartItems.some(cartItem => cartItem.assetId === selectedImage.assetId) : false;
+    const isInCart = selectedImage ? cartAssetItems.some(cartAssetItem => cartAssetItem.assetId === selectedImage.assetId) : false;
 
     // Handle button click - either add or remove from cart
     const handleAddRemoveCart = (e: React.MouseEvent<HTMLButtonElement>) => {

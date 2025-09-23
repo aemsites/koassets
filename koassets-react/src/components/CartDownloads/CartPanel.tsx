@@ -37,8 +37,8 @@ const CartPanelContent: React.FC<CartPanelContentProps> = ({
         <>
             {activeTab === 'assets' && (
                 <CartPanelAssets
-                    cartItems={cartAssetItems}
-                    setCartItems={setCartAssetItems}
+                    cartAssetItems={cartAssetItems}
+                    setCartAssetItems={setCartAssetItems}
                     onRemoveItem={onRemoveItem}
                     onClose={onClose}
                     onActiveStepChange={setActiveStep!}

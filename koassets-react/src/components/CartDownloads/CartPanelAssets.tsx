@@ -24,12 +24,12 @@ import EmptyCartDownloadContent from './EmptyCartDownloadContent';
 import { WorkflowProgress } from './WorkflowProgress';
 
 // Component for rendering individual cart item row
-interface CartItemRowProps {
+interface CartAssetItemRowProps {
     item: Asset;
     onRemoveItem: (item: Asset) => void;
 }
 
-const CartItemRow: React.FC<CartItemRowProps> = ({ item, onRemoveItem }) => {
+const CartAssetItemRow: React.FC<CartAssetItemRowProps> = ({ item, onRemoveItem }) => {
     return (
         <div className={`cart-item-row`}>
             <div className="col-thumbnail">
@@ -70,7 +70,7 @@ interface CartActionsFooterProps {
     onOpenDownload: () => void;
     onOpenRequestDownload: () => void;
     onCloseDownload: () => void;
-    cartItems: Asset[];
+    cartAssetItems: Asset[];
 }
 
 const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
@@ -81,13 +81,13 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
     onOpenDownload,
     onOpenRequestDownload,
     onCloseDownload,
-    cartItems
+    cartAssetItems
 }) => {
     const handleAddToCollectionFromCart = (e: React.MouseEvent): void => {
         e.preventDefault();
         try {
-            if (!cartItems || cartItems.length === 0) return;
-            const detail = { assets: cartItems } as unknown as Record<string, unknown>;
+            if (!cartAssetItems || cartAssetItems.length === 0) return;
+            const detail = { assets: cartAssetItems } as unknown as Record<string, unknown>;
             window.dispatchEvent(new CustomEvent('openCollectionModal', { detail }));
         } catch (err) {
             console.warn('Failed to open Add to Collection modal from cart:', err);
@@ -137,8 +137,8 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
 
 
 const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
-    cartItems,
-    setCartItems,
+    cartAssetItems,
+    setCartAssetItems,
     onRemoveItem,
     onClose,
     onActiveStepChange
@@ -197,24 +197,24 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     }, [activeStep, onActiveStepChange]);
 
 
-    // Update filteredItems when cartItems changes
+    // Update filteredItems when cartAssetItems changes
     useEffect(() => {
         setFilteredItems(prev => ({
             ...prev,
-            [FilteredItemsType.READY_TO_USE]: cartItems.filter(item => item?.readyToUse?.toLowerCase() === 'yes' || item?.authorized === AuthorizationStatus.AVAILABLE)
+            [FilteredItemsType.READY_TO_USE]: cartAssetItems.filter(item => item?.readyToUse?.toLowerCase() === 'yes' || item?.authorized === AuthorizationStatus.AVAILABLE)
         }));
-    }, [cartItems]);
+    }, [cartAssetItems]);
 
     const handleClearCart = useCallback((): void => {
         // Remove cached blobs for each cart item
-        cartItems.forEach(item => {
+        cartAssetItems.forEach(item => {
             if (item.assetId) {
                 removeBlobFromCache(item.assetId);
             }
         });
 
-        setCartItems([]);
-    }, [cartItems, setCartItems]);
+        setCartAssetItems([]);
+    }, [cartAssetItems, setCartAssetItems]);
 
     const handleOpenRequestDownload = useCallback((): void => {
         setStepStatus(prev => ({ ...prev, [WorkflowStep.CART]: StepStatus.SUCCESS }));
@@ -294,9 +294,9 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         // Remove restricted assets from cart
         if (rightsExtensionData.restrictedAssets && rightsExtensionData.restrictedAssets.length > 0) {
             const restrictedAssetIds = rightsExtensionData.restrictedAssets.map(asset => asset.assetId);
-            const authorizedItems = cartItems.filter(item => !restrictedAssetIds.includes(item.assetId));
+            const authorizedItems = cartAssetItems.filter(item => !restrictedAssetIds.includes(item.assetId));
 
-            setCartItems(authorizedItems);
+            setCartAssetItems(authorizedItems);
 
             // If there are still items in cart after removal, go back to RIGHTS_CHECK
             if (authorizedItems.length > 0) {
@@ -306,7 +306,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             }
             // If no items left, the auto-close useEffect will handle closing the cart
         }
-    }, [cartItems, setCartItems]);
+    }, [cartAssetItems, setCartAssetItems]);
 
     const handleOpenDownload = useCallback(async (): Promise<void> => {
         setStepStatus(prev => ({ ...prev, [WorkflowStep.CART]: stepStatus[WorkflowStep.CART] === StepStatus.INIT ? StepStatus.SUCCESS : stepStatus[WorkflowStep.CART] }));
@@ -351,21 +351,21 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             // Remove successfully downloaded assets from cart
             if (successfulAssets && successfulAssets.length > 0) {
                 const successfulAssetIds = successfulAssets.map(asset => asset.assetId);
-                const newCartItems = cartItems.filter(item => !successfulAssetIds.includes(item.assetId));
-                setCartItems(newCartItems);
+                const newCartAssetItems = cartAssetItems.filter(item => !successfulAssetIds.includes(item.assetId));
+                setCartAssetItems(newCartAssetItems);
             }
         } else {
             setStepStatus(prev => ({ ...prev, [WorkflowStep.DOWNLOAD]: StepStatus.FAILURE }));
         }
-    }, [setCartItems, cartItems]);
+    }, [setCartAssetItems, cartAssetItems]);
 
 
     // Memoized computed values
-    const cartItemsCount = useMemo(() => cartItems.length, [cartItems.length]);
+    const cartAssetItemsCount = useMemo(() => cartAssetItems.length, [cartAssetItems.length]);
 
-    const cartItemsCountText = useMemo(() =>
-        `${cartItemsCount} Item${cartItemsCount !== 1 ? 's' : ''}`,
-        [cartItemsCount]
+    const cartAssetItemsCountText = useMemo(() =>
+        `${cartAssetItemsCount} Item${cartAssetItemsCount !== 1 ? 's' : ''}`,
+        [cartAssetItemsCount]
     );
 
     const tableHeader = useMemo(() => (
@@ -384,17 +384,17 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
 
     // Check if any cart item has SMR risk type management
     const hasSMRItem = useMemo(() => {
-        return cartItems.some(item => item?.riskTypeManagement === 'smr');
-    }, [cartItems]);
+        return cartAssetItems.some(item => item?.riskTypeManagement === 'smr');
+    }, [cartAssetItems]);
 
     // Check if any cart item has isRestrictedBrand true
     const hasRestrictedBrandItem = useMemo(() => {
-        return cartItems?.some(item => item.isRestrictedBrand) || false;
-    }, [cartItems]);
+        return cartAssetItems?.some(item => item.isRestrictedBrand) || false;
+    }, [cartAssetItems]);
 
     const hasAllItemsReadyToUse = useMemo(() => {
-        return cartItems.every(item => item?.readyToUse?.toLowerCase() === 'yes' || item?.authorized === AuthorizationStatus.AVAILABLE);
-    }, [cartItems]);
+        return cartAssetItems.every(item => item?.readyToUse?.toLowerCase() === 'yes' || item?.authorized === AuthorizationStatus.AVAILABLE);
+    }, [cartAssetItems]);
 
     // Memoized download assets data for DownloadRenditionsContent
     const downloadAssetsData = useMemo(() => {
@@ -406,9 +406,9 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         }));
     }, [filteredItems]);
 
-    // Populate each cart item with isRestrictedBrand property whenever cartItems changes
+    // Populate each cart item with isRestrictedBrand property whenever cartAssetItems changes
     useEffect(() => {
-        if (!restrictedBrands || restrictedBrands.length === 0 || !cartItems || cartItems.length === 0) {
+        if (!restrictedBrands || restrictedBrands.length === 0 || !cartAssetItems || cartAssetItems.length === 0) {
             return;
         }
 
@@ -422,7 +422,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         }
 
         // Update each cart item with isRestrictedBrand property
-        const updatedCartItems = cartItems.map(item => {
+        const updatedCartAssetItems = cartAssetItems.map(item => {
             let isRestrictedBrand = false;
 
             if (item.brand) {
@@ -440,23 +440,23 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         });
 
         // Only update if there are actual changes to avoid infinite loops
-        const hasChanges = updatedCartItems.some((item, index) =>
-            item.isRestrictedBrand !== cartItems[index].isRestrictedBrand
+        const hasChanges = updatedCartAssetItems.some((item, index) =>
+            item.isRestrictedBrand !== cartAssetItems[index].isRestrictedBrand
         );
 
         if (hasChanges) {
-            setCartItems(updatedCartItems);
+            setCartAssetItems(updatedCartAssetItems);
         }
-    }, [cartItems, restrictedBrands, setCartItems]);
+    }, [cartAssetItems, restrictedBrands, setCartAssetItems]);
 
     // Close cart when all items are removed
     // useEffect(() => {
-    //     if (cartItems.length === 0) {
+    //     if (cartAssetItems.length === 0) {
     //         onClose();
     //     }
-    // }, [cartItems.length, onClose]);
+    // }, [cartAssetItems.length, onClose]);
 
-    if (cartItemsCount === 0) {
+    if (cartAssetItemsCount === 0) {
         return <EmptyCartDownloadContent msg="Your cart is empty" />;
     }
 
@@ -478,7 +478,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                 />
             ) : activeStep === WorkflowStep.REQUEST_DOWNLOAD ? (
                 <CartRequestDownload
-                    cartItems={cartItems}
+                    cartAssetItems={cartAssetItems}
                     onCancel={handleCancelRequestDownload}
                     onOpenRightsCheck={handleOpenRightsCheck}
                     onBack={(stepData: RequestDownloadStepData) => {
@@ -499,8 +499,8 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                 />
             ) : activeStep === WorkflowStep.RIGHTS_CHECK ? (
                 <CartRightsCheck
-                    cartItems={cartItems}
-                    setCartItems={setCartItems}
+                    cartAssetItems={cartAssetItems}
+                    setCartAssetItems={setCartAssetItems}
                     intendedUse={stepData.requestDownload || {
                         airDate: null,
                         pullDate: null,
@@ -572,7 +572,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                     <div className="cart-content">
                         {/* Cart Items Count */}
                         <div className="cart-items-count">
-                            <span className="red-text">{cartItemsCountText}</span> in your cart
+                            <span className="red-text">{cartAssetItemsCountText}</span> in your cart
                         </div>
 
                         {/* Table Header */}
@@ -580,8 +580,8 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
 
                         {/* Cart Items */}
                         <div className="cart-items-table">
-                            {cartItems.map((item: Asset) => (
-                                <CartItemRow
+                            {cartAssetItems.map((item: Asset) => (
+                                <CartAssetItemRow
                                     key={item.assetId}
                                     item={item}
                                     onRemoveItem={handleRemoveItem}
@@ -614,7 +614,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                         onOpenDownload={handleOpenDownload}
                         onOpenRequestDownload={handleOpenRequestDownload}
                         onCloseDownload={handleCloseDownload}
-                        cartItems={cartItems}
+                        cartAssetItems={cartAssetItems}
                     />
                 </>
             )}

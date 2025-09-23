@@ -189,7 +189,7 @@ export interface Asset {
 }
 
 // Cart-related types
-export interface CartItem extends Asset {
+export interface CartAssetItem extends Asset {
     // Additional cart-specific properties can be added here
     isRestrictedBrand?: boolean;
 }
@@ -201,7 +201,7 @@ export interface AssetCardProps {
     handlePreviewClick: (image: Asset, event: React.MouseEvent) => void;
     handleAddToCart?: (image: Asset, event: React.MouseEvent) => void;
     handleRemoveFromCart?: (image: Asset) => void;
-    cartItems?: CartItem[];
+    cartAssetItems?: CartAssetItem[];
     isSelected?: boolean;
     onCheckboxChange?: (id: string, checked: boolean) => void;
     showFullDetails?: boolean;
@@ -260,18 +260,18 @@ export interface Collection {
 export interface CartPanelProps {
     isOpen: boolean;
     onClose: () => void;
-    cartAssetItems: CartItem[];
-    setCartAssetItems: React.Dispatch<React.SetStateAction<CartItem[]>>;
+    cartAssetItems: CartAssetItem[];
+    setCartAssetItems: React.Dispatch<React.SetStateAction<CartAssetItem[]>>;
     cartTemplateItems: CartTemplateItem[];
     setCartTemplateItems: React.Dispatch<React.SetStateAction<CartTemplateItem[]>>;
-    onRemoveItem: (item: CartItem) => void;
+    onRemoveItem: (item: CartAssetItem) => void;
 }
 
 // Download Panel types
 export interface DownloadPanelProps {
     isOpen: boolean;
     onClose: () => void;
-    downloadAssetItems: DownloadArchiveEntry[];
+    downloadAssetItems: DownloadArchiveItem[];
     downloadTemplateItems: DownloadTemplateItem[];
     setDownloadTemplateItems: React.Dispatch<React.SetStateAction<DownloadTemplateItem[]>>;
     onRemoveItem: (item: Asset) => void; // Still accepts Asset for removal logic
@@ -279,13 +279,13 @@ export interface DownloadPanelProps {
 
 // Header Bar types - COMMENTED OUT
 // export interface HeaderBarProps {
-//     cartItems: CartItem[];
-//     setCartItems: React.Dispatch<React.SetStateAction<CartItem[]>>;
+//     cartAssetItems: CartAssetItem[];
+//     setCartAssetItems: React.Dispatch<React.SetStateAction<CartAssetItem[]>>;
 //     isCartOpen: boolean;
 //     setIsCartOpen: (isOpen: boolean) => void;
-//     handleRemoveFromCart: (item: CartItem) => void;
-//     handleApproveAssets: (items: CartItem[]) => void;
-//     handleDownloadAssets: (items: CartItem[]) => void;
+//     handleRemoveFromCart: (item: CartAssetItem) => void;
+//     handleApproveAssets: (items: CartAssetItem[]) => void;
+//     handleDownloadAssets: (items: CartAssetItem[]) => void;
 //     handleAuthenticated: (userData: string) => void;
 //     handleSignOut: () => void;
 // }
@@ -297,7 +297,7 @@ export interface AssetPreviewProps {
     closeModal: () => void;
     handleAddToCart?: (image: Asset, event: React.MouseEvent) => void;
     handleRemoveFromCart?: (image: Asset) => void;
-    cartItems?: CartItem[];
+    cartAssetItems?: CartAssetItem[];
     renditions?: {
         assetId?: string;
         items?: Rendition[];
@@ -399,7 +399,7 @@ export interface ImageGalleryProps {
     loading: boolean;
     onAddToCart?: (image: Asset) => void;
     onRemoveFromCart?: (image: Asset) => void;
-    cartItems?: CartItem[];
+    cartAssetItems?: CartAssetItem[];
     searchResult?: SearchResult | null;
     onToggleMobileFilter?: () => void;
     isMobileFilterOpen?: boolean;
@@ -437,7 +437,7 @@ export interface ImageGalleryProps {
 export interface MainAppState {
     images: Asset[];
     collections: Collection[];
-    cartItems: CartItem[];
+    cartAssetItems: CartAssetItem[];
     loading: boolean;
     selectedFacets: string[][];
 }
@@ -488,15 +488,15 @@ export interface WorkflowStepIcons {
 }
 
 export interface CartPanelAssetsProps {
-    cartItems: CartItem[];
-    setCartItems: React.Dispatch<React.SetStateAction<CartItem[]>>;
-    onRemoveItem: (item: CartItem) => void;
+    cartAssetItems: CartAssetItem[];
+    setCartAssetItems: React.Dispatch<React.SetStateAction<CartAssetItem[]>>;
+    onRemoveItem: (item: CartAssetItem) => void;
     onClose: () => void;
     onActiveStepChange: (step: WorkflowStep) => void;
 }
 
 export interface CartRequestRightsExtensionProps {
-    restrictedAssets: CartItem[];
+    restrictedAssets: CartAssetItem[];
     intendedUse: RequestDownloadStepData;
     onCancel: () => void;
     onSendRightsExtensionRequest: (rightsExtensionData: RequestRightsExtensionStepData) => void;
@@ -617,7 +617,7 @@ export interface SearchPanelProps {
 }
 
 // Download archive data structure for sessionStorage
-export interface DownloadArchiveEntry {
+export interface DownloadArchiveItem {
     assetsRenditions: {
         assetId: string;
         assetName: string;

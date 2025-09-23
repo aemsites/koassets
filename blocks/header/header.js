@@ -197,11 +197,11 @@ async function createNavBar() {
     tools.appendChild(iconsWrapper);
 
     // Expose function to update cart badge
-    window.updateCartBadge = function (numCartItems) {
+    window.updateCartBadge = function (numCartAssetItems) {
       const badge = cartIcon.querySelector('.cart-badge');
       if (badge) {
-        if (numCartItems && numCartItems > 0) {
-          badge.textContent = numCartItems;
+        if (numCartAssetItems && numCartAssetItems > 0) {
+          badge.textContent = numCartAssetItems;
           badge.style.display = 'block';
         } else {
           badge.style.display = 'none';
@@ -224,8 +224,8 @@ async function createNavBar() {
 
     // Update cart badge from localStorage
     try {
-      const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
-      window.updateCartBadge(cartItems.length);
+      const cartAssetItems = JSON.parse(localStorage.getItem('cartAssetItems') || '[]');
+      window.updateCartBadge(cartAssetItems.length);
     } catch (error) {
       console.error('Error reading cart items from localStorage:', error);
       window.updateCartBadge(0);

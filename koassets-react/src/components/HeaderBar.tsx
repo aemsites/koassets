@@ -1,33 +1,28 @@
 import React, { useEffect } from 'react';
 import { useAppConfig } from '../hooks/useAppConfig';
-import type { CartItem } from '../types';
-// import type { HeaderBarProps } from '../types'; // COMMENTED OUT
+import type { CartAssetItem, DownloadArchiveItem } from '../types';
 import AdobeSignInButton from './AdobeSignInButton.jsx';
-// import CartPanel from './CartPanel'; // REMOVED - moved to MainApp
 import './HeaderBar.css';
 
-// Extend window interface for cart badge function
+// Extend window interface for cart and download badge functions
 declare global {
     interface Window {
         updateCartBadge?: (numItems: number) => void;
+        updateDownloadBadge?: (numItems: number) => void;
     }
 }
 
 // Simplified HeaderBar props interface
 interface HeaderBarPropsSimplified {
-    cartItems: CartItem[];
+    cartAssetItems: CartAssetItem[];
+    downloadAssetItems: DownloadArchiveItem[];
     handleAuthenticated: (token: string) => void;
     handleSignOut: () => void;
 }
 
 const HeaderBar: React.FC<HeaderBarPropsSimplified> = ({
-    cartItems, // Keep for window.updateCartBadge
-    // setCartItems, // Removed - cart moved to MainApp
-    // isCartOpen, // Removed - cart moved to MainApp  
-    // setIsCartOpen, // Removed - cart moved to MainApp
-    // handleRemoveFromCart, // Removed - cart moved to MainApp
-    // handleApproveAssets, // Removed - cart moved to MainApp
-    // handleDownloadAssets, // Removed - cart moved to MainApp
+    cartAssetItems, // Keep for window.updateCartBadge
+    downloadAssetItems, // Keep for window.updateDownloadBadge
     handleAuthenticated,
     handleSignOut
 }) => {
@@ -37,9 +32,15 @@ const HeaderBar: React.FC<HeaderBarPropsSimplified> = ({
 
     useEffect(() => {
         if (window.updateCartBadge && typeof window.updateCartBadge === 'function') {
-            window.updateCartBadge(cartItems.length);
+            window.updateCartBadge(cartAssetItems.length);
         }
-    }, [cartItems.length]);
+    }, [cartAssetItems.length]);
+
+    useEffect(() => {
+        if (window.updateDownloadBadge && typeof window.updateDownloadBadge === 'function') {
+            window.updateDownloadBadge(downloadAssetItems.length);
+        }
+    }, [downloadAssetItems.length]);
 
     const handleLogoClick = () => {
         window.location.assign('/');

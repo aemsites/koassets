@@ -894,22 +894,6 @@ export class DynamicMediaClient {
     }
 
     /**
-     * Download a file from a direct URL by creating a temporary link and triggering click
-     * @private
-     */
-    private downloadFromUrl(url: string): void {
-        try {
-            // Extract filename from URL or use default
-            const urlParts = url.split('/');
-            const filename = urlParts[urlParts.length - 1]?.split('?')[0] || 'archive.zip';
-
-            this.triggerDownload(url, filename);
-        } catch (error) {
-            console.error('Failed to download file from URL:', url, error);
-        }
-    }
-
-    /**
      * Download a blob as a file by creating an object URL and triggering download
      * @private
      */

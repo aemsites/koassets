@@ -8,8 +8,8 @@ import ThumbnailImage from '../ThumbnailImage';
 import './CartRightsCheck.css';
 
 interface CartRightsCheckProps {
-    cartItems: Asset[];
-    setCartItems: React.Dispatch<React.SetStateAction<Asset[]>>;
+    cartAssetItems: Asset[];
+    setCartAssetItems: React.Dispatch<React.SetStateAction<Asset[]>>;
     intendedUse: RequestDownloadStepData;
     onCancel: () => void;
     onOpenRequestRightsExtension: (restrictedAssets: Asset[], requestDownloadData: RequestDownloadStepData) => void;
@@ -27,8 +27,8 @@ interface DownloadOptions {
 
 
 const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
-    cartItems,
-    setCartItems,
+    cartAssetItems,
+    setCartAssetItems,
     intendedUse,
     onCancel,
     onOpenRequestRightsExtension,
@@ -49,23 +49,23 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
 
     // Local state for authorized assets (so we can modify it when downloads complete)
     const [authorizedAssets, setAuthorizedAssets] = useState<Asset[]>(() =>
-        cartItems.filter(item => item?.readyToUse?.toLowerCase() === 'yes' || item?.authorized === AuthorizationStatus.AVAILABLE)
+        cartAssetItems.filter(item => item?.readyToUse?.toLowerCase() === 'yes' || item?.authorized === AuthorizationStatus.AVAILABLE)
     );
 
     // Memoize restrictedAssets to prevent unnecessary re-renders, excluding newly authorized assets
     const restrictedAssets = useMemo(() =>
-        cartItems.filter(item =>
+        cartAssetItems.filter(item =>
             item?.readyToUse?.toLowerCase() !== 'yes' &&
             !newlyAuthorizedAssetIds.has(item.assetId || '')
         ),
-        [cartItems, newlyAuthorizedAssetIds]
+        [cartAssetItems, newlyAuthorizedAssetIds]
     );
 
     // Update authorization status for newly authorized assets
     useEffect(() => {
         if (newlyAuthorizedAssetIds.size > 0) {
-            setCartItems(prevCartItems =>
-                prevCartItems.map(item => {
+            setCartAssetItems(prevCartAssetItems =>
+                prevCartAssetItems.map(item => {
                     if (item.assetId && newlyAuthorizedAssetIds.has(item.assetId)) {
                         return { ...item, authorized: AuthorizationStatus.AVAILABLE };
                     }
@@ -73,15 +73,15 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
                 })
             );
         }
-    }, [newlyAuthorizedAssetIds, setCartItems]);
+    }, [newlyAuthorizedAssetIds, setCartAssetItems]);
 
-    // Sync authorized assets when cartItems changes (in case items are added/removed from outside)
+    // Sync authorized assets when cartAssetItems changes (in case items are added/removed from outside)
     useEffect(() => {
-        const newAuthorizedAssets = cartItems.filter(item =>
+        const newAuthorizedAssets = cartAssetItems.filter(item =>
             item?.readyToUse?.toLowerCase() === 'yes' || item?.authorized === AuthorizationStatus.AVAILABLE
         );
         setAuthorizedAssets(newAuthorizedAssets);
-    }, [cartItems]);
+    }, [cartAssetItems]);
 
     // Call checkRights when component mounts or key data changes
     useEffect(() => {
@@ -275,7 +275,7 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
                             <div className="assets-section authorized-assets">
                                 <h3>Assets Cleared - Available to Download</h3>
                                 <div className="authorization-status authorized">
-                                    Usage Is Authorized For {authorizedAssets.length} Of {cartItems.length} Assets
+                                    Usage Is Authorized For {authorizedAssets.length} Of {cartAssetItems.length} Assets
                                 </div>
 
                                 <DownloadRenditionsContent
@@ -302,7 +302,7 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
                             <div className="assets-section restricted-assets">
                                 <h3>Assets Restricted - Please Request Rights Extension</h3>
                                 <div className="authorization-status restricted">
-                                    Rights Restricted For {restrictedAssets.length} Of {cartItems.length} Assets
+                                    Rights Restricted For {restrictedAssets.length} Of {cartAssetItems.length} Assets
                                 </div>
 
                                 <div className="assets-table">
