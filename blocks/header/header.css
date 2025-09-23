@@ -576,8 +576,9 @@ header nav .nav-tools .nav-cart-icon .cart-badge {
 }
 
 header nav .nav-tools .nav-download-icon .download-badge {
-  background-color: var(--color-secondary-light-sky-blue);
-  border-color: var(--color-secondary-light-sky-blue);
+  color: #1e1e1e !important;
+  background: #6ac9ce !important;
+  border-color: #6ac9ce !important;
 }
 
 /* Header with integrated koassets-search - always hidden */

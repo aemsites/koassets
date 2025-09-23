@@ -233,7 +233,7 @@ async function createNavBar() {
 
     // Update download badge from sessionStorage
     try {
-      const downloadItems = JSON.parse(sessionStorage.getItem('downloadItems') || '[]');
+      const downloadItems = JSON.parse(sessionStorage.getItem('downloadArchives') || '[]');
       window.updateDownloadBadge(downloadItems.length);
     } catch (error) {
       console.error('Error reading download items from sessionStorage:', error);
