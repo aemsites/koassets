@@ -126,6 +126,61 @@ header .header-bar .help-section .help-section-button:hover::before {
   background: url("/icons/help-icon-red.svg") no-repeat 50%;
 }
 
+/* Common Dropdown Menu Styles */
+header .header-bar .dropdown-menu {
+  display: none;
+  position: relative;
+  top: 100%;
+  left: 0;
+}
+
+header .header-bar .dropdown-menu > ul {
+  background-color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 0 14px 0 rgb(0 0 0 / 12%);
+  font-size: 14px;
+  left: 50%;
+  list-style-type: none;
+  margin: 0;
+  min-width: 180px;
+  padding: 8px;
+  position: absolute;
+  top: 5px;
+  transform: translateX(-50%);
+  z-index: 100;
+}
+
+header .header-bar .dropdown-menu > ul > li {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 8px 4px;
+  width: 100%;
+}
+
+header .header-bar .dropdown-menu > ul > li:last-child {
+  border-bottom: none;
+}
+
+header .header-bar .dropdown-menu > ul > li a {
+  color: #1e1e1e;
+  text-decoration: none;
+  display: block;
+  width: 100%;
+}
+
+header .header-bar .dropdown-menu > ul > li a:hover {
+  color: #ed0000;
+}
+
+/* Help Dropdown Menu - Specific Styles */
+header .header-bar .help-section .help-section-button.active {
+  color: #ed0000;
+}
+
+/* My Account Dropdown Menu - Specific Styles */
+header .header-bar .my-account .my-account-menu > ul {
+  min-width: 200px;
+}
+
 /* User Button (User Dropdown) */
 header .header-bar .my-account {
   flex-shrink: 0;
@@ -172,34 +227,7 @@ header .header-bar .my-account-button.active .avatar {
   background-color: #fff;
 }
 
-header .header-bar .my-account .my-account-menu {
-  display: none;
-  position: relative;
-  top: 100%;
-  left: 0;
-}
 
-header .header-bar .my-account .my-account-menu>ul {
-  background-color: #fff;
-  border-radius: 4px;
-  box-shadow: 0 0 14px 0 rgb(0 0 0 / 12%);
-  font-size: 14px;
-  left: 50%;
-  list-style-type: none;
-  margin: 0;
-  min-width: 200px;
-  padding: 8px;
-  position: absolute;
-  top: 5px;
-  transform: translateX(-50%);
-  z-index: 100;
-}
-
-header .header-bar .my-account .my-account-menu>ul>li {
-  border-bottom: 1px solid #f0f0f0;
-  padding: 8px 4px;
-  width: 100%;
-}
 
 /* Arrow Icons */
 header .header-bar .down-arrow-icon {
