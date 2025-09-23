@@ -1,6 +1,6 @@
 /* Download Panel Assets Styles */
 
-.download-panel-assets-content {
+.download-panel .download-panel-assets-content {
     flex: 1;
     overflow-y: auto;
     min-height: 200px;
@@ -9,34 +9,34 @@
 }
 
 /* Empty state */
-.empty-download-assets {
+.download-panel .empty-download-assets {
     display: flex;
     justify-content: center;
     align-items: center;
     height: 200px;
 }
 
-.empty-download-assets-message {
+.download-panel .empty-download-assets-message {
     color: #999;
     font-size: 16px;
     text-align: center;
 }
 
 /* Download assets list */
-.download-assets-list h3 {
+.download-panel .download-assets-list h3 {
     margin-bottom: 1rem;
     color: #333;
     font-size: 1.1rem;
 }
 
-.download-items {
+.download-panel .download-items {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
     margin-bottom: 1.5rem;
 }
 
-.download-item {
+.download-panel .download-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -47,34 +47,34 @@
     transition: background-color 0.2s ease;
 }
 
-.download-item:hover {
+.download-panel .download-item:hover {
     background: #f0f0f0;
 }
 
-.download-item-info {
+.download-panel .download-item-info {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
     flex: 1;
 }
 
-.download-item-name {
+.download-panel .download-item-name {
     font-weight: 500;
     color: #333;
     font-size: 0.9rem;
 }
 
-.download-item-format {
+.download-panel .download-item-format {
     font-size: 0.85rem;
     color: #666;
 }
 
-.download-item-actions {
+.download-panel .download-item-actions {
     display: flex;
     gap: 0.5rem;
 }
 
-.remove-button {
+.download-panel .remove-button {
     background: none;
     border: none;
     color: #999;
@@ -90,13 +90,13 @@
     justify-content: center;
 }
 
-.remove-button:hover {
+.download-panel .remove-button:hover {
     color: #e74c3c;
     background-color: rgba(231, 76, 60, 0.1);
 }
 
 /* Action buttons */
-.download-actions {
+.download-panel .download-actions {
     display: flex;
     gap: 1rem;
     padding-top: 1rem;
@@ -104,7 +104,7 @@
     justify-content: flex-start;
 }
 
-.download-all-button {
+.download-panel .download-all-button {
     background: #3498db;
     color: white;
     border: none;
@@ -115,11 +115,11 @@
     transition: background 0.2s ease;
 }
 
-.download-all-button:hover {
+.download-panel .download-all-button:hover {
     background: #2980b9;
 }
 
-.clear-downloads-button {
+.download-panel .clear-downloads-button {
     background: #e74c3c;
     color: white;
     border: none;
@@ -130,6 +130,224 @@
     transition: background 0.2s ease;
 }
 
-.clear-downloads-button:hover {
+.download-panel .clear-downloads-button:hover {
     background: #c0392b;
+}
+
+/* Status Filters */
+.download-panel .download-status-filters {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem 0;
+}
+
+.download-panel .status-filter {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #333;
+    user-select: none;
+}
+
+.download-panel .status-filter input[type="checkbox"] {
+    margin-right: 0.5rem;
+    transform: scale(1.2);
+}
+
+.download-panel .status-filter .checkmark {
+    margin-left: 0.25rem;
+}
+
+/* Download Table */
+.download-panel .download-table-container {
+    margin-bottom: 2rem;
+}
+
+.download-panel .download-table-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1.5fr 1.5fr;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 2px solid #eee;
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    text-align: left;
+}
+
+.download-panel .download-items-table {
+    border-bottom: 1px solid #eee;
+    max-height: 360px;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+}
+
+/* Custom scrollbar styling for download items table */
+.download-panel .download-items-table::-webkit-scrollbar {
+    width: 6px;
+}
+
+.download-panel .download-items-table::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.download-panel .download-items-table::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.download-panel .download-items-table::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.download-panel .download-item-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1.5fr 1.5fr;
+    gap: 16px;
+    padding: 1rem 0;
+    border-bottom: 1px solid #e0e0e0;
+    align-items: center;
+    transition: background-color 0.2s ease;
+}
+
+/* ZIP Files Column */
+.download-panel .col-zip-files {
+    display: flex;
+    align-items: center;
+}
+
+.download-panel .zip-file-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.download-panel .expand-icon {
+    font-size: 0.8rem;
+    color: #666;
+    cursor: pointer;
+    user-select: none;
+}
+
+.download-panel .zip-filename {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    line-height: 1.4;
+}
+
+/* File Count Column */
+.download-panel .col-file-count {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    line-height: 1.4;
+}
+
+/* Status Column */
+.download-panel .col-status .status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.download-panel .status-badge.status-in-progress {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.download-panel .status-badge.status-ready-to-download {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.download-panel .status-badge.status-failed {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f1b0b7;
+}
+
+/* Action Column */
+.download-panel .col-action {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.download-panel .remove-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+}
+
+.download-panel .remove-btn:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.download-panel .remove-btn img {
+    width: 16px;
+    height: 16px;
+}
+
+/* Footer */
+.download-panel .download-panel-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 1.5rem;
+}
+
+.download-panel .close-btn {
+    background: none;
+    border: 2px solid #6c757d;
+    color: #6c757d;
+    padding: 0.75rem 2rem;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    min-width: 100px;
+}
+
+.download-panel .close-btn:hover {
+    background: #6c757d;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+
+    .download-panel .download-table-header,
+    .download-panel .download-item-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .download-panel .download-status-filters {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .download-panel .col-action {
+        justify-content: flex-start;
+        margin-top: 0.5rem;
+    }
 }

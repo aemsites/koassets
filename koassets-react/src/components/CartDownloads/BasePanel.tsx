@@ -21,7 +21,7 @@ const BasePanel: React.FC<BasePanelProps> = ({
     title,
     tabs = [],
     children,
-    panelClassName = 'cart-panel'
+    panelClassName = 'base-panel'
 }) => {
     const [activeTab, setActiveTab] = useState<string>(tabs[0]?.id || '');
     const [activeStep, setActiveStep] = useState<WorkflowStep>(WorkflowStep.CART);

@@ -12,26 +12,33 @@ interface DownloadPanelContentProps {
     setActiveTab?: (tab: string) => void;
     activeStep?: WorkflowStep;
     setActiveStep?: (step: WorkflowStep) => void;
-    downloadItems: DownloadPanelProps['downloadItems'];
+    downloadAssetItems: DownloadPanelProps['downloadAssetItems'];
+    downloadTemplateItems: DownloadPanelProps['downloadTemplateItems'];
+    setDownloadTemplateItems: DownloadPanelProps['setDownloadTemplateItems'];
     onRemoveItem: DownloadPanelProps['onRemoveItem'];
 }
 
 const DownloadPanelContent: React.FC<DownloadPanelContentProps> = ({
     activeTab,
-    downloadItems,
+    downloadAssetItems,
+    downloadTemplateItems,
+    setDownloadTemplateItems, // Will be used for template management functionality
     onRemoveItem
 }) => {
+    // Explicitly mark setDownloadTemplateItems as intentionally unused for now
+    void setDownloadTemplateItems;
+
     return (
         <>
             {activeTab === 'assets' && (
                 <DownloadPanelAssets
-                    downloadItems={downloadItems}
+                    downloadItems={downloadAssetItems}
                     onRemoveItem={onRemoveItem}
                 />
             )}
 
             {activeTab === 'templates' && (
-                <DownloadPanelTemplates downloadItems={downloadItems} />
+                <DownloadPanelTemplates downloadTemplateItems={downloadTemplateItems} />
             )}
         </>
     );
@@ -40,12 +47,14 @@ const DownloadPanelContent: React.FC<DownloadPanelContentProps> = ({
 const DownloadPanel: React.FC<DownloadPanelProps> = ({
     isOpen,
     onClose,
-    downloadItems,
+    downloadAssetItems,
+    downloadTemplateItems,
+    setDownloadTemplateItems,
     onRemoveItem
 }) => {
     const tabs = [
-        { id: 'assets', label: 'Assets', count: downloadItems.length },
-        { id: 'templates', label: 'Templates', count: 0 }
+        { id: 'assets', label: 'Assets', count: downloadAssetItems.length },
+        { id: 'templates', label: 'Templates', count: downloadTemplateItems.length }
     ];
 
     return (
@@ -57,7 +66,9 @@ const DownloadPanel: React.FC<DownloadPanelProps> = ({
             panelClassName="download-panel"
         >
             <DownloadPanelContent
-                downloadItems={downloadItems}
+                downloadAssetItems={downloadAssetItems}
+                downloadTemplateItems={downloadTemplateItems}
+                setDownloadTemplateItems={setDownloadTemplateItems}
                 onRemoveItem={onRemoveItem}
             />
         </BasePanel>

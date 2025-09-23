@@ -21,9 +21,11 @@ declare global {
 import type {
     Asset,
     CartItem,
+    CartTemplateItem,
     Collection,
     CurrentView,
     DownloadArchiveEntry,
+    DownloadTemplateItem,
     ExternalParams,
     LoadingState,
     Rendition,
@@ -187,7 +189,7 @@ function MainApp(): React.JSX.Element {
     const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
 
     // Cart state
-    const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+    const [cartAssetItems, setCartAssetItems] = useState<CartItem[]>(() => {
         try {
             const stored = localStorage.getItem('cartItems');
             return stored ? JSON.parse(stored) : [];
@@ -195,10 +197,12 @@ function MainApp(): React.JSX.Element {
             return [];
         }
     });
+
+    const [cartTemplateItems, setCartTemplateItems] = useState<CartTemplateItem[]>([]);
     const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
 
     // Download panel state
-    const [downloadItems, setDownloadItems] = useState<DownloadArchiveEntry[]>(() => {
+    const [downloadAssetItems, setDownloadAssetItems] = useState<DownloadArchiveEntry[]>(() => {
         try {
             const stored = sessionStorage.getItem('downloadArchives');
             return stored ? JSON.parse(stored) : [];
@@ -206,6 +210,7 @@ function MainApp(): React.JSX.Element {
             return [];
         }
     });
+    const [downloadTemplateItems, setDownloadTemplateItems] = useState<DownloadTemplateItem[]>([]);
     const [isDownloadPanelOpen, setIsDownloadPanelOpen] = useState<boolean>(false);
 
     // Mobile filter panel state
@@ -214,7 +219,7 @@ function MainApp(): React.JSX.Element {
     // Download functions
     const handleAddToDownload = useCallback(async (image: Asset): Promise<void> => {
         // Check if the asset is already in any archive entry
-        const assetExists = downloadItems.some(entry =>
+        const assetExists = downloadAssetItems.some(entry =>
             entry.assetsRenditions.some(item => item.assetId === image.assetId)
         );
 
@@ -229,10 +234,10 @@ function MainApp(): React.JSX.Element {
                 archiveId: `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` // Temporary ID for pending download
             };
 
-            setDownloadItems(prev => [...prev, newDownloadEntry]);
+            setDownloadAssetItems(prev => [...prev, newDownloadEntry]);
             console.log('Added to downloads:', image.title || image.name);
         }
-    }, [downloadItems]);
+    }, [downloadAssetItems]);
 
     // Expose cart and download panel functions to window for EDS header integration
     useEffect(() => {
@@ -281,13 +286,13 @@ function MainApp(): React.JSX.Element {
 
     // Save cart items to localStorage when they change
     useEffect(() => {
-        localStorage.setItem('cartItems', JSON.stringify(cartItems));
-    }, [cartItems]);
+        localStorage.setItem('cartItems', JSON.stringify(cartAssetItems));
+    }, [cartAssetItems]);
 
     // Save download items to sessionStorage when they change
     useEffect(() => {
-        sessionStorage.setItem('downloadArchives', JSON.stringify(downloadItems));
-    }, [downloadItems]);
+        sessionStorage.setItem('downloadArchives', JSON.stringify(downloadAssetItems));
+    }, [downloadAssetItems]);
 
     useEffect(() => {
         const hasAccessToken = Boolean(accessToken);
@@ -597,7 +602,7 @@ function MainApp(): React.JSX.Element {
 
     // Cart functions
     const handleAddToCart = async (image: Asset): Promise<void> => {
-        if (!cartItems.some(item => item.assetId === image.assetId)) {
+        if (!cartAssetItems.some(item => item.assetId === image.assetId)) {
             // Cache the image when adding to cart
             if (dynamicMediaClient && image.assetId) {
                 try {
@@ -617,12 +622,12 @@ function MainApp(): React.JSX.Element {
                 }
             }
 
-            setCartItems(prev => [...prev, image]);
+            setCartAssetItems(prev => [...prev, image]);
         }
     };
 
     const handleRemoveFromCart = (image: Asset): void => {
-        setCartItems(prev => prev.filter(item => item.assetId !== image.assetId));
+        setCartAssetItems(prev => prev.filter(item => item.assetId !== image.assetId));
 
         // Clean up cached blobs for this asset
         if (image.assetId) {
@@ -634,7 +639,7 @@ function MainApp(): React.JSX.Element {
         // Process all selected images in parallel
         const processCartImages = async (imageId: string): Promise<Asset | null> => {
             const image = images.find(img => img.assetId === imageId);
-            if (!image || cartItems.some(item => item.assetId === image.assetId)) {
+            if (!image || cartAssetItems.some(item => item.assetId === image.assetId)) {
                 return null;
             }
 
@@ -653,14 +658,14 @@ function MainApp(): React.JSX.Element {
             .map(result => result.value!);
 
         if (newItems.length > 0) {
-            setCartItems(prev => [...prev, ...newItems]);
+            setCartAssetItems(prev => [...prev, ...newItems]);
         }
     };
 
 
     const handleRemoveFromDownload = (image: Asset): void => {
         // Remove archive entries that contain this asset
-        setDownloadItems(prev => prev.filter(entry =>
+        setDownloadAssetItems(prev => prev.filter(entry =>
             !entry.assetsRenditions.some(item => item.assetId === image.assetId)
         ));
         console.log('Removed archive entries containing:', image.title || image.name);
@@ -754,7 +759,7 @@ function MainApp(): React.JSX.Element {
                     loading={loading[LOADING.dmImages]}
                     onAddToCart={handleAddToCart}
                     onRemoveFromCart={handleRemoveFromCart}
-                    cartItems={cartItems}
+                    cartItems={cartAssetItems}
                     searchResult={searchResults?.[0] || null}
                     onToggleMobileFilter={handleToggleMobileFilter}
                     isMobileFilterOpen={isMobileFilterOpen}
@@ -792,7 +797,7 @@ function MainApp(): React.JSX.Element {
         >
             <div className="container">
                 <HeaderBar
-                    cartItems={cartItems}
+                    cartItems={cartAssetItems}
                     handleAuthenticated={handleIMSAccessToken}
                     handleSignOut={handleSignOut}
                 />
@@ -802,8 +807,10 @@ function MainApp(): React.JSX.Element {
                     <CartPanel
                         isOpen={isCartOpen}
                         onClose={() => setIsCartOpen(false)}
-                        cartItems={cartItems}
-                        setCartItems={setCartItems}
+                        cartAssetItems={cartAssetItems}
+                        setCartAssetItems={setCartAssetItems}
+                        cartTemplateItems={cartTemplateItems}
+                        setCartTemplateItems={setCartTemplateItems}
                         onRemoveItem={handleRemoveFromCart}
                     />,
                     document.body
@@ -814,7 +821,9 @@ function MainApp(): React.JSX.Element {
                     <DownloadPanel
                         isOpen={isDownloadPanelOpen}
                         onClose={() => setIsDownloadPanelOpen(false)}
-                        downloadItems={downloadItems}
+                        downloadAssetItems={downloadAssetItems}
+                        downloadTemplateItems={downloadTemplateItems}
+                        setDownloadTemplateItems={setDownloadTemplateItems}
                         onRemoveItem={handleRemoveFromDownload}
                     />,
                     document.body

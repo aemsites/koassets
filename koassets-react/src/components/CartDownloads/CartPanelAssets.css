@@ -1,12 +1,4 @@
 /* Cart Content */
-.cart-panel .cart-content {
-    flex: 1;
-    overflow-y: auto;
-    min-height: 200px;
-    width: 100%;
-    padding: 0 0 20px;
-}
-
 /* Specific layout for CartPanelAssets wrapper - use a more reliable approach */
 .cart-panel-assets-wrapper {
     display: flex;
@@ -31,18 +23,6 @@
 
 .cart-panel .red-text {
     color: red;
-}
-
-.cart-panel .empty-cart {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 200px;
-}
-
-.cart-panel .empty-cart-message {
-    color: #999;
-    font-size: 16px;
 }
 
 /* Table Layout */
@@ -151,36 +131,6 @@
     font-size: 14px !important;
     line-height: 1.4285em;
     margin: 0 0 1em;
-}
-
-.cart-panel .delete-button {
-    border: none;
-    background: url('/icons/delete-icon.svg') no-repeat center;
-    background-size: contain;
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 4px;
-    color: #666;
-    transition: all 0.2s;
-    content: "";
-    display: block;
-    height: 2.625rem;
-    width: 2.625rem;
-}
-
-.cart-panel .delete-button:hover {
-    border: none;
-    background: url('/icons/delete-icon-hover.svg') no-repeat center;
-    background-size: contain;
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 4px;
-    color: #666;
-    transition: all 0.2s;
-    content: "";
-    display: block;
-    height: 2.625rem;
-    width: 2.625rem;
 }
 
 /* Action Buttons Footer */

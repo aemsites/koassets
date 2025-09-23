@@ -269,6 +269,37 @@ html.base-panel-open {
     border: 1px solid #c3e6cb;
 }
 
+.base-panel .delete-button {
+    border: none;
+    background: url('/icons/delete-icon.svg') no-repeat center;
+    background-size: contain;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    color: #666;
+    transition: all 0.2s;
+    content: "";
+    display: block;
+    height: 2.625rem;
+    width: 2.625rem;
+}
+
+.base-panel .delete-button:hover {
+    border: none;
+    background: url('/icons/delete-icon-hover.svg') no-repeat center;
+    background-size: contain;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    color: #666;
+    transition: all 0.2s;
+    content: "";
+    display: block;
+    height: 2.625rem;
+    width: 2.625rem;
+}
+
+
 /* Common animations */
 @keyframes slideIn {
     from {

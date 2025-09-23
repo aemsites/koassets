@@ -10,7 +10,6 @@ import type {
     RestrictedBrand,
     RightsCheckStepData,
     WorkflowStepData,
-    WorkflowStepIcons,
     WorkflowStepStatuses
 } from '../../types';
 import { FilteredItemsType, StepStatus, WorkflowStep } from '../../types';
@@ -21,6 +20,7 @@ import './CartPanelAssets.css';
 import CartRequestDownload from './CartRequestDownload';
 import CartRequestRightsExtension from './CartRequestRightsExtension';
 import CartRightsCheck from './CartRightsCheck';
+import EmptyCartDownloadContent from './EmptyCartDownloadContent';
 import { WorkflowProgress } from './WorkflowProgress';
 
 // Component for rendering individual cart item row
@@ -156,14 +156,6 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         [WorkflowStep.DOWNLOAD]: StepStatus.INIT,
         [WorkflowStep.CLOSE_DOWNLOAD]: StepStatus.INIT
     });
-    const [stepIcon, setStepIcon] = useState<WorkflowStepIcons>({
-        [WorkflowStep.CART]: '',
-        [WorkflowStep.REQUEST_DOWNLOAD]: '',
-        [WorkflowStep.RIGHTS_CHECK]: '',
-        [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: '',
-        [WorkflowStep.DOWNLOAD]: '',
-        [WorkflowStep.CLOSE_DOWNLOAD]: ''
-    });
     const [filteredItems, setFilteredItems] = useState<{ [key in FilteredItemsType]: Asset[] }>({} as { [key in FilteredItemsType]: Asset[] });
     const [showDownloadContent, setShowDownloadContent] = useState(false);
 
@@ -204,160 +196,6 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         onActiveStepChange(activeStep);
     }, [activeStep, onActiveStepChange]);
 
-    // Monitor stepStatus changes and handle each status for all steps
-    useEffect(() => {
-        Object.entries(stepStatus).forEach(([step, status]) => {
-            console.debug(`Step "${step}" status changed to: ${status}`);
-
-            switch (step as WorkflowStep) {
-                case WorkflowStep.CART:
-                    switch (status) {
-                        case StepStatus.INIT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.CART]: <img src={`/icons/cart-stepper-icon.svg`} alt="Cart" />
-                            }));
-                            break;
-                        case StepStatus.CURRENT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.CART]: <img src={`/icons/cart-stepper-icon.svg`} alt="Cart Current" />
-                            }));
-                            break;
-                        case StepStatus.SUCCESS:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.CART]: <img src={`/icons/cart-icon-success.svg`} alt="Cart Success" />
-                            }));
-                            break;
-                        case StepStatus.FAILURE:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.CART]: <img src={`/icons/cart-icon-failure.svg`} alt="Cart Failure" />
-                            }));
-                            break;
-                    }
-                    break;
-
-                case WorkflowStep.REQUEST_DOWNLOAD:
-                    switch (status) {
-                        case StepStatus.INIT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.REQUEST_DOWNLOAD]: <img src={`/icons/download-asset-grey.svg`} alt="Request Download" />
-                            }));
-                            break;
-                        case StepStatus.CURRENT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.REQUEST_DOWNLOAD]: <img src={`/icons/donwload-cart-step-red.svg`} alt="Request Download Current" />
-                            }));
-                            break;
-                        case StepStatus.SUCCESS:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.REQUEST_DOWNLOAD]: <img src={`/icons/cart-icon-success.svg`} alt="Request Download Success" />
-                            }));
-                            break;
-                        case StepStatus.FAILURE:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.REQUEST_DOWNLOAD]: <img src={`/icons/cart-icon-failure.svg`} alt="Request Download Failure" />
-                            }));
-                            break;
-                    }
-                    break;
-
-                case WorkflowStep.RIGHTS_CHECK:
-                    switch (status) {
-                        case StepStatus.INIT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.RIGHTS_CHECK]: <img src={`/icons/rights-check-grey.svg`} alt="Rights Check" />
-                            }));
-                            break;
-                        case StepStatus.CURRENT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.RIGHTS_CHECK]: <img src={`/icons/rights-check-red.svg`} alt="Rights Check Current" />
-                            }));
-                            break;
-                        case StepStatus.SUCCESS:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.RIGHTS_CHECK]: <img src={`/icons/cart-icon-success.svg`} alt="Rights Check Success" />
-                            }));
-                            break;
-                        case StepStatus.FAILURE:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.RIGHTS_CHECK]: <img src={`/icons/cart-icon-failure.svg`} alt="Rights Check Failure" />
-                            }));
-                            break;
-                    }
-                    break;
-
-                case WorkflowStep.REQUEST_RIGHTS_EXTENSION:
-                    switch (status) {
-                        case StepStatus.INIT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: <img src={`/icons/request-rights-red.svg`} alt="Rights Check" />
-                            }));
-                            break;
-                        case StepStatus.CURRENT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: <img src={`/icons/request-rights-red.svg`} alt="Rights Check Current" />
-                            }));
-                            break;
-                        case StepStatus.SUCCESS:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: <img src={`/icons/cart-icon-success.svg`} alt="Rights Check Success" />
-                            }));
-                            break;
-                        case StepStatus.FAILURE:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: <img src={`/icons/cart-icon-failure.svg`} alt="Rights Check Failure" />
-                            }));
-                            break;
-                    }
-                    break;
-
-                case WorkflowStep.DOWNLOAD:
-                    switch (status) {
-                        case StepStatus.INIT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.DOWNLOAD]: <img src={`/icons/download-icon.svg`} alt="Download" />
-                            }));
-                            break;
-                        case StepStatus.CURRENT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.DOWNLOAD]: <img src={`/icons/donwload-cart-step-red.svg`} alt="Download Current" />
-                            }));
-                            break;
-                        case StepStatus.SUCCESS:
-                            // Could trigger success notification or auto-close
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.DOWNLOAD]: <img src={`/icons/cart-icon-success.svg`} alt="Download Success" />
-                            }));
-                            break;
-                        case StepStatus.FAILURE:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.DOWNLOAD]: <img src={`/icons/cart-icon-failure.svg`} alt="Download Failure" />
-                            }));
-                            break;
-                    }
-                    break;
-            }
-        });
-    }, [stepStatus]);
 
     // Update filteredItems when cartItems changes
     useEffect(() => {
@@ -539,14 +377,6 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         </div>
     ), []);
 
-    const emptyCartMessage = useMemo(() => (
-        <div className="empty-cart">
-            <div className="empty-cart-message">
-                <span>Your cart is empty</span>
-            </div>
-        </div>
-    ), []);
-
     // Memoized cart item removal handler
     const handleRemoveItem = useCallback((item: Asset) => {
         onRemoveItem(item);
@@ -627,11 +457,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     // }, [cartItems.length, onClose]);
 
     if (cartItemsCount === 0) {
-        return (
-            <div className="cart-content">
-                {emptyCartMessage}
-            </div>
-        );
+        return <EmptyCartDownloadContent msg="Your cart is empty" />;
     }
 
     return (
@@ -641,7 +467,6 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                 activeStep={activeStep}
                 hasAllItemsReadyToUse={hasAllItemsReadyToUse}
                 stepStatus={stepStatus}
-                stepIcon={stepIcon}
             />
 
             {/* Direct Download */}

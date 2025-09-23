@@ -1,31 +1,24 @@
 import React from 'react';
-import type { CartItem } from '../../types';
+import type { CartTemplateItem } from '../../types';
 import './CartPanelTemplates.css';
+import EmptyCartDownloadContent from './EmptyCartDownloadContent';
 
 interface CartPanelTemplatesProps {
-    cartItems: CartItem[];
+    cartTemplateItems: CartTemplateItem[];
 }
 
 const CartPanelTemplates: React.FC<CartPanelTemplatesProps> = ({
-    cartItems
+    cartTemplateItems
 }) => {
     return (
-        <div className="cart-templates-content">
-            {cartItems.length === 0 ? (
-                <div className="empty-cart-templates">
-                    <div className="empty-cart-templates-message">
-                        No templates in your cart
-                    </div>
-                </div>
+        <div className="cart-panel-templates-wrapper">
+            {cartTemplateItems.length === 0 ? (
+                <EmptyCartDownloadContent msg="No templates in your cart" />
             ) : (
                 <div className="cart-templates-list">
-                    <h3>Template Items ({cartItems.length})</h3>
+                    <h3>Template Items ({cartTemplateItems.length})</h3>
                     {/* Template-specific content would go here */}
-                    <div className="empty-cart-templates">
-                        <div className="empty-cart-templates-message">
-                            Template items not yet implemented
-                        </div>
-                    </div>
+                    <EmptyCartDownloadContent msg="Template items not yet implemented" />
                 </div>
             )}
         </div>

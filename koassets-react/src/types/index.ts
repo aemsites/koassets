@@ -260,8 +260,10 @@ export interface Collection {
 export interface CartPanelProps {
     isOpen: boolean;
     onClose: () => void;
-    cartItems: CartItem[];
-    setCartItems: React.Dispatch<React.SetStateAction<CartItem[]>>;
+    cartAssetItems: CartItem[];
+    setCartAssetItems: React.Dispatch<React.SetStateAction<CartItem[]>>;
+    cartTemplateItems: CartTemplateItem[];
+    setCartTemplateItems: React.Dispatch<React.SetStateAction<CartTemplateItem[]>>;
     onRemoveItem: (item: CartItem) => void;
 }
 
@@ -269,7 +271,9 @@ export interface CartPanelProps {
 export interface DownloadPanelProps {
     isOpen: boolean;
     onClose: () => void;
-    downloadItems: DownloadArchiveEntry[];
+    downloadAssetItems: DownloadArchiveEntry[];
+    downloadTemplateItems: DownloadTemplateItem[];
+    setDownloadTemplateItems: React.Dispatch<React.SetStateAction<DownloadTemplateItem[]>>;
     onRemoveItem: (item: Asset) => void; // Still accepts Asset for removal logic
 }
 
@@ -466,21 +470,21 @@ export enum FilteredItemsType {
 }
 
 export interface WorkflowStepStatuses {
-    [WorkflowStep.CART]: StepStatus;
-    [WorkflowStep.REQUEST_DOWNLOAD]: StepStatus;
-    [WorkflowStep.RIGHTS_CHECK]: StepStatus;
-    [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: StepStatus;
-    [WorkflowStep.DOWNLOAD]: StepStatus;
-    [WorkflowStep.CLOSE_DOWNLOAD]: StepStatus;
+    [WorkflowStep.CART]?: StepStatus;
+    [WorkflowStep.REQUEST_DOWNLOAD]?: StepStatus;
+    [WorkflowStep.RIGHTS_CHECK]?: StepStatus;
+    [WorkflowStep.REQUEST_RIGHTS_EXTENSION]?: StepStatus;
+    [WorkflowStep.DOWNLOAD]?: StepStatus;
+    [WorkflowStep.CLOSE_DOWNLOAD]?: StepStatus;
 }
 
 export interface WorkflowStepIcons {
-    [WorkflowStep.CART]: React.JSX.Element | string;
-    [WorkflowStep.REQUEST_DOWNLOAD]: React.JSX.Element | string;
-    [WorkflowStep.RIGHTS_CHECK]: React.JSX.Element | string;
-    [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: React.JSX.Element | string;
-    [WorkflowStep.DOWNLOAD]: React.JSX.Element | string;
-    [WorkflowStep.CLOSE_DOWNLOAD]: React.JSX.Element | string;
+    [WorkflowStep.CART]?: React.JSX.Element | string;
+    [WorkflowStep.REQUEST_DOWNLOAD]?: React.JSX.Element | string;
+    [WorkflowStep.RIGHTS_CHECK]?: React.JSX.Element | string;
+    [WorkflowStep.REQUEST_RIGHTS_EXTENSION]?: React.JSX.Element | string;
+    [WorkflowStep.DOWNLOAD]?: React.JSX.Element | string;
+    [WorkflowStep.CLOSE_DOWNLOAD]?: React.JSX.Element | string;
 }
 
 export interface CartPanelAssetsProps {
@@ -620,4 +624,14 @@ export interface DownloadArchiveEntry {
         renditions: string[];
     }[];
     archiveId: string;
+}
+
+// Cart Template Item interface
+export interface CartTemplateItem {
+    // Empty for now - will be filled with template-specific properties later
+}
+
+// Download Template Item interface
+export interface DownloadTemplateItem {
+    // Empty for now - will be filled with template-specific properties later
 }

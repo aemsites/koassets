@@ -12,8 +12,10 @@ interface CartPanelContentProps {
     setActiveTab?: (tab: string) => void;
     activeStep?: WorkflowStep;
     setActiveStep?: (step: WorkflowStep) => void;
-    cartItems: CartPanelProps['cartItems'];
-    setCartItems: CartPanelProps['setCartItems'];
+    cartAssetItems: CartPanelProps['cartAssetItems'];
+    setCartAssetItems: CartPanelProps['setCartAssetItems'];
+    cartTemplateItems: CartPanelProps['cartTemplateItems'];
+    setCartTemplateItems: CartPanelProps['setCartTemplateItems'];
     onRemoveItem: CartPanelProps['onRemoveItem'];
     onClose: CartPanelProps['onClose'];
 }
@@ -21,17 +23,22 @@ interface CartPanelContentProps {
 const CartPanelContent: React.FC<CartPanelContentProps> = ({
     activeTab,
     setActiveStep,
-    cartItems,
-    setCartItems,
+    cartAssetItems,
+    setCartAssetItems,
+    cartTemplateItems,
+    setCartTemplateItems, // Will be used for template management functionality
     onRemoveItem,
     onClose
 }) => {
+    // Explicitly mark setCartTemplateItems as intentionally unused for now
+    void setCartTemplateItems;
+
     return (
         <>
             {activeTab === 'assets' && (
                 <CartPanelAssets
-                    cartItems={cartItems}
-                    setCartItems={setCartItems}
+                    cartItems={cartAssetItems}
+                    setCartItems={setCartAssetItems}
                     onRemoveItem={onRemoveItem}
                     onClose={onClose}
                     onActiveStepChange={setActiveStep!}
@@ -39,7 +46,7 @@ const CartPanelContent: React.FC<CartPanelContentProps> = ({
             )}
 
             {activeTab === 'templates' && (
-                <CartPanelTemplates cartItems={cartItems} />
+                <CartPanelTemplates cartTemplateItems={cartTemplateItems} />
             )}
         </>
     );
@@ -48,13 +55,15 @@ const CartPanelContent: React.FC<CartPanelContentProps> = ({
 const CartPanel: React.FC<CartPanelProps> = ({
     isOpen,
     onClose,
-    cartItems,
-    setCartItems,
+    cartAssetItems,
+    setCartAssetItems,
+    cartTemplateItems,
+    setCartTemplateItems,
     onRemoveItem
 }) => {
     const tabs = [
-        { id: 'assets', label: 'Assets', count: cartItems.length },
-        { id: 'templates', label: 'Templates', count: 0 }
+        { id: 'assets', label: 'Assets', count: cartAssetItems.length },
+        { id: 'templates', label: 'Templates', count: cartTemplateItems.length }
     ];
 
     return (
@@ -66,8 +75,10 @@ const CartPanel: React.FC<CartPanelProps> = ({
             panelClassName="cart-panel"
         >
             <CartPanelContent
-                cartItems={cartItems}
-                setCartItems={setCartItems}
+                cartAssetItems={cartAssetItems}
+                setCartAssetItems={setCartAssetItems}
+                cartTemplateItems={cartTemplateItems}
+                setCartTemplateItems={setCartTemplateItems}
                 onRemoveItem={onRemoveItem}
                 onClose={onClose}
             />

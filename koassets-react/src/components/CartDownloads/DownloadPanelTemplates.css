@@ -1,12 +1,11 @@
 /* Download Templates Panel Styles - Reuses download content styles */
 
 /* Import the download content styles we need */
-.download-panel-templates-content {
+.download-panel-templates-wrapper {
+    display: flex;
+    flex-direction: column;
     flex: 1;
-    overflow-y: auto;
-    min-height: 200px;
-    width: 100%;
-    padding: 1rem;
+    min-height: 0;
 }
 
 .empty-download-templates {

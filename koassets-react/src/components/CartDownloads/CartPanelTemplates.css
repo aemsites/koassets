@@ -1,12 +1,11 @@
 /* Templates Panel Styles - Reuses cart content styles */
 
 /* Import the cart content styles we need */
-.cart-templates-content {
+.cart-panel-templates-wrapper {
+    display: flex;
+    flex-direction: column;
     flex: 1;
-    overflow-y: auto;
-    min-height: 200px;
-    width: 100%;
-    padding: 1rem;
+    min-height: 0;
 }
 
 .empty-cart-templates {
