@@ -25,6 +25,7 @@
   --body-font-family: "TCCC UnityText Regular", roboto-fallback, sans-serif;
   --heading-font-family: "TCCC UnityHeadline", roboto-condensed-fallback, sans-serif;
 
+  /* font sizes */
   --body-font-size-m: 18px;
   --body-font-size-s: 16px;
   --body-font-size-xs: 14px;
