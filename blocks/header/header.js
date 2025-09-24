@@ -233,7 +233,7 @@ async function createNavBar() {
 
     // Update download badge from sessionStorage
     try {
-      const downloadAssetItems = JSON.parse(localStorage.getItem('downloadArchives') || '[]');
+      const downloadAssetItems = JSON.parse(sessionStorage.getItem('downloadArchives') || '[]');
       window.updateDownloadBadge(downloadAssetItems.length);
     } catch (error) {
       console.error('Error reading download items from sessionStorage:', error);
@@ -418,7 +418,7 @@ async function createHeaderBar() {
     const helpButtonElement = helpSectionElement?.querySelector('.help-section-button');
 
     if (helpSectionElement && !helpSectionElement.contains(e.target)
-        && helpMenuElement && helpButtonElement) {
+      && helpMenuElement && helpButtonElement) {
       helpMenuElement.style.display = 'none';
       helpButtonElement.classList.remove('active');
     }
@@ -429,7 +429,7 @@ async function createHeaderBar() {
     const myAccountButtonElement = myAccountElement?.querySelector('.my-account-button');
 
     if (myAccountElement && !myAccountElement.contains(e.target)
-        && myAccountMenuElement && myAccountButtonElement) {
+      && myAccountMenuElement && myAccountButtonElement) {
       myAccountMenuElement.style.display = 'none';
       myAccountButtonElement.classList.remove('active');
     }

@@ -72,18 +72,18 @@ const DownloadPanel: React.FC<DownloadPanelProps> = ({
 
     const loadDownloadAssetItems = useCallback(() => {
         try {
-            const stored = localStorage.getItem('downloadArchives');
+            const stored = sessionStorage.getItem('downloadArchives');
             if (stored) {
                 const parsedData = JSON.parse(stored);
                 setDownloadAssetItems(parsedData);
             }
         } catch (error) {
-            console.warn('Failed to load download archives from localStorage:', error);
+            console.warn('Failed to load download archives from sessionStorage:', error);
             setDownloadAssetItems([]);
         }
     }, []);
 
-    // Always load from localStorage when component launches or panel opens
+    // Always load from sessionStorage when component launches or panel opens
     useEffect(() => {
         loadDownloadAssetItems();
     }, [loadDownloadAssetItems]);
@@ -95,7 +95,7 @@ const DownloadPanel: React.FC<DownloadPanelProps> = ({
     }, [isDownloadPanelOpen, loadDownloadAssetItems]);
 
     useEffect(() => {
-        localStorage.setItem('downloadArchives', JSON.stringify(downloadAssetItems));
+        sessionStorage.setItem('downloadArchives', JSON.stringify(downloadAssetItems));
         if (window.updateDownloadBadge && typeof window.updateDownloadBadge === 'function') {
             window.updateDownloadBadge(downloadAssetItems.length);
         }

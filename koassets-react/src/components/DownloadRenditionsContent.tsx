@@ -315,8 +315,8 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                 const archiveId = await dynamicMediaClient.createAssetsArchive(assetsRenditions);
 
                 if (archiveId) {
-                    // Store and track archiveId in localStorage
-                    const existingDownloads: DownloadAssetItem[] = JSON.parse(localStorage.getItem('downloadArchives') || '[]');
+                    // Store and track archiveId in sessionStorage
+                    const existingDownloads: DownloadAssetItem[] = JSON.parse(sessionStorage.getItem('downloadArchives') || '[]');
 
                     const newDownloadEntry: DownloadAssetItem = {
                         assetsRenditions: assetsRenditions.map(item => ({
@@ -328,7 +328,7 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                     };
 
                     existingDownloads.push(newDownloadEntry);
-                    localStorage.setItem('downloadArchives', JSON.stringify(existingDownloads));
+                    sessionStorage.setItem('downloadArchives', JSON.stringify(existingDownloads));
                     if (window.updateDownloadBadge && typeof window.updateDownloadBadge === 'function') {
                         window.updateDownloadBadge(existingDownloads.length);
                     }
