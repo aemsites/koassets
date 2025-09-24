@@ -405,7 +405,7 @@ function MainApp(): React.JSX.Element {
         if (urlQuery !== null) setQuery(urlQuery);
         
         // Read search type from URL parameter first
-        if (queryType !== null && Object.values(QUERY_TYPES).includes(queryType as any)) {
+        if (queryType !== null && (Object.values(QUERY_TYPES) as string[]).includes(queryType)) {
             setSelectedQueryType(queryType);
         } else {
             // If no URL parameter, try to infer from URL path
