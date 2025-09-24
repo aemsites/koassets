@@ -1,28 +1,25 @@
 import React, { useEffect } from 'react';
 import { useAppConfig } from '../hooks/useAppConfig';
-import type { CartAssetItem, DownloadArchiveItem } from '../types';
+import type { CartAssetItem } from '../types';
 import AdobeSignInButton from './AdobeSignInButton.jsx';
 import './HeaderBar.css';
 
-// Extend window interface for cart and download badge functions
+// Extend window interface for cart badge function
 declare global {
     interface Window {
         updateCartBadge?: (numItems: number) => void;
-        updateDownloadBadge?: (numItems: number) => void;
     }
 }
 
 // Simplified HeaderBar props interface
 interface HeaderBarPropsSimplified {
     cartAssetItems: CartAssetItem[];
-    downloadAssetItems: DownloadArchiveItem[];
     handleAuthenticated: (token: string) => void;
     handleSignOut: () => void;
 }
 
 const HeaderBar: React.FC<HeaderBarPropsSimplified> = ({
     cartAssetItems, // Keep for window.updateCartBadge
-    downloadAssetItems, // Keep for window.updateDownloadBadge
     handleAuthenticated,
     handleSignOut
 }) => {
@@ -35,12 +32,6 @@ const HeaderBar: React.FC<HeaderBarPropsSimplified> = ({
             window.updateCartBadge(cartAssetItems.length);
         }
     }, [cartAssetItems.length]);
-
-    useEffect(() => {
-        if (window.updateDownloadBadge && typeof window.updateDownloadBadge === 'function') {
-            window.updateDownloadBadge(downloadAssetItems.length);
-        }
-    }, [downloadAssetItems.length]);
 
     const handleLogoClick = () => {
         window.location.assign('/');

@@ -16,12 +16,21 @@ export interface AssetRenditionPair {
     renditions: Rendition[];
 }
 
+// Archive status constants
+export const ARCHIVE_STATUS = {
+    PROCESSING: 'PROCESSING',
+    COMPLETED: 'COMPLETED',
+    FAILED: 'FAILED'
+} as const;
+
+export type ArchiveStatusType = typeof ARCHIVE_STATUS[keyof typeof ARCHIVE_STATUS];
+
 export interface ArchiveData {
     id: string;
     format: string;
     submittedBy: string;
     submittedDate: string;
-    status: 'PROCESSING' | 'COMPLETED' | 'FAILED';
+    status: ArchiveStatusType;
     files: string[];
 }
 
@@ -832,7 +841,7 @@ export class DynamicMediaClient {
         }
     }
 
-    async downloadAssetsArchive(assetRenditionPairs: AssetRenditionPair[]): Promise<string | null> {
+    async createAssetsArchive(assetRenditionPairs: AssetRenditionPair[]): Promise<string | null> {
         try {
             const payload = {
                 items: assetRenditionPairs.map(pair => ({
@@ -841,7 +850,7 @@ export class DynamicMediaClient {
                 }))
             };
 
-            console.trace('DynamicMediaClient.downloadAssetsArchive() REQUEST');
+            console.trace('DynamicMediaClient.createAssetsArchive() REQUEST');
             const responseData = await this.makeRequest<{ id: string }>({
                 url: `/adobe/assets/archives`,
                 method: 'POST',
@@ -862,12 +871,28 @@ export class DynamicMediaClient {
 
     async getAssetsArchiveStatus(archiveId: string): Promise<ArchiveStatus | undefined> {
         console.trace('DynamicMediaClient.getAssetsArchiveStatus() REQUEST');
+        // return {
+        //     "operation": "aem.assets.archives.createArchive",
+        //     "status": 200,
+        //     "description": "Archive creation completed successfully",
+        //     "data": {
+        //         "id": archiveId,
+        //         "format": "zip",
+        //         "submittedBy": "b510c440-9086-4619-9381-a909482c7cf1@techacct.adobe.com",
+        //         "submittedDate": "2025-09-23T21:55:21.717+0000",
+        //         "status": "COMPLETED",
+        //         "files": [
+        //             "https://delivery-p64403-e544653.adobeaemcloud.com/adobe/assets/archives/8ff71775-b4e2-4592-b4ce-49946e18bd0c/files/Assets.zip?token=5c6a2e2012c3d3a28e98202e74690dbbac511934b332501df480074fcb7f2ab3_@_2025-09-24T05:39:59.227Z"
+        //         ]
+        //     }
+        // }
         return await this.makeRequest<ArchiveStatus>({
             url: `/adobe/assets/archives/${archiveId}/status`,
             method: 'GET',
             allowUndefinedResponse: true
         });
     }
+
 
     /**
      * Common method to trigger download by creating a link and clicking it
@@ -917,5 +942,19 @@ export class DynamicMediaClient {
         }
     }
 
+    /**
+     * Download a file from a direct URL by creating a temporary link and triggering click
+     * @public
+     */
+    downloadFromUrl(url: string, defaultFilename: string = 'download'): void {
+        try {
+            // Extract filename from URL or use default
+            const urlParts = url.split('/');
+            const filename = urlParts[urlParts.length - 1]?.split('?')[0] || defaultFilename;
 
+            this.triggerDownload(url, filename);
+        } catch (error) {
+            console.error('Failed to download file from URL:', url, error);
+        }
+    }
 }

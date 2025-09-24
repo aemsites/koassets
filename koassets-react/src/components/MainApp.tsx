@@ -14,7 +14,6 @@ declare global {
         openDownloadPanel?: () => void;
         closeDownloadPanel?: () => void;
         toggleDownloadPanel?: () => void;
-        addToDownload?: (asset: Asset) => Promise<void>;
     }
 }
 
@@ -24,8 +23,6 @@ import type {
     CartTemplateItem,
     Collection,
     CurrentView,
-    DownloadArchiveItem,
-    DownloadTemplateItem,
     ExternalParams,
     LoadingState,
     Rendition,
@@ -202,42 +199,10 @@ function MainApp(): React.JSX.Element {
     const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
 
     // Download panel state
-    const [downloadAssetItems, setDownloadAssetItems] = useState<DownloadArchiveItem[]>(() => {
-        try {
-            const stored = sessionStorage.getItem('downloadArchives');
-            return stored ? JSON.parse(stored) : [];
-        } catch {
-            return [];
-        }
-    });
-    const [downloadTemplateItems, setDownloadTemplateItems] = useState<DownloadTemplateItem[]>([]);
     const [isDownloadPanelOpen, setIsDownloadPanelOpen] = useState<boolean>(false);
 
     // Mobile filter panel state
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false);
-
-    // Download functions
-    const handleAddToDownload = useCallback(async (image: Asset): Promise<void> => {
-        // Check if the asset is already in any archive entry
-        const assetExists = downloadAssetItems.some(entry =>
-            entry.assetsRenditions.some(item => item.assetId === image.assetId)
-        );
-
-        if (!assetExists) {
-            // Create a new DownloadArchiveItem with the asset
-            const newDownloadEntry: DownloadArchiveItem = {
-                assetsRenditions: [{
-                    assetId: image.assetId || '',
-                    assetName: image.name || image.title || 'Unknown Asset',
-                    renditions: [] // Empty renditions array - will be populated when user selects renditions
-                }],
-                archiveId: `pending-${Date.now()}-${Math.random().toString(36).substr(2, 9)}` // Temporary ID for pending download
-            };
-
-            setDownloadAssetItems(prev => [...prev, newDownloadEntry]);
-            console.log('Added to downloads:', image.title || image.name);
-        }
-    }, [downloadAssetItems]);
 
     // Expose cart and download panel functions to window for EDS header integration
     useEffect(() => {
@@ -247,7 +212,6 @@ function MainApp(): React.JSX.Element {
         window.openDownloadPanel = () => setIsDownloadPanelOpen(true);
         window.closeDownloadPanel = () => setIsDownloadPanelOpen(false);
         window.toggleDownloadPanel = () => setIsDownloadPanelOpen(prev => !prev);
-        window.addToDownload = handleAddToDownload;
 
         return () => {
             delete window.openCart;
@@ -256,9 +220,8 @@ function MainApp(): React.JSX.Element {
             delete window.openDownloadPanel;
             delete window.closeDownloadPanel;
             delete window.toggleDownloadPanel;
-            delete window.addToDownload;
         };
-    }, [handleAddToDownload]);
+    }, []);
 
     // Sort state
     const [selectedSortType, setSelectedSortType] = useState<string>('Date Created');
@@ -288,11 +251,6 @@ function MainApp(): React.JSX.Element {
     useEffect(() => {
         localStorage.setItem('cartAssetItems', JSON.stringify(cartAssetItems));
     }, [cartAssetItems]);
-
-    // Save download items to sessionStorage when they change
-    useEffect(() => {
-        sessionStorage.setItem('downloadArchives', JSON.stringify(downloadAssetItems));
-    }, [downloadAssetItems]);
 
     useEffect(() => {
         const hasAccessToken = Boolean(accessToken);
@@ -663,14 +621,6 @@ function MainApp(): React.JSX.Element {
     };
 
 
-    const handleRemoveFromDownload = (image: Asset): void => {
-        // Remove archive entries that contain this asset
-        setDownloadAssetItems(prev => prev.filter(entry =>
-            !entry.assetsRenditions.some(item => item.assetId === image.assetId)
-        ));
-        console.log('Removed archive entries containing:', image.title || image.name);
-    };
-
     // Sort handlers
     const handleSortByTopResults = (): void => {
         console.log('Sort by Top Results');
@@ -798,7 +748,6 @@ function MainApp(): React.JSX.Element {
             <div className="container">
                 <HeaderBar
                     cartAssetItems={cartAssetItems}
-                    downloadAssetItems={downloadAssetItems}
                     handleAuthenticated={handleIMSAccessToken}
                     handleSignOut={handleSignOut}
                 />
@@ -822,10 +771,6 @@ function MainApp(): React.JSX.Element {
                     <DownloadPanel
                         isOpen={isDownloadPanelOpen}
                         onClose={() => setIsDownloadPanelOpen(false)}
-                        downloadAssetItems={downloadAssetItems}
-                        downloadTemplateItems={downloadTemplateItems}
-                        setDownloadTemplateItems={setDownloadTemplateItems}
-                        onRemoveItem={handleRemoveFromDownload}
                     />,
                     document.body
                 )}

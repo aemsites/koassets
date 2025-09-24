@@ -1,10 +1,18 @@
 import { ToastQueue } from '@react-spectrum/toast';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppConfig } from '../hooks/useAppConfig';
-import { Asset, Rendition } from '../types';
+import { Asset, DownloadAssetItem, Rendition } from '../types';
 import { formatDimensions, formatFileSize, formatFormatName } from '../utils/formatters';
 import './DownloadRenditionsContent.css';
 import ThumbnailImage from './ThumbnailImage';
+
+// Extend window interface for download badge function
+declare global {
+    interface Window {
+        updateDownloadBadge?: (numItems: number) => void;
+    }
+}
+
 
 interface AssetData {
     asset: Asset;
@@ -302,20 +310,26 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                     }
                 }
 
-                const archiveId = await dynamicMediaClient.downloadAssetsArchive(assetsRenditions);
+                const archiveId = await dynamicMediaClient.createAssetsArchive(assetsRenditions);
 
                 if (archiveId) {
-                    // Store and track archiveId in sessionStorage
-                    const existingDownloads = JSON.parse(sessionStorage.getItem('downloadArchives') || '[]');
-                    existingDownloads.push({
+                    // Store and track archiveId in localStorage
+                    const existingDownloads: DownloadAssetItem[] = JSON.parse(localStorage.getItem('downloadArchives') || '[]');
+
+                    const newDownloadEntry: DownloadAssetItem = {
                         assetsRenditions: assetsRenditions.map(item => ({
-                            assetId: item.asset.assetId,
+                            assetId: item.asset.assetId || '',
                             assetName: item.asset.name || item.asset.title || 'Unknown Asset',
-                            renditions: item.renditions.map(rendition => rendition.name)
+                            renditions: item.renditions.map(rendition => rendition.name || '').filter(name => name !== '')
                         })),
                         archiveId
-                    });
-                    sessionStorage.setItem('downloadArchives', JSON.stringify(existingDownloads));
+                    };
+
+                    existingDownloads.push(newDownloadEntry);
+                    localStorage.setItem('downloadArchives', JSON.stringify(existingDownloads));
+                    if (window.updateDownloadBadge && typeof window.updateDownloadBadge === 'function') {
+                        window.updateDownloadBadge(existingDownloads.length);
+                    }
 
                     closeProcessingToast?.();
                     onDownloadCompleted?.(true, successfulAssets);

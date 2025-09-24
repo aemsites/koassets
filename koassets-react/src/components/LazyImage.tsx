@@ -27,6 +27,15 @@ const LazyImage: React.FC<LazyImageProps> = ({
     const [isVisible, setIsVisible] = useState<boolean>(false);
     const observerRef = useRef<IntersectionObserver | null>(null);
 
+    // Helper function to make element visible and cleanup observer
+    const makeVisible = useCallback(() => {
+        setIsVisible(true);
+        if (observerRef.current) {
+            observerRef.current.disconnect();
+            observerRef.current = null;
+        }
+    }, []);
+
     // Callback ref to set up intersection observer when element is mounted
     const imgRefCallback = useCallback((node: HTMLDivElement | null) => {
         // Clean up previous observer
@@ -35,25 +44,30 @@ const LazyImage: React.FC<LazyImageProps> = ({
             observerRef.current = null;
         }
 
-        if (node && !isVisible) {
-            // Create new observer
-            observerRef.current = new IntersectionObserver(
-                ([entry]) => {
-                    if (entry.isIntersecting) {
-                        setIsVisible(true);
-                        observerRef.current?.disconnect();
-                        observerRef.current = null;
-                    }
-                },
-                {
-                    threshold: 0.1, // Trigger when 10% of the image is visible
-                    rootMargin: '50px' // Start loading 50px before image is visible
-                }
-            );
+        if (!node || isVisible) return;
 
-            observerRef.current.observe(node);
+        // Check if already visible (handles first-row images)
+        const rect = node.getBoundingClientRect();
+        if (rect.top < window.innerHeight && rect.bottom > 0) {
+            makeVisible();
+            return;
         }
-    }, [isVisible]);
+
+        // Set up observer for lazy loading
+        observerRef.current = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    makeVisible();
+                }
+            },
+            {
+                threshold: 0.1, // Trigger when 10% of the image is visible
+                rootMargin: '50px' // Start loading 50px before image is visible
+            }
+        );
+
+        observerRef.current.observe(node);
+    }, [isVisible, makeVisible]);
 
     // Cleanup observer on unmount
     useEffect(() => {

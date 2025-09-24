@@ -31,8 +31,6 @@ export const WorkflowProgress: React.FC<WorkflowProgressProps> = ({
         if (!stepStatus) return;
 
         Object.entries(stepStatus).forEach(([step, status]) => {
-            console.debug(`Step "${step}" status changed to: ${status}`);
-
             switch (step as WorkflowStep) {
                 case WorkflowStep.CART:
                     switch (status) {
@@ -182,11 +180,6 @@ export const WorkflowProgress: React.FC<WorkflowProgressProps> = ({
             }
         });
     }, [stepStatus]);
-
-    useEffect(() => {
-        console.log('stepStatus', stepStatus, getStepClassName(WorkflowStep.CART, activeStep === WorkflowStep.CART));
-        console.log('stepIcon', stepIcon, renderStepIcon(WorkflowStep.CART));
-    }, [stepStatus, stepIcon, activeStep, getStepClassName, renderStepIcon]);
 
     return (
         <div className="workflow-progress">

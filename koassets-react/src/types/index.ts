@@ -271,10 +271,8 @@ export interface CartPanelProps {
 export interface DownloadPanelProps {
     isOpen: boolean;
     onClose: () => void;
-    downloadAssetItems: DownloadArchiveItem[];
-    downloadTemplateItems: DownloadTemplateItem[];
-    setDownloadTemplateItems: React.Dispatch<React.SetStateAction<DownloadTemplateItem[]>>;
-    onRemoveItem: (item: Asset) => void; // Still accepts Asset for removal logic
+    // downloadAssetItems now managed internally
+    // onRemoveItem now managed internally
 }
 
 // Header Bar types - COMMENTED OUT
@@ -617,7 +615,7 @@ export interface SearchPanelProps {
 }
 
 // Download archive data structure for sessionStorage
-export interface DownloadArchiveItem {
+export interface DownloadAssetItem {
     assetsRenditions: {
         assetId: string;
         assetName: string;

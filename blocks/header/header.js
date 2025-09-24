@@ -210,11 +210,11 @@ async function createNavBar() {
     };
 
     // Expose function to update download badge
-    window.updateDownloadBadge = function (numDownloadItems) {
+    window.updateDownloadBadge = function (numDownloadAssetItems) {
       const badge = downloadIcon.querySelector('.download-badge');
       if (badge) {
-        if (numDownloadItems && numDownloadItems > 0) {
-          badge.textContent = numDownloadItems;
+        if (numDownloadAssetItems && numDownloadAssetItems > 0) {
+          badge.textContent = numDownloadAssetItems;
           badge.style.display = 'block';
         } else {
           badge.style.display = 'none';
@@ -233,8 +233,8 @@ async function createNavBar() {
 
     // Update download badge from sessionStorage
     try {
-      const downloadItems = JSON.parse(sessionStorage.getItem('downloadArchives') || '[]');
-      window.updateDownloadBadge(downloadItems.length);
+      const downloadAssetItems = JSON.parse(localStorage.getItem('downloadArchives') || '[]');
+      window.updateDownloadBadge(downloadAssetItems.length);
     } catch (error) {
       console.error('Error reading download items from sessionStorage:', error);
       window.updateDownloadBadge(0);
