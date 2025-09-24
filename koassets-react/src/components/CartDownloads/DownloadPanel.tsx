@@ -237,6 +237,18 @@ const DownloadPanel: React.FC<DownloadPanelProps> = ({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [downloadAssetItems, isDownloadPanelOpen]);
 
+    // Cancel all active polling when panel is closed
+    useEffect(() => {
+        if (!isDownloadPanelOpen) {
+            // Cancel all active polling when panel closes
+            pollingControllers.current.forEach((controller, archiveId) => {
+                controller.abort();
+                console.debug('Cancelled polling for archive on panel close:', archiveId);
+            });
+            pollingControllers.current.clear();
+        }
+    }, [isDownloadPanelOpen]);
+
     // Cleanup all active polling when component unmounts
     useEffect(() => {
         const controllers = pollingControllers.current;

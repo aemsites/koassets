@@ -158,7 +158,7 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
     // Moved from DownloadRenditionsModal - rendition selection functions
     const handleToggleRendition = useCallback((asset: Asset, rendition: Rendition) => {
         const assetId = asset.assetId || `asset-${asset.name}`;
-        console.log(`Toggling rendition "${rendition.name}" for asset "${assetId}"`);
+        console.debug(`Toggling rendition "${rendition.name}" for asset "${assetId}"`);
 
         setSelectedRenditions(prev => {
             const newMap = new Map(prev);
