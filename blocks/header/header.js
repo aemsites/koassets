@@ -1,5 +1,5 @@
 import { getMetadata } from '../../scripts/aem.js';
-import { loadFragment } from '../../scripts/scripts.js';
+import { fetchSpreadsheetData, loadFragment } from '../../scripts/scripts.js';
 import decorateKoAssetsSearch from '../koassets-search/koassets-search.js';
 import showProfileModal from './profile.js';
 
@@ -267,7 +267,7 @@ function getUserInitials() {
   return window.user.name.split(' ').map((name) => name.charAt(0)).join('').toUpperCase();
 }
 
-function createHeaderBar() {
+async function createHeaderBar() {
   // Create TCCC primary header bar
   const headerBar = document.createElement('div');
   headerBar.className = 'header-bar';
@@ -292,7 +292,7 @@ function createHeaderBar() {
     <a class="upload-icon">Upload</a>
   `;
 
-  // Create help section
+  // Create help section with dropdown
   const helpSection = document.createElement('div');
   helpSection.className = 'help-section';
 
@@ -302,7 +302,56 @@ function createHeaderBar() {
     Help
     <span class="down-arrow-icon"></span>
   `;
+
+  const helpMenu = document.createElement('div');
+  helpMenu.className = 'help-menu dropdown-menu';
+  helpMenu.innerHTML = `
+    <ul></ul>
+  `;
+
+  // Fetch help menu items
+  async function loadHelpMenu() {
+    try {
+      const configs = await fetchSpreadsheetData('configs', 'help-menu');
+      const menuItems = configs?.data || [];
+
+      const helpMenuList = helpMenu.querySelector('ul');
+
+      // Populate menu with items
+      helpMenuList.innerHTML = '';
+      menuItems.forEach((item) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<a href="${item.link}">${item.title}</a>`;
+        helpMenuList.appendChild(li);
+      });
+    } catch (error) {
+      console.error('Error loading help menu:', error);
+    }
+  }
+
+  // Load help menu items
+  loadHelpMenu();
+
+  helpButton.addEventListener('click', (e) => {
+    e.stopPropagation();
+    // Only show dropdown if there are menu items
+    const helpMenuList = helpMenu.querySelector('ul');
+    if (!helpMenuList || helpMenuList.children.length === 0) {
+      return;
+    }
+    // Close any other open dropdowns first
+    const myAccountMenu = document.querySelector('.my-account-menu');
+    if (myAccountMenu && myAccountMenu.style.display === 'block') {
+      myAccountMenu.style.display = 'none';
+      document.querySelector('.my-account-button').classList.remove('active');
+    }
+    // toggle display
+    helpMenu.style.display = helpMenu.style.display === 'block' ? 'none' : 'block';
+    helpButton.classList.toggle('active');
+  });
+
   helpSection.appendChild(helpButton);
+  helpSection.appendChild(helpMenu);
 
   headerBar.append(languageSection, uploadButton, helpSection);
 
@@ -321,7 +370,7 @@ function createHeaderBar() {
     `;
 
     const myAccountMenu = document.createElement('div');
-    myAccountMenu.className = 'my-account-menu';
+    myAccountMenu.className = 'my-account-menu dropdown-menu';
     myAccountMenu.innerHTML = `
       <ul>
         <li><a href="#" id="my-profile-link">My Profile</a></li>
@@ -333,7 +382,14 @@ function createHeaderBar() {
         <li><a href="/auth/logout">Log Out</a></li>
       </ul>
     `;
-    myAccountButton.addEventListener('click', () => {
+    myAccountButton.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Close any other open dropdowns first
+      const openHelpMenu = document.querySelector('.help-menu');
+      if (openHelpMenu && openHelpMenu.style.display === 'block') {
+        openHelpMenu.style.display = 'none';
+        document.querySelector('.help-section-button').classList.remove('active');
+      }
       // toggle display
       myAccountMenu.style.display = myAccountMenu.style.display === 'block' ? 'none' : 'block';
       myAccountButton.classList.toggle('active');
@@ -354,6 +410,31 @@ function createHeaderBar() {
     headerBar.append(myAccount);
   }
 
+  // Centralized click outside handler for all dropdowns
+  document.addEventListener('click', (e) => {
+    // Close help menu if clicking outside
+    const helpSectionElement = headerBar.querySelector('.help-section');
+    const helpMenuElement = helpSectionElement?.querySelector('.help-menu');
+    const helpButtonElement = helpSectionElement?.querySelector('.help-section-button');
+
+    if (helpSectionElement && !helpSectionElement.contains(e.target)
+        && helpMenuElement && helpButtonElement) {
+      helpMenuElement.style.display = 'none';
+      helpButtonElement.classList.remove('active');
+    }
+
+    // Close my account menu if clicking outside
+    const myAccountElement = headerBar.querySelector('.my-account');
+    const myAccountMenuElement = myAccountElement?.querySelector('.my-account-menu');
+    const myAccountButtonElement = myAccountElement?.querySelector('.my-account-button');
+
+    if (myAccountElement && !myAccountElement.contains(e.target)
+        && myAccountMenuElement && myAccountButtonElement) {
+      myAccountMenuElement.style.display = 'none';
+      myAccountButtonElement.classList.remove('active');
+    }
+  });
+
   return headerBar;
 }
 
@@ -370,7 +451,7 @@ export default async function decorate(block) {
     return;
   }
 
-  block.append(createHeaderBar());
+  block.append(await createHeaderBar());
   block.append(await createNavBar());
 
   // Create and render koassets-search block
