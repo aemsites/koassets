@@ -1,9 +1,7 @@
 import React, { useEffect } from 'react';
 import { useAppConfig } from '../hooks/useAppConfig';
-import type { CartItem } from '../types';
-// import type { HeaderBarProps } from '../types'; // COMMENTED OUT
+import type { CartAssetItem } from '../types';
 import AdobeSignInButton from './AdobeSignInButton.jsx';
-// import CartPanel from './CartPanel'; // REMOVED - moved to MainApp
 import './HeaderBar.css';
 
 // Extend window interface for cart badge function
@@ -15,19 +13,13 @@ declare global {
 
 // Simplified HeaderBar props interface
 interface HeaderBarPropsSimplified {
-    cartItems: CartItem[];
+    cartAssetItems: CartAssetItem[];
     handleAuthenticated: (token: string) => void;
     handleSignOut: () => void;
 }
 
 const HeaderBar: React.FC<HeaderBarPropsSimplified> = ({
-    cartItems, // Keep for window.updateCartBadge
-    // setCartItems, // Removed - cart moved to MainApp
-    // isCartOpen, // Removed - cart moved to MainApp  
-    // setIsCartOpen, // Removed - cart moved to MainApp
-    // handleRemoveFromCart, // Removed - cart moved to MainApp
-    // handleApproveAssets, // Removed - cart moved to MainApp
-    // handleDownloadAssets, // Removed - cart moved to MainApp
+    cartAssetItems, // Keep for window.updateCartBadge
     handleAuthenticated,
     handleSignOut
 }) => {
@@ -37,9 +29,9 @@ const HeaderBar: React.FC<HeaderBarPropsSimplified> = ({
 
     useEffect(() => {
         if (window.updateCartBadge && typeof window.updateCartBadge === 'function') {
-            window.updateCartBadge(cartItems.length);
+            window.updateCartBadge(cartAssetItems.length);
         }
-    }, [cartItems.length]);
+    }, [cartAssetItems.length]);
 
     const handleLogoClick = () => {
         window.location.assign('/');

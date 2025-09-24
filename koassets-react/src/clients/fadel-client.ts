@@ -67,7 +67,7 @@ interface Asset {
     };
 }
 
-interface RestOfAssetsItem {
+export interface RestOfAssetsItem {
     asset: Asset;
     typeCode: string;
     typeName: string;

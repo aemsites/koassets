@@ -1,14 +1,14 @@
 import { CalendarDate } from '@internationalized/date';
 import React, { useCallback, useState } from 'react';
-import type { Asset, RequestDownloadStepData, RightsData } from '../types';
+import type { Asset, RequestDownloadStepData, RightsData } from '../../types';
+import Markets from '../Markets';
+import MediaChannels from '../MediaChannels';
+import MyDatePicker from '../MyDatePicker';
+import ThumbnailImage from '../ThumbnailImage';
 import './CartRequestDownload.css';
-import Markets from './Markets';
-import MediaChannels from './MediaChannels';
-import MyDatePicker from './MyDatePicker';
-import ThumbnailImage from './ThumbnailImage';
 
 interface CartRequestDownloadProps {
-    cartItems: Asset[];
+    cartAssetItems: Asset[];
     onCancel: () => void;
     onOpenRightsCheck: (stepData: RequestDownloadStepData) => void;
     onBack: (stepData: RequestDownloadStepData) => void;
@@ -31,7 +31,7 @@ interface CartRequestDownloadProps {
 
 
 const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
-    cartItems,
+    cartAssetItems,
     onCancel,
     onOpenRightsCheck,
     onBack,
@@ -115,7 +115,7 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
                 <div className="cart-request-download-assets">
                     <h3>Asset List</h3>
                     <div className="asset-list-items">
-                        {cartItems.map((item: Asset) => (
+                        {cartAssetItems.map((item: Asset) => (
                             <div key={item.assetId} className="asset-list-item">
                                 <div className="asset-thumbnail">
                                     <ThumbnailImage item={item} />

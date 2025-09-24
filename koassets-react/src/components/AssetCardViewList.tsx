@@ -15,7 +15,7 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
     handlePreviewClick,
     handleAddToCart,
     handleRemoveFromCart,
-    cartItems = [],
+    cartAssetItems = [],
     isSelected = false,
     onCheckboxChange,
     showFullDetails = true
@@ -23,7 +23,7 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
     // Get dynamicMediaClient from context
     const { dynamicMediaClient } = useAppConfig();
     // Check if this item is already in the cart
-    const isInCart = cartItems.some(cartItem => cartItem.assetId === image.assetId);
+    const isInCart = cartAssetItems.some(cartAssetItem => cartAssetItem.assetId === image.assetId);
 
     // Handle button click - either add or remove from cart
     const handleAddRemoveCart = (e: React.MouseEvent<HTMLButtonElement>) => {

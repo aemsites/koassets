@@ -453,11 +453,11 @@ function handleAddToCart(asset) {
   }
 
   try {
-    const stored = JSON.parse(localStorage.getItem('cartItems') || '[]');
+    const stored = JSON.parse(localStorage.getItem('cartAssetItems') || '[]');
     const exists = stored.some((item) => item.assetId === (asset.assetId || asset.id));
     if (!exists) {
       stored.push({ ...asset });
-      localStorage.setItem('cartItems', JSON.stringify(stored));
+      localStorage.setItem('cartAssetItems', JSON.stringify(stored));
     }
     showToast('ASSET ADDED TO CART', 'success');
   } catch (e) {
@@ -486,7 +486,7 @@ function showToast(message, type = 'success') {
 
 function isAssetInCart(asset) {
   try {
-    const stored = JSON.parse(localStorage.getItem('cartItems') || '[]');
+    const stored = JSON.parse(localStorage.getItem('cartAssetItems') || '[]');
     return stored.some((item) => item.assetId === (asset.assetId || asset.id));
   } catch {
     return false;
@@ -498,9 +498,9 @@ function handleToggleCart(asset, buttonEl) {
   if (inCart) {
     // Remove from cart
     try {
-      const stored = JSON.parse(localStorage.getItem('cartItems') || '[]');
+      const stored = JSON.parse(localStorage.getItem('cartAssetItems') || '[]');
       const next = stored.filter((item) => item.assetId !== (asset.assetId || asset.id));
-      localStorage.setItem('cartItems', JSON.stringify(next));
+      localStorage.setItem('cartAssetItems', JSON.stringify(next));
     } catch (err) {
       // ignore JSON errors
     }

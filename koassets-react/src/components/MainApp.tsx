@@ -5,9 +5,22 @@ import '../MainApp.css';
 
 import { DynamicMediaClient } from '../clients/dynamicmedia-client';
 import { DEFAULT_FACETS, type ExcFacets } from '../constants/facets';
+// Extend Window interface to include our custom functions
+declare global {
+    interface Window {
+        openCart?: () => void;
+        closeCart?: () => void;
+        toggleCart?: () => void;
+        openDownloadPanel?: () => void;
+        closeDownloadPanel?: () => void;
+        toggleDownloadPanel?: () => void;
+    }
+}
+
 import type {
     Asset,
-    CartItem,
+    CartAssetItem,
+    CartTemplateItem,
     Collection,
     CurrentView,
     ExternalParams,
@@ -23,12 +36,15 @@ import { fetchOptimizedDeliveryBlob, removeBlobFromCache } from '../utils/blobCa
 import { getBucket, getExternalParams } from '../utils/config';
 import { AppConfigProvider } from './AppConfigProvider';
 
-// Extend window interface for cart functions and user authentication
+// Extend window interface for cart functions, download functions and user authentication
 declare global {
     interface Window {
         openCart?: () => void;
         closeCart?: () => void;
         toggleCart?: () => void;
+        openDownloadPanel?: () => void;
+        closeDownloadPanel?: () => void;
+        toggleDownloadPanel?: () => void;
         user?: unknown; // Global user object for authentication
     }
 }
@@ -38,7 +54,8 @@ import { CalendarDate } from '@internationalized/date';
 import { createPortal } from 'react-dom';
 import { AuthorizationStatus, CheckRightsRequest, FadelClient } from '../clients/fadel-client';
 import { calendarDateToEpoch } from '../utils/formatters';
-import CartPanel from './CartPanel';
+import CartPanel from './CartDownloads/CartPanel';
+import DownloadPanel from './CartDownloads/DownloadPanel';
 import Facets from './Facets';
 import HeaderBar from './HeaderBar';
 import ImageGallery from './ImageGallery';
@@ -169,28 +186,40 @@ function MainApp(): React.JSX.Element {
     const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
 
     // Cart state
-    const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+    const [cartAssetItems, setCartAssetItems] = useState<CartAssetItem[]>(() => {
         try {
-            const stored = localStorage.getItem('cartItems');
+            const stored = localStorage.getItem('cartAssetItems');
             return stored ? JSON.parse(stored) : [];
         } catch {
             return [];
         }
     });
-    const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+
+    const [cartTemplateItems, setCartTemplateItems] = useState<CartTemplateItem[]>([]);
+    const [isCartPanelOpen, setIsCartPanelOpen] = useState<boolean>(false);
+
+    // Download panel state
+    const [isDownloadPanelOpen, setIsDownloadPanelOpen] = useState<boolean>(false);
+
     // Mobile filter panel state
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false);
 
-    // Expose cart functions to window for EDS header integration
+    // Expose cart and download panel functions to window for EDS header integration
     useEffect(() => {
-        window.openCart = () => setIsCartOpen(true);
-        window.closeCart = () => setIsCartOpen(false);
-        window.toggleCart = () => setIsCartOpen(prev => !prev);
+        window.openCart = () => setIsCartPanelOpen(true);
+        window.closeCart = () => setIsCartPanelOpen(false);
+        window.toggleCart = () => setIsCartPanelOpen(prev => !prev);
+        window.openDownloadPanel = () => setIsDownloadPanelOpen(true);
+        window.closeDownloadPanel = () => setIsDownloadPanelOpen(false);
+        window.toggleDownloadPanel = () => setIsDownloadPanelOpen(prev => !prev);
 
         return () => {
             delete window.openCart;
             delete window.closeCart;
             delete window.toggleCart;
+            delete window.openDownloadPanel;
+            delete window.closeDownloadPanel;
+            delete window.toggleDownloadPanel;
         };
     }, []);
 
@@ -220,8 +249,8 @@ function MainApp(): React.JSX.Element {
 
     // Save cart items to localStorage when they change
     useEffect(() => {
-        localStorage.setItem('cartItems', JSON.stringify(cartItems));
-    }, [cartItems]);
+        localStorage.setItem('cartAssetItems', JSON.stringify(cartAssetItems));
+    }, [cartAssetItems]);
 
     useEffect(() => {
         const hasAccessToken = Boolean(accessToken);
@@ -543,7 +572,7 @@ function MainApp(): React.JSX.Element {
 
     // Cart functions
     const handleAddToCart = async (image: Asset): Promise<void> => {
-        if (!cartItems.some(item => item.assetId === image.assetId)) {
+        if (!cartAssetItems.some(item => item.assetId === image.assetId)) {
             // Cache the image when adding to cart
             if (dynamicMediaClient && image.assetId) {
                 try {
@@ -563,12 +592,12 @@ function MainApp(): React.JSX.Element {
                 }
             }
 
-            setCartItems(prev => [...prev, image]);
+            setCartAssetItems(prev => [...prev, image]);
         }
     };
 
     const handleRemoveFromCart = (image: Asset): void => {
-        setCartItems(prev => prev.filter(item => item.assetId !== image.assetId));
+        setCartAssetItems(prev => prev.filter(item => item.assetId !== image.assetId));
 
         // Clean up cached blobs for this asset
         if (image.assetId) {
@@ -580,7 +609,7 @@ function MainApp(): React.JSX.Element {
         // Process all selected images in parallel
         const processCartImages = async (imageId: string): Promise<Asset | null> => {
             const image = images.find(img => img.assetId === imageId);
-            if (!image || cartItems.some(item => item.assetId === image.assetId)) {
+            if (!image || cartAssetItems.some(item => item.assetId === image.assetId)) {
                 return null;
             }
 
@@ -599,9 +628,10 @@ function MainApp(): React.JSX.Element {
             .map(result => result.value!);
 
         if (newItems.length > 0) {
-            setCartItems(prev => [...prev, ...newItems]);
+            setCartAssetItems(prev => [...prev, ...newItems]);
         }
     };
+
 
     // Sort handlers
     const handleSortByTopResults = (): void => {
@@ -635,18 +665,6 @@ function MainApp(): React.JSX.Element {
         // TODO: Implement actual sorting logic
     };
 
-    const handleApproveAssets = (): void => {
-        if (cartItems.length === 0) {
-            return;
-        }
-    };
-
-    const handleDownloadAssets = (): void => {
-        if (cartItems.length === 0) {
-            return;
-        }
-        setIsCartOpen(false);
-    };
 
     const handleIMSAccessToken = (token: string): void => {
         setAccessToken(token);
@@ -703,7 +721,7 @@ function MainApp(): React.JSX.Element {
                     loading={loading[LOADING.dmImages]}
                     onAddToCart={handleAddToCart}
                     onRemoveFromCart={handleRemoveFromCart}
-                    cartItems={cartItems}
+                    cartAssetItems={cartAssetItems}
                     searchResult={searchResults?.[0] || null}
                     onToggleMobileFilter={handleToggleMobileFilter}
                     isMobileFilterOpen={isMobileFilterOpen}
@@ -741,7 +759,7 @@ function MainApp(): React.JSX.Element {
         >
             <div className="container">
                 <HeaderBar
-                    cartItems={cartItems}
+                    cartAssetItems={cartAssetItems}
                     handleAuthenticated={handleIMSAccessToken}
                     handleSignOut={handleSignOut}
                 />
@@ -749,13 +767,22 @@ function MainApp(): React.JSX.Element {
                 {/* Cart Container - moved from HeaderBar, now uses Portal */}
                 {createPortal(
                     <CartPanel
-                        isOpen={isCartOpen}
-                        onClose={() => setIsCartOpen(false)}
-                        cartItems={cartItems}
-                        setCartItems={setCartItems}
+                        isCartPanelOpen={isCartPanelOpen}
+                        onCloseCartPanel={() => setIsCartPanelOpen(false)}
+                        cartAssetItems={cartAssetItems}
+                        setCartAssetItems={setCartAssetItems}
+                        cartTemplateItems={cartTemplateItems}
+                        setCartTemplateItems={setCartTemplateItems}
                         onRemoveItem={handleRemoveFromCart}
-                        onApproveAssets={handleApproveAssets}
-                        onDownloadAssets={handleDownloadAssets}
+                    />,
+                    document.body
+                )}
+
+                {/* Download Panel - similar to Cart Panel */}
+                {createPortal(
+                    <DownloadPanel
+                        isDownloadPanelOpen={isDownloadPanelOpen}
+                        onCloseDownloadPanel={() => setIsDownloadPanelOpen(false)}
                     />,
                     document.body
                 )}

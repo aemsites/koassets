@@ -145,8 +145,13 @@ async function createNavBar() {
 
   const tools = nav.querySelector('.nav-tools');
 
-  // add shopping cart icon to nav-tools
+  // add shopping cart and download icons to nav-tools
   if (tools) {
+    // Create wrapper div with flex layout
+    const iconsWrapper = document.createElement('div');
+    iconsWrapper.classList.add('nav-icons-wrapper');
+
+    // Create cart icon
     const cartIcon = document.createElement('div');
     cartIcon.classList.add('nav-cart-icon');
     cartIcon.innerHTML = `
@@ -165,14 +170,51 @@ async function createNavBar() {
       }
     });
 
-    tools.appendChild(cartIcon);
+    // Create download icon
+    const downloadIcon = document.createElement('div');
+    downloadIcon.classList.add('nav-download-icon');
+    downloadIcon.innerHTML = `
+      <button type="button" aria-label="Download">
+        <img src="/icons/download-icon.svg" alt="Download" />
+        <span class="download-badge" style="display: none;"></span>
+      </button>
+    `;
+
+    // Add click handler for download icon
+    downloadIcon.addEventListener('click', () => {
+      if (window.openDownloadPanel && typeof window.openDownloadPanel === 'function') {
+        window.openDownloadPanel();
+      } else {
+        console.log('Download functionality not available');
+      }
+    });
+
+    // Append icons to wrapper (download icon first, then cart icon)
+    iconsWrapper.appendChild(downloadIcon);
+    iconsWrapper.appendChild(cartIcon);
+
+    // Append wrapper to tools
+    tools.appendChild(iconsWrapper);
 
     // Expose function to update cart badge
-    window.updateCartBadge = function (numCartItems) {
+    window.updateCartBadge = function (numCartAssetItems) {
       const badge = cartIcon.querySelector('.cart-badge');
       if (badge) {
-        if (numCartItems && numCartItems > 0) {
-          badge.textContent = numCartItems;
+        if (numCartAssetItems && numCartAssetItems > 0) {
+          badge.textContent = numCartAssetItems;
+          badge.style.display = 'block';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+    };
+
+    // Expose function to update download badge
+    window.updateDownloadBadge = function (numDownloadAssetItems) {
+      const badge = downloadIcon.querySelector('.download-badge');
+      if (badge) {
+        if (numDownloadAssetItems && numDownloadAssetItems > 0) {
+          badge.textContent = numDownloadAssetItems;
           badge.style.display = 'block';
         } else {
           badge.style.display = 'none';
@@ -182,11 +224,20 @@ async function createNavBar() {
 
     // Update cart badge from localStorage
     try {
-      const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
-      window.updateCartBadge(cartItems.length);
+      const cartAssetItems = JSON.parse(localStorage.getItem('cartAssetItems') || '[]');
+      window.updateCartBadge(cartAssetItems.length);
     } catch (error) {
       console.error('Error reading cart items from localStorage:', error);
       window.updateCartBadge(0);
+    }
+
+    // Update download badge from sessionStorage
+    try {
+      const downloadAssetItems = JSON.parse(sessionStorage.getItem('downloadArchives') || '[]');
+      window.updateDownloadBadge(downloadAssetItems.length);
+    } catch (error) {
+      console.error('Error reading download items from sessionStorage:', error);
+      window.updateDownloadBadge(0);
     }
   }
 
@@ -367,7 +418,7 @@ async function createHeaderBar() {
     const helpButtonElement = helpSectionElement?.querySelector('.help-section-button');
 
     if (helpSectionElement && !helpSectionElement.contains(e.target)
-        && helpMenuElement && helpButtonElement) {
+      && helpMenuElement && helpButtonElement) {
       helpMenuElement.style.display = 'none';
       helpButtonElement.classList.remove('active');
     }
@@ -378,7 +429,7 @@ async function createHeaderBar() {
     const myAccountButtonElement = myAccountElement?.querySelector('.my-account-button');
 
     if (myAccountElement && !myAccountElement.contains(e.target)
-        && myAccountMenuElement && myAccountButtonElement) {
+      && myAccountMenuElement && myAccountButtonElement) {
       myAccountMenuElement.style.display = 'none';
       myAccountButtonElement.classList.remove('active');
     }
