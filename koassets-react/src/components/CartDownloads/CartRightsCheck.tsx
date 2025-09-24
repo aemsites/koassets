@@ -16,6 +16,7 @@ interface CartRightsCheckProps {
     onBack: (stepData: RightsCheckStepData) => void;
     initialData?: RightsCheckStepData;
     onDownloadCompleted?: (success: boolean, successfulAssets?: Asset[]) => void;
+    onCloseCartPanel: () => void;
 }
 
 
@@ -34,7 +35,8 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
     onOpenRequestRightsExtension,
     onBack,
     initialData,
-    onDownloadCompleted
+    onDownloadCompleted,
+    onCloseCartPanel
 }) => {
     const [downloadOptions] = useState<Record<string, DownloadOptions>>(initialData?.downloadOptions || {});
     const isCheckingRightsRef = useRef(false);
@@ -284,10 +286,7 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
                                         renditionsLoading: false,
                                         renditionsError: null
                                     }))}
-                                    onClose={() => {
-                                        // Handle close action if needed
-                                        console.log('Download renditions closed');
-                                    }}
+                                    onCloseCartPanel={onCloseCartPanel}
                                     onDownloadCompleted={(success, successfulAssets) => {
                                         console.log('Download completed:', success, 'Successful assets:', successfulAssets);
                                         onDownloadCompleted?.(success, successfulAssets);

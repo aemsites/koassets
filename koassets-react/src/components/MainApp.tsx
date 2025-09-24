@@ -196,7 +196,7 @@ function MainApp(): React.JSX.Element {
     });
 
     const [cartTemplateItems, setCartTemplateItems] = useState<CartTemplateItem[]>([]);
-    const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+    const [isCartPanelOpen, setIsCartPanelOpen] = useState<boolean>(false);
 
     // Download panel state
     const [isDownloadPanelOpen, setIsDownloadPanelOpen] = useState<boolean>(false);
@@ -206,9 +206,9 @@ function MainApp(): React.JSX.Element {
 
     // Expose cart and download panel functions to window for EDS header integration
     useEffect(() => {
-        window.openCart = () => setIsCartOpen(true);
-        window.closeCart = () => setIsCartOpen(false);
-        window.toggleCart = () => setIsCartOpen(prev => !prev);
+        window.openCart = () => setIsCartPanelOpen(true);
+        window.closeCart = () => setIsCartPanelOpen(false);
+        window.toggleCart = () => setIsCartPanelOpen(prev => !prev);
         window.openDownloadPanel = () => setIsDownloadPanelOpen(true);
         window.closeDownloadPanel = () => setIsDownloadPanelOpen(false);
         window.toggleDownloadPanel = () => setIsDownloadPanelOpen(prev => !prev);
@@ -755,8 +755,8 @@ function MainApp(): React.JSX.Element {
                 {/* Cart Container - moved from HeaderBar, now uses Portal */}
                 {createPortal(
                     <CartPanel
-                        isOpen={isCartOpen}
-                        onClose={() => setIsCartOpen(false)}
+                        isCartPanelOpen={isCartPanelOpen}
+                        onCloseCartPanel={() => setIsCartPanelOpen(false)}
                         cartAssetItems={cartAssetItems}
                         setCartAssetItems={setCartAssetItems}
                         cartTemplateItems={cartTemplateItems}
@@ -769,8 +769,8 @@ function MainApp(): React.JSX.Element {
                 {/* Download Panel - similar to Cart Panel */}
                 {createPortal(
                     <DownloadPanel
-                        isOpen={isDownloadPanelOpen}
-                        onClose={() => setIsDownloadPanelOpen(false)}
+                        isDownloadPanelOpen={isDownloadPanelOpen}
+                        onCloseDownloadPanel={() => setIsDownloadPanelOpen(false)}
                     />,
                     document.body
                 )}

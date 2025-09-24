@@ -65,7 +65,7 @@ const CartAssetItemRow: React.FC<CartAssetItemRowProps> = ({ item, onRemoveItem 
 interface CartActionsFooterProps {
     activeStep: WorkflowStep;
     hasAllItemsReadyToUse: boolean;
-    onClose: () => void;
+    onCloseCartPanel: () => void;
     onClearCart: () => void;
     onOpenDownload: () => void;
     onOpenRequestDownload: () => void;
@@ -76,7 +76,7 @@ interface CartActionsFooterProps {
 const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
     activeStep,
     hasAllItemsReadyToUse,
-    onClose,
+    onCloseCartPanel,
     onClearCart,
     onOpenDownload,
     onOpenRequestDownload,
@@ -95,7 +95,7 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
     };
     return (
         <div className="cart-actions-footer">
-            <button className="action-btn secondary-button" onClick={onClose}>
+            <button className="action-btn secondary-button" onClick={onCloseCartPanel}>
                 Close
             </button>
             <button className="action-btn secondary-button" onClick={onClearCart}>
@@ -123,8 +123,10 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
                     </button>
                 )
             )}
+
             {/* when activeStep === RIGHTS_CHECK, it has its own buttons */}
-            {activeStep === WorkflowStep.DOWNLOAD && (
+
+            {activeStep === WorkflowStep.CLOSE_DOWNLOAD && (
                 <>
                     <button className="action-btn primary-button" onClick={onCloseDownload}>
                         Complete Download
@@ -140,7 +142,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     cartAssetItems,
     setCartAssetItems,
     onRemoveItem,
-    onClose,
+    onCloseCartPanel,
     onActiveStepChange
 }) => {
     // Get app config from context - no prop drilling needed!
@@ -324,12 +326,8 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     }, [stepStatus, filteredItems]);
 
     const handleCloseDownload = useCallback(async (): Promise<void> => {
-        setStepStatus(prev => ({ ...prev, [WorkflowStep.CLOSE_DOWNLOAD]: StepStatus.CURRENT }));
-        setActiveStep(WorkflowStep.CLOSE_DOWNLOAD);
-        onClose();
-    }, [onClose]);
-
-
+        onCloseCartPanel();
+    }, [onCloseCartPanel]);
 
     // Handler for canceling from request download step
     const handleCancelRequestDownload = useCallback((): void => {
@@ -452,7 +450,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     // Close cart when all items are removed
     // useEffect(() => {
     //     if (cartAssetItems.length === 0) {
-    //         onClose();
+    //         onCloseCartPanel();
     //     }
     // }, [cartAssetItems.length, onClose]);
 
@@ -473,7 +471,8 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             {activeStep === WorkflowStep.DOWNLOAD && showDownloadContent && downloadAssetsData.length > 0 ? (
                 <DownloadRenditionsContent
                     assets={downloadAssetsData}
-                    onClose={handleCloseDownloadContent}
+                    onCloseDownloadRenditions={handleCloseDownloadContent}
+                    onCloseCartPanel={onCloseCartPanel}
                     onDownloadCompleted={handleDownloadCompleted}
                 />
             ) : activeStep === WorkflowStep.REQUEST_DOWNLOAD ? (
@@ -511,7 +510,8 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                         marketSearchTerm: '',
                         dateValidationError: ''
                     }}
-                    onCancel={onClose}
+                    onCancel={onCloseCartPanel}
+                    onCloseCartPanel={onCloseCartPanel}
                     onOpenRequestRightsExtension={handleOpenRequestRightsExtension}
                     onBack={(stepData: RightsCheckStepData) => {
                         // Update the form data state
@@ -546,7 +546,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                         marketSearchTerm: '',
                         dateValidationError: ''
                     }}
-                    onCancel={onClose}
+                    onCancel={onCloseCartPanel}
                     onSendRightsExtensionRequest={handleSendRightsExtensionRequest}
                     onBack={(stepData: RequestRightsExtensionStepData) => {
                         // Update the form data state
@@ -609,7 +609,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                     <CartActionsFooter
                         activeStep={activeStep}
                         hasAllItemsReadyToUse={hasAllItemsReadyToUse}
-                        onClose={onClose}
+                        onCloseCartPanel={onCloseCartPanel}
                         onClearCart={handleClearCart}
                         onOpenDownload={handleOpenDownload}
                         onOpenRequestDownload={handleOpenRequestDownload}

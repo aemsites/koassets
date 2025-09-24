@@ -177,6 +177,11 @@ export const WorkflowProgress: React.FC<WorkflowProgressProps> = ({
                             break;
                     }
                     break;
+                case WorkflowStep.CLOSE_DOWNLOAD:
+                    setStepIcon(prev => ({
+                        ...prev,
+                        [WorkflowStep.CLOSE_DOWNLOAD]: <img src={`/icons/cart-icon-success.svg`} alt="Download Success" />
+                    }));
             }
         });
     }, [stepStatus]);

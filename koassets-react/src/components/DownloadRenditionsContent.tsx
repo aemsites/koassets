@@ -132,15 +132,17 @@ const SelectAllRenditionsCheckbox: React.FC<SelectAllRenditionsCheckboxProps> = 
 
 interface DownloadRenditionsContentProps {
     assets: AssetData[];
-    onClose: () => void;
+    onCloseDownloadRenditions?: () => void;
+    onCloseCartPanel?: () => void;
     onDownloadCompleted?: (success: boolean, successfulAssets?: Asset[]) => void;
     showCancel?: boolean;
 }
 
 const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
     assets,
-    onClose,
-    onDownloadCompleted: onDownloadCompleted,
+    onCloseDownloadRenditions,
+    onCloseCartPanel,
+    onDownloadCompleted,
     showCancel = true
 }) => {
     // Get dynamicMediaClient from context instead of props
@@ -279,7 +281,7 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                     const isImagePreset = rendition && assetForRendition.imagePresets?.items?.some(preset => preset.name === rendition.name);
                     await dynamicMediaClient.downloadAsset(assetForRendition, rendition, isImagePreset);
                     onDownloadCompleted?.(true, [assetForRendition]);
-                    onClose();
+                    onCloseDownloadRenditions?.();
                 } else {
                     console.error('Could not find asset or rendition for single download');
                     ToastQueue.negative('Error: Could not find asset or rendition for single download.', { timeout: 1000 });
@@ -332,8 +334,13 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                     }
 
                     closeProcessingToast?.();
+                    ToastQueue.positive(`Download request for ${totalSelectedCount} renditions created.`, { timeout: 1000 });
                     onDownloadCompleted?.(true, successfulAssets);
-                    onClose();
+                    onCloseDownloadRenditions?.();
+                    if (onCloseCartPanel && window.openDownloadPanel && typeof window.openDownloadPanel === 'function') {
+                        onCloseCartPanel?.();
+                        window.openDownloadPanel();
+                    }
                 } else {
                     closeProcessingToast?.();
                     ToastQueue.negative(`Failed to create archive for ${totalSelectedCount} renditions.`, { timeout: 1000 });
@@ -365,7 +372,7 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
             });
             setAcceptTerms(false);
         }
-    }, [assets, dynamicMediaClient, acceptTerms, isDownloading, selectedRenditions, onClose, onDownloadCompleted]);
+    }, [assets, dynamicMediaClient, acceptTerms, isDownloading, selectedRenditions, onCloseDownloadRenditions, onCloseCartPanel, onDownloadCompleted]);
 
     // Calculate total selected renditions count for UI
     const totalSelectedCount = React.useMemo(() => {
@@ -577,7 +584,7 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                 {showCancel && (
                     <button
                         className="download-renditions-button cancel secondary-button"
-                        onClick={onClose}
+                        onClick={onCloseDownloadRenditions}
                         disabled={isDownloading}
                     >
                         Cancel

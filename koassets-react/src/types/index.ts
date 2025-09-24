@@ -258,8 +258,8 @@ export interface Collection {
 
 // Cart Panel types
 export interface CartPanelProps {
-    isOpen: boolean;
-    onClose: () => void;
+    isCartPanelOpen: boolean;
+    onCloseCartPanel: () => void;
     cartAssetItems: CartAssetItem[];
     setCartAssetItems: React.Dispatch<React.SetStateAction<CartAssetItem[]>>;
     cartTemplateItems: CartTemplateItem[];
@@ -269,24 +269,9 @@ export interface CartPanelProps {
 
 // Download Panel types
 export interface DownloadPanelProps {
-    isOpen: boolean;
-    onClose: () => void;
-    // downloadAssetItems now managed internally
-    // onRemoveItem now managed internally
+    isDownloadPanelOpen: boolean;
+    onCloseDownloadPanel: () => void;
 }
-
-// Header Bar types - COMMENTED OUT
-// export interface HeaderBarProps {
-//     cartAssetItems: CartAssetItem[];
-//     setCartAssetItems: React.Dispatch<React.SetStateAction<CartAssetItem[]>>;
-//     isCartOpen: boolean;
-//     setIsCartOpen: (isOpen: boolean) => void;
-//     handleRemoveFromCart: (item: CartAssetItem) => void;
-//     handleApproveAssets: (items: CartAssetItem[]) => void;
-//     handleDownloadAssets: (items: CartAssetItem[]) => void;
-//     handleAuthenticated: (userData: string) => void;
-//     handleSignOut: () => void;
-// }
 
 // Asset Preview types
 export interface AssetPreviewProps {
@@ -489,7 +474,7 @@ export interface CartPanelAssetsProps {
     cartAssetItems: CartAssetItem[];
     setCartAssetItems: React.Dispatch<React.SetStateAction<CartAssetItem[]>>;
     onRemoveItem: (item: CartAssetItem) => void;
-    onClose: () => void;
+    onCloseCartPanel: () => void;
     onActiveStepChange: (step: WorkflowStep) => void;
 }
 

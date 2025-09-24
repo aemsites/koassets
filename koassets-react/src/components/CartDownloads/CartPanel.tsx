@@ -17,7 +17,7 @@ interface CartPanelContentProps {
     cartTemplateItems: CartPanelProps['cartTemplateItems'];
     setCartTemplateItems: CartPanelProps['setCartTemplateItems'];
     onRemoveItem: CartPanelProps['onRemoveItem'];
-    onClose: CartPanelProps['onClose'];
+    onCloseCartPanel: CartPanelProps['onCloseCartPanel'];
 }
 
 const CartPanelContent: React.FC<CartPanelContentProps> = ({
@@ -28,7 +28,7 @@ const CartPanelContent: React.FC<CartPanelContentProps> = ({
     cartTemplateItems,
     setCartTemplateItems, // Will be used for template management functionality
     onRemoveItem,
-    onClose
+    onCloseCartPanel
 }) => {
     // Explicitly mark setCartTemplateItems as intentionally unused for now
     void setCartTemplateItems;
@@ -40,7 +40,7 @@ const CartPanelContent: React.FC<CartPanelContentProps> = ({
                     cartAssetItems={cartAssetItems}
                     setCartAssetItems={setCartAssetItems}
                     onRemoveItem={onRemoveItem}
-                    onClose={onClose}
+                    onCloseCartPanel={onCloseCartPanel}
                     onActiveStepChange={setActiveStep!}
                 />
             )}
@@ -53,8 +53,8 @@ const CartPanelContent: React.FC<CartPanelContentProps> = ({
 };
 
 const CartPanel: React.FC<CartPanelProps> = ({
-    isOpen,
-    onClose,
+    isCartPanelOpen,
+    onCloseCartPanel,
     cartAssetItems,
     setCartAssetItems,
     cartTemplateItems,
@@ -68,8 +68,8 @@ const CartPanel: React.FC<CartPanelProps> = ({
 
     return (
         <BasePanel
-            isOpen={isOpen}
-            onClose={onClose}
+            isOpen={isCartPanelOpen}
+            onClose={onCloseCartPanel}
             title="Cart"
             tabs={tabs}
             panelClassName="cart-panel"
@@ -80,7 +80,7 @@ const CartPanel: React.FC<CartPanelProps> = ({
                 cartTemplateItems={cartTemplateItems}
                 setCartTemplateItems={setCartTemplateItems}
                 onRemoveItem={onRemoveItem}
-                onClose={onClose}
+                onCloseCartPanel={onCloseCartPanel}
             />
         </BasePanel>
     );

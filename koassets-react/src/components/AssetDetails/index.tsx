@@ -122,7 +122,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
         }
     };
 
-    const handleDownloadRenditionsModalClose = () => {
+    const handleCloseDownloadRenditionsModal = () => {
         setShowDownloadRenditionsModal(false);
     };
 
@@ -378,7 +378,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                 <DownloadRenditionsModal
                     isOpen={showDownloadRenditionsModal}
                     asset={selectedImage}
-                    onClose={handleDownloadRenditionsModalClose}
+                    onCloseDownloadRenditions={handleCloseDownloadRenditionsModal}
                     renditions={renditions}
                     imagePresets={imagePresets}
                 />,

@@ -373,6 +373,7 @@
 .download-panel .download-item-container {
     display: flex;
     flex-direction: column;
+    padding: 0 5px;
 }
 
 /* Expanded Renditions Area */
@@ -381,7 +382,6 @@
     border-radius: 0 0 .5rem .5rem;
     padding: 16px;
     margin: 0 0 8px 0;
-    animation: expandDown 0.3s ease-out;
 }
 
 .download-panel .rendition-list {
@@ -396,20 +396,4 @@
     font-family: "TCCC UnityHeadline", "Helvetica Neue", Arial, Helvetica, sans-serif;
     line-height: 1.4285em;
     padding: 2px 0;
-}
-
-@keyframes expandDown {
-    from {
-        max-height: 0;
-        opacity: 0;
-        padding-top: 0;
-        padding-bottom: 0;
-    }
-
-    to {
-        max-height: 200px;
-        opacity: 1;
-        padding-top: 16px;
-        padding-bottom: 16px;
-    }
 }

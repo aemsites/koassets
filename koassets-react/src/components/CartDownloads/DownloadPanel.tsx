@@ -60,8 +60,8 @@ const DownloadPanelContent: React.FC<DownloadPanelContentProps> = ({
 };
 
 const DownloadPanel: React.FC<DownloadPanelProps> = ({
-    isOpen,
-    onClose
+    isDownloadPanelOpen,
+    onCloseDownloadPanel
 }) => {
     // Download panel state - moved from MainApp
     const [downloadAssetItems, setDownloadAssetItems] = useState<DownloadAssetItem[]>([]);
@@ -89,10 +89,10 @@ const DownloadPanel: React.FC<DownloadPanelProps> = ({
     }, [loadDownloadAssetItems]);
 
     useEffect(() => {
-        if (isOpen) {
+        if (isDownloadPanelOpen) {
             loadDownloadAssetItems();
         }
-    }, [isOpen, loadDownloadAssetItems]);
+    }, [isDownloadPanelOpen, loadDownloadAssetItems]);
 
     useEffect(() => {
         localStorage.setItem('downloadArchives', JSON.stringify(downloadAssetItems));
@@ -159,7 +159,7 @@ const DownloadPanel: React.FC<DownloadPanelProps> = ({
 
     // Auto-poll archive status for all download items when they change
     useEffect(() => {
-        if (isOpen && downloadAssetItems.length > 0) {
+        if (isDownloadPanelOpen && downloadAssetItems.length > 0) {
             downloadAssetItems.forEach((item) => {
                 // Start polling in parallel without waiting
                 pollingArchiveDownloadLinks(item.archiveId)
@@ -179,7 +179,7 @@ const DownloadPanel: React.FC<DownloadPanelProps> = ({
             });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [downloadAssetItems, isOpen]);
+    }, [downloadAssetItems, isDownloadPanelOpen]);
 
     const tabs = [
         { id: 'assets', label: 'Assets', count: downloadAssetItems.length },
@@ -188,8 +188,8 @@ const DownloadPanel: React.FC<DownloadPanelProps> = ({
 
     return (
         <BasePanel
-            isOpen={isOpen}
-            onClose={onClose}
+            isOpen={isDownloadPanelOpen}
+            onClose={onCloseDownloadPanel}
             title="Downloads"
             tabs={tabs}
             panelClassName="download-panel"
@@ -200,7 +200,7 @@ const DownloadPanel: React.FC<DownloadPanelProps> = ({
                 setDownloadTemplateItems={setDownloadTemplateItems}
                 onRemoveArchiveItem={handleRemoveArchiveItem}
                 archivePollingResults={archivePollingResults}
-                onClose={onClose}
+                onClose={onCloseDownloadPanel}
             />
         </BasePanel>
     );
