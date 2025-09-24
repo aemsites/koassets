@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ARCHIVE_STATUS, type ArchiveStatusType } from '../../clients/dynamicmedia-client';
 import { useAppConfig } from '../../hooks/useAppConfig';
 import type { DownloadAssetItem, DownloadPanelProps, DownloadTemplateItem } from '../../types';
@@ -70,6 +70,9 @@ const DownloadPanel: React.FC<DownloadPanelProps> = ({
     // State to track polling results for each archive - moved from DownloadPanelAssets
     const [archivePollingResults, setArchivePollingResults] = useState<Map<string, string[] | undefined>>(new Map());
 
+    // Track active polling controllers to allow cancellation
+    const pollingControllers = useRef<Map<string, AbortController>>(new Map());
+
     const loadDownloadAssetItems = useCallback(() => {
         try {
             const stored = sessionStorage.getItem('downloadArchives');
@@ -102,11 +105,29 @@ const DownloadPanel: React.FC<DownloadPanelProps> = ({
     }, [downloadAssetItems]);
 
     const handleRemoveArchiveItem = useCallback((archiveItem: DownloadAssetItem): void => {
+        const archiveId = archiveItem.archiveId;
+
+        // Cancel active polling for this archive
+        const controller = pollingControllers.current.get(archiveId);
+        if (controller) {
+            controller.abort();
+            pollingControllers.current.delete(archiveId);
+            console.debug('Cancelled polling for archive:', archiveId);
+        }
+
+        // Remove from polling results
+        setArchivePollingResults(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(archiveId);
+            return newMap;
+        });
+
+        // Remove from download items
         const newDownloadAssetItems = downloadAssetItems.filter(entry =>
-            entry.archiveId !== archiveItem.archiveId
+            entry.archiveId !== archiveId
         );
         setDownloadAssetItems(newDownloadAssetItems);
-        console.debug('Removed archive:', archiveItem.archiveId);
+        console.debug('Removed archive:', archiveId);
     }, [downloadAssetItems]);
 
     // Archive polling functions - moved from DownloadPanelAssets
@@ -125,36 +146,71 @@ const DownloadPanel: React.FC<DownloadPanelProps> = ({
             return existingResult;
         }
 
-        // Poll for status until no longer processing
-        let archiveStatus: { data?: { status?: ArchiveStatusType; files?: string[] } } | undefined;
-        const maxRetries = 60; // Maximum 5 minutes (60 * 5s intervals)
-        let retryCount = 0;
-        let result: string[] | undefined;
-
-        do {
-            archiveStatus = await dynamicMediaClient?.getAssetsArchiveStatus(archiveId);
-            const status = archiveStatus?.data?.status;
-
-            if (status === ARCHIVE_STATUS.FAILED) {
-                result = undefined;
-                break;
-            } else if (status === ARCHIVE_STATUS.COMPLETED) {
-                result = archiveStatus?.data?.files;
-                break;
-            }
-
-            // Wait 5 seconds before next poll
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            retryCount++;
-
-        } while (retryCount < maxRetries && archiveStatus?.data?.status === ARCHIVE_STATUS.PROCESSING);
-
-        // If we didn't get a result and timed out
-        if (result === undefined && retryCount >= maxRetries) {
-            result = undefined; // Timeout occurred
+        // Check if there's already active polling for this archive
+        const existingController = pollingControllers.current.get(archiveId);
+        if (existingController) {
+            // Already polling this archive
+            return undefined;
         }
 
-        return result;
+        // Create AbortController for this polling session
+        const controller = new AbortController();
+        pollingControllers.current.set(archiveId, controller);
+
+        try {
+            // Poll for status until no longer processing
+            let archiveStatus: { data?: { status?: ArchiveStatusType; files?: string[] } } | undefined;
+            const maxRetries = 60; // Maximum 5 minutes (60 * 5s intervals)
+            let retryCount = 0;
+            let result: string[] | undefined;
+
+            do {
+                // Check if polling was cancelled
+                if (controller.signal.aborted) {
+                    console.debug('Polling cancelled for archive:', archiveId);
+                    return undefined;
+                }
+
+                archiveStatus = await dynamicMediaClient?.getAssetsArchiveStatus(archiveId);
+                const status = archiveStatus?.data?.status;
+
+                if (status === ARCHIVE_STATUS.FAILED) {
+                    result = undefined;
+                    break;
+                } else if (status === ARCHIVE_STATUS.COMPLETED) {
+                    result = archiveStatus?.data?.files;
+                    break;
+                }
+
+                // Wait 5 seconds before next poll (with cancellation support)
+                await new Promise<void>((resolve, reject) => {
+                    const timeoutId = setTimeout(resolve, 5000);
+                    controller.signal.addEventListener('abort', () => {
+                        clearTimeout(timeoutId);
+                        reject(new Error('Polling cancelled'));
+                    });
+                });
+                retryCount++;
+
+            } while (retryCount < maxRetries && archiveStatus?.data?.status === ARCHIVE_STATUS.PROCESSING);
+
+            // If we didn't get a result and timed out
+            if (result === undefined && retryCount >= maxRetries) {
+                result = undefined; // Timeout occurred
+            }
+
+            return result;
+        } catch (error) {
+            if (error instanceof Error && error.message === 'Polling cancelled') {
+                console.debug('Polling was cancelled for archive:', archiveId);
+                return undefined;
+            }
+            console.error('Error during polling for archive:', archiveId, error);
+            return undefined;
+        } finally {
+            // Clean up controller
+            pollingControllers.current.delete(archiveId);
+        }
     }, [dynamicMediaClient, getArchivePollingResult]);
 
     // Auto-poll archive status for all download items when they change
@@ -180,6 +236,19 @@ const DownloadPanel: React.FC<DownloadPanelProps> = ({
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [downloadAssetItems, isDownloadPanelOpen]);
+
+    // Cleanup all active polling when component unmounts
+    useEffect(() => {
+        const controllers = pollingControllers.current;
+        return () => {
+            // Cancel all active polling
+            controllers.forEach((controller, archiveId) => {
+                controller.abort();
+                console.debug('Cancelled polling for archive on unmount:', archiveId);
+            });
+            controllers.clear();
+        };
+    }, []);
 
     const tabs = [
         { id: 'assets', label: 'Assets', count: downloadAssetItems.length },
