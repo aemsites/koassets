@@ -10,6 +10,7 @@
  * @param {string} search.searchTerm - The search term
  * @param {Array<Array<string>>} search.facetFilters - Array of facet filter groups
  * @param {Array<string>} search.numericFilters - Array of numeric filters
+ * @param {string} search.searchType - The search type path
  * @returns {string} The complete shareable URL
  */
 export default function buildSavedSearchUrl(search) {
@@ -27,8 +28,11 @@ export default function buildSavedSearchUrl(search) {
     params.set('numericFilters', encodeURIComponent(JSON.stringify(search.numericFilters)));
   }
 
-  // Build complete URL with current host and search/all path
+  // Use the stored search type or default to /search/all
+  const searchPath = search.searchType || '/search/all';
+
+  // Build complete URL with current host and search type path
   const currentUrl = new URL(window.location.href);
-  const baseUrl = `${currentUrl.protocol}//${currentUrl.host}/search/all`;
+  const baseUrl = `${currentUrl.protocol}//${currentUrl.host}${searchPath}`;
   return `${baseUrl}?${params.toString()}`;
 }

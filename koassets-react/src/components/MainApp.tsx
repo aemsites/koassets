@@ -134,7 +134,7 @@ function MainApp(): React.JSX.Element {
     const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
     const [loading, setLoading] = useState<LoadingState>({ [LOADING.dmImages]: false, [LOADING.collections]: false });
     const [currentView, setCurrentView] = useState<CurrentView>(CURRENT_VIEW.images);
-    const [selectedQueryType, setSelectedQueryType] = useState<string>(QUERY_TYPES.ASSETS);
+    const [selectedQueryType, setSelectedQueryType] = useState<string>(QUERY_TYPES.ALL);
     const [selectedFacetFilters, setSelectedFacetFilters] = useState<string[][]>([]);
     const [selectedNumericFilters, setSelectedNumericFilters] = useState<string[]>([]);
     const [searchDisabled, setSearchDisabled] = useState<boolean>(false);
@@ -432,8 +432,20 @@ function MainApp(): React.JSX.Element {
         const numericFiltersParam = params.get('numericFilters');
 
         if (urlQuery !== null) setQuery(urlQuery);
-        if (queryType !== null && (queryType === QUERY_TYPES.ASSETS || queryType === QUERY_TYPES.COLLECTIONS)) {
+        
+        // Read search type from URL parameter first
+        if (queryType !== null && (Object.values(QUERY_TYPES) as string[]).includes(queryType)) {
             setSelectedQueryType(queryType);
+        } else {
+            // If no URL parameter, try to infer from URL path
+            const currentPath = window.location.pathname;
+            if (currentPath.includes('/search/all')) {
+                setSelectedQueryType(QUERY_TYPES.ALL);
+            } else if (currentPath.includes('/search/assets')) {
+                setSelectedQueryType(QUERY_TYPES.ASSETS);
+            } else if (currentPath.includes('/search/products')) {
+                setSelectedQueryType(QUERY_TYPES.PRODUCTS);
+            }
         }
 
         // Apply saved search parameters if present
