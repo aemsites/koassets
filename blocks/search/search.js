@@ -127,7 +127,8 @@ export default async function decorate(block) {
   // Initialize values from URL parameters
   const urlParams = new URLSearchParams(window.location.search);
 
-  const queryParam = urlParams.get('query');
+  // Check for both 'query' and 'fulltext' parameters (saved searches use 'fulltext')
+  const queryParam = urlParams.get('query') || urlParams.get('fulltext');
   if (queryParam) {
     input.value = decodeURIComponent(queryParam) || '';
   }
