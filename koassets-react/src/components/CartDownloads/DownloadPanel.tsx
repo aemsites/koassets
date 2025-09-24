@@ -217,21 +217,37 @@ const DownloadPanel: React.FC<DownloadPanelProps> = ({
     useEffect(() => {
         if (isDownloadPanelOpen && downloadAssetItems.length > 0) {
             downloadAssetItems.forEach((item) => {
-                // Start polling in parallel without waiting
-                pollingArchiveDownloadLinks(item.archiveId)
-                    .then((result) => {
-                        // Store the result in our map
-                        setArchivePollingResults(prev => {
-                            const newMap = new Map(prev);
-                            newMap.set(item.archiveId, result);
-                            return newMap;
-                        });
-
-                        console.debug('Completed polling for archive:', item.archiveId, 'Result:', result ? `${result.length} files` : 'no files');
-                    })
-                    .catch((error) => {
-                        console.error('Failed to poll archive:', item.archiveId, error);
+                // Check if we're already polling this item
+                if (!archivePollingResults.has(item.archiveId)) {
+                    // Mark as polling started (use empty array as "in progress" marker)
+                    setArchivePollingResults(prev => {
+                        const newMap = new Map(prev);
+                        newMap.set(item.archiveId, []); // Empty array means "polling in progress"
+                        return newMap;
                     });
+
+                    // Start polling in parallel without waiting
+                    pollingArchiveDownloadLinks(item.archiveId)
+                        .then((result) => {
+                            // Store the result in our map
+                            setArchivePollingResults(prev => {
+                                const newMap = new Map(prev);
+                                newMap.set(item.archiveId, result);
+                                return newMap;
+                            });
+
+                            console.debug('Completed polling for archive:', item.archiveId, 'Result:', result ? `${result.length} files` : 'no files');
+                        })
+                        .catch((error) => {
+                            console.error('Failed to poll archive:', item.archiveId, error);
+                            // Set undefined to indicate failure
+                            setArchivePollingResults(prev => {
+                                const newMap = new Map(prev);
+                                newMap.set(item.archiveId, undefined);
+                                return newMap;
+                            });
+                        });
+                }
             });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
