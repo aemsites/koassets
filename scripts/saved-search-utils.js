@@ -10,7 +10,7 @@
  * @param {string} search.searchTerm - The search term
  * @param {Array<Array<string>>} search.facetFilters - Array of facet filter groups
  * @param {Array<string>} search.numericFilters - Array of numeric filters
- * @param {string} search.searchType - The search type path
+ * @param {string} [search.searchType] - The search type path (optional)
  * @returns {string} The complete shareable URL
  */
 export default function buildSavedSearchUrl(search) {
