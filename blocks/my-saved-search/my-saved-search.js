@@ -81,33 +81,12 @@ export default function decorate(block) {
 function loadSavedSearches() {
   try {
     const searches = JSON.parse(localStorage.getItem('koassets-saved-searches') || '[]');
-    return migrateSavedSearches(searches);
+    return searches;
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Error loading saved searches:', error);
     return [];
   }
-}
-
-function migrateSavedSearches(searches) {
-  let needsUpdate = false;
-  const migratedSearches = searches.map((search) => {
-    if (!search.dateLastUsed) {
-      needsUpdate = true;
-      return {
-        ...search,
-        dateLastUsed: search.dateLastModified || search.dateCreated,
-      };
-    }
-    return search;
-  });
-
-  // Save migrated searches back to localStorage if needed
-  if (needsUpdate) {
-    localStorage.setItem('koassets-saved-searches', JSON.stringify(migratedSearches));
-  }
-
-  return migratedSearches;
 }
 
 // Current search state
@@ -370,30 +349,8 @@ function handleExecuteSearch(search) {
   // Update last used when user executes search
   updateSearchLastUsed(search.id);
 
-  // Build the search URL with parameters
-  const params = new URLSearchParams();
-
-  if (search.searchTerm) {
-    params.set('q', search.searchTerm);
-  }
-
-  if (search.facetFilters && search.facetFilters.length > 0) {
-    // Convert facet filters back to URL format
-    search.facetFilters.forEach((filterGroup, index) => {
-      if (filterGroup.length > 0) {
-        params.set(`facetFilters[${index}]`, filterGroup.join(','));
-      }
-    });
-  }
-
-  if (search.numericFilters && search.numericFilters.length > 0) {
-    search.numericFilters.forEach((filter, index) => {
-      params.set(`numericFilters[${index}]`, filter);
-    });
-  }
-
-  // Navigate to search page with parameters
-  const searchUrl = `/?${params.toString()}`;
+  // Use the shared utility to build the search URL (same as copy link)
+  const searchUrl = buildSavedSearchUrl(search);
   window.location.href = searchUrl;
 }
 

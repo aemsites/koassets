@@ -209,7 +209,9 @@ export interface AssetCardProps {
 
 // Query and filter types
 export const QUERY_TYPES = {
+    ALL: 'All',
     ASSETS: 'Assets',
+    PRODUCTS: 'Products',
     COLLECTIONS: 'Collections',
 } as const;
 
@@ -321,6 +323,7 @@ export interface SavedSearch {
     dateLastModified: number;
     dateLastUsed?: number;
     favorite: boolean;
+    searchType?: string; // The search type path (e.g., '/search/all', '/search/assets', '/search/products')
 }
 
 export interface FacetValue {

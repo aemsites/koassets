@@ -34,7 +34,10 @@ const SearchBar: React.FC<SearchBarProps> = ({
             <div className="query-input-bar">
                 <div className="query-dropdown">
                     <select value={selectedQueryType} onChange={handleSelectChange}>
+                        <option value={QUERY_TYPES.ALL}>{QUERY_TYPES.ALL}</option>
                         <option value={QUERY_TYPES.ASSETS}>{QUERY_TYPES.ASSETS}</option>
+                        <option value={QUERY_TYPES.PRODUCTS}>{QUERY_TYPES.PRODUCTS}</option>
+                        <option value={QUERY_TYPES.COLLECTIONS}>{QUERY_TYPES.COLLECTIONS}</option>
                     </select>
                 </div>
                 <div className="query-input-wrapper">
@@ -50,12 +53,12 @@ const SearchBar: React.FC<SearchBarProps> = ({
                         value={query}
                         onChange={handleInputChange}
                         onKeyPress={handleKeyPress}
-                        placeholder="What are you looking for?"
+                        placeholder="react What are you looking for?"
                         autoFocus
                         ref={inputRef}
                     />
                 </div>
-                <button className="query-search-btn" onClick={handleSearchClick} aria-label="Search">
+                <button className="query-search-btn" onClick={handleSearchClick} aria-label="REACKESearch">
                     Search
                 </button>
             </div>
