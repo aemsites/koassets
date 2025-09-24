@@ -58,11 +58,13 @@ const DownloadPanelAssets: React.FC<DownloadPanelAssetsProps> = ({
         const pollingResult = archivePollingResults.get(item.archiveId);
 
         if (!hasPollingStarted) {
-            return ARCHIVE_STATUS.PROCESSING; // "In Progress"
-        } else if (pollingResult !== undefined) {
-            return ARCHIVE_STATUS.COMPLETED; // "Ready to Download"
+            return ARCHIVE_STATUS.PROCESSING; // "In Progress" - haven't started polling yet
+        } else if (pollingResult === undefined) {
+            return ARCHIVE_STATUS.FAILED; // "Failed" - polling completed but failed
+        } else if (pollingResult.length === 0) {
+            return ARCHIVE_STATUS.PROCESSING; // "In Progress" - polling started but not completed
         } else {
-            return ARCHIVE_STATUS.FAILED; // "Failed"
+            return ARCHIVE_STATUS.COMPLETED; // "Ready to Download" - got download links
         }
     }, [archivePollingResults]);
 
