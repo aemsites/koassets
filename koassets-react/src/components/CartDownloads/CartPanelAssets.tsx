@@ -95,17 +95,17 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
     };
     return (
         <div className="cart-actions-footer">
-            <button className="action-btn secondary-button" onClick={onCloseCartPanel}>
+            <button className="cart-panel-action-btn secondary-button" onClick={onCloseCartPanel}>
                 Close
             </button>
-            <button className="action-btn secondary-button" onClick={onClearCart}>
+            <button className="cart-panel-action-btn secondary-button" onClick={onClearCart}>
                 Clear Cart
             </button>
-            <button className="action-btn secondary-button disabled" onClick={(e) => e.preventDefault()}>
+            <button className="cart-panel-action-btn secondary-button disabled" onClick={(e) => e.preventDefault()}>
                 Share Cart
             </button>
             <button
-                className="action-btn secondary-button"
+                className="cart-panel-action-btn secondary-button"
                 onClick={handleAddToCollectionFromCart}
             >
                 Add To Collection
@@ -114,11 +114,11 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
             {/* Dynamic primary button based on step */}
             {activeStep === WorkflowStep.CART && (
                 hasAllItemsReadyToUse ? (
-                    <button className="action-btn primary-button" onClick={onOpenDownload}>
+                    <button className="cart-panel-action-btn primary-button" onClick={onOpenDownload}>
                         Download Cart
                     </button>
                 ) : (
-                    <button className="action-btn primary-button" onClick={onOpenRequestDownload}>
+                    <button className="cart-panel-action-btn primary-button" onClick={onOpenRequestDownload}>
                         Request Download
                     </button>
                 )
@@ -128,7 +128,7 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
 
             {activeStep === WorkflowStep.CLOSE_DOWNLOAD && (
                 <>
-                    <button className="action-btn primary-button" onClick={onCloseDownload}>
+                    <button className="cart-panel-action-btn primary-button" onClick={onCloseDownload}>
                         Complete Download
                     </button>
                 </>
