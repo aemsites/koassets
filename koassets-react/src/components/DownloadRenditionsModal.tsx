@@ -6,7 +6,7 @@ import './DownloadRenditionsModal.css';
 interface DownloadRenditionsModalProps {
     isOpen: boolean;
     asset: Asset | null;
-    onClose: () => void;
+    onCloseDownloadRenditions: () => void;
     renditions: {
         assetId?: string;
         items?: Rendition[];
@@ -22,7 +22,7 @@ interface DownloadRenditionsModalProps {
 const DownloadRenditionsModal: React.FC<DownloadRenditionsModalProps> = ({
     isOpen,
     asset,
-    onClose,
+    onCloseDownloadRenditions,
     renditions,
     imagePresets
 }) => {
@@ -45,9 +45,9 @@ const DownloadRenditionsModal: React.FC<DownloadRenditionsModalProps> = ({
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
-            onClose();
+            onCloseDownloadRenditions();
         }
-    }, [onClose]);
+    }, [onCloseDownloadRenditions]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -59,9 +59,9 @@ const DownloadRenditionsModal: React.FC<DownloadRenditionsModalProps> = ({
 
     const handleOverlayClick = useCallback((e: React.MouseEvent) => {
         if (e.target === e.currentTarget) {
-            onClose();
+            onCloseDownloadRenditions();
         }
-    }, [onClose]);
+    }, [onCloseDownloadRenditions]);
 
 
 
@@ -81,14 +81,14 @@ const DownloadRenditionsModal: React.FC<DownloadRenditionsModalProps> = ({
             <div className="download-renditions-modal">
                 <div className="download-renditions-header">
                     <div className="download-renditions-header-title">Download</div>
-                    <button className="download-renditions-close" onClick={onClose}>
+                    <button className="download-renditions-close" onClick={onCloseDownloadRenditions}>
                         ×
                     </button>
                 </div>
 
                 <DownloadRenditionsContent
                     assets={assets}
-                    onClose={onClose}
+                    onCloseDownloadRenditions={onCloseDownloadRenditions}
                 />
             </div>
         </div>

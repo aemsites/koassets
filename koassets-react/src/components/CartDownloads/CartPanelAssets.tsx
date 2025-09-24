@@ -1,33 +1,35 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AuthorizationStatus } from '../clients/fadel-client';
-import { restrictedBrandsWarning, smrWarnings } from '../constants/warnings';
-import { useAppConfig } from '../hooks/useAppConfig';
+import { AuthorizationStatus } from '../../clients/fadel-client';
+import { restrictedBrandsWarning, smrWarnings } from '../../constants/warnings';
+import { useAppConfig } from '../../hooks/useAppConfig';
 import type {
     Asset,
     CartPanelAssetsProps,
     RequestDownloadStepData,
     RequestRightsExtensionStepData,
+    RestrictedBrand,
     RightsCheckStepData,
     WorkflowStepData,
-    WorkflowStepIcons,
     WorkflowStepStatuses
-} from '../types';
-import { FilteredItemsType, StepStatus, WorkflowStep } from '../types';
-import { removeBlobFromCache } from '../utils/blobCache';
+} from '../../types';
+import { FilteredItemsType, StepStatus, WorkflowStep } from '../../types';
+import { removeBlobFromCache } from '../../utils/blobCache';
+import DownloadRenditionsContent from '../DownloadRenditionsContent';
+import ThumbnailImage from '../ThumbnailImage';
 import './CartPanelAssets.css';
 import CartRequestDownload from './CartRequestDownload';
 import CartRequestRightsExtension from './CartRequestRightsExtension';
 import CartRightsCheck from './CartRightsCheck';
-import DownloadRenditionsContent from './DownloadRenditionsContent';
-import ThumbnailImage from './ThumbnailImage';
+import EmptyCartDownloadContent from './EmptyCartDownloadContent';
+import { WorkflowProgress } from './WorkflowProgress';
 
 // Component for rendering individual cart item row
-interface CartItemRowProps {
+interface CartAssetItemRowProps {
     item: Asset;
     onRemoveItem: (item: Asset) => void;
 }
 
-const CartItemRow: React.FC<CartItemRowProps> = ({ item, onRemoveItem }) => {
+const CartAssetItemRow: React.FC<CartAssetItemRowProps> = ({ item, onRemoveItem }) => {
     return (
         <div className={`cart-item-row`}>
             <div className="col-thumbnail">
@@ -63,29 +65,29 @@ const CartItemRow: React.FC<CartItemRowProps> = ({ item, onRemoveItem }) => {
 interface CartActionsFooterProps {
     activeStep: WorkflowStep;
     hasAllItemsReadyToUse: boolean;
-    onClose: () => void;
+    onCloseCartPanel: () => void;
     onClearCart: () => void;
     onOpenDownload: () => void;
     onOpenRequestDownload: () => void;
     onCloseDownload: () => void;
-    cartItems: Asset[];
+    cartAssetItems: Asset[];
 }
 
 const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
     activeStep,
     hasAllItemsReadyToUse,
-    onClose,
+    onCloseCartPanel,
     onClearCart,
     onOpenDownload,
     onOpenRequestDownload,
     onCloseDownload,
-    cartItems
+    cartAssetItems
 }) => {
     const handleAddToCollectionFromCart = (e: React.MouseEvent): void => {
         e.preventDefault();
         try {
-            if (!cartItems || cartItems.length === 0) return;
-            const detail = { assets: cartItems } as unknown as Record<string, unknown>;
+            if (!cartAssetItems || cartAssetItems.length === 0) return;
+            const detail = { assets: cartAssetItems } as unknown as Record<string, unknown>;
             window.dispatchEvent(new CustomEvent('openCollectionModal', { detail }));
         } catch (err) {
             console.warn('Failed to open Add to Collection modal from cart:', err);
@@ -93,7 +95,7 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
     };
     return (
         <div className="cart-actions-footer">
-            <button className="action-btn secondary-button" onClick={onClose}>
+            <button className="action-btn secondary-button" onClick={onCloseCartPanel}>
                 Close
             </button>
             <button className="action-btn secondary-button" onClick={onClearCart}>
@@ -121,8 +123,10 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
                     </button>
                 )
             )}
+
             {/* when activeStep === RIGHTS_CHECK, it has its own buttons */}
-            {activeStep === WorkflowStep.DOWNLOAD && (
+
+            {activeStep === WorkflowStep.CLOSE_DOWNLOAD && (
                 <>
                     <button className="action-btn primary-button" onClick={onCloseDownload}>
                         Complete Download
@@ -133,73 +137,12 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
     );
 };
 
-// Component for rendering workflow progress steps
-interface WorkflowProgressProps {
-    activeStep: WorkflowStep;
-    hasAllItemsReadyToUse: boolean;
-    getStepClassName: (step: WorkflowStep, isActive: boolean) => string;
-    renderStepIcon: (step: WorkflowStep) => React.ReactNode;
-}
-
-const WorkflowProgress: React.FC<WorkflowProgressProps> = ({
-    activeStep,
-    hasAllItemsReadyToUse,
-    getStepClassName,
-    renderStepIcon
-}) => {
-    return (
-        <div className="workflow-progress">
-            <div className={getStepClassName(WorkflowStep.CART, activeStep === WorkflowStep.CART)}>
-                <div className="step-icon">
-                    {renderStepIcon(WorkflowStep.CART)}
-                </div>
-                <span className="step-label">Cart</span>
-            </div>
-            <div className="horizontal-line"></div>
-            {!hasAllItemsReadyToUse && (
-                <>
-                    <div className={getStepClassName(WorkflowStep.REQUEST_DOWNLOAD, activeStep === WorkflowStep.REQUEST_DOWNLOAD)}>
-                        <div className="step-icon">
-                            {renderStepIcon(WorkflowStep.REQUEST_DOWNLOAD)}
-                        </div>
-                        <span className="step-label">Request Download</span>
-                    </div>
-                    <div className="horizontal-line"></div>
-                    <div className={getStepClassName(WorkflowStep.RIGHTS_CHECK, activeStep === WorkflowStep.RIGHTS_CHECK)}>
-                        <div className="step-icon">
-                            {renderStepIcon(WorkflowStep.RIGHTS_CHECK)}
-                        </div>
-                        <span className="step-label">Rights Check</span>
-                    </div>
-                    <div className="horizontal-line"></div>
-                    {activeStep === WorkflowStep.REQUEST_RIGHTS_EXTENSION && (
-                        <>
-                            <div className={getStepClassName(WorkflowStep.REQUEST_RIGHTS_EXTENSION, activeStep === WorkflowStep.REQUEST_RIGHTS_EXTENSION)}>
-                                <div className="step-icon">
-                                    {renderStepIcon(WorkflowStep.REQUEST_RIGHTS_EXTENSION)}
-                                </div>
-                                <span className="step-label">Request Rights Extension</span>
-                            </div>
-                            <div className="horizontal-line"></div>
-                        </>
-                    )}
-                </>
-            )}
-            <div className={getStepClassName(WorkflowStep.DOWNLOAD, activeStep === WorkflowStep.DOWNLOAD)}>
-                <div className="step-icon">
-                    {renderStepIcon(WorkflowStep.DOWNLOAD)}
-                </div>
-                <span className="step-label">Download</span>
-            </div>
-        </div>
-    );
-};
 
 const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
-    cartItems,
-    setCartItems,
+    cartAssetItems,
+    setCartAssetItems,
     onRemoveItem,
-    onClose,
+    onCloseCartPanel,
     onActiveStepChange
 }) => {
     // Get app config from context - no prop drilling needed!
@@ -214,14 +157,6 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: StepStatus.INIT,
         [WorkflowStep.DOWNLOAD]: StepStatus.INIT,
         [WorkflowStep.CLOSE_DOWNLOAD]: StepStatus.INIT
-    });
-    const [stepIcon, setStepIcon] = useState<WorkflowStepIcons>({
-        [WorkflowStep.CART]: '',
-        [WorkflowStep.REQUEST_DOWNLOAD]: '',
-        [WorkflowStep.RIGHTS_CHECK]: '',
-        [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: '',
-        [WorkflowStep.DOWNLOAD]: '',
-        [WorkflowStep.CLOSE_DOWNLOAD]: ''
     });
     const [filteredItems, setFilteredItems] = useState<{ [key in FilteredItemsType]: Asset[] }>({} as { [key in FilteredItemsType]: Asset[] });
     const [showDownloadContent, setShowDownloadContent] = useState(false);
@@ -263,179 +198,25 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         onActiveStepChange(activeStep);
     }, [activeStep, onActiveStepChange]);
 
-    // Monitor stepStatus changes and handle each status for all steps
-    useEffect(() => {
-        Object.entries(stepStatus).forEach(([step, status]) => {
-            console.debug(`Step "${step}" status changed to: ${status}`);
 
-            switch (step as WorkflowStep) {
-                case WorkflowStep.CART:
-                    switch (status) {
-                        case StepStatus.INIT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.CART]: <img src={`/icons/cart-stepper-icon.svg`} alt="Cart" />
-                            }));
-                            break;
-                        case StepStatus.CURRENT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.CART]: <img src={`/icons/cart-stepper-icon.svg`} alt="Cart Current" />
-                            }));
-                            break;
-                        case StepStatus.SUCCESS:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.CART]: <img src={`/icons/cart-icon-success.svg`} alt="Cart Success" />
-                            }));
-                            break;
-                        case StepStatus.FAILURE:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.CART]: <img src={`/icons/cart-icon-failure.svg`} alt="Cart Failure" />
-                            }));
-                            break;
-                    }
-                    break;
-
-                case WorkflowStep.REQUEST_DOWNLOAD:
-                    switch (status) {
-                        case StepStatus.INIT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.REQUEST_DOWNLOAD]: <img src={`/icons/download-asset-grey.svg`} alt="Request Download" />
-                            }));
-                            break;
-                        case StepStatus.CURRENT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.REQUEST_DOWNLOAD]: <img src={`/icons/donwload-cart-step-red.svg`} alt="Request Download Current" />
-                            }));
-                            break;
-                        case StepStatus.SUCCESS:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.REQUEST_DOWNLOAD]: <img src={`/icons/cart-icon-success.svg`} alt="Request Download Success" />
-                            }));
-                            break;
-                        case StepStatus.FAILURE:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.REQUEST_DOWNLOAD]: <img src={`/icons/cart-icon-failure.svg`} alt="Request Download Failure" />
-                            }));
-                            break;
-                    }
-                    break;
-
-                case WorkflowStep.RIGHTS_CHECK:
-                    switch (status) {
-                        case StepStatus.INIT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.RIGHTS_CHECK]: <img src={`/icons/rights-check-grey.svg`} alt="Rights Check" />
-                            }));
-                            break;
-                        case StepStatus.CURRENT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.RIGHTS_CHECK]: <img src={`/icons/rights-check-red.svg`} alt="Rights Check Current" />
-                            }));
-                            break;
-                        case StepStatus.SUCCESS:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.RIGHTS_CHECK]: <img src={`/icons/cart-icon-success.svg`} alt="Rights Check Success" />
-                            }));
-                            break;
-                        case StepStatus.FAILURE:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.RIGHTS_CHECK]: <img src={`/icons/cart-icon-failure.svg`} alt="Rights Check Failure" />
-                            }));
-                            break;
-                    }
-                    break;
-
-                case WorkflowStep.REQUEST_RIGHTS_EXTENSION:
-                    switch (status) {
-                        case StepStatus.INIT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: <img src={`/icons/request-rights-red.svg`} alt="Rights Check" />
-                            }));
-                            break;
-                        case StepStatus.CURRENT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: <img src={`/icons/request-rights-red.svg`} alt="Rights Check Current" />
-                            }));
-                            break;
-                        case StepStatus.SUCCESS:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: <img src={`/icons/cart-icon-success.svg`} alt="Rights Check Success" />
-                            }));
-                            break;
-                        case StepStatus.FAILURE:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: <img src={`/icons/cart-icon-failure.svg`} alt="Rights Check Failure" />
-                            }));
-                            break;
-                    }
-                    break;
-
-                case WorkflowStep.DOWNLOAD:
-                    switch (status) {
-                        case StepStatus.INIT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.DOWNLOAD]: <img src={`/icons/download-icon.svg`} alt="Download" />
-                            }));
-                            break;
-                        case StepStatus.CURRENT:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.DOWNLOAD]: <img src={`/icons/donwload-cart-step-red.svg`} alt="Download Current" />
-                            }));
-                            break;
-                        case StepStatus.SUCCESS:
-                            // Could trigger success notification or auto-close
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.DOWNLOAD]: <img src={`/icons/cart-icon-success.svg`} alt="Download Success" />
-                            }));
-                            break;
-                        case StepStatus.FAILURE:
-                            setStepIcon(prev => ({
-                                ...prev,
-                                [WorkflowStep.DOWNLOAD]: <img src={`/icons/cart-icon-failure.svg`} alt="Download Failure" />
-                            }));
-                            break;
-                    }
-                    break;
-            }
-        });
-    }, [stepStatus]);
-
-    // Update filteredItems when cartItems changes
+    // Update filteredItems when cartAssetItems changes
     useEffect(() => {
         setFilteredItems(prev => ({
             ...prev,
-            [FilteredItemsType.READY_TO_USE]: cartItems.filter(item => item?.readyToUse?.toLowerCase() === 'yes' || item?.authorized === AuthorizationStatus.AVAILABLE)
+            [FilteredItemsType.READY_TO_USE]: cartAssetItems.filter(item => item?.readyToUse?.toLowerCase() === 'yes' || item?.authorized === AuthorizationStatus.AVAILABLE)
         }));
-    }, [cartItems]);
+    }, [cartAssetItems]);
 
     const handleClearCart = useCallback((): void => {
         // Remove cached blobs for each cart item
-        cartItems.forEach(item => {
+        cartAssetItems.forEach(item => {
             if (item.assetId) {
                 removeBlobFromCache(item.assetId);
             }
         });
 
-        setCartItems([]);
-    }, [cartItems, setCartItems]);
+        setCartAssetItems([]);
+    }, [cartAssetItems, setCartAssetItems]);
 
     const handleOpenRequestDownload = useCallback((): void => {
         setStepStatus(prev => ({ ...prev, [WorkflowStep.CART]: StepStatus.SUCCESS }));
@@ -515,9 +296,9 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         // Remove restricted assets from cart
         if (rightsExtensionData.restrictedAssets && rightsExtensionData.restrictedAssets.length > 0) {
             const restrictedAssetIds = rightsExtensionData.restrictedAssets.map(asset => asset.assetId);
-            const authorizedItems = cartItems.filter(item => !restrictedAssetIds.includes(item.assetId));
+            const authorizedItems = cartAssetItems.filter(item => !restrictedAssetIds.includes(item.assetId));
 
-            setCartItems(authorizedItems);
+            setCartAssetItems(authorizedItems);
 
             // If there are still items in cart after removal, go back to RIGHTS_CHECK
             if (authorizedItems.length > 0) {
@@ -527,7 +308,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             }
             // If no items left, the auto-close useEffect will handle closing the cart
         }
-    }, [cartItems, setCartItems]);
+    }, [cartAssetItems, setCartAssetItems]);
 
     const handleOpenDownload = useCallback(async (): Promise<void> => {
         setStepStatus(prev => ({ ...prev, [WorkflowStep.CART]: stepStatus[WorkflowStep.CART] === StepStatus.INIT ? StepStatus.SUCCESS : stepStatus[WorkflowStep.CART] }));
@@ -545,12 +326,8 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     }, [stepStatus, filteredItems]);
 
     const handleCloseDownload = useCallback(async (): Promise<void> => {
-        setStepStatus(prev => ({ ...prev, [WorkflowStep.CLOSE_DOWNLOAD]: StepStatus.CURRENT }));
-        setActiveStep(WorkflowStep.CLOSE_DOWNLOAD);
-        onClose();
-    }, [onClose]);
-
-
+        onCloseCartPanel();
+    }, [onCloseCartPanel]);
 
     // Handler for canceling from request download step
     const handleCancelRequestDownload = useCallback((): void => {
@@ -566,46 +343,27 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     const handleDownloadCompleted = useCallback((success: boolean, successfulAssets?: Asset[]) => {
         if (success) {
             setStepStatus(prev => ({ ...prev, [WorkflowStep.DOWNLOAD]: StepStatus.SUCCESS }));
+            setActiveStep(WorkflowStep.CLOSE_DOWNLOAD);
             console.log('Download completed successfully for assets:', successfulAssets);
 
             // Remove successfully downloaded assets from cart
             if (successfulAssets && successfulAssets.length > 0) {
                 const successfulAssetIds = successfulAssets.map(asset => asset.assetId);
-                const newCartItems = cartItems.filter(item => !successfulAssetIds.includes(item.assetId));
-                setCartItems(newCartItems);
+                const newCartAssetItems = cartAssetItems.filter(item => !successfulAssetIds.includes(item.assetId));
+                setCartAssetItems(newCartAssetItems);
             }
         } else {
             setStepStatus(prev => ({ ...prev, [WorkflowStep.DOWNLOAD]: StepStatus.FAILURE }));
         }
-    }, [setCartItems, cartItems]);
+    }, [setCartAssetItems, cartAssetItems]);
 
-    // Helper function to render step icon - simply returns the stepIcon for that step
-    const renderStepIcon = useCallback((step: WorkflowStep, defaultIcon?: string): React.JSX.Element | string => {
-        return stepIcon[step] || defaultIcon || '';
-    }, [stepIcon]);
-
-    // Helper function to get step class names
-    const getStepClassName = useCallback((step: WorkflowStep, isCurrentStep: boolean): string => {
-        const status = stepStatus[step];
-        const baseClass = 'workflow-step';
-
-        if (isCurrentStep) {
-            return `${baseClass} active`;
-        } else if (status === StepStatus.SUCCESS) {
-            return `${baseClass} completed success`;
-        } else if (status === StepStatus.FAILURE) {
-            return `${baseClass} completed failure`;
-        } else {
-            return baseClass;
-        }
-    }, [stepStatus]);
 
     // Memoized computed values
-    const cartItemsCount = useMemo(() => cartItems.length, [cartItems.length]);
+    const cartAssetItemsCount = useMemo(() => cartAssetItems.length, [cartAssetItems.length]);
 
-    const cartItemsCountText = useMemo(() =>
-        `${cartItemsCount} Item${cartItemsCount !== 1 ? 's' : ''}`,
-        [cartItemsCount]
+    const cartAssetItemsCountText = useMemo(() =>
+        `${cartAssetItemsCount} Item${cartAssetItemsCount !== 1 ? 's' : ''}`,
+        [cartAssetItemsCount]
     );
 
     const tableHeader = useMemo(() => (
@@ -617,14 +375,6 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         </div>
     ), []);
 
-    const emptyCartMessage = useMemo(() => (
-        <div className="empty-cart">
-            <div className="empty-cart-message">
-                <span>Your cart is empty</span>
-            </div>
-        </div>
-    ), []);
-
     // Memoized cart item removal handler
     const handleRemoveItem = useCallback((item: Asset) => {
         onRemoveItem(item);
@@ -632,17 +382,17 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
 
     // Check if any cart item has SMR risk type management
     const hasSMRItem = useMemo(() => {
-        return cartItems.some(item => item?.riskTypeManagement === 'smr');
-    }, [cartItems]);
+        return cartAssetItems.some(item => item?.riskTypeManagement === 'smr');
+    }, [cartAssetItems]);
 
     // Check if any cart item has isRestrictedBrand true
     const hasRestrictedBrandItem = useMemo(() => {
-        return cartItems?.some(item => item.isRestrictedBrand) || false;
-    }, [cartItems]);
+        return cartAssetItems?.some(item => item.isRestrictedBrand) || false;
+    }, [cartAssetItems]);
 
     const hasAllItemsReadyToUse = useMemo(() => {
-        return cartItems.every(item => item?.readyToUse?.toLowerCase() === 'yes' || item?.authorized === AuthorizationStatus.AVAILABLE);
-    }, [cartItems]);
+        return cartAssetItems.every(item => item?.readyToUse?.toLowerCase() === 'yes' || item?.authorized === AuthorizationStatus.AVAILABLE);
+    }, [cartAssetItems]);
 
     // Memoized download assets data for DownloadRenditionsContent
     const downloadAssetsData = useMemo(() => {
@@ -654,15 +404,15 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         }));
     }, [filteredItems]);
 
-    // Populate each cart item with isRestrictedBrand property whenever cartItems changes
+    // Populate each cart item with isRestrictedBrand property whenever cartAssetItems changes
     useEffect(() => {
-        if (!restrictedBrands || restrictedBrands.length === 0 || !cartItems || cartItems.length === 0) {
+        if (!restrictedBrands || restrictedBrands.length === 0 || !cartAssetItems || cartAssetItems.length === 0) {
             return;
         }
 
         // Get all restricted brand values (case-insensitive)
         const restrictedBrandValues = restrictedBrands
-            .map(rb => rb.value?.toLowerCase().trim())
+            .map((rb: RestrictedBrand) => rb.value?.toLowerCase().trim())
             .filter(Boolean);
 
         if (restrictedBrandValues.length === 0) {
@@ -670,7 +420,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         }
 
         // Update each cart item with isRestrictedBrand property
-        const updatedCartItems = cartItems.map(item => {
+        const updatedCartAssetItems = cartAssetItems.map(item => {
             let isRestrictedBrand = false;
 
             if (item.brand) {
@@ -688,28 +438,24 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         });
 
         // Only update if there are actual changes to avoid infinite loops
-        const hasChanges = updatedCartItems.some((item, index) =>
-            item.isRestrictedBrand !== cartItems[index].isRestrictedBrand
+        const hasChanges = updatedCartAssetItems.some((item, index) =>
+            item.isRestrictedBrand !== cartAssetItems[index].isRestrictedBrand
         );
 
         if (hasChanges) {
-            setCartItems(updatedCartItems);
+            setCartAssetItems(updatedCartAssetItems);
         }
-    }, [cartItems, restrictedBrands, setCartItems]);
+    }, [cartAssetItems, restrictedBrands, setCartAssetItems]);
 
     // Close cart when all items are removed
-    useEffect(() => {
-        if (cartItems.length === 0) {
-            onClose();
-        }
-    }, [cartItems.length, onClose]);
+    // useEffect(() => {
+    //     if (cartAssetItems.length === 0) {
+    //         onCloseCartPanel();
+    //     }
+    // }, [cartAssetItems.length, onClose]);
 
-    if (cartItemsCount === 0) {
-        return (
-            <div className="cart-content">
-                {emptyCartMessage}
-            </div>
-        );
+    if (cartAssetItemsCount === 0) {
+        return <EmptyCartDownloadContent msg="Your cart is empty" />;
     }
 
     return (
@@ -718,20 +464,20 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             <WorkflowProgress
                 activeStep={activeStep}
                 hasAllItemsReadyToUse={hasAllItemsReadyToUse}
-                getStepClassName={getStepClassName}
-                renderStepIcon={renderStepIcon}
+                stepStatus={stepStatus}
             />
 
             {/* Direct Download */}
             {activeStep === WorkflowStep.DOWNLOAD && showDownloadContent && downloadAssetsData.length > 0 ? (
                 <DownloadRenditionsContent
                     assets={downloadAssetsData}
-                    onClose={handleCloseDownloadContent}
+                    onCloseDownloadRenditions={handleCloseDownloadContent}
+                    onCloseCartPanel={onCloseCartPanel}
                     onDownloadCompleted={handleDownloadCompleted}
                 />
             ) : activeStep === WorkflowStep.REQUEST_DOWNLOAD ? (
                 <CartRequestDownload
-                    cartItems={cartItems}
+                    cartAssetItems={cartAssetItems}
                     onCancel={handleCancelRequestDownload}
                     onOpenRightsCheck={handleOpenRightsCheck}
                     onBack={(stepData: RequestDownloadStepData) => {
@@ -752,8 +498,8 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                 />
             ) : activeStep === WorkflowStep.RIGHTS_CHECK ? (
                 <CartRightsCheck
-                    cartItems={cartItems}
-                    setCartItems={setCartItems}
+                    cartAssetItems={cartAssetItems}
+                    setCartAssetItems={setCartAssetItems}
                     intendedUse={stepData.requestDownload || {
                         airDate: null,
                         pullDate: null,
@@ -764,7 +510,8 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                         marketSearchTerm: '',
                         dateValidationError: ''
                     }}
-                    onCancel={onClose}
+                    onCancel={onCloseCartPanel}
+                    onCloseCartPanel={onCloseCartPanel}
                     onOpenRequestRightsExtension={handleOpenRequestRightsExtension}
                     onBack={(stepData: RightsCheckStepData) => {
                         // Update the form data state
@@ -799,7 +546,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                         marketSearchTerm: '',
                         dateValidationError: ''
                     }}
-                    onCancel={onClose}
+                    onCancel={onCloseCartPanel}
                     onSendRightsExtensionRequest={handleSendRightsExtensionRequest}
                     onBack={(stepData: RequestRightsExtensionStepData) => {
                         // Update the form data state
@@ -825,7 +572,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                     <div className="cart-content">
                         {/* Cart Items Count */}
                         <div className="cart-items-count">
-                            <span className="red-text">{cartItemsCountText}</span> in your cart
+                            <span className="red-text">{cartAssetItemsCountText}</span> in your cart
                         </div>
 
                         {/* Table Header */}
@@ -833,8 +580,8 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
 
                         {/* Cart Items */}
                         <div className="cart-items-table">
-                            {cartItems.map((item: Asset) => (
-                                <CartItemRow
+                            {cartAssetItems.map((item: Asset) => (
+                                <CartAssetItemRow
                                     key={item.assetId}
                                     item={item}
                                     onRemoveItem={handleRemoveItem}
@@ -862,12 +609,12 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                     <CartActionsFooter
                         activeStep={activeStep}
                         hasAllItemsReadyToUse={hasAllItemsReadyToUse}
-                        onClose={onClose}
+                        onCloseCartPanel={onCloseCartPanel}
                         onClearCart={handleClearCart}
                         onOpenDownload={handleOpenDownload}
                         onOpenRequestDownload={handleOpenRequestDownload}
                         onCloseDownload={handleCloseDownload}
-                        cartItems={cartItems}
+                        cartAssetItems={cartAssetItems}
                     />
                 </>
             )}

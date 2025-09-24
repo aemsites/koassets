@@ -17,7 +17,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     loading,
     onAddToCart,
     onRemoveFromCart,
-    cartItems = [],
+    cartAssetItems = [],
     searchResult,
     onToggleMobileFilter,
     isMobileFilterOpen,
@@ -280,7 +280,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                                         handlePreviewClick={handleCardPreviewClick}
                                         handleAddToCart={handleAddToCart}
                                         handleRemoveFromCart={onRemoveFromCart}
-                                        cartItems={cartItems}
+                                        cartAssetItems={cartAssetItems}
                                         isSelected={selectedCards.has(visibleImage.assetId || '')}
                                         onCheckboxChange={handleCheckboxChange}
                                         showFullDetails={showFullDetails}
@@ -320,7 +320,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                     closeModal={closeCardPreviewModal}
                     handleAddToCart={handleAddToCart}
                     handleRemoveFromCart={onRemoveFromCart}
-                    cartItems={cartItems}
+                    cartAssetItems={cartAssetItems}
                     renditions={selectedCard?.assetId ? assetRenditionsCache[selectedCard.assetId] : undefined}
                     fetchAssetRenditions={fetchAssetRenditions}
                 />,
@@ -335,7 +335,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                     closeModal={closeFullScreenModal}
                     handleAddToCart={handleAddToCart}
                     handleRemoveFromCart={onRemoveFromCart}
-                    cartItems={cartItems}
+                    cartAssetItems={cartAssetItems}
                     imagePresets={imagePresets}
                     renditions={selectedCard?.assetId ? assetRenditionsCache[selectedCard.assetId] : undefined}
                     fetchAssetRenditions={fetchAssetRenditions}

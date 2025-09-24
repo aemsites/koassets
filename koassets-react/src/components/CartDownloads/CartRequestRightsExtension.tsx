@@ -1,9 +1,9 @@
 import { CalendarDate } from '@internationalized/date';
 import React, { useCallback, useState } from 'react';
-import type { CartRequestRightsExtensionProps, RequestRightsExtensionStepData } from '../types';
+import MyDatePicker from '../MyDatePicker';
+import ThumbnailImage from '../ThumbnailImage';
+import type { CartRequestRightsExtensionProps, RequestRightsExtensionStepData } from '../../types';
 import './CartRequestRightsExtension.css';
-import MyDatePicker from './MyDatePicker';
-import ThumbnailImage from './ThumbnailImage';
 
 const CartRequestRightsExtension: React.FC<CartRequestRightsExtensionProps> = ({
     restrictedAssets,

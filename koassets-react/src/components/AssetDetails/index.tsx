@@ -35,7 +35,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     closeModal,
     handleAddToCart,
     handleRemoveFromCart,
-    cartItems = [],
+    cartAssetItems = [],
     imagePresets = {},
     renditions = {},
     fetchAssetRenditions
@@ -56,7 +56,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     };
 
     // Check if this item is already in the cart
-    const isInCart = selectedImage ? cartItems.some(cartItem => cartItem.assetId === selectedImage.assetId) : false;
+    const isInCart = selectedImage ? cartAssetItems.some(cartAssetItem => cartAssetItem.assetId === selectedImage.assetId) : false;
 
     // Handle button click - either add or remove from cart
     const handleAddRemoveCart = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -122,7 +122,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
         }
     };
 
-    const handleDownloadRenditionsModalClose = () => {
+    const handleCloseDownloadRenditionsModal = () => {
         setShowDownloadRenditionsModal(false);
     };
 
@@ -378,7 +378,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                 <DownloadRenditionsModal
                     isOpen={showDownloadRenditionsModal}
                     asset={selectedImage}
-                    onClose={handleDownloadRenditionsModalClose}
+                    onCloseDownloadRenditions={handleCloseDownloadRenditionsModal}
                     renditions={renditions}
                     imagePresets={imagePresets}
                 />,

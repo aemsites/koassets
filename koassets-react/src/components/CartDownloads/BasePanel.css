@@ -1,0 +1,312 @@
+/* Base Panel Styles - Shared across all panels */
+
+.base-panel-overlay {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    z-index: 1200;
+    overflow-y: auto;
+    padding: 40px 20px;
+}
+
+/* Prevent body scroll when panel is open */
+body.base-panel-open {
+    overflow: hidden !important;
+}
+
+html.base-panel-open {
+    overflow: hidden !important;
+}
+
+.base-panel-overlay .base-panel {
+    /* Remove max-height and overflow to show full height of panel and let outer page scroll */
+    min-width: 1000px;
+    max-width: 1280px;
+    width: 1000px;
+    background-color: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    display: flex;
+    flex-direction: column;
+    animation: fadeIn 0.3s ease-out;
+    padding: 35px;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Header Styles */
+.base-panel-overlay .base-panel .base-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0px 0px 16px 0px;
+    border-bottom: 1px solid #e4e4e4;
+    margin-bottom: 20px;
+    flex-shrink: 0;
+}
+
+.base-panel-overlay .base-panel .base-panel-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.base-panel-overlay .base-panel .close-button {
+    border: none;
+    background: none;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: right;
+    border-radius: 4px;
+    color: #666;
+}
+
+.base-panel-overlay .base-panel .close-button:hover {
+    background: none;
+    color: #666;
+}
+
+/* Tabs Styles */
+.base-panel-overlay .base-panel .base-panel-tabs {
+    display: flex;
+    background-color: #f5f5f5;
+    padding: 0;
+    gap: 8px;
+    align-items: center;
+    border-bottom: 1px solid var(--primary-color);
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+
+.base-panel-overlay .base-panel .base-panel-tabs .base-panel-tab {
+    padding: 12px 32px;
+    border: none;
+    background: #e8e8e8;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #666;
+    transition: all 0.2s;
+    border-radius: 8px 8px 0 0;
+    margin-right: 2px;
+    position: relative;
+}
+
+.base-panel-overlay .base-panel .base-panel-tabs .base-panel-tab.active {
+    background-color: var(--primary-color);
+    color: white;
+    z-index: 1;
+}
+
+.base-panel-overlay .base-panel .base-panel-tabs .base-panel-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: var(--primary-color);
+}
+
+.base-panel-overlay .base-panel .base-panel-tabs .base-panel-tab:hover:not(.active) {
+    background-color: #d0d0d0;
+}
+
+.base-panel-overlay .base-panel .workflow-arrow {
+    margin: 0 16px;
+    color: #ccc;
+    font-size: 16px;
+}
+
+/* Content Area */
+.base-panel-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Workflow Progress Styles */
+.base-panel .workflow-progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 30px 40px 0;
+    flex-shrink: 0;
+}
+
+.base-panel .workflow-step {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 12px;
+    position: relative;
+}
+
+.base-panel .workflow-step.active {
+    color: var(--primary-color);
+}
+
+.base-panel .workflow-step.completed {
+    color: #4CAF50;
+}
+
+.base-panel .workflow-step.failure {
+    color: #f44336;
+}
+
+.base-panel .workflow-step.success {
+    color: #4CAF50;
+}
+
+.base-panel .step-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.base-panel .workflow-step.active .step-icon {
+    color: white;
+}
+
+.base-panel .workflow-step.completed .step-icon {
+    background-color: transparent;
+}
+
+.base-panel .step-loading-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.base-panel .step-icon img {
+    width: 32px;
+    height: 32px;
+}
+
+.base-panel .step-label {
+    bottom: -25px;
+    color: #707070;
+    font-size: 14px;
+    font-weight: 600;
+    position: absolute;
+    white-space: nowrap;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.base-panel .step-label::before {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 1px;
+}
+
+.base-panel .horizontal-line {
+    background-color: #e4e4e4;
+    height: 2px;
+    width: 200px;
+    margin: 0 -1px;
+    align-self: center;
+}
+
+/* Workflow Status Messages */
+.base-panel .workflow-status {
+    padding: 0 30px;
+    min-height: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.base-panel .status-message {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+}
+
+.base-panel .status-message.processing {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.base-panel .status-message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.base-panel .status-message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.base-panel .delete-button {
+    border: none;
+    background: url('/icons/delete-icon.svg') no-repeat center;
+    background-size: contain;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    color: #666;
+    transition: all 0.2s;
+    content: "";
+    display: block;
+    height: 2.625rem;
+    width: 2.625rem;
+}
+
+.base-panel .delete-button:hover {
+    border: none;
+    background: url('/icons/delete-icon-hover.svg') no-repeat center;
+    background-size: contain;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    color: #666;
+    transition: all 0.2s;
+    content: "";
+    display: block;
+    height: 2.625rem;
+    width: 2.625rem;
+}
+
+
+/* Common animations */
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}

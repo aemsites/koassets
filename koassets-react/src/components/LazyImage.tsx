@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type { Asset } from '../types';
 import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
@@ -25,15 +25,39 @@ const LazyImage: React.FC<LazyImageProps> = ({
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isError, setIsError] = useState<boolean>(false);
     const [isVisible, setIsVisible] = useState<boolean>(false);
-    const imgRef = useRef<HTMLDivElement>(null);
+    const observerRef = useRef<IntersectionObserver | null>(null);
 
-    // Intersection Observer to detect when image comes into view
-    useEffect(() => {
-        const observer = new IntersectionObserver(
+    // Helper function to make element visible and cleanup observer
+    const makeVisible = useCallback(() => {
+        setIsVisible(true);
+        if (observerRef.current) {
+            observerRef.current.disconnect();
+            observerRef.current = null;
+        }
+    }, []);
+
+    // Callback ref to set up intersection observer when element is mounted
+    const imgRefCallback = useCallback((node: HTMLDivElement | null) => {
+        // Clean up previous observer
+        if (observerRef.current) {
+            observerRef.current.disconnect();
+            observerRef.current = null;
+        }
+
+        if (!node || isVisible) return;
+
+        // Check if already visible (handles first-row images)
+        const rect = node.getBoundingClientRect();
+        if (rect.top < window.innerHeight && rect.bottom > 0) {
+            makeVisible();
+            return;
+        }
+
+        // Set up observer for lazy loading
+        observerRef.current = new IntersectionObserver(
             ([entry]) => {
                 if (entry.isIntersecting) {
-                    setIsVisible(true);
-                    observer.disconnect(); // Stop observing once visible
+                    makeVisible();
                 }
             },
             {
@@ -42,11 +66,16 @@ const LazyImage: React.FC<LazyImageProps> = ({
             }
         );
 
-        if (imgRef.current) {
-            observer.observe(imgRef.current);
-        }
+        observerRef.current.observe(node);
+    }, [isVisible, makeVisible]);
 
-        return () => observer.disconnect();
+    // Cleanup observer on unmount
+    useEffect(() => {
+        return () => {
+            if (observerRef.current) {
+                observerRef.current.disconnect();
+            }
+        };
     }, []);
 
     // Load image when it becomes visible
@@ -95,9 +124,9 @@ const LazyImage: React.FC<LazyImageProps> = ({
     }, [imageUrl]);
 
     return (
-        <div ref={imgRef} className={`lazy-image-container ${className}`} onClick={onClick}>
+        <div ref={imgRefCallback} className={`lazy-image-container ${className}`} onClick={onClick}>
             {(isLoading || !imageUrl) && (
-                <div className="lazy-image-placeholder loading" 
+                <div className="lazy-image-placeholder loading"
                     data-testid={`lazy-image-placeholder-loading-${isLoading}-${isVisible}-${imageUrl}`}
                 >
                     <div className="loading-spinner"></div>

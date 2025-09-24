@@ -57,6 +57,11 @@ export default defineConfig(({ mode }) => {
               return 'assets/index.css';
             }
             return 'assets/[name][extname]';
+          },
+          // Better source map paths for debugging
+          sourcemapPathTransform: (relativeSourcePath, sourcemapPath) => {
+            // Convert relative paths to be relative to project root
+            return relativeSourcePath.replace(/^\.\.\/\.\.\//, '../koassets-react/');
           }
         }
       }

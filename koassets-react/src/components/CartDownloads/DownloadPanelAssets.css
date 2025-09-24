@@ -1,0 +1,399 @@
+/* Download Panel Assets Styles */
+
+.download-panel .download-panel-assets-content {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 200px;
+    width: 100%;
+    padding: 1rem;
+}
+
+/* Empty state */
+.download-panel .empty-download-assets {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 200px;
+}
+
+.download-panel .empty-download-assets-message {
+    color: #999;
+    font-size: 16px;
+    text-align: center;
+}
+
+/* Download assets list */
+.download-panel .download-assets-list h3 {
+    margin-bottom: 1rem;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.download-panel .download-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.download-panel .download-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background: #f9f9f9;
+    transition: background-color 0.2s ease;
+}
+
+.download-panel .download-item:hover {
+    background: #f0f0f0;
+}
+
+.download-panel .download-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.download-panel .download-item-name {
+    font-weight: 500;
+    color: #333;
+    font-size: 0.9rem;
+}
+
+.download-panel .download-item-format {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.download-panel .download-item-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.download-panel .remove-button {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0.25rem;
+    border-radius: 2px;
+    transition: color 0.2s ease;
+    min-width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.download-panel .remove-button:hover {
+    color: #e74c3c;
+    background-color: rgba(231, 76, 60, 0.1);
+}
+
+/* Action buttons */
+.download-panel .download-actions {
+    display: flex;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e0e0e0;
+    justify-content: flex-start;
+}
+
+.download-panel .download-all-button {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.2s ease;
+}
+
+.download-panel .download-all-button:hover {
+    background: #2980b9;
+}
+
+.download-panel .clear-downloads-button {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.2s ease;
+}
+
+.download-panel .clear-downloads-button:hover {
+    background: #c0392b;
+}
+
+/* Status Filters */
+.download-panel .download-status-filters {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem 0;
+}
+
+.download-panel .status-filter {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #333;
+    user-select: none;
+}
+
+.download-panel .status-filter input[type="checkbox"] {
+    margin-right: 0.5rem;
+    transform: scale(1.2);
+}
+
+.download-panel .status-filter .checkmark {
+    margin-left: 0.25rem;
+}
+
+/* Download Table */
+.download-panel .download-table-container {
+    margin-bottom: 2rem;
+}
+
+.download-panel .download-table-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1.5fr 1.5fr;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 2px solid #eee;
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    text-align: left;
+}
+
+.download-panel .download-items-table {
+    border-bottom: 1px solid #eee;
+    max-height: 360px;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+}
+
+/* Custom scrollbar styling for download items table */
+.download-panel .download-items-table::-webkit-scrollbar {
+    width: 6px;
+}
+
+.download-panel .download-items-table::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.download-panel .download-items-table::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.download-panel .download-items-table::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.download-panel .download-item-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1.5fr 1.5fr;
+    gap: 16px;
+    padding: 1rem 0;
+    border-bottom: 1px solid #e0e0e0;
+    align-items: center;
+    transition: background-color 0.2s ease;
+}
+
+/* ZIP Files Column */
+.download-panel .col-zip-files {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.download-panel .col-file-count {
+    cursor: pointer;
+}
+
+.download-panel .info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.download-panel .expand-icon {
+    font-size: 0.8rem;
+    color: #666;
+    cursor: pointer;
+    user-select: none;
+    padding-right: 8px;
+    transition: transform 0.2s ease;
+}
+
+.download-panel .expand-icon.expanded {
+    transform: rotate(180deg);
+}
+
+.download-panel .zip-filename,
+.download-panel .col-file-count {
+    font-family: "TCCC UnityHeadline", sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.download-panel .status-badge {
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: "TCCC UnityHeadline Regular", sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.download-panel .status-badge.status-failed {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f1b0b7;
+}
+
+.download-panel .status-badge.status-completed {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.download-panel .processing-status {
+    display: inline-flex;
+    color: var(--dark-color);
+    background: rgba(247, 153, 0, .12);
+    border: 1px solid #f79900;
+}
+
+.download-panel .fa-spinner::before {
+    content: "\f110";
+    -webkit-text-size-adjust: 100%;
+    visibility: visible !important;
+    user-select: text;
+    border-collapse: separate;
+    border-spacing: 0;
+    color: #505050;
+    cursor: pointer;
+    text-align: inherit;
+    text-transform: uppercase;
+    box-sizing: inherit;
+    text-rendering: auto;
+    -webkit-font-smoothing: antialiased;
+    display: inline-block;
+    font: normal normal normal 14px/1 FontAwesome;
+    font-size: inherit;
+    animation: spin 2s linear infinite;
+    margin-left: .5rem;
+    transform: rotate(185.977deg);
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Action Column */
+.download-panel .col-action {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.download-panel .remove-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+}
+
+.download-panel .remove-btn:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.download-panel .remove-btn img {
+    width: 16px;
+    height: 16px;
+}
+
+/* Footer */
+.download-panel .download-panel-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 1.5rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+
+    .download-panel .download-table-header,
+    .download-panel .download-item-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .download-panel .download-status-filters {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .download-panel .col-action {
+        justify-content: flex-start;
+        margin-top: 0.5rem;
+    }
+}
+
+/* Download Item Container */
+.download-panel .download-item-container {
+    display: flex;
+    flex-direction: column;
+    padding: 0 5px;
+}
+
+/* Expanded Renditions Area */
+.download-panel .download-renditions-expanded {
+    background-color: rgba(106, 201, 206, .102);
+    border-radius: 0 0 .5rem .5rem;
+    padding: 16px;
+    margin: 0 0 8px 0;
+}
+
+.download-panel .rendition-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.download-panel .rendition-item {
+    font-size: 16px;
+    color: #1e1e1e;
+    font-family: "TCCC UnityHeadline", "Helvetica Neue", Arial, Helvetica, sans-serif;
+    line-height: 1.4285em;
+    padding: 2px 0;
+}

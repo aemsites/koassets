@@ -189,7 +189,7 @@ export interface Asset {
 }
 
 // Cart-related types
-export interface CartItem extends Asset {
+export interface CartAssetItem extends Asset {
     // Additional cart-specific properties can be added here
     isRestrictedBrand?: boolean;
 }
@@ -201,7 +201,7 @@ export interface AssetCardProps {
     handlePreviewClick: (image: Asset, event: React.MouseEvent) => void;
     handleAddToCart?: (image: Asset, event: React.MouseEvent) => void;
     handleRemoveFromCart?: (image: Asset) => void;
-    cartItems?: CartItem[];
+    cartAssetItems?: CartAssetItem[];
     isSelected?: boolean;
     onCheckboxChange?: (id: string, checked: boolean) => void;
     showFullDetails?: boolean;
@@ -260,27 +260,20 @@ export interface Collection {
 
 // Cart Panel types
 export interface CartPanelProps {
-    isOpen: boolean;
-    onClose: () => void;
-    cartItems: CartItem[];
-    setCartItems: React.Dispatch<React.SetStateAction<CartItem[]>>;
-    onRemoveItem: (item: CartItem) => void;
-    onApproveAssets: (items: CartItem[]) => void;
-    onDownloadAssets: (items: CartItem[]) => void;
+    isCartPanelOpen: boolean;
+    onCloseCartPanel: () => void;
+    cartAssetItems: CartAssetItem[];
+    setCartAssetItems: React.Dispatch<React.SetStateAction<CartAssetItem[]>>;
+    cartTemplateItems: CartTemplateItem[];
+    setCartTemplateItems: React.Dispatch<React.SetStateAction<CartTemplateItem[]>>;
+    onRemoveItem: (item: CartAssetItem) => void;
 }
 
-// Header Bar types - COMMENTED OUT
-// export interface HeaderBarProps {
-//     cartItems: CartItem[];
-//     setCartItems: React.Dispatch<React.SetStateAction<CartItem[]>>;
-//     isCartOpen: boolean;
-//     setIsCartOpen: (isOpen: boolean) => void;
-//     handleRemoveFromCart: (item: CartItem) => void;
-//     handleApproveAssets: (items: CartItem[]) => void;
-//     handleDownloadAssets: (items: CartItem[]) => void;
-//     handleAuthenticated: (userData: string) => void;
-//     handleSignOut: () => void;
-// }
+// Download Panel types
+export interface DownloadPanelProps {
+    isDownloadPanelOpen: boolean;
+    onCloseDownloadPanel: () => void;
+}
 
 // Asset Preview types
 export interface AssetPreviewProps {
@@ -289,7 +282,7 @@ export interface AssetPreviewProps {
     closeModal: () => void;
     handleAddToCart?: (image: Asset, event: React.MouseEvent) => void;
     handleRemoveFromCart?: (image: Asset) => void;
-    cartItems?: CartItem[];
+    cartAssetItems?: CartAssetItem[];
     renditions?: {
         assetId?: string;
         items?: Rendition[];
@@ -392,7 +385,7 @@ export interface ImageGalleryProps {
     loading: boolean;
     onAddToCart?: (image: Asset) => void;
     onRemoveFromCart?: (image: Asset) => void;
-    cartItems?: CartItem[];
+    cartAssetItems?: CartAssetItem[];
     searchResult?: SearchResult | null;
     onToggleMobileFilter?: () => void;
     isMobileFilterOpen?: boolean;
@@ -430,7 +423,7 @@ export interface ImageGalleryProps {
 export interface MainAppState {
     images: Asset[];
     collections: Collection[];
-    cartItems: CartItem[];
+    cartAssetItems: CartAssetItem[];
     loading: boolean;
     selectedFacets: string[][];
 }
@@ -463,33 +456,33 @@ export enum FilteredItemsType {
 }
 
 export interface WorkflowStepStatuses {
-    [WorkflowStep.CART]: StepStatus;
-    [WorkflowStep.REQUEST_DOWNLOAD]: StepStatus;
-    [WorkflowStep.RIGHTS_CHECK]: StepStatus;
-    [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: StepStatus;
-    [WorkflowStep.DOWNLOAD]: StepStatus;
-    [WorkflowStep.CLOSE_DOWNLOAD]: StepStatus;
+    [WorkflowStep.CART]?: StepStatus;
+    [WorkflowStep.REQUEST_DOWNLOAD]?: StepStatus;
+    [WorkflowStep.RIGHTS_CHECK]?: StepStatus;
+    [WorkflowStep.REQUEST_RIGHTS_EXTENSION]?: StepStatus;
+    [WorkflowStep.DOWNLOAD]?: StepStatus;
+    [WorkflowStep.CLOSE_DOWNLOAD]?: StepStatus;
 }
 
 export interface WorkflowStepIcons {
-    [WorkflowStep.CART]: React.JSX.Element | string;
-    [WorkflowStep.REQUEST_DOWNLOAD]: React.JSX.Element | string;
-    [WorkflowStep.RIGHTS_CHECK]: React.JSX.Element | string;
-    [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: React.JSX.Element | string;
-    [WorkflowStep.DOWNLOAD]: React.JSX.Element | string;
-    [WorkflowStep.CLOSE_DOWNLOAD]: React.JSX.Element | string;
+    [WorkflowStep.CART]?: React.JSX.Element | string;
+    [WorkflowStep.REQUEST_DOWNLOAD]?: React.JSX.Element | string;
+    [WorkflowStep.RIGHTS_CHECK]?: React.JSX.Element | string;
+    [WorkflowStep.REQUEST_RIGHTS_EXTENSION]?: React.JSX.Element | string;
+    [WorkflowStep.DOWNLOAD]?: React.JSX.Element | string;
+    [WorkflowStep.CLOSE_DOWNLOAD]?: React.JSX.Element | string;
 }
 
 export interface CartPanelAssetsProps {
-    cartItems: CartItem[];
-    setCartItems: React.Dispatch<React.SetStateAction<CartItem[]>>;
-    onRemoveItem: (item: CartItem) => void;
-    onClose: () => void;
+    cartAssetItems: CartAssetItem[];
+    setCartAssetItems: React.Dispatch<React.SetStateAction<CartAssetItem[]>>;
+    onRemoveItem: (item: CartAssetItem) => void;
+    onCloseCartPanel: () => void;
     onActiveStepChange: (step: WorkflowStep) => void;
 }
 
 export interface CartRequestRightsExtensionProps {
-    restrictedAssets: CartItem[];
+    restrictedAssets: CartAssetItem[];
     intendedUse: RequestDownloadStepData;
     onCancel: () => void;
     onSendRightsExtensionRequest: (rightsExtensionData: RequestRightsExtensionStepData) => void;
@@ -607,4 +600,24 @@ export interface SearchPanelProps {
     selectAuthorized?: boolean;
     onSelectAuthorized?: (isChecked: boolean) => void;
     isRightsSearch?: boolean;
+}
+
+// Download archive data structure for sessionStorage
+export interface DownloadAssetItem {
+    assetsRenditions: {
+        assetId: string;
+        assetName: string;
+        renditions: string[];
+    }[];
+    archiveId: string;
+}
+
+// Cart Template Item interface
+export interface CartTemplateItem {
+    // Empty for now - will be filled with template-specific properties later
+}
+
+// Download Template Item interface
+export interface DownloadTemplateItem {
+    // Empty for now - will be filled with template-specific properties later
 }
