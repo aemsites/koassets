@@ -685,6 +685,17 @@ const Facets: React.FC<FacetsProps> = ({
                 return facetFilter;
             }).filter(filter => filter.length > 0);
 
+            // Capture current search type from URL path
+            const currentPath = window.location.pathname;
+            let searchType = '/search/all'; // default fallback
+            if (currentPath.includes('/search/assets')) {
+                searchType = '/search/assets';
+            } else if (currentPath.includes('/search/products')) {
+                searchType = '/search/products';
+            } else if (currentPath.includes('/search/all')) {
+                searchType = '/search/all';
+            }
+
             const now = Date.now();
             const newSearch: SavedSearch = {
                 id: now.toString(),
@@ -695,7 +706,8 @@ const Facets: React.FC<FacetsProps> = ({
                 dateCreated: now,
                 dateLastModified: now,
                 dateLastUsed: now,
-                favorite: false
+                favorite: false,
+                searchType: searchType
             };
 
             const updatedSearches = [...savedSearches, newSearch];
@@ -716,6 +728,18 @@ const Facets: React.FC<FacetsProps> = ({
     };
 
     const handleLoadSavedSearch = (savedSearch: SavedSearch) => {
+        // If the saved search has a different search type, navigate to that URL
+        if (savedSearch.searchType) {
+            const currentPath = window.location.pathname;
+            
+            // Check if we need to navigate to a different search type
+            if (!currentPath.includes(savedSearch.searchType)) {
+                const searchUrl = buildSavedSearchUrl(savedSearch);
+                window.location.href = searchUrl;
+                return; // Exit early since we're navigating away
+            }
+        }
+        
         // Dismiss any open tooltip
         handleHideTooltip();
 
