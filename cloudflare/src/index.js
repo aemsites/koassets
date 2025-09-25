@@ -54,6 +54,12 @@ router
 
   // parse cookies (middleware)
   .all('*', withCookies)
+  // decode cookie values (not done by itty-router withCookies)
+  .all('*', (request) => {
+    for (const key in request.cookies) {
+      request.cookies[key] = decodeURIComponent(request.cookies[key]);
+    }
+  })
 
   // authentication flows (/auth/* by default)
   .all(authRouter.route, authRouter.fetch)
