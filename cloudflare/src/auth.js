@@ -22,6 +22,11 @@ const REQUIRED_ENV_VARS = [
   'COOKIE_SECRET',
 ];
 
+const ALLOWED_EMAIL_DOMAINS = [
+  'coca-cola.com',
+  'adobe.com',
+];
+
 async function createSessionJWT(request, idToken, env) {
   const payload = {
     // session id
@@ -117,6 +122,21 @@ async function validateIdToken(request, rawIdToken, env, nonce) {
   }
 }
 
+function validateUserEmail(email) {
+  if (!email) {
+    return false;
+  }
+
+  const emailDomain = email.split('@').pop();
+
+  if (!ALLOWED_EMAIL_DOMAINS.includes(emailDomain.toLowerCase())) {
+    console.error('User denied access because email domain is not allowed:', email);
+    return false;
+  }
+
+  return true;
+}
+
 function unauthorized(request) {
   if (request.error) {
     console.error(request.error);
@@ -197,6 +217,11 @@ export async function withAuthentication(request, env) {
     // if session cookie was found but invalid, user was previously logged in,
     // so let's send them straight to the MS login page which might auto-login them
     return redirectToLoginPage(request, env, `${AUTH_PREFIX}/login`);
+  }
+
+  if (!validateUserEmail(session.email)) {
+    request.error = 'User not allowed to access this application';
+    return unauthorized(request);
   }
 
   // authenticated
@@ -286,6 +311,11 @@ authRouter
 
     const idToken = await validateIdToken(request, formData.get('id_token'), env, state.nonce);
     if (!idToken) {
+      return unauthorized(request);
+    }
+
+    if (!validateUserEmail(idToken.email)) {
+      request.error = 'User not allowed to access this application';
       return unauthorized(request);
     }
 
