@@ -33,10 +33,14 @@ async function createSessionJWT(request, idToken, env) {
     sid: crypto.randomUUID(),
     // user id in MS Entra IDP
     sub: idToken.oid,
+    // full name (first + last name)
     name: idToken.name,
-    email: idToken.email,
+    // fields needed for access control
+    email: idToken.email?.toLowerCase(),
     country: idToken.ctry,
-    usertype: idToken.usertype,
+    usertype: idToken.EmployeeType,
+    // company - informational
+    company: idToken.Company,
   };
 
   const key = new TextEncoder().encode(await env.COOKIE_SECRET.get());
@@ -350,6 +354,7 @@ authRouter
       email: user.email,
       country: user.country,
       usertype: user.usertype,
+      company: user.company,
       sessionExpiresInSec: user.exp && Math.floor((user.exp * 1000 - Date.now()) / 1000),
     });
   })
