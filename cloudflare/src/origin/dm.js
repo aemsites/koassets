@@ -55,6 +55,44 @@ async function getIMSToken(request, env) {
   }
 }
 
+function forceSearchFilter(search, constraint) {
+  // skip if constraint is empty or not set
+  if (!constraint || constraint.length === 0) {
+    return;
+  }
+
+  for (let i = 0; i < search.requests?.length; i++) {
+    const searchReq = search.requests[i];
+    // console.log('>>> Search', i, JSON.stringify(searchReq, null, 2));
+
+    const filter = searchReq.params.filters;
+    if (!filter || filter.length === 0) {
+      searchReq.params.filters = constraint;
+    } else {
+      searchReq.params.filters = `(${filter}) AND (${constraint})`;
+    }
+
+    // console.log('Rewritten filter:', searchReq.params.filters);
+  }
+}
+
+async function rewriteSearch(request) {
+  const search = await request.json();
+
+  const user = request.user;
+  // console.log('user', user);
+
+  let constraint = "";
+  // TODO: this user type is wrong
+  if (request.user.usertype !== '99') {
+    constraint = `tccc-intendedBottlerCountry:'${user.country?.toLowerCase()}' OR tccc-intendedBottlerCountry:'all'`;
+  }
+
+  forceSearchFilter(search, constraint);
+
+  return JSON.stringify(search);
+}
+
 export async function originDynamicMedia(request, env) {
   // incoming url:
   //   <host>/api/adobe/assets/...
@@ -75,10 +113,15 @@ export async function originDynamicMedia(request, env) {
   // remove /api from path
   url.pathname = url.pathname.replace(/^\/api/, '');
 
+  let body = request.body;
+  if (url.pathname === '/adobe/assets/search') {
+    body = await rewriteSearch(request);
+  }
+
   const req = new Request(url, {
     method: request.method,
     headers: request.headers,
-    body: request.body,
+    body: body,
   });
 
   req.headers.delete('cookie');
