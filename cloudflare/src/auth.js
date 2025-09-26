@@ -1,5 +1,5 @@
 import { json, Router } from 'itty-router';
-import { createRemoteJWKSet, jwtVerify, SignJWT } from "jose";
+import { createRemoteJWKSet, decodeJwt,jwtVerify, SignJWT } from "jose";
 import {
   createSignedCookie,
   deleteCookie,
@@ -7,6 +7,18 @@ import {
   setCookie,
   validateSignedCookie,
 } from './util/http.js';
+
+// user configuration -----------------------------------------
+const ALLOWED_EMAIL_DOMAINS = [
+  'coca-cola.com',
+  'adobe.com',
+];
+
+const ALLOWED_SUDO_DOMAINS = [
+  'coca-cola.com',
+  'adobe.com',
+];
+// ------------------------------------------------------------
 
 /* Configure the URL path prefix for auth flows here */
 const AUTH_PREFIX = '/auth';
@@ -18,13 +30,7 @@ const ORIGINAL_URL_PARAM = 'url';
 const REQUIRED_ENV_VARS = [
   'MICROSOFT_ENTRA_TENANT_ID',
   'MICROSOFT_ENTRA_CLIENT_ID',
-  'MICROSOFT_ENTRA_JWKS_URL',
   'COOKIE_SECRET',
-];
-
-const ALLOWED_EMAIL_DOMAINS = [
-  'coca-cola.com',
-  'adobe.com',
 ];
 
 async function createSessionJWT(request, idToken, env) {
@@ -126,15 +132,15 @@ async function validateIdToken(request, rawIdToken, env, nonce) {
   }
 }
 
-function validateUserEmail(email) {
-  if (!email) {
+function validateUser(user) {
+  if (!user.email) {
     return false;
   }
 
-  const emailDomain = email.split('@').pop();
+  const emailDomain = user.email.split('@').pop();
 
   if (!ALLOWED_EMAIL_DOMAINS.includes(emailDomain.toLowerCase())) {
-    console.error('User denied access because email domain is not allowed:', email);
+    console.warn('User denied access because email domain is not allowed:', user.email);
     return false;
   }
 
@@ -143,7 +149,7 @@ function validateUserEmail(email) {
 
 function unauthorized(request) {
   if (request.error) {
-    console.error(request.error);
+    console.warn(request.error);
     return new Response(`Unauthorized - ${request.error}`, { status: 401 });
   }
   return new Response('Unauthorized', { status: 401 });
@@ -153,30 +159,44 @@ function redirect(url, status = 302) {
   const response = new Response(null, { status });
   response.headers.set('Location', url);
   return response;
+}
 
-  // TODO: use one of these redirect tricks below to get the original page into the browser history?
+function canSudo(user) {
+  const emailDomain = user.email.split('@').pop();
 
-  // also redirect() which does HTTP 302 redirect
+  return ALLOWED_SUDO_DOMAINS.includes(emailDomain.toLowerCase());
+}
 
-  // const page = `<meta http-equiv="refresh" content="1;url=${targetUrl}">`;
-  // // const page = `<script>window.location.href = "${targetUrl}";</script>`;
-  // // const redirectPage = `
-  // // <html>
-  // //   <head>
-  // //     <title>${request.url}</title>
-  // //   </head>
-  // //   <body>
-  // //     <script>
-  // //       window.location.assign("${targetUrl}");
-  // //     </script>
-  // //   </body>
-  // // </html>
-  // // `;
-  // return new Response(page, {
-  //   headers: {
-  //     'Content-Type': 'text/html',
-  //   },
-  // });
+function handleSudo(request, user) {
+  user.canSudo = canSudo(user);
+
+  // check for any sudo request
+  if (['SUDO_NAME',
+       'SUDO_EMAIL',
+       'SUDO_COUNTRY',
+       'SUDO_USERTYPE'].some(c => request.cookies[c])) {
+
+    // only certain super users are allowed to sudo
+    if (!user.canSudo) {
+      console.warn('Sudo denied for user:', user.email);
+      return user;
+    }
+
+    // store original super user data
+    user.sudo = {
+      name: user.name,
+      email: user.email,
+      country: user.country,
+      usertype: user.usertype,
+    };
+
+    user.name = request.cookies.SUDO_NAME || user.name;
+    user.email = request.cookies.SUDO_EMAIL || user.email;
+    user.country = request.cookies.SUDO_COUNTRY || user.country;
+    user.usertype = request.cookies.SUDO_USERTYPE || user.usertype;
+  }
+
+  return user;
 }
 
 function redirectToLoginPage(request, env, page = env.LOGIN_PAGE) {
@@ -204,7 +224,7 @@ export async function withAuthentication(request, env) {
   request.uri = new URL(request.url);
 
   if (env.DISABLE_AUTHENTICATION) {
-    request.session = {};
+    request.user = {};
     console.warn('Authentication is disabled because DISABLE_AUTHENTICATION is set');
     return;
   }
@@ -215,21 +235,23 @@ export async function withAuthentication(request, env) {
     return redirectToLoginPage(request, env);
   }
 
-  const session = await validateSessionJWT(request, env, sessionJWT);
-  if (!session) {
-    console.error(request.error);
+  let user = await validateSessionJWT(request, env, sessionJWT);
+  if (!user) {
+    console.warn(request.error);
     // if session cookie was found but invalid, user was previously logged in,
     // so let's send them straight to the MS login page which might auto-login them
     return redirectToLoginPage(request, env, `${AUTH_PREFIX}/login`);
   }
 
-  if (!validateUserEmail(session.email)) {
+  if (!validateUser(user)) {
     request.error = 'User not allowed to access this application';
     return unauthorized(request);
   }
 
+  user = handleSudo(request, user);
+
   // authenticated
-  request.session = session;
+  request.user = user;
 }
 
 // router for dedicated login & logout flows
@@ -318,12 +340,14 @@ authRouter
       return unauthorized(request);
     }
 
-    if (!validateUserEmail(idToken.email)) {
+    const sessionJWT = await createSessionJWT(request, idToken, env);
+
+    const user = decodeJwt(sessionJWT);
+    if (!validateUser(user)) {
       request.error = 'User not allowed to access this application';
       return unauthorized(request);
     }
 
-    const sessionJWT = await createSessionJWT(request, idToken, env);
 
     let redirectUrl = `${request.uri.origin}/`;
     // get original redirect url from state parameter (if present)
@@ -348,19 +372,21 @@ authRouter
   })
 
   .get('/user', withAuthentication, (request) => {
-    const user = request.session;
+    const user = request.user;
     return json({
       name: user.name,
       email: user.email,
       country: user.country,
       usertype: user.usertype,
       company: user.company,
+      canSudo: user.canSudo,
+      sudo: user.sudo,
       sessionExpiresInSec: user.exp && Math.floor((user.exp * 1000 - Date.now()) / 1000),
     });
   })
 
   .get('/logout', withAuthentication, (request, env) => {
-    console.log('User logout:', request.session);
+    console.log('User logout:', request.user);
 
     // redirect to MS logout page
     const logoutUrl = `https://login.microsoftonline.com/${env.MICROSOFT_ENTRA_TENANT_ID}/oauth2/logout?` +

@@ -55,13 +55,120 @@
   color: #1e1e1e;
 }
 
+.profile-modal .profile-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
+.profile-modal .edit-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.profile-modal .profile-save-button {
+  display: flex;
+  align-items: center;
+  background: #007bff;
+  border: 1px solid #007bff;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.profile-modal .reset-button {
+  display: flex;
+  align-items: center;
+  background: #dc3545;
+  border: 1px solid #dc3545;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.profile-modal .edit-button:hover {
+  background: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.profile-modal .profile-save-button:hover {
+  background: #0056b3;
+  border-color: #004085;
+}
+
+.profile-modal .reset-button:hover {
+  background: #c82333;
+  border-color: #bd2130;
+}
+
+.profile-modal .edit-button .edit-icon {
+  width: 16px;
+  height: 16px;
+  fill: currentcolor;
+}
+
+.profile-modal.editing-mode .edit-button {
+  background: #ffeaa7;
+  border-color: #fdcb6e;
+  color: #e17055;
+}
+
+.profile-modal.editing-mode .edit-button:hover {
+  background: #fdcb6e;
+}
+
 .profile-modal .profile-info {
   padding: 0 24px;
   margin-bottom: 32px;
 }
 
+.profile-modal .user-fields-group {
+  border-radius: 8px;
+  transition: background-color 0.3s ease;
+}
+
+.profile-modal .user-fields-group.impersonating {
+  background-color: #fefdf5;
+  border: 1px solid #f9e79f;
+  padding: 16px;
+  margin: 8px 0;
+}
+
 .profile-modal .profile-field {
   margin-bottom: 24px;
+}
+
+.profile-modal .user-fields-group.impersonating .profile-field:last-child {
+  margin-bottom: 0;
+}
+
+.profile-modal .simulating-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8b6914;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  text-align: center;
 }
 
 .profile-modal .profile-field label {
@@ -79,6 +186,25 @@
   color: #1e1e1e;
   font-weight: 400;
   padding: 8px 0;
+}
+
+.profile-modal .profile-input {
+  font-size: 16px;
+  color: #1e1e1e;
+  font-weight: 400;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #fff;
+  transition: border-color 0.3s ease;
+}
+
+.profile-modal .profile-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgb(0 123 255 / 25%);
 }
 
 .profile-modal .notifications-section {
@@ -132,6 +258,7 @@
 .profile-modal .save-button:hover {
   background-color: #bbb;
 }
+
 
 /* Responsive design */
 @media (width <= 768px) {
