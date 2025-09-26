@@ -7,7 +7,7 @@ import { formatCategory, getFileExtension, removeHyphenTitleCase } from '../util
 import ActionButton from './ActionButton';
 import { BUTTON_CONFIGS } from './ActionButtonConfigs';
 import './AssetCardViewList.css';
-import LazyImage from './LazyImage';
+import Picture from './Picture';
 
 const AssetCardViewList: React.FC<AssetCardProps> = ({
     image,
@@ -112,11 +112,10 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
                         </div>
                     </div>
 
-                    <LazyImage
+                    <Picture
                         asset={image}
                         width={350}
                         className="image-container"
-                        alt={image.alt || image.name}
                     />
                 </div>
 

@@ -4,11 +4,11 @@ import { useAppConfig } from '../../hooks/useAppConfig';
 import type { AssetDetailsProps, Rendition } from '../../types';
 
 import { AuthorizationStatus } from '../../clients/fadel-client';
-import { fetchOptimizedDeliveryBlob } from '../../utils/blobCache';
 import { removeHyphenTitleCase } from '../../utils/formatters';
 import ActionButton from '../ActionButton';
 import { BUTTON_CONFIGS } from '../ActionButtonConfigs';
 import DownloadRenditionsModal from '../DownloadRenditionsModal';
+import Picture from '../Picture';
 import './AssetDetails.css';
 import AssetDetailsDRM from './AssetDetailsDRM';
 import AssetDetailsGeneralInfo from './AssetDetailsGeneralInfo';
@@ -42,8 +42,6 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 }) => {
     // Get dynamicMediaClient from context
     const { dynamicMediaClient } = useAppConfig();
-    const [blobUrl, setBlobUrl] = useState<string | null>(null);
-    const [imageLoading, setImageLoading] = useState<boolean>(false);
     const [collapseAll, setCollapseAll] = useState<boolean>(false);
     const [showDownloadRenditionsModal, setShowDownloadRenditionsModal] = useState<boolean>(false);
     const [actionButtonEnable, setActionButtonEnable] = useState<boolean>(false);
@@ -127,38 +125,11 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     };
 
     useEffect(() => {
-        if (showModal && selectedImage && dynamicMediaClient) {
-            setImageLoading(true);
-            setBlobUrl(null);
+        if (showModal && selectedImage) {
             setActionButtonEnable(false);
             setWatermarkRendition(undefined);
-
-            const fetchHighResImage = async () => {
-                try {
-                    // Just fetch high-res image directly, no caching for viewing
-                    const blobUrl = await fetchOptimizedDeliveryBlob(
-                        dynamicMediaClient,
-                        selectedImage,
-                        1200,
-                        {
-                            cache: false,
-                            cacheKey: `${selectedImage.assetId}-1200`,
-                            fallbackUrl: selectedImage.url
-                        }
-                    );
-                    setBlobUrl(blobUrl);
-                } catch (error) {
-                    console.error(`Error getting optimized delivery blob for asset ${selectedImage.assetId}: ${error}`);
-                    // Fallback to original URL
-                    setBlobUrl(selectedImage.url);
-                } finally {
-                    setImageLoading(false);
-                }
-            };
-
-            fetchHighResImage();
         }
-    }, [showModal, selectedImage, dynamicMediaClient]);
+    }, [showModal, selectedImage]);
 
     // Fetch static renditions when modal opens
     useEffect(() => {
@@ -182,15 +153,6 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 
     // Image presets are now fetched automatically by fetchAssetRenditions in MainApp
 
-    // Separate effect for cleanup
-    useEffect(() => {
-        return () => {
-            if (blobUrl && blobUrl.startsWith('blob:')) {
-                URL.revokeObjectURL(blobUrl);
-            }
-        };
-    }, [blobUrl]);
-
     if (!showModal || !selectedImage) return null;
 
     return (
@@ -198,30 +160,20 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
             <div className="asset-details-modal-inner" onClick={handleModalClick}>
                 <div className="asset-details-main-main-section">
                     <div className="asset-details-main-image-section">
-                        {imageLoading ? (
-                            <div className="asset-details-main-image-loading">
-                                <div className="loading-spinner"></div>
-                                <p>Loading high resolution image...</p>
-                            </div>
-                        ) : (
-                            <div className="asset-details-image-wrapper">
-                                {/* Add to Collection Overlay */}
-                                <div className="add-to-collection-overlay" onClick={handleAddToCollection}>
-                                    <div className="add-to-collection-content">
-                                        <i className="icon add circle"></i>
-                                        <span>Add to Collection</span>
-                                    </div>
-                                </div>
-                                <div className="preview-image">
-                                    <img
-                                        src={blobUrl || selectedImage.url}
-                                        alt={selectedImage.alt || selectedImage.name}
-                                        className="asset-details-main-image"
-                                        onError={(e) => { (e.target as HTMLImageElement)?.parentElement?.classList.add('missing'); }}
-                                    />
+                        <div className="asset-details-image-wrapper">
+                            {/* Add to Collection Overlay */}
+                            <div className="add-to-collection-overlay" onClick={handleAddToCollection}>
+                                <div className="add-to-collection-content">
+                                    <i className="icon add circle"></i>
+                                    <span>Add to Collection</span>
                                 </div>
                             </div>
-                        )}
+                            <Picture
+                                asset={selectedImage}
+                                width={1200}
+                                className="asset-details-main-image"
+                            />
+                        </div>
                     </div>
 
                     <div className="asset-details-main-info-section">

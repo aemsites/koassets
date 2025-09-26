@@ -13,9 +13,8 @@ import type {
     WorkflowStepStatuses
 } from '../../types';
 import { FilteredItemsType, StepStatus, WorkflowStep } from '../../types';
-import { removeBlobFromCache } from '../../utils/blobCache';
 import DownloadRenditionsContent from '../DownloadRenditionsContent';
-import ThumbnailImage from '../ThumbnailImage';
+import Picture from '../Picture';
 import './CartPanelAssets.css';
 import CartRequestDownload from './CartRequestDownload';
 import CartRequestRightsExtension from './CartRequestRightsExtension';
@@ -33,7 +32,9 @@ const CartAssetItemRow: React.FC<CartAssetItemRowProps> = ({ item, onRemoveItem 
     return (
         <div className={`cart-item-row`}>
             <div className="col-thumbnail">
-                <ThumbnailImage item={item} />
+                <div className="item-thumbnail">
+                    <Picture asset={item} width={350} />
+                </div>
             </div>
             <div className="col-title">
                 <div className="item-title">{item.title || item.name}</div>
@@ -208,15 +209,8 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     }, [cartAssetItems]);
 
     const handleClearCart = useCallback((): void => {
-        // Remove cached blobs for each cart item
-        cartAssetItems.forEach(item => {
-            if (item.assetId) {
-                removeBlobFromCache(item.assetId);
-            }
-        });
-
         setCartAssetItems([]);
-    }, [cartAssetItems, setCartAssetItems]);
+    }, [setCartAssetItems]);
 
     const handleOpenRequestDownload = useCallback((): void => {
         setStepStatus(prev => ({ ...prev, [WorkflowStep.CART]: StepStatus.SUCCESS }));

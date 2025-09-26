@@ -34,19 +34,6 @@
     border-bottom: 1px solid #e0e0e0;
 }
 
-/* Thumbnail */
-.download-renditions-thumbnail {
-    width: 80px;
-    height: 80px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
-}
-
 /* Loading States */
 .renditions-status {
     display: flex;

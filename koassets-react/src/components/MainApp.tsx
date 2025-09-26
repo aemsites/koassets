@@ -32,7 +32,6 @@ import type {
 } from '../types';
 import { CURRENT_VIEW, LOADING, QUERY_TYPES } from '../types';
 import { populateAssetFromHit } from '../utils/assetTransformers';
-import { fetchOptimizedDeliveryBlob, removeBlobFromCache } from '../utils/blobCache';
 import { getBucket, getExternalParams } from '../utils/config';
 import { AppConfigProvider } from './AppConfigProvider';
 
@@ -432,7 +431,7 @@ function MainApp(): React.JSX.Element {
         const numericFiltersParam = params.get('numericFilters');
 
         if (urlQuery !== null) setQuery(urlQuery);
-        
+
         // Read search type from URL parameter first
         if (queryType !== null && (Object.values(QUERY_TYPES) as string[]).includes(queryType)) {
             setSelectedQueryType(queryType);
@@ -573,36 +572,12 @@ function MainApp(): React.JSX.Element {
     // Cart functions
     const handleAddToCart = async (image: Asset): Promise<void> => {
         if (!cartAssetItems.some(item => item.assetId === image.assetId)) {
-            // Cache the image when adding to cart
-            if (dynamicMediaClient && image.assetId) {
-                try {
-                    const cacheKey = `${image.assetId}-350`;
-                    await fetchOptimizedDeliveryBlob(
-                        dynamicMediaClient,
-                        image,
-                        350,
-                        {
-                            cache: false,
-                            cacheKey: cacheKey,
-                            fallbackUrl: image.url
-                        }
-                    );
-                } catch (error) {
-                    console.warn(`Failed to cache image for cart ${image.assetId}:`, error);
-                }
-            }
-
             setCartAssetItems(prev => [...prev, image]);
         }
     };
 
     const handleRemoveFromCart = (image: Asset): void => {
         setCartAssetItems(prev => prev.filter(item => item.assetId !== image.assetId));
-
-        // Clean up cached blobs for this asset
-        if (image.assetId) {
-            removeBlobFromCache(image.assetId);
-        }
     };
 
     const handleBulkAddToCart = async (selectedCardIds: Set<string>, images: Asset[]): Promise<void> => {

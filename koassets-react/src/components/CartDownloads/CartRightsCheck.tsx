@@ -4,7 +4,7 @@ import { AuthorizationStatus, FadelClient, type CheckRightsRequest, type RestOfA
 import type { Asset, RequestDownloadStepData, RightsCheckStepData } from '../../types';
 import { calendarDateToEpoch } from '../../utils/formatters';
 import DownloadRenditionsContent from '../DownloadRenditionsContent';
-import ThumbnailImage from '../ThumbnailImage';
+import Picture from '../Picture';
 import './CartRightsCheck.css';
 
 interface CartRightsCheckProps {
@@ -319,7 +319,9 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
                                         return (
                                             <div key={asset.assetId} className="table-row">
                                                 <div className="col-thumbnail">
-                                                    <ThumbnailImage item={asset} />
+                                                    <div className="item-thumbnail">
+                                                        <Picture asset={asset} width={350} />
+                                                    </div>
                                                 </div>
                                                 <div className="col-title">
                                                     <div className="asset-title">{asset.title || asset.name}</div>

@@ -7,7 +7,7 @@ import { formatCategory, getFileExtension, removeHyphenTitleCase } from '../util
 import ActionButton from './ActionButton';
 import { BUTTON_CONFIGS } from './ActionButtonConfigs';
 import './AssetCardViewGrid.css';
-import LazyImage from './LazyImage';
+import Picture from './Picture';
 
 /* Displayed on the card view title section
 campaignName
@@ -117,11 +117,10 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                         </div>
                     </div>
 
-                    <LazyImage
+                    <Picture
                         asset={image}
                         width={350}
                         className="image-container"
-                        alt={image.alt || image.name}
                     />
                 </div>
 

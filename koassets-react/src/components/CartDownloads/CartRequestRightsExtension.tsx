@@ -1,8 +1,8 @@
 import { CalendarDate } from '@internationalized/date';
 import React, { useCallback, useState } from 'react';
-import MyDatePicker from '../MyDatePicker';
-import ThumbnailImage from '../ThumbnailImage';
 import type { CartRequestRightsExtensionProps, RequestRightsExtensionStepData } from '../../types';
+import MyDatePicker from '../MyDatePicker';
+import Picture from '../Picture';
 import './CartRequestRightsExtension.css';
 
 const CartRequestRightsExtension: React.FC<CartRequestRightsExtensionProps> = ({
@@ -148,7 +148,9 @@ const CartRequestRightsExtension: React.FC<CartRequestRightsExtensionProps> = ({
                         {restrictedAssets.map((asset) => (
                             <div key={asset.assetId} className="asset-list-item">
                                 <div className="asset-thumbnail">
-                                    <ThumbnailImage item={asset} />
+                                    <div className="item-thumbnail">
+                                        <Picture asset={asset} width={350} />
+                                    </div>
                                 </div>
                                 <div className="asset-details">
                                     <div className="asset-title">{asset.title || asset.name}</div>
