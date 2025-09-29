@@ -13,6 +13,7 @@ const Picture: React.FC<PictureProps> = ({
     className = ''
 }) => {
     const id = asset.assetId || '';
+    const encodedId = encodeURIComponent(id);
     const name = asset.name || '';
     const alt = asset.alt;
 
@@ -43,12 +44,12 @@ const Picture: React.FC<PictureProps> = ({
                 </div>
             )}
             <picture>
-                <source type="image/webp" srcSet={`/api/adobe/assets/${id}/as/${fileName}.webp?width=${width}`} />
-                <source type="image/jpg" srcSet={`/api/adobe/assets/${id}/as/${fileName}.jpg?width=${width}`} />
+                <source type="image/webp" srcSet={`/api/adobe/assets/${encodedId}/as/${fileName}.webp?width=${width}`} />
+                <source type="image/jpg" srcSet={`/api/adobe/assets/${encodedId}/as/${fileName}.jpg?width=${width}`} />
                 <img
                     className={className}
                     loading="lazy"
-                    src={`/api/adobe/assets/${id}/as/${fileName}.jpg?width=${width}`}
+                    src={`/api/adobe/assets/${encodedId}/as/${fileName}.jpg?width=${width}`}
                     alt={alt || name}
                     onLoad={handleLoad}
                     onError={handleError}
