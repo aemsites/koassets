@@ -328,20 +328,17 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
             )}
 
             {/* Asset Details Modal */}
-            {createPortal(
-                <AssetDetails
-                    showModal={showFullScreenModal}
-                    selectedImage={selectedCard}
-                    closeModal={closeFullScreenModal}
-                    handleAddToCart={handleAddToCart}
-                    handleRemoveFromCart={onRemoveFromCart}
-                    cartAssetItems={cartAssetItems}
-                    imagePresets={imagePresets}
-                    renditions={selectedCard?.assetId ? assetRenditionsCache[selectedCard.assetId] : undefined}
-                    fetchAssetRenditions={fetchAssetRenditions}
-                />,
-                document.body
-            )}
+            <AssetDetails
+                showModal={showFullScreenModal}
+                selectedImage={selectedCard}
+                closeModal={closeFullScreenModal}
+                handleAddToCart={handleAddToCart}
+                handleRemoveFromCart={onRemoveFromCart}
+                cartAssetItems={cartAssetItems}
+                imagePresets={imagePresets}
+                renditions={selectedCard?.assetId ? assetRenditionsCache[selectedCard.assetId] : undefined}
+                fetchAssetRenditions={fetchAssetRenditions}
+            />
         </div>
     );
 };
