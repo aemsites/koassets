@@ -341,7 +341,11 @@ export function extractFromArrayValue(dataJson: Record<string, unknown>, key: st
     if (!Array.isArray(jsonArray)) return fallback;
 
     const processed = jsonArray
-        .filter(item => item && typeof item === 'object' && 'value' in item)
+        .filter(item => {
+            if (!item || typeof item !== 'object' || !('value' in item)) return false;
+            const lang = (item as { '@lang'?: string })['@lang'];
+            return !lang || lang === 'en';
+        })
         .map(item => {
             const valueObj = item as { value: string; };
             const splitResult = split(valueObj.value, ':', 2);
