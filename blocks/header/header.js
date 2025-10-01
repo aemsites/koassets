@@ -468,6 +468,11 @@ export default async function decorate(block) {
     console.error('Error decorating searchBlock:', error);
   }
 
+  // Clean up
+  setTimeout(() => {
+    searchBlock.remove();
+  }, 1000);
+
   // Append the search block to the header (always hidden)
   block.append(searchBlock);
 }

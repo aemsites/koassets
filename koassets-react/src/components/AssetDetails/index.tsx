@@ -5,7 +5,6 @@ import type { AssetDetailsProps, Rendition } from '../../types';
 
 import { AuthorizationStatus } from '../../clients/fadel-client';
 import { fetchOptimizedDeliveryBlob } from '../../utils/blobCache';
-import { removeHyphenTitleCase } from '../../utils/formatters';
 import ActionButton from '../ActionButton';
 import { BUTTON_CONFIGS } from '../ActionButtonConfigs';
 import DownloadRenditionsModal from '../DownloadRenditionsModal';
@@ -43,7 +42,6 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     // Get dynamicMediaClient from context
     const { dynamicMediaClient } = useAppConfig();
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
-    const [imageLoading, setImageLoading] = useState<boolean>(true);
     const [collapseAll, setCollapseAll] = useState<boolean>(false);
     const [showDownloadRenditionsModal, setShowDownloadRenditionsModal] = useState<boolean>(false);
     const [actionButtonEnable, setActionButtonEnable] = useState<boolean>(false);
@@ -150,8 +148,6 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                     console.error(`Error getting optimized delivery blob for asset ${selectedImage.assetId}: ${error}`);
                     // Fallback to original URL
                     setBlobUrl(selectedImage.url);
-                } finally {
-                    setImageLoading(false);
                 }
             };
 
@@ -225,30 +221,24 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
             <div className="asset-details-modal-inner" onClick={handleModalClick}>
                 <div className="asset-details-main-main-section">
                     <div className="asset-details-main-image-section">
-                        {imageLoading ? (
-                            <div className="asset-details-main-image-loading">
-                                <div className="loading-spinner"></div>
-                                <p>Loading high resolution image...</p>
+                        <div className="asset-details-image-wrapper">
+                            {/* Add to Collection Overlay */}
+                            <div className="add-to-collection-overlay" onClick={handleAddToCollection}>
+                                <div className="add-to-collection-content">
+                                    <i className="icon add circle"></i>
+                                    <span>Add to Collection</span>
+                                </div>
                             </div>
-                        ) : (
-                            <div className="asset-details-image-wrapper">
-                                {/* Add to Collection Overlay */}
-                                <div className="add-to-collection-overlay" onClick={handleAddToCollection}>
-                                    <div className="add-to-collection-content">
-                                        <i className="icon add circle"></i>
-                                        <span>Add to Collection</span>
-                                    </div>
-                                </div>
-                                <div className="preview-image">
-                                    <img
-                                        src={blobUrl || selectedImage.url}
-                                        alt={selectedImage.alt || selectedImage.name}
-                                        className="asset-details-main-image"
-                                            onError={(e) => { (e.target as HTMLImageElement)?.parentElement?.classList.add('missing'); }}
-                                        />
-                                    </div>
-                                </div>
-                        )}
+                            <div className="preview-image loading-spinner">
+                                <img
+                                    src={blobUrl || selectedImage.url}
+                                    alt={selectedImage.alt || selectedImage.name}
+                                    className="asset-details-main-image"
+                                    onLoad={(e) => { (e.target as HTMLImageElement)?.parentElement?.classList.remove('loading-spinner'); }}
+                                    onError={(e) => { (e.target as HTMLImageElement)?.parentElement?.classList.add('missing'); }}
+                                />
+                            </div>
+                        </div>
                     </div>
 
                     <div className="asset-details-main-info-section">
