@@ -35,7 +35,6 @@ import DownloadPanel from './CartDownloads/DownloadPanel';
 import Facets from './Facets';
 import HeaderBar from './HeaderBar';
 import ImageGallery from './ImageGallery';
-import SearchBar from './SearchBar';
 
 const HITS_PER_PAGE = 24;
 
@@ -203,25 +202,7 @@ function MainApp(): React.JSX.Element {
     const [selectedSortType, setSelectedSortType] = useState<string>('Date Created');
     const [selectedSortDirection, setSelectedSortDirection] = useState<string>('Ascending');
 
-    const searchBarRef = useRef<HTMLInputElement>(null);
     const settingsLoadedRef = useRef<boolean>(false);
-
-    const handleSetSelectedQueryType = useCallback((newQueryType: string): void => {
-        setSelectedQueryType(prevType => {
-            if (prevType !== newQueryType) {
-                setQuery('');
-            }
-            return newQueryType;
-        });
-        // Focus the query input after changing type
-        setTimeout(() => {
-            if (searchBarRef.current) {
-                searchBarRef.current.focus();
-            }
-        }, 0);
-    }, []);
-
-
 
     // Save cart items to localStorage when they change
     useEffect(() => {
@@ -763,16 +744,6 @@ function MainApp(): React.JSX.Element {
                     document.body
                 )}
 
-                {/* TODO: Update this once finalized */}
-                {window.location.pathname.includes('/tools/assets-browser/index.html') && (
-                    <SearchBar
-                        query={query}
-                        setQuery={setQuery}
-                        sendQuery={search}
-                        selectedQueryType={selectedQueryType}
-                        setSelectedQueryType={handleSetSelectedQueryType}
-                        inputRef={searchBarRef}
-                    />)}
                 <div className="main-content">
                     <div className="images-container">
                         <div className="images-content-wrapper">

@@ -234,15 +234,6 @@ export interface StepStatuses {
 
 // Phase 1 Component Types
 
-export interface SearchBarProps {
-    query: string;
-    setQuery: (query: string) => void;
-    sendQuery: (queryType: string) => void;
-    selectedQueryType: string;
-    setSelectedQueryType: (queryType: string) => void;
-    inputRef: React.RefObject<HTMLInputElement | null>;
-}
-
 // Phase 2 Component Types
 
 // Collection-related types
