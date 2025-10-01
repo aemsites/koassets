@@ -145,7 +145,7 @@
 
 .asset-details-main-image-section {
     flex: 2;
-    display: flex;
+    /* display: flex; */
     align-items: center;
     justify-content: center;
     padding: 40px;
@@ -233,7 +233,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 300px;
+    height: 600px;
     color: #666;
 }
 

@@ -43,7 +43,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     // Get dynamicMediaClient from context
     const { dynamicMediaClient } = useAppConfig();
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
-    const [imageLoading, setImageLoading] = useState<boolean>(false);
+    const [imageLoading, setImageLoading] = useState<boolean>(true);
     const [collapseAll, setCollapseAll] = useState<boolean>(false);
     const [showDownloadRenditionsModal, setShowDownloadRenditionsModal] = useState<boolean>(false);
     const [actionButtonEnable, setActionButtonEnable] = useState<boolean>(false);
@@ -128,7 +128,6 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 
     useEffect(() => {
         if (showModal && selectedImage && dynamicMediaClient) {
-            setImageLoading(true);
             setBlobUrl(null);
             setActionButtonEnable(false);
             setWatermarkRendition(undefined);
@@ -193,8 +192,36 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 
     if (!showModal || !selectedImage) return null;
 
+    // Get or create the modal root container - insert before header to ensure proper stacking
+    const getModalRoot = () => {
+        let modalRoot = document.getElementById('modal-root');
+        if (!modalRoot) {
+            modalRoot = document.createElement('div');
+            modalRoot.id = 'modal-root';
+            modalRoot.style.position = 'fixed';
+            modalRoot.style.top = '0';
+            modalRoot.style.left = '0';
+            modalRoot.style.width = '100%';
+            modalRoot.style.height = '100%';
+            modalRoot.style.zIndex = '1'; // Very low z-index
+            modalRoot.style.pointerEvents = 'none';
+
+            // Insert before the header element to ensure proper DOM order
+            const header = document.querySelector('header');
+            if (header) {
+                document.body.insertBefore(modalRoot, header);
+            } else {
+                document.body.appendChild(modalRoot);
+            }
+        }
+        return modalRoot;
+    };
+
     return (
-        <div className="asset-details-modal portal-modal" onClick={handleOverlayClick}>
+        createPortal(<div className="asset-details-modal portal-modal"
+            onClick={handleOverlayClick}
+            style={{ pointerEvents: 'auto' }} // Re-enable pointer events for the modal
+        >
             <div className="asset-details-modal-inner" onClick={handleModalClick}>
                 <div className="asset-details-main-main-section">
                     <div className="asset-details-main-image-section">
@@ -217,10 +244,10 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                         src={blobUrl || selectedImage.url}
                                         alt={selectedImage.alt || selectedImage.name}
                                         className="asset-details-main-image"
-                                        onError={(e) => { (e.target as HTMLImageElement)?.parentElement?.classList.add('missing'); }}
-                                    />
+                                            onError={(e) => { (e.target as HTMLImageElement)?.parentElement?.classList.add('missing'); }}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
                         )}
                     </div>
 
@@ -234,7 +261,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     <div className="asset-details-main-tags">
                                         {selectedImage.xcmKeywords.split(',').map((keyword, index) => (
                                             <span key={index} className="asset-details-main-tag tccc-tag">
-                                                {removeHyphenTitleCase(keyword.trim())}
+                                                {keyword.trim()}
                                             </span>
                                         ))}
                                     </div>
@@ -255,7 +282,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">TYPE</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.formatLabel}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.illustratorType as string}</span>
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">SIZE</span>
@@ -344,7 +371,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                 <div className="asset-details-main-toggle-section"></div>
 
                 <div className="asset-details-main-metadata-section">
-                    <div className="cmp-title" id="showfulldetails">
+                    <div className="cmp-title">
                         <h1>
                             Collapse All
                             <label className="switch">
@@ -384,7 +411,9 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                 />,
                 document.body
             )}
-        </div>
+        </div>,
+            getModalRoot()
+        )
     );
 };
 

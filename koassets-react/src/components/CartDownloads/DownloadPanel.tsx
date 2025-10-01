@@ -9,13 +9,6 @@ import './DownloadPanel.css'; // Download-specific styles
 import DownloadPanelAssets from './DownloadPanelAssets';
 import DownloadPanelTemplates from './DownloadPanelTemplates';
 
-// Extend window interface for download badge function
-declare global {
-    interface Window {
-        updateDownloadBadge?: (numItems: number) => void;
-    }
-}
-
 interface DownloadPanelContentProps {
     activeTab?: string;
     setActiveTab?: (tab: string) => void;

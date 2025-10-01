@@ -5,17 +5,6 @@ import '../MainApp.css';
 
 import { DynamicMediaClient } from '../clients/dynamicmedia-client';
 import { DEFAULT_FACETS, type ExcFacets } from '../constants/facets';
-// Extend Window interface to include our custom functions
-declare global {
-    interface Window {
-        openCart?: () => void;
-        closeCart?: () => void;
-        toggleCart?: () => void;
-        openDownloadPanel?: () => void;
-        closeDownloadPanel?: () => void;
-        toggleDownloadPanel?: () => void;
-    }
-}
 
 import type {
     Asset,
@@ -35,19 +24,6 @@ import { populateAssetFromHit } from '../utils/assetTransformers';
 import { fetchOptimizedDeliveryBlob, removeBlobFromCache } from '../utils/blobCache';
 import { getBucket, getExternalParams } from '../utils/config';
 import { AppConfigProvider } from './AppConfigProvider';
-
-// Extend window interface for cart functions, download functions and user authentication
-declare global {
-    interface Window {
-        openCart?: () => void;
-        closeCart?: () => void;
-        toggleCart?: () => void;
-        openDownloadPanel?: () => void;
-        closeDownloadPanel?: () => void;
-        toggleDownloadPanel?: () => void;
-        user?: unknown; // Global user object for authentication
-    }
-}
 
 // Components
 import { CalendarDate } from '@internationalized/date';
@@ -432,7 +408,7 @@ function MainApp(): React.JSX.Element {
         const numericFiltersParam = params.get('numericFilters');
 
         if (urlQuery !== null) setQuery(urlQuery);
-        
+
         // Read search type from URL parameter first
         if (queryType !== null && (Object.values(QUERY_TYPES) as string[]).includes(queryType)) {
             setSelectedQueryType(queryType);
@@ -483,7 +459,7 @@ function MainApp(): React.JSX.Element {
 
     // Auto-search with empty query on app load
     useEffect(() => {
-        if (!searchDisabled && authenticated && dynamicMediaClient && excFacets !== undefined) {
+        if (!searchDisabled && authenticated && dynamicMediaClient && excFacets !== undefined && document.querySelector('.koassets-search-wrapper')) {
             search();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps

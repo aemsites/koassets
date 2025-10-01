@@ -99,6 +99,7 @@ export interface Asset {
     japaneseDescription?: string;
     japaneseKeywords?: string;
     japaneseTitle?: string;
+    illustratorType?: string;
     intendedBottlerCountry?: string;
     intendedChannel?: string;
     intendedCustomers?: string;
@@ -204,7 +205,7 @@ export interface AssetCardProps {
     cartAssetItems?: CartAssetItem[];
     isSelected?: boolean;
     onCheckboxChange?: (id: string, checked: boolean) => void;
-    showFullDetails?: boolean;
+    expandAllDetails?: boolean;
 }
 
 // Query and filter types
@@ -590,8 +591,8 @@ export interface SearchPanelProps {
     selectedSortDirection: string;
     onSortTypeChange: (sortType: string) => void;
     onSortDirectionChange: (direction: string) => void;
-    showFullDetails?: boolean;
-    onShowFullDetailsChange?: (showDetails: boolean) => void;
+    expandAllDetails?: boolean;
+    onExpandAllDetailsChange?: (showDetails: boolean) => void;
     viewType?: 'grid' | 'list';
     onViewTypeChange?: (viewType: 'grid' | 'list') => void;
     currentPage?: number;
@@ -620,4 +621,145 @@ export interface CartTemplateItem {
 // Download Template Item interface
 export interface DownloadTemplateItem {
     // Empty for now - will be filled with template-specific properties later
+}
+
+// Metadata types for populateAssetFromMetadata function
+export interface KeywordValue {
+    value: string;
+    '@lang'?: string;
+    'repo:ancestors': string[];
+}
+
+export interface RepositoryMetadata {
+    'repo:name'?: string;
+    'repo:scene7File'?: string;
+    'dc:format'?: string;
+    'repo:createDate'?: string;
+    'repo:modifyDate'?: string;
+    'repo:size'?: number;
+}
+
+export interface AssetMetadata {
+    'dam:activationTarget'?: string;
+    'status'?: string;
+    'dam:assetStatus'?: string;
+    'xcm:keywords'?: KeywordValue[];
+    'xcm:machineKeywords'?: KeywordValue[];
+    'xmp:CreatorTool'?: string;
+    'tccc:intendedBottlerCountry'?: string[];
+    'tccc:intendedBusinessUnitOrMarket'?: KeywordValue[];
+    'tccc:riskTypeMgmt_hidden'?: string;
+    'tccc:rightsNotes'?: string;
+    'tccc:intendedCustomers'?: string[];
+    'dc:title'?: string;
+    'xmp:CreateDate'?: string;
+    'tccc:FolderId'?: string;
+    'tccc:underEmbargo'?: string;
+    'tccc:beverageType_hidden'?: string[];
+    'tccc:intendedBusinessUnitOrMarket_hidden'?: string[];
+    'xmpMM:OriginalDocumentID'?: string;
+    'xmp:ModifyDate'?: string;
+    'tccc:rightsStartDate'?: string;
+    'tccc:intendedChannel'?: KeywordValue[];
+    'tccc:fadelAssetId'?: string;
+    'tccc:beverageType'?: string[];
+    'tccc:riskTypeMgmt'?: string;
+    'tccc:rightsStatus'?: string;
+    'tccc:intendedCustomers_hidden'?: string[];
+    'tccc:brand'?: KeywordValue[];
+    'tccc:sharedDownstream'?: string;
+    'tccc:legacyId2'?: string;
+    'xmpTPg:PlateNames'?: string[];
+    'tccc:yearCopyright'?: string;
+    'tccc:assetStatus_hidden'?: string;
+    'tccc:lastModifiedBy'?: string;
+    'tccc:rightRecordTitle'?: string;
+    'tccc:assetCategoryAndType'?: KeywordValue[];
+    'tccc:agencyName_hidden'?: string;
+    'tccc:assetCategoryAndType_hidden'?: string[];
+    'tccc:intendedChannel_hidden'?: string[];
+    'tccc:assignedAM'?: string;
+    'tccc:agencyName'?: string;
+    'tccc:autoPublish'?: boolean;
+    'tccc:assetType'?: string;
+    'tccc:packageDepicted'?: string;
+    'tccc:masterOrAdaptation'?: string;
+    'tccc:fundingBU'?: string[];
+    'tccc:masterOrAdaptation_hidden'?: string;
+    'tccc:description'?: string;
+    'tccc:legacyFileName'?: string;
+    'xmpMM:DocumentID'?: string;
+    'tccc:rightsProfileType'?: string;
+    'tccc:rightsProfileToContract'?: string;
+    'xmpTPg:PlateNames_xmpArrayType'?: string;
+    'tccc:digest'?: string;
+    'tccc:readyToUse'?: string;
+    'tccc:drmRestricted'?: string;
+    'xmpMM:RenditionClass'?: string;
+    'tccc:amReviewStatus'?: string;
+    'tccc:marketCovered'?: string[];
+    'tccc:language_hidden'?: string[];
+    'tccc:language'?: string[];
+    'tccc:associatedWBrand'?: string;
+    'xmp:MetadataDate'?: string;
+    'pdf:Producer'?: string;
+    'tccc:migrationID'?: string;
+    'tccc:mediaCovered'?: string[];
+    'tccc:intendedBottlerCountry_hidden'?: string[];
+    'xmpTPg:NPages'?: number;
+    'dc:modified'?: string;
+    'tccc:rightsStatus_hidden'?: string;
+    'tccc:featuredAsset'?: string;
+    'tccc:originalCreate'?: string;
+    'illustrator:CreatorSubTool'?: string;
+    'tccc:leadAssociate'?: string;
+    'tccc:brand_hidden'?: string[];
+    'tccc:assetStatus'?: string;
+    'xmpTPg:HasVisibleOverprint'?: string;
+    'tccc:lastModified'?: string;
+    'xmpMM:InstanceID'?: string;
+    'tccc:keyAsset'?: string;
+    'illustrator:Type'?: string;
+    'tccc:intendedMarket'?: string;
+    'xmpTPg:HasVisibleTransparency'?: string;
+    [key: string]: unknown; // For additional metadata fields
+}
+
+export interface Metadata {
+    assetId: string;
+    repositoryMetadata?: RepositoryMetadata;
+    assetMetadata?: AssetMetadata;
+}
+
+// Global Window interface extensions - consolidated from multiple files
+declare global {
+    interface Window {
+        // Configuration objects
+        APP_CONFIG?: {
+            ADOBE_CLIENT_ID?: string;
+            BUCKET?: string;
+        };
+        KOAssetsConfig?: {
+            externalParams?: ExternalParams;
+        };
+
+        // Cart management functions
+        openCart?: () => void;
+        closeCart?: () => void;
+        toggleCart?: () => void;
+        updateCartBadge?: (numItems: number) => void;
+
+        // Download panel management functions  
+        openDownloadPanel?: () => void;
+        closeDownloadPanel?: () => void;
+        toggleDownloadPanel?: () => void;
+        updateDownloadBadge?: (numItems: number) => void;
+
+        // Details view management functions
+        openDetailsView?: (asset?: Asset, loadMetadata?: boolean) => void;
+        closeDetailsView?: () => void;
+
+        // Authentication
+        user?: unknown; // Global user object for authentication
+    }
 }
