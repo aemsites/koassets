@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AuthorizationStatus } from '../clients/fadel-client';
 import { DEFAULT_ACCORDION_CONFIG } from '../constants/accordion';
@@ -40,7 +40,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     fetchAssetRenditions,
     isRightsSearch = false
 }: ImageGalleryProps) => {
-    // Get external params from context
+    // Get external params and dynamic media client from context
     const { externalParams } = useAppConfig();
 
     // Extract accordion parameters from external params with fallbacks
@@ -51,11 +51,11 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     const [selectedCard, setSelectedCard] = useState<Asset | null>(null);
     const [showPreviewModal, setShowPreviewModal] = useState<boolean>(false);
     // Modal state management for asset details (card click)
-    const [showFullScreenModal, setShowFullScreenModal] = useState<boolean>(false);
+    const [showDetailsModal, setShowDetailsModal] = useState<boolean>(false);
     // Checkbox selection state
     const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
     // Show full details toggle state
-    const [showFullDetails, setShowFullDetails] = useState<boolean>(true);
+    const [expandAllDetails, setExpandAllDetails] = useState<boolean>(true);
     // View type state (grid or list)
     const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
     // Title expansion state
@@ -85,15 +85,15 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
-                if (showFullScreenModal) {
-                    closeFullScreenModal();
+                if (showDetailsModal) {
+                    closeDetailsModal();
                 } else if (showPreviewModal) {
                     closeCardPreviewModal();
                 }
             }
         };
 
-        if (showPreviewModal || showFullScreenModal) {
+        if (showPreviewModal || showDetailsModal) {
             document.addEventListener('keydown', handleKeyDown);
             document.body.style.overflow = 'hidden'; // Prevent background scrolling
         }
@@ -102,7 +102,30 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
             document.removeEventListener('keydown', handleKeyDown);
             document.body.style.overflow = 'unset'; // Restore scrolling
         };
-    }, [showPreviewModal, showFullScreenModal]);
+    }, [showPreviewModal, showDetailsModal]);
+
+    // Create stable callback for opening details view
+    const openDetailsView = useCallback(async (asset?: Asset, loadMetadata: boolean = false) => {
+        console.debug('openDetailsView called with asset:', asset, 'loadMetadata:', loadMetadata);
+        if (asset) {
+            console.debug('Setting selected card with asset ID:', asset.assetId, 'Asset object:', JSON.stringify(asset, null, 2));
+            setSelectedCard(asset as Asset);
+        } else {
+            console.log('No asset provided to openDetailsView');
+        }
+        setShowDetailsModal(true);
+    }, []);
+
+    // Expose cart and download panel functions to window for EDS header integration
+    useEffect(() => {
+        window.openDetailsView = openDetailsView;
+        window.closeDetailsView = () => closeDetailsModal();
+
+        return () => {
+            delete window.openDetailsView;
+            delete window.closeDetailsView;
+        };
+    }, [openDetailsView]);
 
     // Handler for Add to Cart click with animation
     const handleAddToCart = (image: Asset, e?: React.MouseEvent) => {
@@ -127,12 +150,12 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     const handleCardDetailClick = (image: Asset, e: React.MouseEvent) => {
         e.stopPropagation();
         setSelectedCard(image);
-        setShowFullScreenModal(true);
+        setShowDetailsModal(true);
     };
 
     // Handler to close asset details modal
-    const closeFullScreenModal = () => {
-        setShowFullScreenModal(false);
+    const closeDetailsModal = () => {
+        setShowDetailsModal(false);
         setSelectedCard(null);
     };
 
@@ -245,8 +268,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 selectedSortDirection={selectedSortDirection}
                 onSortTypeChange={onSortTypeChange}
                 onSortDirectionChange={onSortDirectionChange}
-                showFullDetails={showFullDetails}
-                onShowFullDetailsChange={setShowFullDetails}
+                expandAllDetails={expandAllDetails}
+                onExpandAllDetailsChange={setExpandAllDetails}
                 viewType={viewType}
                 onViewTypeChange={setViewType}
                 hasMorePages={hasMorePages}
@@ -283,7 +306,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                                         cartAssetItems={cartAssetItems}
                                         isSelected={selectedCards.has(visibleImage.assetId || '')}
                                         onCheckboxChange={handleCheckboxChange}
-                                        showFullDetails={showFullDetails}
+                                        expandAllDetails={expandAllDetails}
                                     />
                                 );
                             })}
@@ -316,8 +339,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
             {createPortal(
                 <AssetPreview
                     showModal={showPreviewModal}
-                    selectedImage={selectedCard}
                     closeModal={closeCardPreviewModal}
+                    selectedImage={selectedCard}
                     handleAddToCart={handleAddToCart}
                     handleRemoveFromCart={onRemoveFromCart}
                     cartAssetItems={cartAssetItems}
@@ -329,9 +352,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
             {/* Asset Details Modal */}
             <AssetDetails
-                showModal={showFullScreenModal}
+                showModal={showDetailsModal}
+                closeModal={closeDetailsModal}
                 selectedImage={selectedCard}
-                closeModal={closeFullScreenModal}
                 handleAddToCart={handleAddToCart}
                 handleRemoveFromCart={onRemoveFromCart}
                 cartAssetItems={cartAssetItems}

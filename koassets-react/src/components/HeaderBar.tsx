@@ -4,13 +4,6 @@ import type { CartAssetItem } from '../types';
 import AdobeSignInButton from './AdobeSignInButton.jsx';
 import './HeaderBar.css';
 
-// Extend window interface for cart badge function
-declare global {
-    interface Window {
-        updateCartBadge?: (numItems: number) => void;
-    }
-}
-
 // Simplified HeaderBar props interface
 interface HeaderBarPropsSimplified {
     cartAssetItems: CartAssetItem[];

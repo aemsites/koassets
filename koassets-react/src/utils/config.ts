@@ -3,18 +3,6 @@
 
 import type { ExternalParams } from '../types';
 
-declare global {
-    interface Window {
-        APP_CONFIG?: {
-            ADOBE_CLIENT_ID?: string;
-            BUCKET?: string;
-        };
-        KOAssetsConfig?: {
-            externalParams?: ExternalParams;
-        };
-    }
-}
-
 export const getConfig = () => {
     // Runtime config from window.APP_CONFIG (loaded from config.js)
     const runtimeConfig = window.APP_CONFIG || {};

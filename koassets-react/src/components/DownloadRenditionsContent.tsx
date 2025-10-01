@@ -6,14 +6,6 @@ import { formatDimensions, formatFileSize, formatFormatName } from '../utils/for
 import './DownloadRenditionsContent.css';
 import ThumbnailImage from './ThumbnailImage';
 
-// Extend window interface for download badge function
-declare global {
-    interface Window {
-        updateDownloadBadge?: (numItems: number) => void;
-    }
-}
-
-
 interface AssetData {
     asset: Asset;
     renditionsLoading: boolean;
