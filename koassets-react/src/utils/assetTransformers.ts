@@ -1,4 +1,4 @@
-import type { Asset, Metadata, KeywordValue } from '../types';
+import type { Asset, Metadata } from '../types';
 import { formatDate, formatFileSize } from './formatters';
 import { split } from './stringUtils';
 

@@ -3,14 +3,13 @@ import { createPortal } from 'react-dom';
 import { AuthorizationStatus } from '../clients/fadel-client';
 import { DEFAULT_ACCORDION_CONFIG } from '../constants/accordion';
 import { useAppConfig } from '../hooks/useAppConfig';
-import type { Asset, ImageGalleryProps, Metadata } from '../types';
+import type { Asset, ImageGalleryProps } from '../types';
 import AssetCardViewGrid from './AssetCardViewGrid';
 import AssetCardViewList from './AssetCardViewList';
 import AssetDetails from './AssetDetails/';
 import AssetPreview from './AssetPreview';
 import './ImageGallery.css';
 import SearchPanel from './SearchPanel';
-import { populateAssetFromMetadata } from '../utils';
 
 // Display list of images
 const ImageGallery: React.FC<ImageGalleryProps> = ({
@@ -42,7 +41,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     isRightsSearch = false
 }: ImageGalleryProps) => {
     // Get external params and dynamic media client from context
-    const { externalParams, dynamicMediaClient } = useAppConfig();
+    const { externalParams } = useAppConfig();
 
     // Extract accordion parameters from external params with fallbacks
     const accordionTitle = externalParams?.accordionTitle || DEFAULT_ACCORDION_CONFIG.accordionTitle;
