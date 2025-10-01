@@ -5,17 +5,6 @@ import '../MainApp.css';
 
 import { DynamicMediaClient } from '../clients/dynamicmedia-client';
 import { DEFAULT_FACETS, type ExcFacets } from '../constants/facets';
-// Extend Window interface to include our custom functions
-declare global {
-    interface Window {
-        openCart?: () => void;
-        closeCart?: () => void;
-        toggleCart?: () => void;
-        openDownloadPanel?: () => void;
-        closeDownloadPanel?: () => void;
-        toggleDownloadPanel?: () => void;
-    }
-}
 
 import type {
     Asset,
@@ -35,19 +24,6 @@ import { populateAssetFromHit } from '../utils/assetTransformers';
 import { getBucket, getExternalParams } from '../utils/config';
 import { AppConfigProvider } from './AppConfigProvider';
 
-// Extend window interface for cart functions, download functions and user authentication
-declare global {
-    interface Window {
-        openCart?: () => void;
-        closeCart?: () => void;
-        toggleCart?: () => void;
-        openDownloadPanel?: () => void;
-        closeDownloadPanel?: () => void;
-        toggleDownloadPanel?: () => void;
-        user?: unknown; // Global user object for authentication
-    }
-}
-
 // Components
 import { CalendarDate } from '@internationalized/date';
 import { createPortal } from 'react-dom';
@@ -58,7 +34,6 @@ import DownloadPanel from './CartDownloads/DownloadPanel';
 import Facets from './Facets';
 import HeaderBar from './HeaderBar';
 import ImageGallery from './ImageGallery';
-import SearchBar from './SearchBar';
 
 const HITS_PER_PAGE = 24;
 
@@ -226,25 +201,7 @@ function MainApp(): React.JSX.Element {
     const [selectedSortType, setSelectedSortType] = useState<string>('Date Created');
     const [selectedSortDirection, setSelectedSortDirection] = useState<string>('Ascending');
 
-    const searchBarRef = useRef<HTMLInputElement>(null);
     const settingsLoadedRef = useRef<boolean>(false);
-
-    const handleSetSelectedQueryType = useCallback((newQueryType: string): void => {
-        setSelectedQueryType(prevType => {
-            if (prevType !== newQueryType) {
-                setQuery('');
-            }
-            return newQueryType;
-        });
-        // Focus the query input after changing type
-        setTimeout(() => {
-            if (searchBarRef.current) {
-                searchBarRef.current.focus();
-            }
-        }, 0);
-    }, []);
-
-
 
     // Save cart items to localStorage when they change
     useEffect(() => {
@@ -482,7 +439,7 @@ function MainApp(): React.JSX.Element {
 
     // Auto-search with empty query on app load
     useEffect(() => {
-        if (!searchDisabled && authenticated && dynamicMediaClient && excFacets !== undefined) {
+        if (!searchDisabled && authenticated && dynamicMediaClient && excFacets !== undefined && document.querySelector('.koassets-search-wrapper')) {
             search();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -762,16 +719,6 @@ function MainApp(): React.JSX.Element {
                     document.body
                 )}
 
-                {/* TODO: Update this once finalized */}
-                {window.location.pathname.includes('/tools/assets-browser/index.html') && (
-                    <SearchBar
-                        query={query}
-                        setQuery={setQuery}
-                        sendQuery={search}
-                        selectedQueryType={selectedQueryType}
-                        setSelectedQueryType={handleSetSelectedQueryType}
-                        inputRef={searchBarRef}
-                    />)}
                 <div className="main-content">
                     <div className="images-container">
                         <div className="images-content-wrapper">

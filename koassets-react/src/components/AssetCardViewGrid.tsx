@@ -23,7 +23,7 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
     cartAssetItems = [],
     isSelected = false,
     onCheckboxChange,
-    showFullDetails = true
+    expandAllDetails = true
 }) => {
     // Get dynamicMediaClient from context
     const { dynamicMediaClient } = useAppConfig();
@@ -149,7 +149,7 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                             </>
                         </div>
 
-                        {showFullDetails && (
+                        {expandAllDetails && (
                             <div className="product-meta-grid">
                                 <div className="product-meta-item">
                                     <span className="product-meta-label tccc-metadata-label">SIZE</span>

@@ -1,18 +1,19 @@
-import type { Asset } from '../types';
+import type { Asset, Metadata } from '../types';
 import { formatDate, formatFileSize } from './formatters';
+import { split } from './stringUtils';
 
 // Safe extraction helpers for populateAssetFromHit
-function safeStringField(hit: Record<string, unknown>, key: string, fallback: string = 'N/A'): string {
-    const value = (hit as Record<string, unknown>)[key];
+function safeStringField(dataJson: Record<string, unknown>, key: string, fallback: string = 'N/A'): string {
+    const value = (dataJson as Record<string, unknown>)[key];
     if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value.toString();
     if (value && typeof value === 'object') return 'ERROR';
     return fallback;
 }
 
-function safeStringFromCandidates(hit: Record<string, unknown>, keys: string[], fallback: string = 'N/A'): string {
+function safeStringFromCandidates(dataJson: Record<string, unknown>, keys: string[], fallback: string = 'N/A'): string {
     let sawObject = false;
     for (const key of keys) {
-        const candidate = safeStringField(hit, key, '');
+        const candidate = safeStringField(dataJson, key, '');
         if (candidate === 'ERROR') {
             sawObject = true;
             continue;
@@ -24,13 +25,13 @@ function safeStringFromCandidates(hit: Record<string, unknown>, keys: string[], 
     return sawObject ? 'ERROR' : fallback;
 }
 
-function safeNumberField(hit: Record<string, unknown>, key: string, fallback: number = 0): number {
-    const value = (hit as Record<string, unknown>)[key];
+function safeNumberField(dataJson: Record<string, unknown>, key: string, fallback: number = 0): number {
+    const value = (dataJson as Record<string, unknown>)[key];
     return typeof value === 'number' ? value : fallback;
 }
 
-function safeDateField(hit: Record<string, unknown>, key: string): string {
-    const value = (hit as Record<string, unknown>)[key];
+function safeDateField(dataJson: Record<string, unknown>, key: string): string {
+    const value = (dataJson as Record<string, unknown>)[key];
     if (typeof value === 'number') {
         return formatDate(value);
     }
@@ -51,12 +52,12 @@ function safeDateField(hit: Record<string, unknown>, key: string): string {
 // Normalize fields that may be arrays: if the primary key contains an array,
 // join string entries with commas; otherwise, fall back to candidate keys using safeStringFromCandidates.
 function extractJoinedIfArrayElseSafe(
-    hit: Record<string, unknown>,
+    dataJson: Record<string, unknown>,
     primaryKey: string,
     candidateKeys?: string[],
     fallback: string = 'N/A'
 ): string {
-    const raw = (hit as Record<string, unknown>)[primaryKey] as unknown;
+    const raw = (dataJson as Record<string, unknown>)[primaryKey] as unknown;
     if (Array.isArray(raw)) {
         return (raw as unknown[])
             .filter((v) => typeof v === 'string' && v)
@@ -65,21 +66,17 @@ function extractJoinedIfArrayElseSafe(
             .join(', ');
     }
     const keys = candidateKeys && candidateKeys.length > 0 ? candidateKeys : [primaryKey];
-    return safeStringFromCandidates(hit, keys, fallback);
+    return safeStringFromCandidates(dataJson, keys, fallback);
 }
 
 // Extract "last token" values from objects of the form { TCCC: { #values: [...] } }
-function extractFromTcccValues(hit: Record<string, unknown>, key: string): string {
-    const raw = (hit as Record<string, unknown>)[key] as unknown;
+function extractFromTcccValues(dataJson: Record<string, unknown>, key: string): string {
+    const raw = (dataJson as Record<string, unknown>)[key] as unknown;
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
         const tcccObj = (raw as Record<string, unknown>)['TCCC'] as Record<string, unknown> | undefined;
         const values = tcccObj && (tcccObj['#values'] as unknown);
         if (Array.isArray(values)) {
-            const processed = (values as string[]).map((v) => {
-                const parts = v.split(' / ');
-                return parts[parts.length - 1].trim();
-            });
-            return processed.join(', ');
+            return values.join(', ');
         }
         return 'ERROR';
     }
@@ -87,21 +84,30 @@ function extractFromTcccValues(hit: Record<string, unknown>, key: string): strin
 }
 
 // Extract last tokens from xcm keywords object: uses _tagIDs strings, splitting by '/' or ':' and joining with commas
-function extractFromTcccTagIDs(hit: Record<string, unknown>, key: string, fallback: string = 'N/A'): string {
-    const raw = (hit as Record<string, unknown>)[key] as unknown;
+function extractFromTcccTagIDs(dataJson: Record<string, unknown>, key: string, fallback: string = 'N/A'): string {
+    const raw = (dataJson as Record<string, unknown>)[key] as unknown;
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-        const tagIds = (raw as Record<string, unknown>)['_tagIDs'] as unknown;
-        if (Array.isArray(tagIds)) {
-            const tokens = (tagIds as unknown[])
-                .filter((v) => typeof v === 'string' && v)
-                .map((v) => {
-                    const s = v as string;
-                    const idx = Math.max(s.lastIndexOf('/'), s.lastIndexOf(':'));
-                    return (idx >= 0 ? s.slice(idx + 1) : s).trim();
-                });
-            return tokens.join(', ');
+        const obj = raw as Record<string, unknown>;
+        const allValues: string[] = [];
+
+        // Go through each key in the object, skip '_tagIDs'
+        for (const objKey in obj) {
+            if (objKey !== '_tagIDs') {
+                const keyData = obj[objKey];
+                if (keyData && typeof keyData === 'object' && !Array.isArray(keyData)) {
+                    const keyObj = keyData as Record<string, unknown>;
+                    const values = keyObj['#values'];
+
+                    if (Array.isArray(values)) {
+                        allValues.push(...(values as string[]));
+                    } else if (typeof values === 'string') {
+                        allValues.push(values);
+                    }
+                }
+            }
         }
-        return fallback;
+
+        return allValues.length > 0 ? allValues.join(', ') : fallback;
     }
     return fallback;
 }
@@ -206,7 +212,7 @@ export function populateAssetFromHit(hit: Record<string, unknown>): Asset {
         derivedAssets: safeStringField(hit, 'tccc-derivedAssets'), //TODO: missing metadata
         duration: duration,
         experienceId: safeStringField(hit, 'tccc-campaignExperienceID'),
-        expired: safeStringField(hit, 'is_pur-expirationDate'), //TODO: missing metadata
+        expired: safeStringField(hit, 'is_pur-expirationDate'),
         expirationDate: safeDateField(hit, 'pur-expirationDate'),
         fadelId: safeStringField(hit, 'tccc-fadelAssetId'),
         fadelJobId: fadelJobId,
@@ -216,6 +222,7 @@ export function populateAssetFromHit(hit: Record<string, unknown>): Asset {
         formatLabel: safeStringField(hit, 'dc-format-label'),
         formatedSize: formatFileSize(safeNumberField(hit, 'size')),
         fundingBuOrMarket: fundingBuOrMarket,
+        illustratorType: safeStringField(hit, 'illustrator-Type'),
         imageHeight: imageHeight,
         imageWidth: imageWidth,
         intendedBottlerCountry: intendedBottlerCountry,
@@ -285,5 +292,258 @@ export function populateAssetFromHit(hit: Record<string, unknown>): Asset {
         workfrontId: safeStringField(hit, 'tccc-workfrontID'),
         xcmKeywords: extractFromTcccTagIDs(hit, 'xcm-keywords', ''),
         ...hit
+    } satisfies Asset;
+}
+
+// Helper functions for populateAssetFromMetadata
+function safeMetadataStringField(
+    repositoryMetadata: Record<string, unknown> | undefined,
+    assetMetadata: Record<string, unknown> | undefined,
+    key: string,
+    fallback: string = 'N/A'
+): string {
+    // Try assetMetadata first, then repositoryMetadata
+    const assetValue = assetMetadata?.[key];
+    if (typeof assetValue === 'string') return assetValue;
+
+    const repoValue = repositoryMetadata?.[key];
+    if (typeof repoValue === 'string') return repoValue;
+
+    return fallback;
+}
+
+function safeMetadataDateField(
+    repositoryMetadata: Record<string, unknown> | undefined,
+    assetMetadata: Record<string, unknown> | undefined,
+    key: string
+): string {
+    const assetValue = assetMetadata?.[key];
+    const repoValue = repositoryMetadata?.[key];
+
+    const value = assetValue || repoValue;
+    if (typeof value === 'string') {
+        // ISO string -> parse to ms
+        const ms = Date.parse(value);
+        if (!Number.isNaN(ms)) {
+            return formatDate(ms);
+        }
+    }
+    return 'N/A';
+}
+
+/**
+ * Extract values from an array of objects with 'value' property, splitting each value and taking the second part
+ * @param jsonArray - Array of objects with 'value' property
+ * @returns Joined string of processed values
+ */
+export function extractFromArrayValue(dataJson: Record<string, unknown>, key: string, fallback: string = 'N/A'): string {
+    const jsonArray = dataJson[key];
+    if (!Array.isArray(jsonArray)) return fallback;
+
+    const processed = jsonArray
+        .filter(item => item && typeof item === 'object' && 'value' in item)
+        .map(item => {
+            const valueObj = item as { value: string; };
+            const splitResult = split(valueObj.value, ':', 2);
+            return splitResult.length > 1 ? splitResult[1] : valueObj.value;
+        })
+        .filter(value => value && value.trim());
+
+    return processed.length > 0 ? processed.join(', ') : fallback;
+}
+
+/**
+ * Transforms metadata into an Asset object
+ * @param metadata - The metadata object from Dynamic Media
+ * @returns Asset object with populated properties from metadata
+ */
+export function populateAssetFromMetadata(metadata: Metadata): Asset {
+    const { repositoryMetadata, assetMetadata } = metadata;
+
+    // Convert metadata objects to generic records for helper functions
+    const repoMeta = repositoryMetadata as Record<string, unknown>;
+    const assetMeta = assetMetadata as Record<string, unknown>;
+
+    // Basic asset information (matching populateAssetFromHit pattern)
+    const name = safeMetadataStringField(repoMeta, assetMeta, 'repo:name');
+    const category = extractFromArrayValue(assetMeta, 'tccc:assetCategoryAndType');
+    const marketCovered = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:marketCovered');
+    const language = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:language');
+    const longRangePlan = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:longRangePlan');
+    const longRangePlanTactic = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:longRangePlanTactic');
+    const campaignReach = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:campaignReach');
+    const ageDemographic = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:ageDemographic');
+    const brand = extractFromArrayValue(assetMeta, 'tccc:brand');
+    const subBrand = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:subBrand');
+    const beverageType = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:beverageType');
+    const packageOrContainerType = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:packageContainerType');
+    const packageOrContainerMaterial = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:packageContainerMaterial');
+    const packageOrContainerSize = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:packageContainerSize');
+    const secondaryPackaging = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:secondaryPackaging');
+
+    // Intended Use fields
+    const intendedBottlerCountry = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:intendedBottlerCountry');
+    const intendedCustomers = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:intendedCustomers');
+    const intendedChannel = extractFromArrayValue(assetMeta, 'tccc:intendedChannel');
+
+    // Scheduled (de)activation
+    const onTime = safeMetadataDateField(repoMeta, assetMeta, 'tccc:onTime');
+    const offTime = safeMetadataDateField(repoMeta, assetMeta, 'tccc:offTime');
+
+    // Technical info
+    const imageHeight = safeMetadataStringField(repoMeta, assetMeta, 'tiff:ImageHeight');
+    const imageWidth = safeMetadataStringField(repoMeta, assetMeta, 'tiff:ImageWidth');
+    const duration = safeMetadataStringField(repoMeta, assetMeta, 'tccc:videoDuration');
+    const broadcastFormat = safeMetadataStringField(repoMeta, assetMeta, 'tccc:videoBitRate');
+    const titling = safeMetadataStringField(repoMeta, assetMeta, 'tccc:titling');
+    const ratio = safeMetadataStringField(repoMeta, assetMeta, 'tccc:ratio');
+    const orientation = safeMetadataStringField(repoMeta, assetMeta, 'tiff:Orientation');
+
+    // System Info Legacy
+    const legacyAssetId1 = safeMetadataStringField(repoMeta, assetMeta, 'tccc:legacyId1');
+    const legacyAssetId2 = safeMetadataStringField(repoMeta, assetMeta, 'tccc:legacyId2');
+    const legacyFileName = safeMetadataStringField(repoMeta, assetMeta, 'tccc:legacyFileName');
+    const sourceUploadDate = safeMetadataDateField(repoMeta, assetMeta, 'tccc:sourceUploadDate');
+    const sourceUploader = safeMetadataStringField(repoMeta, assetMeta, 'tccc:sourceUploader');
+    const jobId = safeMetadataStringField(repoMeta, assetMeta, 'tccc:jobID');
+    const projectId = safeMetadataStringField(repoMeta, assetMeta, 'tccc:projectID');
+    const legacySourceSystem = safeMetadataStringField(repoMeta, assetMeta, 'tccc:legacySourceSystem');
+    const intendedBusinessUnitOrMarket = extractFromArrayValue(assetMeta, 'tccc:intendedBusinessUnitOrMarket');
+
+    // Production
+    const leadOperatingUnit = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:leadOU');
+    const tcccContact = safeMetadataStringField(repoMeta, assetMeta, 'tccc:contact');
+    const tcccLeadAssociateLegacy = safeMetadataStringField(repoMeta, assetMeta, 'tccc:leadAssociate');
+    const fadelJobId = safeMetadataStringField(repoMeta, assetMeta, 'tccc:fadelJobId');
+
+    // Legacy Fields (additional)
+    const originalCreateDate = safeMetadataDateField(repoMeta, assetMeta, 'repo:createDate');
+    const dateUploaded = safeMetadataDateField(repoMeta, assetMeta, 'tccc:dateUploaded');
+    const underEmbargo = safeMetadataStringField(repoMeta, assetMeta, 'tccc:underEmbargo');
+    const associatedWBrand = safeMetadataStringField(repoMeta, assetMeta, 'tccc:associatedWBrand');
+    const packageDepicted = safeMetadataStringField(repoMeta, assetMeta, 'tccc:packageDepicted');
+    const fundingBuOrMarket = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:fundingBU');
+    const trackName = safeMetadataStringField(repoMeta, assetMeta, 'tccc:trackName');
+    const brandsWAssetGuideline = safeMetadataStringField(repoMeta, assetMeta, 'tccc:brandsWAssetGuideline');
+    const brandsWAssetHero = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:brandsWAssetHero');
+    const campaignsWKeyAssets = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:campaignsWKeyAssets');
+    const featuredAsset = safeMetadataStringField(repoMeta, assetMeta, 'tccc:featuredAsset');
+    const keyAsset = safeMetadataStringField(repoMeta, assetMeta, 'tccc:keyAsset');
+    const layout = safeMetadataStringField(repoMeta, assetMeta, 'tccc:layout');
+    const contractAssetJobs = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:contractAssetJobs');
+
+    // File size formatting
+    const formatedSize = repoMeta?.['repo:size'] ? formatFileSize(repoMeta['repo:size'] as number) : 'N/A';
+
+    // Extract keywords from xcm:keywords if available
+    const xcmKeywords = extractFromArrayValue(assetMeta, 'xcm:keywords');
+
+    return {
+        agencyName: safeMetadataStringField(repoMeta, assetMeta, 'tccc:agencyName'),
+        ageDemographic: ageDemographic,
+        alt: safeMetadataStringField(repoMeta, assetMeta, 'dc:title') || name,
+        assetAssociatedWithBrand: associatedWBrand,
+        assetStatus: safeMetadataStringField(repoMeta, assetMeta, 'tccc:assetStatus'),
+        beverageType: beverageType,
+        brand: brand,
+        brandsWAssetGuideline: brandsWAssetGuideline,
+        brandsWAssetHero: brandsWAssetHero,
+        broadcastFormat: broadcastFormat,
+        businessAffairsManager: safeMetadataStringField(repoMeta, assetMeta, 'tccc:businessAffairsManager'),
+        campaignActivationRemark: extractJoinedIfArrayElseSafe(assetMeta, 'tccc:campaignActivationRemark'),
+        campaignName: safeMetadataStringField(repoMeta, assetMeta, 'tccc:campaignName'),
+        campaignReach: campaignReach,
+        campaignSubActivationRemark: extractJoinedIfArrayElseSafe(assetMeta, 'tccc:campaignSubActivationRemark'),
+        campaignsWKeyAssets: campaignsWKeyAssets,
+        category: category,
+        contractAssetJobs: contractAssetJobs,
+        createBy: safeMetadataStringField(repoMeta, assetMeta, 'repo:createdBy'),
+        createDate: safeMetadataDateField(repoMeta, assetMeta, 'repo:createDate'),
+        dateUploaded: dateUploaded,
+        description: safeMetadataStringField(repoMeta, assetMeta, 'tccc:description'),
+        derivedAssets: safeMetadataStringField(repoMeta, assetMeta, 'tccc:derivedAssets'),
+        duration: duration,
+        experienceId: safeMetadataStringField(repoMeta, assetMeta, 'tccc:campaignExperienceID'),
+        expired: safeMetadataStringField(repoMeta, assetMeta, 'is_pur:expirationDate'), // NOT EXIST
+        expirationDate: safeMetadataDateField(repoMeta, assetMeta, 'pur:expirationDate'),
+        fadelId: safeMetadataStringField(repoMeta, assetMeta, 'tccc:fadelAssetId'),
+        fadelJobId: fadelJobId,
+        featuredAsset: featuredAsset,
+        format: safeMetadataStringField(repoMeta, assetMeta, 'dc:format'),
+        formatType: safeMetadataStringField(repoMeta, assetMeta, 'dc:format:type'),
+        formatLabel: safeMetadataStringField(repoMeta, assetMeta, 'dc:format:label'),
+        formatedSize: formatedSize,
+        fundingBuOrMarket: fundingBuOrMarket,
+        illustratorType: safeMetadataStringField(repoMeta, assetMeta, 'illustrator:Type'),
+        imageHeight: imageHeight,
+        imageWidth: imageWidth,
+        intendedBottlerCountry: intendedBottlerCountry,
+        intendedBusinessUnitOrMarket: intendedBusinessUnitOrMarket,
+        intendedChannel: intendedChannel,
+        intendedCustomers: intendedCustomers,
+        japaneseDescription: safeMetadataStringField(repoMeta, assetMeta, 'tccc:description.ja'),
+        japaneseKeywords: extractJoinedIfArrayElseSafe(assetMeta, 'tccc:keywords_ja'),
+        japaneseTitle: safeMetadataStringField(repoMeta, assetMeta, 'dc:title_ja'),
+        jobId: jobId,
+        keyAsset: keyAsset,
+        keywords: extractJoinedIfArrayElseSafe(assetMeta, 'tccc:keywords'),
+        language: language,
+        lastModified: safeMetadataDateField(repoMeta, assetMeta, 'tccc:lastModified'),
+        layout: layout,
+        leadOperatingUnit: leadOperatingUnit,
+        legacyAssetId1: legacyAssetId1,
+        legacyAssetId2: legacyAssetId2,
+        legacyFileName: legacyFileName,
+        legacySourceSystem: legacySourceSystem,
+        longRangePlan: longRangePlan,
+        longRangePlanTactic: longRangePlanTactic,
+        marketCovered: marketCovered,
+        masterOrAdaptation: safeMetadataStringField(repoMeta, assetMeta, 'tccc:masterOrAdaptation'),
+        media: extractJoinedIfArrayElseSafe(assetMeta, 'tccc:mediaCovered'),
+        migrationId: safeMetadataStringField(repoMeta, assetMeta, 'tccc:migrationID'),
+        modifyBy: safeMetadataStringField(repoMeta, assetMeta, 'tccc:lastModifiedBy'),
+        modifyDate: safeMetadataDateField(repoMeta, assetMeta, 'repo:modifyDate'),
+        name: name,
+        offTime: offTime,
+        onTime: onTime,
+        orientation: orientation,
+        originalCreateDate: originalCreateDate,
+        otherAssets: safeMetadataStringField(repoMeta, assetMeta, 'tccc:otherAssets'),
+        packageDepicted: packageDepicted,
+        packageOrContainerMaterial: packageOrContainerMaterial,
+        packageOrContainerSize: packageOrContainerSize,
+        packageOrContainerType: packageOrContainerType,
+        projectId: projectId,
+        publishBy: safeMetadataStringField(repoMeta, assetMeta, 'tccc:publishBy'),
+        publishDate: safeMetadataDateField(repoMeta, assetMeta, 'tccc:publishDate'),
+        publishStatus: safeMetadataStringField(repoMeta, assetMeta, 'tccc:publishStatus'),
+        ratio: ratio,
+        resolution: safeMetadataStringField(repoMeta, assetMeta, 'tccc:resolution'),
+        rightsEndDate: safeMetadataDateField(repoMeta, assetMeta, 'tccc:rightsEndDate'),
+        readyToUse: safeMetadataStringField(repoMeta, assetMeta, 'tccc:readyToUse'),
+        rightsNotes: safeMetadataStringField(repoMeta, assetMeta, 'tccc:rightsNotes'),
+        rightsProfileTitle: safeMetadataStringField(repoMeta, assetMeta, 'tccc:rightsProfileTitle'),
+        rightsStartDate: safeMetadataDateField(repoMeta, assetMeta, 'tccc:rightsStartDate'),
+        rightsStatus: safeMetadataStringField(repoMeta, assetMeta, 'tccc:rightsStatus'),
+        riskTypeManagement: safeMetadataStringField(repoMeta, assetMeta, 'tccc:riskTypeMgmt'),
+        secondaryPackaging: secondaryPackaging,
+        sourceAsset: safeMetadataStringField(repoMeta, assetMeta, 'tccc:sourceAsset'),
+        sourceId: safeMetadataStringField(repoMeta, assetMeta, 'tccc:sourceId'),
+        sourceUploadDate: sourceUploadDate,
+        sourceUploader: sourceUploader,
+        subBrand: subBrand,
+        tags: safeMetadataStringField(repoMeta, assetMeta, 'tccc:tags'),
+        tcccContact: tcccContact,
+        tcccLeadAssociateLegacy: tcccLeadAssociateLegacy,
+        titling: titling,
+        title: safeMetadataStringField(repoMeta, assetMeta, 'dc:title'),
+        trackName: trackName,
+        underEmbargo: underEmbargo,
+        url: '', // Loaded lazily
+        usage: safeMetadataStringField(repoMeta, assetMeta, 'tccc:usage'),
+        workfrontId: safeMetadataStringField(repoMeta, assetMeta, 'tccc:workfrontID'),
+        xcmKeywords: xcmKeywords,
+        // Include all original metadata for any additional fields needed
+        ...metadata
     } satisfies Asset;
 }

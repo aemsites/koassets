@@ -232,6 +232,7 @@ function createAssetCard(asset, collectionId) {
   // Image area
   const imageArea = document.createElement('div');
   imageArea.className = 'asset-image-area';
+  imageArea.style.cursor = 'pointer'; // Make it clear the image is clickable
 
   const directSrc = resolvePreviewUrlFromAsset(asset);
   if (directSrc) {
@@ -267,6 +268,15 @@ function createAssetCard(asset, collectionId) {
     placeholder.textContent = 'Preview not available';
     imageArea.appendChild(placeholder);
   }
+
+  // Add click event to imageArea to trigger details view
+  imageArea.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (window.openDetailsView) {
+      window.openDetailsView(asset, true);
+    }
+  });
 
   // Info area
   const infoArea = document.createElement('div');

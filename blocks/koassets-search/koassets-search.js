@@ -84,15 +84,25 @@ function loadReactApp() {
 }
 
 function loadCSS(href) {
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = href;
-  link.onerror = () => console.warn(`Failed to load CSS: ${href}`);
-  document.head.appendChild(link);
+  // Prevent duplicate loading
+  if (!document.querySelector(`head > link[href="${href}"]`)) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.onerror = () => console.warn(`Failed to load CSS: ${href}`);
+    document.head.appendChild(link);
+  }
 }
 
 function loadJS(src) {
   return new Promise((resolve, reject) => {
+    // Check if script is already loaded
+    const existingScript = document.querySelector(`head > script[src="${src}"]`);
+    if (existingScript) {
+      resolve();
+      return;
+    }
+
     const script = document.createElement('script');
     script.type = 'module';
     script.src = src;
