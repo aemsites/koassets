@@ -3,11 +3,6 @@ import { AlgoliaSearchQuery, AlgoliaSearchRequest, Asset, Rendition } from '../t
 import { mimeTypeToExtension } from '../utils/mimeTypeConverter';
 
 // Extend window interface for user authentication
-declare global {
-    interface Window {
-        user?: unknown; // Global user object for authentication
-    }
-}
 
 export const ORIGINAL_RENDITION = 'original';
 

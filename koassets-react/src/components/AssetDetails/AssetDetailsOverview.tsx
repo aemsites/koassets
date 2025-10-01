@@ -54,7 +54,7 @@ const AssetDetailsOverview: React.FC<AssetDetailsOverviewProps> = ({ selectedIma
 
                         <div className="asset-details-group">
                             <h4 className="asset-details-main-metadata-label">File Type</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.formatLabel as string}</span>
+                            <span className="asset-details-main-metadata-value">{selectedImage?.illustratorType as string}</span>
                         </div>
 
                         <div className="asset-details-group">

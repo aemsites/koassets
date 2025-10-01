@@ -24,8 +24,8 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
     selectedSortDirection,
     onSortTypeChange,
     onSortDirectionChange,
-    showFullDetails,
-    onShowFullDetailsChange,
+    expandAllDetails,
+    onExpandAllDetailsChange,
     viewType,
     onViewTypeChange,
     selectAuthorized,
@@ -33,7 +33,7 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
     isRightsSearch = false
 }) => {
     const handleToggleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        onShowFullDetailsChange?.(e.target.checked);
+        onExpandAllDetailsChange?.(e.target.checked);
     };
 
     const handleGridViewClick = () => {
@@ -71,8 +71,8 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
                         />
 
                         {/* Show Full Details Toggle */}
-                        <div className="cmp-title" id="showfulldetails">
-                            <h1>Show full details<label className="switch"><input type="checkbox" checked={showFullDetails} onChange={handleToggleChange} /><span className="slider round"></span></label></h1>
+                        <div className="cmp-title">
+                            <h1>Show full details<label className="switch"><input type="checkbox" checked={expandAllDetails} onChange={handleToggleChange} /><span className="slider round"></span></label></h1>
                         </div>
                     </div>
 
