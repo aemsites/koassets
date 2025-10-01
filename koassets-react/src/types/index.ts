@@ -73,7 +73,7 @@ export interface Asset {
     agencyName?: string;
     ageDemographic?: string;
     alt?: string;
-    assetId?: string;
+    assetId: string;
     assetStatus?: string;
     beverageType?: string;
     brand?: string;

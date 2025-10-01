@@ -110,33 +110,12 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         console.debug('openDetailsView called with asset:', asset, 'loadMetadata:', loadMetadata);
         if (asset) {
             console.debug('Setting selected card with asset ID:', asset.assetId, 'Asset object:', JSON.stringify(asset, null, 2));
-            if (loadMetadata && asset.assetId) {
-                // Try to load metadata from sessionStorage first
-                const metadataCache = JSON.parse(sessionStorage.getItem('assetMetadataCache') || '{}');
-                let metadata = metadataCache[asset.assetId];
-
-                if (!metadata) {
-                    // Fetch metadata if not in cache
-                    metadata = await dynamicMediaClient?.getMetadata(asset.assetId);
-
-                    // Store in sessionStorage
-                    if (metadata) {
-                        metadataCache[asset.assetId] = metadata;
-                        sessionStorage.setItem('assetMetadataCache', JSON.stringify(metadataCache));
-                    }
-                }
-
-                console.debug('Metadata:', metadata);
-                const populatedAsset = populateAssetFromMetadata(metadata as Metadata);
-                console.debug('Populated asset:', populatedAsset);
-                asset = { ...asset, ...populatedAsset };
-            }
             setSelectedCard(asset as Asset);
         } else {
             console.log('No asset provided to openDetailsView');
         }
         setShowDetailsModal(true);
-    }, [dynamicMediaClient]);
+    }, []);
 
     // Expose cart and download panel functions to window for EDS header integration
     useEffect(() => {
