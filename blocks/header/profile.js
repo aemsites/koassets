@@ -61,9 +61,17 @@ function createProfileModal() {
            </div>
            ${window.user?.su || canSudo ? `
            <div class="profile-field" id="usertype-field" style="${!window.user?.su ? 'display: none;' : ''}">
-             <label>USER TYPE</label>
+             <label>USER TYPE (In Microsoft Directory)</label>
              <div class="profile-value" id="profile-usertype">${currentUserType}</div>
-             <input type="text" class="profile-input" id="profile-usertype-input" value="${currentUserType}" style="display: none;">
+             <div class="profile-usertype-dropdown" id="profile-usertype-dropdown" style="display: none;">
+               <select class="profile-input" id="profile-usertype-select">
+                 <option value="" ${currentUserType === '' ? 'selected' : ''}>Select user type...</option>
+                 <option value="10" ${currentUserType === '10' ? 'selected' : ''}>Employee - 10</option>
+                 <option value="11" ${currentUserType === '11' ? 'selected' : ''}>Contingent Worker - 11</option>
+                 <option value="custom" ${currentUserType !== '10' && currentUserType !== '11' && currentUserType !== '' ? 'selected' : ''}>Other</option>
+               </select>
+               <input type="text" class="profile-input profile-usertype-custom" id="profile-usertype-custom" value="${currentUserType !== '10' && currentUserType !== '11' ? currentUserType : ''}" placeholder="Enter custom user type" style="${currentUserType !== '10' && currentUserType !== '11' && currentUserType !== '' ? 'display: block; margin-top: 8px;' : 'display: none; margin-top: 8px;'}">
+             </div>
            </div>
            ` : ''}
          </div>
@@ -175,14 +183,14 @@ ${window.user?.su ? 'Simulating User' : 'Simulate User'}
     // Handle USER TYPE field visibility
     const userTypeField = document.getElementById('usertype-field');
     const userTypeValue = document.getElementById('profile-usertype');
-    const userTypeInput = document.getElementById('profile-usertype-input');
-    if (userTypeField && userTypeValue && userTypeInput) {
+    const userTypeDropdown = document.getElementById('profile-usertype-dropdown');
+    if (userTypeField && userTypeValue && userTypeDropdown) {
       // Hide USER TYPE field if not currently impersonating
       if (!window.user?.su) {
         userTypeField.style.display = 'none';
       }
       userTypeValue.style.display = 'block';
-      userTypeInput.style.display = 'none';
+      userTypeDropdown.style.display = 'none';
     }
   } else {
     // Switch to edit mode
@@ -218,12 +226,12 @@ ${window.user?.su ? 'Simulating User' : 'Simulate User'}
     // Show and handle USER TYPE field in edit mode
     const userTypeField = document.getElementById('usertype-field');
     const userTypeValue = document.getElementById('profile-usertype');
-    const userTypeInput = document.getElementById('profile-usertype-input');
-    if (userTypeField && userTypeValue && userTypeInput) {
+    const userTypeDropdown = document.getElementById('profile-usertype-dropdown');
+    if (userTypeField && userTypeValue && userTypeDropdown) {
       // Always show USER TYPE field in edit mode (for sudo users)
       userTypeField.style.display = 'block';
       userTypeValue.style.display = 'none';
-      userTypeInput.style.display = 'block';
+      userTypeDropdown.style.display = 'block';
     }
   }
 }
@@ -247,7 +255,8 @@ function handleSave() {
     const nameInput = document.getElementById('profile-name-input');
     const emailInput = document.getElementById('profile-email-input');
     const countryInput = document.getElementById('profile-country-input');
-    const userTypeInput = document.getElementById('profile-usertype-input');
+    const userTypeSelect = document.getElementById('profile-usertype-select');
+    const userTypeCustom = document.getElementById('profile-usertype-custom');
 
     if (nameInput && emailInput && countryInput) {
       let needsReload = false;
@@ -268,9 +277,18 @@ function handleSave() {
         needsReload = true;
       }
 
-      if (userTypeInput && userTypeInput.value !== (window.user?.usertype || '')) {
-        setCookie('SUDO_USERTYPE', userTypeInput.value);
-        needsReload = true;
+      if (userTypeSelect) {
+        let userTypeValue = '';
+        if (userTypeSelect.value === 'custom') {
+          userTypeValue = userTypeCustom ? userTypeCustom.value : '';
+        } else {
+          userTypeValue = userTypeSelect.value;
+        }
+
+        if (userTypeValue !== (window.user?.usertype || '')) {
+          setCookie('SUDO_USERTYPE', userTypeValue);
+          needsReload = true;
+        }
       }
 
       // Only reload if we actually set any cookies
@@ -311,9 +329,10 @@ export default function showProfileModal() {
     const nameInput = modal.querySelector('#profile-name-input');
     const emailInput = modal.querySelector('#profile-email-input');
     const countryInput = modal.querySelector('#profile-country-input');
-    const userTypeInput = modal.querySelector('#profile-usertype-input');
+    const userTypeSelect = modal.querySelector('#profile-usertype-select');
+    const userTypeCustom = modal.querySelector('#profile-usertype-custom');
 
-    [nameInput, emailInput, countryInput, userTypeInput].forEach((input) => {
+    [nameInput, emailInput, countryInput, userTypeCustom].forEach((input) => {
       if (input) {
         input.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
@@ -323,6 +342,21 @@ export default function showProfileModal() {
         });
       }
     });
+
+    // Add change event listener to usertype select to show/hide custom input
+    if (userTypeSelect) {
+      userTypeSelect.addEventListener('change', (e) => {
+        const customInput = document.getElementById('profile-usertype-custom');
+        if (customInput) {
+          if (e.target.value === 'custom') {
+            customInput.style.display = 'block';
+            customInput.focus();
+          } else {
+            customInput.style.display = 'none';
+          }
+        }
+      });
+    }
 
     // Add reset button event listener (only if window.user.su is set)
     const resetBtn = modal.querySelector('#profile-reset-btn');
