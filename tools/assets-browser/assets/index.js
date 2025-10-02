@@ -31547,7 +31547,6 @@ const getConfig = () => {
     BUCKET: runtimeConfig.BUCKET || "delivery-p64403-e544653"
   };
 };
-const getAdobeClientId = () => getConfig().ADOBE_CLIENT_ID;
 const getBucket = () => getConfig().BUCKET;
 const getExternalParams = () => {
   var _a;
@@ -35966,284 +35965,6 @@ const Facets = ({
     ] })
   ] });
 };
-const AdobeSignInButton = ({ onAuthenticated, onSignOut }) => {
-  const [loading, setLoading] = reactExports.useState(false);
-  const [error, setError] = reactExports.useState(null);
-  const [isAuthenticated, setIsAuthenticated] = reactExports.useState(false);
-  const imsConfig = reactExports.useMemo(() => ({
-    clientId: getAdobeClientId(),
-    redirectUri: window.location.href,
-    scope: "AdobeID,openid,read_organizations,additional_info.projectedProductContext",
-    responseType: "token"
-    // Implicit flow - returns token directly
-  }), []);
-  const performSilentRefresh = reactExports.useCallback(async () => {
-    return new Promise((resolve) => {
-      const iframe = document.createElement("iframe");
-      iframe.style.display = "none";
-      iframe.src = `https://ims-na1.adobelogin.com/ims/authorize/v2?${new URLSearchParams({
-        client_id: imsConfig.clientId,
-        redirect_uri: imsConfig.redirectUri,
-        scope: imsConfig.scope,
-        response_type: imsConfig.responseType,
-        prompt: "none"
-        // Silent refresh
-      }).toString()}`;
-      const timeout = setTimeout(() => {
-        cleanup();
-        resolve(null);
-      }, 1e4);
-      const cleanup = () => {
-        clearTimeout(timeout);
-        document.body.removeChild(iframe);
-        window.removeEventListener("message", handleMessage);
-      };
-      const handleMessage = (event) => {
-        if (event.origin !== "https://ims-na1.adobelogin.com") return;
-        try {
-          const url = new URL(event.data);
-          const params = new URLSearchParams(url.hash.substring(1));
-          const accessToken = params.get("access_token");
-          const error2 = params.get("error");
-          cleanup();
-          if (error2) {
-            resolve(null);
-            return;
-          }
-          if (accessToken) {
-            const token = `Bearer ${accessToken}`;
-            const expiresIn = params.get("expires_in");
-            localStorage.setItem("accessToken", token);
-            const expiresAt = Date.now() + (expiresIn ? parseInt(expiresIn) : 3600) * 1e3;
-            localStorage.setItem("tokenExpiresAt", expiresAt.toString());
-            setIsAuthenticated(true);
-            if (onAuthenticated) {
-              onAuthenticated(token);
-            }
-            resolve(token);
-            return;
-          }
-        } catch (err) {
-          console.error("Error parsing silent refresh response:", err);
-        }
-        resolve(null);
-      };
-      window.addEventListener("message", handleMessage);
-      document.body.appendChild(iframe);
-    });
-  }, [imsConfig, onAuthenticated]);
-  const isTokenExpired = reactExports.useCallback(() => {
-    const expiresAt = localStorage.getItem("tokenExpiresAt");
-    if (!expiresAt) return true;
-    const expirationTime = parseInt(expiresAt);
-    const now = Date.now();
-    const fiveMinutes = 5 * 60 * 1e3;
-    return now >= expirationTime - fiveMinutes;
-  }, []);
-  const setupTokenRefresh = reactExports.useCallback(() => {
-    const expiresAt = localStorage.getItem("tokenExpiresAt");
-    if (!expiresAt) return;
-    const expirationTime = parseInt(expiresAt);
-    const now = Date.now();
-    const refreshTime = expirationTime - 5 * 60 * 1e3;
-    const timeUntilRefresh = refreshTime - now;
-    if (timeUntilRefresh > 0) {
-      setTimeout(async () => {
-        await performSilentRefresh();
-      }, timeUntilRefresh);
-    }
-  }, [performSilentRefresh]);
-  const handleSignIn = () => {
-    setError(null);
-    setLoading(true);
-    try {
-      if (!imsConfig.clientId) {
-        throw new Error("Adobe Client ID not configured. Please set VITE_ADOBE_CLIENT_ID environment variable.");
-      }
-      const params = new URLSearchParams({
-        client_id: imsConfig.clientId,
-        redirect_uri: imsConfig.redirectUri,
-        scope: imsConfig.scope,
-        response_type: imsConfig.responseType
-      });
-      const authUrl = `https://ims-na1.adobelogin.com/ims/authorize/v2?${params.toString()}`;
-      window.location.href = authUrl;
-    } catch (error2) {
-      console.error("Sign in error:", error2);
-      setError(`Sign in failed: ${error2 instanceof Error ? error2.message : String(error2)}`);
-      setLoading(false);
-    }
-  };
-  const handleSignOut = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("tokenExpiresAt");
-    setError(null);
-    if (onSignOut) {
-      onSignOut();
-    }
-  };
-  reactExports.useEffect(() => {
-    if (window.location.hash) {
-      try {
-        const params = new URLSearchParams(window.location.hash.substring(1));
-        const accessToken = params.get("access_token");
-        const expiresIn = params.get("expires_in");
-        const error2 = params.get("error");
-        const errorDescription = params.get("error_description");
-        if (error2) {
-          setError(`OAuth error: ${error2} - ${errorDescription || "No description"}`);
-          setLoading(false);
-          return;
-        }
-        if (accessToken) {
-          const token = `Bearer ${accessToken}`;
-          setIsAuthenticated(true);
-          localStorage.setItem("accessToken", token);
-          if (expiresIn) {
-            const expiresAt = Date.now() + parseInt(expiresIn) * 1e3;
-            localStorage.setItem("tokenExpiresAt", expiresAt.toString());
-          } else {
-            const expiresAt = Date.now() + 60 * 60 * 1e3;
-            localStorage.setItem("tokenExpiresAt", expiresAt.toString());
-          }
-          if (onAuthenticated) {
-            onAuthenticated(token);
-          }
-          window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
-          setupTokenRefresh();
-          setLoading(false);
-          return;
-        }
-      } catch (error2) {
-        console.error("Error parsing hash:", error2);
-        setError("Error parsing authentication response");
-        setLoading(false);
-      }
-    }
-    if (window.location.pathname.includes("access_token")) {
-      try {
-        const pathString = window.location.pathname;
-        const tokenStartIndex = pathString.indexOf("access_token=");
-        if (tokenStartIndex !== -1) {
-          const tokenString = pathString.substring(tokenStartIndex);
-          const params = new URLSearchParams(tokenString);
-          const accessToken = params.get("access_token");
-          const expiresIn = params.get("expires_in");
-          const error2 = params.get("error");
-          const errorDescription = params.get("error_description");
-          if (error2) {
-            setError(`OAuth error: ${error2} - ${errorDescription || "No description"}`);
-            setLoading(false);
-            return;
-          }
-          if (accessToken) {
-            const token = `Bearer ${accessToken}`;
-            setIsAuthenticated(true);
-            localStorage.setItem("accessToken", token);
-            if (expiresIn) {
-              const expiresAt = Date.now() + parseInt(expiresIn) * 1e3;
-              localStorage.setItem("tokenExpiresAt", expiresAt.toString());
-            } else {
-              const expiresAt = Date.now() + 60 * 60 * 1e3;
-              localStorage.setItem("tokenExpiresAt", expiresAt.toString());
-            }
-            if (onAuthenticated) {
-              onAuthenticated(token);
-            }
-            const cleanPath = tokenStartIndex === 1 ? "/" : window.location.pathname.substring(0, tokenStartIndex - 1);
-            const cleanUrl = `${window.location.origin}${cleanPath}${window.location.search}`;
-            window.history.replaceState({}, document.title, cleanUrl);
-            setupTokenRefresh();
-            setLoading(false);
-            return;
-          }
-        }
-      } catch (error2) {
-        console.error("Error parsing access_token from pathname:", error2);
-        setError("Error parsing authentication response from URL");
-        setLoading(false);
-      }
-    }
-    const checkExistingToken = async () => {
-      const storedToken = localStorage.getItem("accessToken");
-      const storedExpiresAt = localStorage.getItem("tokenExpiresAt");
-      if (storedToken && storedExpiresAt) {
-        if (isTokenExpired()) {
-          const refreshedToken = await performSilentRefresh();
-          if (refreshedToken) {
-            setupTokenRefresh();
-          } else {
-            localStorage.removeItem("accessToken");
-            localStorage.removeItem("tokenExpiresAt");
-            setIsAuthenticated(false);
-          }
-        } else {
-          setIsAuthenticated(true);
-          if (onAuthenticated) {
-            onAuthenticated(storedToken);
-          }
-          setupTokenRefresh();
-        }
-      }
-      setLoading(false);
-    };
-    checkExistingToken();
-  }, [onAuthenticated, isTokenExpired, performSilentRefresh, setupTokenRefresh]);
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "button",
-      {
-        type: "button",
-        className: "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200",
-        style: {
-          backgroundColor: "var(--primary-color)",
-          color: "#fff",
-          opacity: loading ? 0.7 : 1
-        },
-        onClick: isAuthenticated ? handleSignOut : handleSignIn,
-        disabled: loading,
-        children: loading ? isAuthenticated ? "Signing out..." : "Signing in..." : isAuthenticated ? "Sign out" : "Sign in with Adobe"
-      }
-    ),
-    error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-sm text-red-600", children: error })
-  ] });
-};
-const HeaderBar = ({
-  cartAssetItems,
-  // Keep for window.updateCartBadge
-  handleAuthenticated,
-  handleSignOut
-}) => {
-  const { externalParams: externalParams2 } = useAppConfig();
-  const isBlockIntegration2 = externalParams2 == null ? void 0 : externalParams2.isBlockIntegration;
-  reactExports.useEffect(() => {
-    if (window.updateCartBadge && typeof window.updateCartBadge === "function") {
-      window.updateCartBadge(cartAssetItems.length);
-    }
-  }, [cartAssetItems.length]);
-  const handleLogoClick = () => {
-    window.location.assign("/");
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "app-header", children: [
-    !isBlockIntegration2 && /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "img",
-      {
-        className: "app-logo",
-        src: `${"/tools/assets-browser/"}ko-assets-logo.png`,
-        alt: "KO Assets Logo",
-        onClick: handleLogoClick
-      }
-    ),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "header-controls", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "auth-container", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-      AdobeSignInButton,
-      {
-        onAuthenticated: handleAuthenticated,
-        onSignOut: handleSignOut
-      }
-    ) }) })
-  ] });
-};
 const DEFAULT_ACCORDION_CONFIG = {
   accordionTitle: "Search Assets - where you can discover the company's latest and greatest content!",
   accordionContent: `<p><b>SEARCH:</b> Use the search bar in conjunction with the filters on the right to filter by usage rights, campaign, brand, asset type, and more.</p>
@@ -38298,13 +38019,6 @@ function MainApp() {
     const params = getExternalParams();
     return params;
   });
-  const [accessToken, setAccessToken] = reactExports.useState(() => {
-    try {
-      return localStorage.getItem("accessToken") || "";
-    } catch {
-      return "";
-    }
-  });
   const [bucket] = reactExports.useState(() => {
     try {
       return getBucket();
@@ -38312,9 +38026,8 @@ function MainApp() {
       return "";
     }
   });
-  const [authenticated, setAuthenticated] = reactExports.useState(() => {
-    const hasAccessToken = Boolean(localStorage.getItem("accessToken"));
-    return hasAccessToken || isCookieAuth();
+  const [authenticated, _setAuthenticated] = reactExports.useState(() => {
+    return isCookieAuth();
   });
   const [dynamicMediaClient, setDynamicMediaClient] = reactExports.useState(null);
   const [query, setQuery] = reactExports.useState("");
@@ -38388,10 +38101,6 @@ function MainApp() {
     localStorage.setItem("cartAssetItems", JSON.stringify(cartAssetItems));
   }, [cartAssetItems]);
   reactExports.useEffect(() => {
-    const hasAccessToken = Boolean(accessToken);
-    setAuthenticated(hasAccessToken || isCookieAuth());
-  }, [accessToken]);
-  reactExports.useEffect(() => {
     if (authenticated && bucket) {
       if (isCookieAuth()) {
         console.debug("🔑 Authenticated via Cookie.");
@@ -38406,13 +38115,6 @@ function MainApp() {
       setDynamicMediaClient(null);
     }
   }, [authenticated, bucket]);
-  reactExports.useEffect(() => {
-    try {
-      localStorage.setItem("accessToken", accessToken || "");
-    } catch (error) {
-      console.warn("Failed to save access token to localStorage:", error);
-    }
-  }, [accessToken]);
   const processDMImages = reactExports.useCallback(async (content, isLoadingMore2 = false) => {
     var _a2;
     if (!isLoadingMore2) {
@@ -38666,24 +38368,6 @@ function MainApp() {
   const handleSortDirectionDescending = () => {
     console.log("Sort direction: Descending");
   };
-  const handleIMSAccessToken = (token) => {
-    setAccessToken(token);
-  };
-  const handleSignOut = () => {
-    console.log("🚪 User signed out, clearing access token");
-    setAccessToken("");
-    try {
-      const localStorageLength = localStorage.length;
-      console.log(`- Clearing ${localStorageLength} localStorage items`);
-      localStorage.clear();
-      const sessionStorageLength = sessionStorage.length;
-      console.log(`- Clearing ${sessionStorageLength} sessionStorage items`);
-      sessionStorage.clear();
-      console.log("✅ All browser storage cleared successfully");
-    } catch (error) {
-      console.error("❌ Error clearing browser storage:", error);
-    }
-  };
   const handleToggleMobileFilter = () => {
     setIsMobileFilterOpen(!isMobileFilterOpen);
   };
@@ -38741,14 +38425,6 @@ function MainApp() {
       fetchAssetRenditions,
       imagePresets,
       children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "container", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          HeaderBar,
-          {
-            cartAssetItems,
-            handleAuthenticated: handleIMSAccessToken,
-            handleSignOut
-          }
-        ),
         reactDomExports.createPortal(
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             CartPanel,
@@ -38822,21 +38498,6 @@ const App = () => {
     /* @__PURE__ */ jsxRuntimeExports.jsx($02c59b34bd70955a$export$f2815235e76a62b9, {})
   ] });
 };
-if (window.opener && window.location.hash.includes("access_token=")) {
-  console.log("Relay running", window.location.href);
-  try {
-    const params = new URLSearchParams(window.location.hash.substring(1));
-    const accessToken = params.get("access_token");
-    if (accessToken) {
-      window.opener.postMessage(
-        { access_token: accessToken },
-        window.location.origin
-      );
-      window.close();
-    }
-  } catch (e) {
-  }
-}
 const rootElement = document.getElementById("root");
 if (!rootElement) {
   throw new Error("Root element not found");

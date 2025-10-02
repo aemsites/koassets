@@ -32,7 +32,6 @@ import { calendarDateToEpoch } from '../utils/formatters';
 import CartPanel from './CartDownloads/CartPanel';
 import DownloadPanel from './CartDownloads/DownloadPanel';
 import Facets from './Facets';
-import HeaderBar from './HeaderBar';
 import ImageGallery from './ImageGallery';
 
 const HITS_PER_PAGE = 24;
@@ -78,13 +77,6 @@ function MainApp(): React.JSX.Element {
     });
 
     // Local state
-    const [accessToken, setAccessToken] = useState<string>(() => {
-        try {
-            return localStorage.getItem('accessToken') || '';
-        } catch {
-            return '';
-        }
-    });
     const [bucket] = useState<string>(() => {
         try {
             return getBucket();
@@ -93,10 +85,9 @@ function MainApp(): React.JSX.Element {
         }
     });
 
-    // Authentication state - either IMS or cookie authenticated
-    const [authenticated, setAuthenticated] = useState<boolean>(() => {
-        const hasAccessToken = Boolean(localStorage.getItem('accessToken'));
-        return hasAccessToken || isCookieAuth();
+    // Authentication state - cookie authenticated
+    const [authenticated, _setAuthenticated] = useState<boolean>(() => {
+        return isCookieAuth();
     });
 
     const [dynamicMediaClient, setDynamicMediaClient] = useState<DynamicMediaClient | null>(null);
@@ -209,11 +200,6 @@ function MainApp(): React.JSX.Element {
     }, [cartAssetItems]);
 
     useEffect(() => {
-        const hasAccessToken = Boolean(accessToken);
-        setAuthenticated(hasAccessToken || isCookieAuth());
-    }, [accessToken]);
-
-    useEffect(() => {
         // Only create client when authenticated and bucket is available
         if (authenticated && bucket) {
             if (isCookieAuth()) {
@@ -229,16 +215,6 @@ function MainApp(): React.JSX.Element {
             setDynamicMediaClient(null);
         }
     }, [authenticated, bucket]);
-
-    // Keep accessToken in sync with localStorage
-    useEffect(() => {
-        try {
-            localStorage.setItem('accessToken', accessToken || '');
-        } catch (error) {
-            // Silently fail if localStorage is not available
-            console.warn('Failed to save access token to localStorage:', error);
-        }
-    }, [accessToken]);
 
     // Process and display Adobe Dynamic Media images
     const processDMImages = useCallback(async (content: unknown, isLoadingMore: boolean = false): Promise<void> => {
@@ -593,29 +569,6 @@ function MainApp(): React.JSX.Element {
     };
 
 
-    const handleIMSAccessToken = (token: string): void => {
-        setAccessToken(token);
-    };
-
-    const handleSignOut = (): void => {
-        console.log('🚪 User signed out, clearing access token');
-        setAccessToken('');
-        try {
-            // Clear all localStorage
-            const localStorageLength = localStorage.length;
-            console.log(`- Clearing ${localStorageLength} localStorage items`);
-            localStorage.clear();
-
-            // Clear all sessionStorage
-            const sessionStorageLength = sessionStorage.length;
-            console.log(`- Clearing ${sessionStorageLength} sessionStorage items`);
-            sessionStorage.clear();
-
-            console.log('✅ All browser storage cleared successfully');
-        } catch (error) {
-            console.error('❌ Error clearing browser storage:', error);
-        }
-    };
 
     // Toggle mobile filter panel
     const handleToggleMobileFilter = (): void => {
@@ -685,11 +638,6 @@ function MainApp(): React.JSX.Element {
             imagePresets={imagePresets}
         >
             <div className="container">
-                <HeaderBar
-                    cartAssetItems={cartAssetItems}
-                    handleAuthenticated={handleIMSAccessToken}
-                    handleSignOut={handleSignOut}
-                />
 
                 {/* Cart Container - moved from HeaderBar, now uses Portal */}
                 {createPortal(
