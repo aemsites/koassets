@@ -78,78 +78,42 @@ function forceSearchFilter(search, constraint) {
   }
 }
 
-async function searchAuthorization(request) {
-  const search = await request.json();
+const USER_TYPE = {
+  EMPLOYEE: 'employee',
+  CONTIGENT_WORKER: 'contigent',
+  AGENCY: 'agency',
+  CUSTOMER: 'customer',
+  BOTTLER: 'bottler',
+  UNKNOWN: 'unknown',
+};
 
-  const USER_TYPE = {
-    EMPLOYEE: 'employee',
-    CONTIGENT_WORKER: 'contigent',
-    AGENCY: 'agency',
-    CUSTOMER: 'customer',
-    BOTTLER: 'bottler',
-    UNKNOWN: 'unknown',
-  };
-
-  const user = {
-    data: request.user,
-    domain: request.user.email.split('@').pop().toLowerCase(),
-    type: USER_TYPE.UNKNOWN,
-  }
+function getUserType(user) {
   if (user.domain === 'coca-cola.com') {
-    if (user.data.usertype === '10') {
-      user.type = USER_TYPE.EMPLOYEE;
-    } else if (user.data.usertype === '11') {
-      user.type = USER_TYPE.CONTIGENT_WORKER;
+    if (user.usertype === '10') {
+      return USER_TYPE.EMPLOYEE;
+    } else if (user.usertype === '11') {
+      return USER_TYPE.CONTIGENT_WORKER;
     }
   }
 
-  // TODO: make agency, customer & bottler authoriable in EDS sheet
+  // TODO: make agency, customer & bottler authorable in EDS sheet
   // change all toLowerCase() when reading
   const AGENCIES = ['bertelsmann.de'];
   const CUSTOMERS = ['mcdonalds.com'];
   const BOTTLERS = ['brn.com.mx', 'carlsberg.dk'];
+
   if (AGENCIES.includes(user.domain)) {
-    user.type = USER_TYPE.AGENCY;
+    return USER_TYPE.AGENCY;
   } else if (CUSTOMERS.includes(user.domain)) {
-    user.type = USER_TYPE.CUSTOMER;
+    return USER_TYPE.CUSTOMER;
   } else if (BOTTLERS.includes(user.domain)) {
-    user.type = USER_TYPE.BOTTLER;
+    return USER_TYPE.BOTTLER;
   }
 
-  // TODO: make user brand access authorable - pull from EDS sheet
-  user.restrictedBrands = ['nestea'];
-  console.log('user', user);
+  return USER_TYPE.UNKNOWN;
+}
 
-  // RESTRICTED BRAND CHECK ------------------------------------------------------
-  // TODO: DISABLED for now. does not seem possible with Algolia and current index setup
-  // TODO: make restrictedBrands configurable - pull from EDS sheet
-  const restrictedBrands = ['kirks-ko','carlysle-farm-ko','chill-out','m-hydro-ko','diet-canada-dry-ko','lemon-paerora','live','roar-ko','aloe-gloe','burn','deep-spring','diet-dr-pepper-ko','dr-pepper-ko','enviga','full-throttle','gladiator','kirks','monster-ko','mother','moxie-ko','nalu','nestea','nestea-cool','nos','relentless'];
-  // const restrictedBrands = ['nalu' ,'nestea'];
-
-  const hasBrandOfUser = user.restrictedBrands.map(brand => `tccc-brand._tagIDs:'tccc:brand/${brand}'`).join(' OR ');
-  const hasNoRestrictedBrand = restrictedBrands.map(brand => `tccc-brand._tagIDs:'tccc:brand/${brand}'`).join(' OR ');
-  // Problem: 'a OR (b AND c)' is not supported by Aloglia
-  // https://www.algolia.com/doc/guides/managing-results/refine-results/filtering/in-depth/combining-boolean-operators#use-of-parentheses
-  // const restrictedBrand = `(${hasBrandOfUser} OR NOT (${hasNoRestrictedBrand}))`;
-  const restrictedBrand = '';
-  // ----------------------------------------------------------------------------
-
-  // INTENDED BOTTLER COUNTRY CHECK ---------------------------------------------
-  let intendedBottlerCountry = '';
-  if (user.type === USER_TYPE.EMPLOYEE || user.type === USER_TYPE.CONTIGENT_WORKER || user.type === USER_TYPE.AGENCY) {
-    // can access everything wrt bottlers
-    intendedBottlerCountry = '';
-  } else {
-    // TODO: can the user be in multiple countries via manual group configuration?
-    intendedBottlerCountry = `tccc-intendedBottlerCountry:'${request.user.country?.toLowerCase()}'`;
-    if (user.type === USER_TYPE.BOTTLER) {
-      // bottlers can access all countries
-      intendedBottlerCountry = `(tccc-intendedBottlerCountry:'all-countries' OR ${intendedBottlerCountry})`;
-    }
-  }
-  // ----------------------------------------------------------------------------
-
-  // INTENDED CUSTOMER CHECK ----------------------------------------------------
+function getCustomer(user) {
   // TODO: this needs customizable domain mapping (but only for special cases)
   const CUSTOMER_MAPPING = {
     'exxonmobil.com': 'exxon-mobil',
@@ -158,9 +122,56 @@ async function searchAuthorization(request) {
     'sodexo.com': 'sodexo',
     'walmart.com': 'walmart-usa',
   };
-  const customer = CUSTOMER_MAPPING[user.domain] ? CUSTOMER_MAPPING[user.domain] : user.domain.replace(/[^a-zA-Z0-9-]/g, '-');
-  const intendedCustomer = `(NOT tccc-assetType:'customers' OR tccc-intendedCustomers:'${customer}')`;
-  // ----------------------------------------------------------------------------
+  return CUSTOMER_MAPPING[user.domain] ? CUSTOMER_MAPPING[user.domain] : user.domain.replace(/[^a-zA-Z0-9-]/g, '-');
+}
+
+function getRestrictedBrands(user) {
+  // TODO: make users access to restricted brands configurable - pull from EDS sheet
+  return ['nestea'];
+}
+
+async function searchAuthorization(request) {
+  const search = await request.json();
+
+  request.user.domain = request.user.email.split('@').pop().toLowerCase();
+  const user = {
+    country: request.user.country?.toLowerCase(),
+    type: getUserType(request.user),
+    customer: getCustomer(request.user),
+    restrictedBrands: getRestrictedBrands(request.user),
+  }
+  console.log('user', user);
+
+  // RESTRICTED BRAND CHECK ------------------------------------------------------
+  // TODO: make list of restricted brands configurable - pull from EDS sheet
+  const restrictedBrands = ['kirks-ko','carlysle-farm-ko','chill-out','m-hydro-ko','diet-canada-dry-ko','lemon-paerora','live','roar-ko','aloe-gloe','burn','deep-spring','diet-dr-pepper-ko','dr-pepper-ko','enviga','full-throttle','gladiator','kirks','monster-ko','mother','moxie-ko','nalu','nestea','nestea-cool','nos','relentless'];
+  // const restrictedBrands = ['nalu' ,'nestea'];
+
+  const hasBrandOfUser = user.restrictedBrands.map(brand => `tccc-brand._tagIDs:'tccc:brand/${brand}'`).join(' OR ');
+  const hasNoRestrictedBrand = restrictedBrands.map(brand => `tccc-brand._tagIDs:'tccc:brand/${brand}'`).join(' OR ');
+
+  // TODO: DISABLED for now. does not seem possible with Algolia and current index setup
+  // Problem: 'a OR (b AND c)' is not supported by Aloglia
+  // https://www.algolia.com/doc/guides/managing-results/refine-results/filtering/in-depth/combining-boolean-operators#use-of-parentheses
+  // const restrictedBrand = `(${hasBrandOfUser} OR NOT (${hasNoRestrictedBrand}))`;
+  const restrictedBrand = '';
+
+  // INTENDED BOTTLER COUNTRY CHECK ---------------------------------------------
+  let intendedBottlerCountry = '';
+  if (user.type === USER_TYPE.EMPLOYEE || user.type === USER_TYPE.CONTIGENT_WORKER || user.type === USER_TYPE.AGENCY) {
+    // these userscan access everything wrt bottlers
+    intendedBottlerCountry = '';
+  } else {
+    // TODO: can the user be in multiple countries via manual group configuration?
+    intendedBottlerCountry = `tccc-intendedBottlerCountry:'${user.country}'`;
+    if (user.type === USER_TYPE.BOTTLER) {
+      // bottlers can access all countries
+      intendedBottlerCountry = `(tccc-intendedBottlerCountry:'all-countries' OR ${intendedBottlerCountry})`;
+    }
+  }
+
+  // INTENDED CUSTOMER CHECK ----------------------------------------------------
+  const intendedCustomer = `(NOT tccc-assetType:'customers' OR tccc-intendedCustomers:'${user.customer}')`;
 
   const constraint = [restrictedBrand, intendedBottlerCountry, intendedCustomer].filter(c => c).join(' AND ');
 
