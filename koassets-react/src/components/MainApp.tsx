@@ -214,26 +214,21 @@ function MainApp(): React.JSX.Element {
     }, [accessToken]);
 
     useEffect(() => {
-        // Only create client when authenticated (either mechanism) and bucket is available
+        // Only create client when authenticated and bucket is available
         if (authenticated && bucket) {
-            if (accessToken && isCookieAuth()) {
-                console.debug('🔑 Authenticated via IMS and Cookie. Using IMS route (during transition period)');
-            } else if (accessToken) {
-                console.debug('🔑 Authenticated via IMS only.');
-            } else if (isCookieAuth()) {
-                console.debug('🔑 Authenticated via Cookie only.');
+            if (isCookieAuth()) {
+                console.debug('🔑 Authenticated via Cookie.');
             } else {
-                console.debug('🔑 Not authenticated (not IMS, nor Cookie)');
+                console.debug('🔑 Authenticated via other mechanism.');
             }
             setDynamicMediaClient(new DynamicMediaClient({
                 bucket: bucket,
-                accessToken: accessToken || undefined, // Pass undefined if empty string
             }));
         } else {
             console.debug('🔑 Not authenticated (not IMS, nor cookie)');
             setDynamicMediaClient(null);
         }
-    }, [authenticated, accessToken, bucket]);
+    }, [authenticated, bucket]);
 
     // Keep accessToken in sync with localStorage
     useEffect(() => {
