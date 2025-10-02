@@ -207,6 +207,15 @@
   box-shadow: 0 0 0 2px rgb(0 123 255 / 25%);
 }
 
+.profile-modal .profile-usertype-dropdown {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-modal .profile-usertype-custom {
+  margin-top: 8px;
+}
+
 .profile-modal .notifications-section {
   padding: 0 24px;
   margin-bottom: 32px;
