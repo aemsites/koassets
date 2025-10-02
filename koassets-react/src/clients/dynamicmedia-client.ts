@@ -692,7 +692,7 @@ export class DynamicMediaClient {
         }
     }
 
-    async getOptimizedDeliveryPreviewUrl(assetId: string, repoName: string, width: number = 350) {
+    getOptimizedDeliveryPreviewUrl(assetId: string, repoName: string, width: number = 350) {
         // Convert video extensions to avif for optimal delivery
         const processedRepoName = this.changeToSupportedPreview(repoName);
 
