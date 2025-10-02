@@ -38099,6 +38099,9 @@ function MainApp() {
   const settingsLoadedRef = reactExports.useRef(false);
   reactExports.useEffect(() => {
     localStorage.setItem("cartAssetItems", JSON.stringify(cartAssetItems));
+    if (window.updateCartBadge && typeof window.updateCartBadge === "function") {
+      window.updateCartBadge(cartAssetItems.length);
+    }
   }, [cartAssetItems]);
   reactExports.useEffect(() => {
     if (authenticated && bucket) {

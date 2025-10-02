@@ -197,6 +197,11 @@ function MainApp(): React.JSX.Element {
     // Save cart items to localStorage when they change
     useEffect(() => {
         localStorage.setItem('cartAssetItems', JSON.stringify(cartAssetItems));
+
+        // Update cart badge count if the function exists
+        if (window.updateCartBadge && typeof window.updateCartBadge === 'function') {
+            window.updateCartBadge(cartAssetItems.length);
+        }
     }, [cartAssetItems]);
 
     useEffect(() => {
