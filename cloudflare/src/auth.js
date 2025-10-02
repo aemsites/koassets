@@ -183,7 +183,7 @@ function handleSudo(request, user) {
     }
 
     // store original super user data
-    user.sudo = {
+    user.su = {
       name: user.name,
       email: user.email,
       country: user.country,
@@ -380,7 +380,7 @@ authRouter
       usertype: user.usertype,
       company: user.company,
       canSudo: user.canSudo,
-      sudo: user.sudo,
+      su: user.su,
       sessionExpiresInSec: user.exp && Math.floor((user.exp * 1000 - Date.now()) / 1000),
     });
   })

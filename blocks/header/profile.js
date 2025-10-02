@@ -34,14 +34,14 @@ function createProfileModal() {
         <h1>My Profile</h1>
       </div>
       <div class="profile-info">
-        ${window.user?.sudo ? `
+        ${window.user?.su ? `
         <div class="profile-field">
           <label>LOGGED IN USER</label>
-          <div class="profile-value" id="profile-sudo">${window.user?.sudo?.email || ''}</div>
+          <div class="profile-value" id="profile-sudo">${window.user?.su?.email || ''}</div>
         </div>
          ` : ''}
-         <div class="user-fields-group ${window.user?.sudo ? 'impersonating' : ''}">
-           ${window.user?.sudo ? `
+         <div class="user-fields-group ${window.user?.su ? 'impersonating' : ''}">
+           ${window.user?.su ? `
            <div class="simulating-title">SIMULATING USER</div>
            ` : ''}
            <div class="profile-field">
@@ -59,8 +59,8 @@ function createProfileModal() {
              <div class="profile-value" id="profile-country">${currentCountry}</div>
              ${canSudo ? `<input type="text" class="profile-input" id="profile-country-input" value="${currentCountry}" style="display: none;">` : ''}
            </div>
-           ${window.user?.sudo || canSudo ? `
-           <div class="profile-field" id="usertype-field" style="${!window.user?.sudo ? 'display: none;' : ''}">
+           ${window.user?.su || canSudo ? `
+           <div class="profile-field" id="usertype-field" style="${!window.user?.su ? 'display: none;' : ''}">
              <label>USER TYPE</label>
              <div class="profile-value" id="profile-usertype">${currentUserType}</div>
              <input type="text" class="profile-input" id="profile-usertype-input" value="${currentUserType}" style="display: none;">
@@ -86,7 +86,7 @@ function createProfileModal() {
            <button class="profile-save-button" id="profile-inline-save-btn" type="button" style="display: none;">
              Save
            </button>
-           ${window.user?.sudo ? `
+           ${window.user?.su ? `
            <button class="reset-button" id="profile-reset-btn" type="button">
              Reset
            </button>
@@ -156,7 +156,7 @@ function toggleEditMode() {
           </clipPath>
         </defs>
       </svg>
-${window.user?.sudo ? 'Simulating User' : 'Simulate User'}
+${window.user?.su ? 'Simulating User' : 'Simulate User'}
     `;
 
     // Hide inline save button
@@ -178,7 +178,7 @@ ${window.user?.sudo ? 'Simulating User' : 'Simulate User'}
     const userTypeInput = document.getElementById('profile-usertype-input');
     if (userTypeField && userTypeValue && userTypeInput) {
       // Hide USER TYPE field if not currently impersonating
-      if (!window.user?.sudo) {
+      if (!window.user?.su) {
         userTypeField.style.display = 'none';
       }
       userTypeValue.style.display = 'block';
@@ -324,7 +324,7 @@ export default function showProfileModal() {
       }
     });
 
-    // Add reset button event listener (only if window.user.sudo is set)
+    // Add reset button event listener (only if window.user.su is set)
     const resetBtn = modal.querySelector('#profile-reset-btn');
     if (resetBtn) {
       resetBtn.addEventListener('click', handleReset);
