@@ -727,7 +727,6 @@ declare global {
     interface Window {
         // Configuration objects
         APP_CONFIG?: {
-            ADOBE_CLIENT_ID?: string;
             BUCKET?: string;
         };
         KOAssetsConfig?: {

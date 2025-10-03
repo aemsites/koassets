@@ -1,4 +1,3 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { AlgoliaSearchQuery, AlgoliaSearchRequest, Asset, Rendition } from '../types';
 import { mimeTypeToExtension } from '../utils/mimeTypeConverter';
 
@@ -38,9 +37,7 @@ export interface ArchiveStatus {
 
 interface DynamicMediaClientConfig {
     bucket: string;
-    accessToken?: string;
     baseURL?: string;
-    apiKey?: string;
 }
 
 export interface SearchAssetsOptions {
@@ -147,31 +144,15 @@ const apiKey: { [key: string]: string; } = {
 };
 
 export class DynamicMediaClient {
-    private readonly client: AxiosInstance;
     private readonly bucket: string;
-    private readonly accessToken?: string;
 
     constructor(config: DynamicMediaClientConfig) {
         this.bucket = config.bucket;
-        this.accessToken = config.accessToken?.replace(/^Bearer /, '');
-
-        this.client = axios.create({
-            baseURL: config.baseURL || `https://${this.bucket}.adobeaemcloud.com`,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.accessToken}`,
-                'x-api-key': this.bucket.includes('-cmstg') ? apiKey.STAGE : apiKey.PROD,
-                'x-adobe-accept-experimental': '1'
-            }
-        });
     }
 
-    public isIMSAuthenticated(): boolean {
-        return this.accessToken !== undefined;
-    }
 
     /**
-     * Generic request method that handles both IMS and fetch authentication patterns
+     * Generic request method using fetch API
      * @private
      */
     private async makeRequest<T = unknown>(config: {
@@ -191,32 +172,10 @@ export class DynamicMediaClient {
             allowUndefinedResponse = false
         } = config;
 
-        // for transition period, if logged in both ways, prefer IMS route
-        if (this.isIMSAuthenticated()) {
-            try {
-                const axiosConfig: AxiosRequestConfig = {
-                    url,
-                    method,
-                    data,
-                    params,
-                    headers
-                };
-
-                const response = await this.client.request(axiosConfig);
-                return response.data;
-            } catch (error) {
-                if (axios.isAxiosError(error)) {
-                    if (allowUndefinedResponse && error.response?.status !== 200) {
-                        return undefined as T;
-                    }
-                    throw new Error(`Request failed: ${error.message}`);
-                }
-                throw error;
-            }
-
-        } else /* if (window.user) */ {
+        /* if (window.user) */ {
             try {
                 const fetchHeaders: HeadersInit = {
+                    'x-api-key': this.bucket.includes('-cmstg') ? apiKey.STAGE : apiKey.PROD,
                     'x-adobe-accept-experimental': '1',
                     ...headers
                 };
@@ -302,82 +261,6 @@ export class DynamicMediaClient {
         }
     }
 
-    /**
-     * Request method for blob responses
-     * @private
-     */
-    private async makeRequestBlob(config: {
-        url: string;
-        method?: 'GET' | 'POST';
-        params?: Record<string, unknown>;
-        headers?: Record<string, string>;
-    }): Promise<Blob> {
-        const {
-            url,
-            method = 'GET',
-            params,
-            headers = {}
-        } = config;
-
-        // for transition period, if logged in both ways, prefer IMS route
-        if (this.isIMSAuthenticated()) {
-            try {
-                const axiosConfig: AxiosRequestConfig = {
-                    url,
-                    method,
-                    params,
-                    headers,
-                    responseType: 'blob'
-                };
-
-                const response = await this.client.request(axiosConfig);
-                return response.data as Blob;
-            } catch (error) {
-                if (axios.isAxiosError(error)) {
-                    throw new Error(`Request failed: ${error.message}`);
-                }
-                throw error;
-            }
-
-        } else /* if (window.user) */ {
-            try {
-                const fetchHeaders: HeadersInit = {
-                    'x-adobe-accept-experimental': '1',
-                    ...headers
-                };
-
-                // Construct URL with params
-                let fetchUrl = `/api${url}`;
-                if (params) {
-                    const searchParams = new URLSearchParams();
-                    Object.entries(params).forEach(([key, value]) => {
-                        if (value !== undefined) {
-                            searchParams.append(key, String(value));
-                        }
-                    });
-                    if (searchParams.toString()) {
-                        fetchUrl += `?${searchParams.toString()}`;
-                    }
-                }
-
-                const response = await fetch(fetchUrl, {
-                    method,
-                    headers: fetchHeaders
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Request failed: ${response.statusText}`);
-                }
-
-                return response.blob();
-            } catch (error) {
-                if (error instanceof Error) {
-                    throw error;
-                }
-                throw new Error(`Request failed`);
-            }
-        }
-    }
 
     // Extract index name from bucket (e.g., delivery-p92206-e211033-cmstg -> 92206-211033)
     private getIndexName(): string {
@@ -585,37 +468,14 @@ export class DynamicMediaClient {
     async searchAssets(query: string, options: SearchAssetsOptions = {}): Promise<unknown> {
         const algoliaQuery = this.transformToAlgoliaSearchAssets(query, options);
 
-        // for transition period, if logged in both ways, prefer IMS route
-        if (this.isIMSAuthenticated()) {
-            const config: AxiosRequestConfig = {
-                url: '/adobe/assets/search',
-                method: 'POST',
-                data: algoliaQuery,
-                headers: { 'x-ch-request': 'search' }
-            };
-
-            try {
-                const response = await this.client.request(config);
-                return response.data;
-            } catch (error) {
-                if (axios.isAxiosError(error)) {
-                    throw new Error(`Failed to search assets: ${error.message}`);
-                }
-                throw error;
+        return await this.makeRequest({
+            url: '/adobe/assets/search',
+            method: 'POST',
+            data: algoliaQuery,
+            headers: {
+                'x-ch-request': 'search'
             }
-
-        } else /* if (window.user) */ {
-            const response = await fetch(`/api/adobe/assets/search`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-ch-request': 'search',
-                    'x-adobe-accept-experimental': '1',
-                },
-                body: JSON.stringify(algoliaQuery)
-            });
-            return response.json();
-        }
+        });
     }
 
     /**
@@ -627,19 +487,18 @@ export class DynamicMediaClient {
     async searchCollections(query: string, options: SearchCollectionsOptions = {}): Promise<CollectionSearchResults> {
         const algoliaQuery = this.transformToAlgoliaSearchCollections(query, options);
 
-        const config: AxiosRequestConfig = {
-            url: '/adobe/assets/search',
-            method: 'POST',
-            data: algoliaQuery,
-            headers: { 'x-ch-request': 'search' }
-        };
-
         try {
             console.trace('DynamicMediaClient.searchCollections() REQUEST');
-            const response = await this.client.request(config);
-            return response.data;
+            return await this.makeRequest<CollectionSearchResults>({
+                url: '/adobe/assets/search',
+                method: 'POST',
+                data: algoliaQuery,
+                headers: {
+                    'x-ch-request': 'search'
+                }
+            });
         } catch (error) {
-            if (axios.isAxiosError(error)) {
+            if (error instanceof Error) {
                 throw new Error(`Failed to search collections: ${error.message}`);
             }
             throw error;
@@ -664,33 +523,6 @@ export class DynamicMediaClient {
         return `${baseName}.${extension}`;
     }
 
-    // NOTE: this is only used if IMS authentication is used
-    async getOptimizedDeliveryPreviewBlob(assetId: string, repoName: string, width: number = 350) {
-        // Convert video extensions to avif for optimal delivery
-        const processedRepoName = this.changeToSupportedPreview(repoName);
-
-        try {
-            const response = await this.client.request({
-                url: `/adobe/assets/${assetId}/as/preview-${processedRepoName}`,
-                method: 'GET',
-                params: {
-                    width: width,
-                    preferwebp: true
-                },
-                headers: {
-                    'x-ch-request': 'delivery'
-                },
-                responseType: 'blob'
-            });
-
-            return response.data as Blob;
-        } catch (error) {
-            if (axios.isAxiosError(error)) {
-                throw new Error(`Failed to fetch assetId "${assetId}": ${error.message}`);
-            }
-            throw error;
-        }
-    }
 
     getOptimizedDeliveryPreviewUrl(assetId: string, repoName: string, width: number = 350) {
         // Convert video extensions to avif for optimal delivery
@@ -708,7 +540,13 @@ export class DynamicMediaClient {
         });
     }
 
-    async downloadAsset(asset: Asset, rendition: Rendition = { name: ORIGINAL_RENDITION }, isImagePreset: boolean = false) {
+    /*
+    Download asset's single rendition
+    @param asset - Asset object
+    @param rendition - Rendition object
+    @param isImagePreset - Whether the rendition is an image preset
+    */
+    async downloadAsset(asset: Asset, rendition: Rendition = { name: ORIGINAL_RENDITION }, isImagePreset: boolean = false): Promise<void> {
         const tokenResp = await this.getDownloadTokenResp(asset);
 
         let queryParams: Record<string, string> = {};
@@ -785,25 +623,20 @@ export class DynamicMediaClient {
             queryParams.expiryTime = tokenResp.expiryTime.toString();
         }
 
-        let blob: Blob;
-        try {
-            console.trace('DynamicMediaClient.downloadAsset() REQUEST');
-            blob = await this.makeRequestBlob({
-                url: url,
-                method: 'GET',
-                params: queryParams
-            });
-        } catch (error) {
-            if (error instanceof Error) {
-                throw new Error(`Failed to download assetId "${asset?.assetId}": ${error.message}`);
+        // Construct the complete URL with query parameters
+        const searchParams = new URLSearchParams();
+        Object.entries(queryParams).forEach(([key, value]) => {
+            if (value !== undefined) {
+                searchParams.append(key, String(value));
             }
-            throw error;
-        }
+        });
 
-        // Trigger download using reusable method
-        this.downloadFromBlob(blob, finalFilename);
+        const downloadUrl = `/api${url}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
 
-        return blob;
+        console.trace('DynamicMediaClient.downloadAsset() REQUEST');
+
+        // Trigger direct download using URL
+        this.downloadFromUrl(downloadUrl, finalFilename);
     }
 
     async getAssetRenditions(asset: Asset): Promise<{ items?: Rendition[] }> {
@@ -866,21 +699,6 @@ export class DynamicMediaClient {
 
     async getAssetsArchiveStatus(archiveId: string): Promise<ArchiveStatus | undefined> {
         console.trace('DynamicMediaClient.getAssetsArchiveStatus() REQUEST');
-        // return {
-        //     "operation": "aem.assets.archives.createArchive",
-        //     "status": 200,
-        //     "description": "Archive creation completed successfully",
-        //     "data": {
-        //         "id": archiveId,
-        //         "format": "zip",
-        //         "submittedBy": "b510c440-9086-4619-9381-a909482c7cf1@techacct.adobe.com",
-        //         "submittedDate": "2025-09-23T21:55:21.717+0000",
-        //         "status": "COMPLETED",
-        //         "files": [
-        //             "https://delivery-p64403-e544653.adobeaemcloud.com/adobe/assets/archives/8ff71775-b4e2-4592-b4ce-49946e18bd0c/files/Assets.zip?token=5c6a2e2012c3d3a28e98202e74690dbbac511934b332501df480074fcb7f2ab3_@_2025-09-24T05:39:59.227Z"
-        //         ]
-        //     }
-        // }
         return await this.makeRequest<ArchiveStatus>({
             url: `/adobe/assets/archives/${archiveId}/status`,
             method: 'GET',
@@ -913,29 +731,6 @@ export class DynamicMediaClient {
         }
     }
 
-    /**
-     * Download a blob as a file by creating an object URL and triggering download
-     * @private
-     */
-    private downloadFromBlob(blob: Blob, filename: string): void {
-        let downloadUrl: string | null = null;
-        try {
-            // Create download URL and trigger download
-            downloadUrl = URL.createObjectURL(blob);
-
-            this.triggerDownload(downloadUrl, filename, () => {
-                if (downloadUrl) {
-                    URL.revokeObjectURL(downloadUrl);
-                }
-            });
-        } catch (error) {
-            console.error('Failed to download blob:', error);
-            // Ensure cleanup even if error occurs
-            if (downloadUrl) {
-                URL.revokeObjectURL(downloadUrl);
-            }
-        }
-    }
 
     /**
      * Download a file from a direct URL by creating a temporary link and triggering click
