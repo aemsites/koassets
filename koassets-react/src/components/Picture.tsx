@@ -12,7 +12,7 @@ const Picture: React.FC<PictureProps> = ({
     width,
     className = ''
 }) => {
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoaded, setIsLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
 
     const id = asset.assetId || '';
@@ -23,21 +23,21 @@ const Picture: React.FC<PictureProps> = ({
     const fileName = encodeURIComponent(name?.replace(/\.[^/.]+$/, '') || 'thumbnail');
 
     const handleLoad = () => {
-        setIsLoading(false);
+        setIsLoaded(true);
     };
 
     const handleError = () => {
-        setIsLoading(false);
+        setIsLoaded(true);
         setHasError(true);
     };
 
     return (
-        <div className={`preview-image ${isLoading ? 'loading-spinner' : ''} ${hasError ? 'missing' : ''}`}>
+        <div className={`preview-image ${!isLoaded ? 'skeleton' : ''} ${hasError ? 'missing' : ''}`}>
             <picture>
                 <source type="image/webp" srcSet={`/api/adobe/assets/${encodedId}/as/${fileName}.webp?width=${width}`} />
                 <source type="image/jpg" srcSet={`/api/adobe/assets/${encodedId}/as/${fileName}.jpg?width=${width}`} />
                 <img
-                    className={className}
+                    className={`${className} ${isLoaded ? 'fade-in' : ''}`}
                     loading="lazy"
                     src={`/api/adobe/assets/${encodedId}/as/${fileName}.jpg?width=${width}`}
                     alt={alt || name}

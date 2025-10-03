@@ -32366,7 +32366,7 @@ const Picture = ({
   width,
   className = ""
 }) => {
-  const [isLoading, setIsLoading] = reactExports.useState(true);
+  const [isLoaded, setIsLoaded] = reactExports.useState(false);
   const [hasError, setHasError] = reactExports.useState(false);
   const id = asset.assetId || "";
   const encodedId = encodeURIComponent(id);
@@ -32374,19 +32374,19 @@ const Picture = ({
   const alt = asset.alt;
   const fileName = encodeURIComponent((name == null ? void 0 : name.replace(/\.[^/.]+$/, "")) || "thumbnail");
   const handleLoad = () => {
-    setIsLoading(false);
+    setIsLoaded(true);
   };
   const handleError = () => {
-    setIsLoading(false);
+    setIsLoaded(true);
     setHasError(true);
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `preview-image ${isLoading ? "loading-spinner" : ""} ${hasError ? "missing" : ""}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("picture", { children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `preview-image ${!isLoaded ? "skeleton" : ""} ${hasError ? "missing" : ""}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("picture", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("source", { type: "image/webp", srcSet: `/api/adobe/assets/${encodedId}/as/${fileName}.webp?width=${width}` }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("source", { type: "image/jpg", srcSet: `/api/adobe/assets/${encodedId}/as/${fileName}.jpg?width=${width}` }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "img",
       {
-        className,
+        className: `${className} ${isLoaded ? "fade-in" : ""}`,
         loading: "lazy",
         src: `/api/adobe/assets/${encodedId}/as/${fileName}.jpg?width=${width}`,
         alt: alt || name,
