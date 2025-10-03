@@ -65,13 +65,12 @@ function getEnvVar(key) {
 
 // Get configuration values
 const config = {
-    ADOBE_CLIENT_ID: getEnvVar('VITE_ADOBE_CLIENT_ID'),
     BUCKET: getEnvVar('VITE_BUCKET'),
     // Add other environment variables as needed
 };
 
 // Validate required configuration
-const requiredVars = ['ADOBE_CLIENT_ID', 'BUCKET'];
+const requiredVars = ['BUCKET'];
 const missingVars = requiredVars.filter(key => !config[key]);
 
 if (missingVars.length > 0) {
@@ -88,7 +87,6 @@ const configContent = `// Runtime configuration generated from environment varia
 // Generated at: ${new Date().toISOString()}
 // Environment: ${nodeEnv}
 window.APP_CONFIG = {
-  ADOBE_CLIENT_ID: '${config.ADOBE_CLIENT_ID}',
   BUCKET: '${config.BUCKET}',
   // Add other environment variables as needed
 };
@@ -113,7 +111,6 @@ console.log('✅ Generated runtime config at:', configPath);
 console.log('✅ Generated deployment config at:', toolsConfigPath);
 console.log('📋 Configuration:');
 console.log(`   Environment: ${nodeEnv}`);
-console.log(`   ADOBE_CLIENT_ID: ${config.ADOBE_CLIENT_ID || '(not set)'}`);
 console.log(`   BUCKET: ${config.BUCKET || '(not set)'}`);
 
 // Show sources that were checked

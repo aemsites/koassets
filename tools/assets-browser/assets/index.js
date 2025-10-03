@@ -32143,7 +32143,6 @@ function populateAssetFromMetadata(metadata) {
 const getConfig = () => {
   const runtimeConfig = window.APP_CONFIG || {};
   return {
-    ADOBE_CLIENT_ID: runtimeConfig.ADOBE_CLIENT_ID || "ko-assets-ims",
     BUCKET: runtimeConfig.BUCKET || "delivery-p64403-e544653"
   };
 };

@@ -20,7 +20,7 @@ npm run dev
 
 ```bash
 # Option 1: Static embedded config (recommended)
-VITE_ADOBE_CLIENT_ID=your-id VITE_BUCKET=your-bucket npm run build:embed
+VITE_BUCKET=your-bucket npm run build:embed
 
 # Option 2: Use .env files
 npm run build:prod
@@ -150,32 +150,9 @@ src/
    # Copy the example file to environment-specific file
    cp env.example .env.development
 
-   # Edit .env.development with your Client ID and Bucket
-   VITE_ADOBE_CLIENT_ID=your-actual-client-id-here
+   # Edit .env.development with your Bucket
+   
    VITE_BUCKET=your-adobe-dynamic-media-bucket-id
-   ```
-
-   **Option 2: Update the fallback in code**
-
-   ```javascript
-   // In src/components/AdobeSignInButton.jsx
-   const imsConfig = {
-     clientId:
-       import.meta.env.VITE_ADOBE_CLIENT_ID || "your-adobe-client-id-here",
-     // ...
-   };
-
-   // In src/components/MainApp.tsx
-   const [bucket] =
-     useState <
-     string >
-     (() => {
-       try {
-         return import.meta.env.VITE_BUCKET || "";
-       } catch {
-         return "";
-       }
-     });
    ```
 
 4. **Start the development server**
@@ -329,11 +306,11 @@ cp .env.production.template .env.production
 
 ```bash
 # .env.development (for development)
-VITE_ADOBE_CLIENT_ID=your-dev-client-id
+
 VITE_BUCKET=your-dev-bucket-id
 
 # .env.production (for production builds)
-VITE_ADOBE_CLIENT_ID=your-prod-client-id
+
 VITE_BUCKET=your-prod-bucket-id
 ```
 
@@ -359,10 +336,10 @@ Build with values embedded directly at build time:
 
 ```bash
 # PowerShell
-$env:VITE_ADOBE_CLIENT_ID="your-client-id"; $env:VITE_BUCKET="your-bucket-name"; npm run build:embed
+$env:$env:VITE_BUCKET="your-bucket-name"; npm run build:embed
 
 # Bash/Zsh
-VITE_ADOBE_CLIENT_ID=your-client-id VITE_BUCKET=your-bucket-name npm run build:embed
+VITE_BUCKET=your-bucket-name npm run build:embed
 ```
 
 **Result:** Creates `tools/assets-browser/index.html` with values embedded directly in the JavaScript.
