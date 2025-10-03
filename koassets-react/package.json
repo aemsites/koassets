@@ -17,10 +17,10 @@
     "preview:prod": "npx cross-env NODE_ENV=production vite preview",
     "lint": "eslint src --ext js,jsx,ts,tsx --report-unused-disable-directives",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build:koassets-react": "npm install && VITE_ADOBE_CLIENT_ID=ko-assets-ims VITE_BUCKET=delivery-p64403-e544653 VITE_EXC_BASE_URL=https://exc-unifiedcontent.experience.adobe.net npm run build:embed",
+    "build:koassets-react": "npm install && VITE_BUCKET=delivery-p64403-e544653 npm run build:embed",
     "copy-to-eds": "rm dist/index.html; cp -r dist/* ../tools/assets-browser/",
     "build-and-copy:koassets-react": "npm run build:koassets-react && npm run copy-to-eds",
-    "build-local-dev": "VITE_ADOBE_CLIENT_ID=ko-assets-ims VITE_BUCKET=delivery-p64403-e544653 VITE_EXC_BASE_URL=https://exc-unifiedcontent.experience.adobe.net vite build && npm run copy-to-eds",
+    "build-local-dev": "VITE_BUCKET=delivery-p64403-e544653 vite build && npm run copy-to-eds",
     "auto-build": "npx chokidar '**' -i 'dist/**' -d 5000 -c 'npm run build-local-dev'"
   },
   "engines": {
@@ -28,7 +28,6 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.28.3",
-    "@identity/imslib": "^0.48.0",
     "@internationalized/date": "^3.8.2",
     "@react-spectrum/provider": "^3.10.8",
     "@react-spectrum/theme-default": "^3.5.20",
