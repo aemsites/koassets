@@ -11296,8 +11296,7 @@ button.action-button:disabled:hover {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 300px;
-    max-height: 450px;
+    height: 450px;
     overflow: hidden;
 }
 
