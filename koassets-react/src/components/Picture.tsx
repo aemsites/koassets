@@ -33,10 +33,11 @@ const Picture: React.FC<PictureProps> = ({
 
     return (
         <div className={`preview-image ${!isLoaded ? 'skeleton' : ''} ${hasError ? 'missing' : ''}`}>
-            <picture>
+            <picture key={id}>
                 <source type="image/webp" srcSet={`/api/adobe/assets/${encodedId}/as/${fileName}.webp?width=${width}`} />
                 <source type="image/jpg" srcSet={`/api/adobe/assets/${encodedId}/as/${fileName}.jpg?width=${width}`} />
                 <img
+                    key={id}
                     className={`${className} ${isLoaded ? 'fade-in' : ''}`}
                     loading="lazy"
                     src={`/api/adobe/assets/${encodedId}/as/${fileName}.jpg?width=${width}`}

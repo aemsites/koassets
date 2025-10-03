@@ -32391,9 +32391,10 @@ const Picture = ({
         alt: alt || name,
         onLoad: handleLoad,
         onError: handleError
-      }
+      },
+      id
     )
-  ] }) });
+  ] }, id) });
 };
 const SelectAllRenditionsCheckbox = ({
   assetData,
