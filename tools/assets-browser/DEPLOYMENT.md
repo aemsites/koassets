@@ -13,7 +13,6 @@ This directory contains the built React application for static deployment (no se
 
 ### Option 1: Server-Side Template (Recommended for Dynamic Environments)
 
-**✅ Environment variables processed by target server!** Template uses `${ADOBE_CLIENT_ID}` placeholders.
 
 **Build command:**
 
@@ -26,7 +25,6 @@ cd koassets-react && npm run build:template
 ```html
 <script>
   window.APP_CONFIG = {
-    ADOBE_CLIENT_ID: "${ADOBE_CLIENT_ID}",
     BUCKET: "${BUCKET}",
   };
 </script>
@@ -39,7 +37,6 @@ cd koassets-react && npm run build:template
 envsubst < index.html > index.html.tmp && mv index.html.tmp index.html
 
 # Using sed (Linux/Unix)
-sed -i "s/\${ADOBE_CLIENT_ID}/$ADOBE_CLIENT_ID/g" index.html
 sed -i "s/\${BUCKET}/$BUCKET/g" index.html
 
 # Using Node.js/PHP/Python server-side templating
@@ -53,13 +50,13 @@ sed -i "s/\${BUCKET}/$BUCKET/g" index.html
 **Zsh/Bash:**
 
 ```bash
-cd koassets-react && VITE_ADOBE_CLIENT_ID=your-client-id VITE_BUCKET=your-bucket-name npm run build:embed
+cd koassets-react && VITE_BUCKET=your-bucket-name npm run build:embed
 ```
 
 **PowerShell:**
 
 ```powershell
-cd koassets-react; $env:VITE_ADOBE_CLIENT_ID="your-client-id"; $env:VITE_BUCKET="your-bucket-name"; npm run build:embed
+cd koassets-react; $env:$env:VITE_BUCKET="your-bucket-name"; npm run build:embed
 ```
 
 **Result:** Config embedded in `index.html`:
@@ -67,7 +64,6 @@ cd koassets-react; $env:VITE_ADOBE_CLIENT_ID="your-client-id"; $env:VITE_BUCKET=
 ```html
 <script>
   window.APP_CONFIG = {
-    ADOBE_CLIENT_ID: "your-client-id",
     BUCKET: "your-bucket-name",
   };
 </script>
@@ -81,7 +77,6 @@ cd koassets-react; $env:VITE_ADOBE_CLIENT_ID="your-client-id"; $env:VITE_BUCKET=
 
 1. **Build locally**: `cd koassets-react && npm run build:template`
 2. **Upload files**: Copy `tools/assets-browser/` to your server
-3. **Process template**: Server replaces `${ADOBE_CLIENT_ID}` and `${BUCKET}` with actual values
 4. **Test**: Verify the app loads and authenticates correctly
 
 ### Option 2: Static Embedded Config (Currently Used)
@@ -99,5 +94,4 @@ cd koassets-react; $env:VITE_ADOBE_CLIENT_ID="your-client-id"; $env:VITE_BUCKET=
 ## Troubleshooting
 
 - **404 on config.js**: Use Option 1 (embedded config) instead
-- **Missing environment variables**: Set `VITE_ADOBE_CLIENT_ID` and `VITE_BUCKET` before building
 - **Build fails**: Run `npm install` first, then try the build command again

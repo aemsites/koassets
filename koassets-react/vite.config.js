@@ -47,6 +47,7 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       sourcemap: true, // Enable source maps for production builds too
+      minify: false, // Disable minification for better debugging
       rollupOptions: {
         external: [],
         output: {
@@ -60,8 +61,14 @@ export default defineConfig(({ mode }) => {
           },
           // Better source map paths for debugging
           sourcemapPathTransform: (relativeSourcePath, sourcemapPath) => {
-            // Convert relative paths to be relative to project root
-            return relativeSourcePath.replace(/^\.\.\/\.\.\//, '../koassets-react/');
+            // Build creates: koassets-react/dist/assets/index.js with paths like ../../src/
+            // Gets copied to: tools/assets-browser/assets/index.js
+            // We need to transform ../../src/ to ../../../koassets-react/src/
+            // so it points correctly from the final location
+            if (relativeSourcePath.startsWith('../../src/')) {
+              return relativeSourcePath.replace('../../src/', '../../../koassets-react/src/');
+            }
+            return relativeSourcePath;
           }
         }
       }

@@ -4,10 +4,10 @@ import { useAppConfig } from '../../hooks/useAppConfig';
 import type { AssetDetailsProps, Rendition, Asset, Metadata } from '../../types';
 
 import { AuthorizationStatus } from '../../clients/fadel-client';
-import { fetchOptimizedDeliveryBlob } from '../../utils/blobCache';
 import ActionButton from '../ActionButton';
 import { BUTTON_CONFIGS } from '../ActionButtonConfigs';
 import DownloadRenditionsModal from '../DownloadRenditionsModal';
+import Picture from '../Picture';
 import './AssetDetails.css';
 import AssetDetailsDRM from './AssetDetailsDRM';
 import AssetDetailsGeneralInfo from './AssetDetailsGeneralInfo';
@@ -42,7 +42,6 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 }) => {
     // Get dynamicMediaClient from context
     const { dynamicMediaClient } = useAppConfig();
-    const [blobUrl, setBlobUrl] = useState<string | null>(null);
     const [collapseAll, setCollapseAll] = useState<boolean>(false);
     const [showDownloadRenditionsModal, setShowDownloadRenditionsModal] = useState<boolean>(false);
     const [actionButtonEnable, setActionButtonEnable] = useState<boolean>(false);
@@ -155,35 +154,11 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     }, [showModal, selectedImage, dynamicMediaClient]);
 
     useEffect(() => {
-        if (showModal && populatedImage && dynamicMediaClient) {
-            setBlobUrl(null);
+        if (showModal && populatedImage) {
             setActionButtonEnable(false);
             setWatermarkRendition(undefined);
-
-            const fetchHighResImage = async () => {
-                try {
-                    // Just fetch high-res image directly, no caching for viewing
-                    const blobUrl = await fetchOptimizedDeliveryBlob(
-                        dynamicMediaClient,
-                        populatedImage,
-                        1200,
-                        {
-                            cache: false,
-                            cacheKey: `${populatedImage.assetId}-1200`,
-                            fallbackUrl: populatedImage.url
-                        }
-                    );
-                    setBlobUrl(blobUrl);
-                } catch (error) {
-                    console.error(`Error getting optimized delivery blob for asset ${populatedImage.assetId}: ${error}`);
-                    // Fallback to original URL
-                    setBlobUrl(populatedImage.url);
-                }
-            };
-
-            fetchHighResImage();
         };
-    }, [showModal, populatedImage, dynamicMediaClient]);
+    }, [showModal, populatedImage]);
 
     // Fetch static renditions when modal opens
     useEffect(() => {
@@ -206,15 +181,6 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     }, [watermarkRendition]);
 
     // Image presets are now fetched automatically by fetchAssetRenditions in MainApp
-
-    // Separate effect for cleanup
-    useEffect(() => {
-        return () => {
-            if (blobUrl && blobUrl.startsWith('blob:')) {
-                URL.revokeObjectURL(blobUrl);
-            }
-        };
-    }, [blobUrl]);
 
     if (!showModal || !populatedImage) return null;
 
@@ -259,15 +225,11 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     <span>Add to Collection</span>
                                 </div>
                             </div>
-                            <div className="preview-image loading-spinner">
-                                <img
-                                    src={blobUrl || populatedImage.url}
-                                    alt={populatedImage.alt || populatedImage.name}
-                                    className="asset-details-main-image"
-                                    onLoad={(e) => { (e.target as HTMLImageElement)?.parentElement?.classList.remove('loading-spinner'); }}
-                                    onError={(e) => { (e.target as HTMLImageElement)?.parentElement?.classList.add('missing'); }}
-                                />
-                            </div>
+                            <Picture
+                                asset={populatedImage}
+                                width={1200}
+                                className="asset-details-main-image"
+                            />
                         </div>
                     </div>
 

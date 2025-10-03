@@ -4,7 +4,7 @@ import { useAppConfig } from '../hooks/useAppConfig';
 import { Asset, DownloadAssetItem, Rendition } from '../types';
 import { formatDimensions, formatFileSize, formatFormatName } from '../utils/formatters';
 import './DownloadRenditionsContent.css';
-import ThumbnailImage from './ThumbnailImage';
+import Picture from './Picture';
 
 interface AssetData {
     asset: Asset;
@@ -425,9 +425,10 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                 {/* Asset Rows */}
                 {assets.map((assetData, index) => (
                     <div key={assetData.asset.assetId || index} className="download-renditions-row">
-                        <div className="download-renditions-thumbnail">
-                            <ThumbnailImage
-                                item={assetData.asset}
+                        <div className="item-thumbnail">
+                            <Picture
+                                asset={assetData.asset}
+                                width={350}
                             />
                         </div>
                         <div className="download-renditions-title">

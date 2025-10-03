@@ -4,7 +4,7 @@ import type { Asset, RequestDownloadStepData, RightsData } from '../../types';
 import Markets from '../Markets';
 import MediaChannels from '../MediaChannels';
 import MyDatePicker from '../MyDatePicker';
-import ThumbnailImage from '../ThumbnailImage';
+import Picture from '../Picture';
 import './CartRequestDownload.css';
 
 interface CartRequestDownloadProps {
@@ -118,7 +118,9 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
                         {cartAssetItems.map((item: Asset) => (
                             <div key={item.assetId} className="asset-list-item">
                                 <div className="asset-thumbnail">
-                                    <ThumbnailImage item={item} />
+                                    <div className="item-thumbnail">
+                                        <Picture asset={item} width={350} />
+                                    </div>
                                 </div>
                                 <div className="asset-details">
                                     <div className="asset-title">{item.title || item.name}</div>
