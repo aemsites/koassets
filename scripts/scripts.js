@@ -47,6 +47,25 @@ function buildHeroBlock(main) {
 }
 
 /**
+ * Preload critical SVG icons
+ */
+function preloadIcons() {
+  const icons = [
+    '/icons/shopping_cart_icon_red.svg',
+    '/icons/download_icon_red.svg',
+  ];
+
+  icons.forEach((iconPath) => {
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'image';
+    link.type = 'image/svg+xml';
+    link.href = iconPath;
+    document.head.appendChild(link);
+  });
+}
+
+/**
  * load fonts.css and set a session storage flag
  */
 async function loadFonts() {
@@ -92,6 +111,10 @@ export function decorateMain(main) {
 async function loadEager(doc) {
   document.documentElement.lang = 'en';
   decorateTemplateAndTheme();
+
+  // Preload critical icons early
+  preloadIcons();
+
   const main = doc.querySelector('main');
   if (main) {
     decorateMain(main);
