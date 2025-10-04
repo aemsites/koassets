@@ -32388,7 +32388,8 @@ const Picture = ({
         alt: asset.alt || asset.name,
         onLoad: handleLoad,
         onError: handleError
-      }
+      },
+      asset.assetId
     )
   ] }) });
 };

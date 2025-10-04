@@ -33,6 +33,7 @@ const Picture: React.FC<PictureProps> = ({
                 <source type="image/webp" srcSet={`/api/adobe/assets/${asset.assetId}/as/${fileName}.webp?width=${width}`} />
                 <source type="image/jpg" srcSet={`/api/adobe/assets/${asset.assetId}/as/${fileName}.jpg?width=${width}`} />
                 <img
+                    key={asset.assetId}
                     className={`${className} ${isLoaded ? 'fade-in' : ''}`}
                     loading="lazy"
                     src={`/api/adobe/assets/${asset.assetId}/as/${fileName}.jpg?width=${width}`}
