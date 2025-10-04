@@ -427,6 +427,7 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                     <div key={assetData.asset.assetId || index} className="download-renditions-row">
                         <div className="item-thumbnail">
                             <Picture
+                                key={assetData.asset.assetId}
                                 asset={assetData.asset}
                                 width={350}
                             />

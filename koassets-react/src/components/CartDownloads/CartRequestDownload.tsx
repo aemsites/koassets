@@ -119,7 +119,7 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
                             <div key={item.assetId} className="asset-list-item">
                                 <div className="asset-thumbnail">
                                     <div className="item-thumbnail">
-                                        <Picture asset={item} width={350} />
+                                        <Picture key={item.assetId} asset={item} width={350} />
                                     </div>
                                 </div>
                                 <div className="asset-details">
