@@ -117,6 +117,7 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
 
                     <div className="modal-image-container">
                         <Picture
+                            key={selectedImage.assetId}
                             asset={selectedImage}
                             width={350}
                             className="modal-image"

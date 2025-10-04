@@ -320,7 +320,7 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
                                             <div key={asset.assetId} className="table-row">
                                                 <div className="col-thumbnail">
                                                     <div className="item-thumbnail">
-                                                        <Picture asset={asset} width={350} />
+                                                        <Picture key={asset.assetId} asset={asset} width={350} />
                                                     </div>
                                                 </div>
                                                 <div className="col-title">

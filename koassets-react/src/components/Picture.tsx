@@ -15,11 +15,7 @@ const Picture: React.FC<PictureProps> = ({
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
 
-    const id = asset.assetId || '';
-    const encodedId = encodeURIComponent(id);
-    const name = asset.name || '';
-    const alt = asset.alt;
-
+    const name = asset?.name || '';
     const fileName = encodeURIComponent(name?.replace(/\.[^/.]+$/, '') || 'thumbnail');
 
     const handleLoad = () => {
@@ -33,15 +29,15 @@ const Picture: React.FC<PictureProps> = ({
 
     return (
         <div className={`preview-image ${!isLoaded ? 'skeleton' : ''} ${hasError ? 'missing' : ''}`}>
-            <picture key={id}>
-                <source type="image/webp" srcSet={`/api/adobe/assets/${encodedId}/as/${fileName}.webp?width=${width}`} />
-                <source type="image/jpg" srcSet={`/api/adobe/assets/${encodedId}/as/${fileName}.jpg?width=${width}`} />
+            <picture>
+                <source type="image/webp" srcSet={`/api/adobe/assets/${asset.assetId}/as/${fileName}.webp?width=${width}`} />
+                <source type="image/jpg" srcSet={`/api/adobe/assets/${asset.assetId}/as/${fileName}.jpg?width=${width}`} />
                 <img
-                    key={id}
+                    key={asset.assetId}
                     className={`${className} ${isLoaded ? 'fade-in' : ''}`}
                     loading="lazy"
-                    src={`/api/adobe/assets/${encodedId}/as/${fileName}.jpg?width=${width}`}
-                    alt={alt || name}
+                    src={`/api/adobe/assets/${asset.assetId}/as/${fileName}.jpg?width=${width}`}
+                    alt={asset.alt || asset.name}
                     onLoad={handleLoad}
                     onError={handleError}
                 />

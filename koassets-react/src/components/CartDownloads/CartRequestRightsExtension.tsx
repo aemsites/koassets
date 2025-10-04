@@ -149,7 +149,7 @@ const CartRequestRightsExtension: React.FC<CartRequestRightsExtensionProps> = ({
                             <div key={asset.assetId} className="asset-list-item">
                                 <div className="asset-thumbnail">
                                     <div className="item-thumbnail">
-                                        <Picture asset={asset} width={350} />
+                                        <Picture key={asset.assetId} asset={asset} width={350} />
                                     </div>
                                 </div>
                                 <div className="asset-details">
