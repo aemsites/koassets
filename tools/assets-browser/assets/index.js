@@ -32367,10 +32367,7 @@ const Picture = ({
 }) => {
   const [isLoaded, setIsLoaded] = reactExports.useState(false);
   const [hasError, setHasError] = reactExports.useState(false);
-  const id = asset.assetId || "";
-  const encodedId = encodeURIComponent(id);
-  const name = asset.name || "";
-  const alt = asset.alt;
+  const name = (asset == null ? void 0 : asset.name) || "";
   const fileName = encodeURIComponent((name == null ? void 0 : name.replace(/\.[^/.]+$/, "")) || "thumbnail");
   const handleLoad = () => {
     setIsLoaded(true);
@@ -32380,21 +32377,20 @@ const Picture = ({
     setHasError(true);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `preview-image ${!isLoaded ? "skeleton" : ""} ${hasError ? "missing" : ""}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("picture", { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("source", { type: "image/webp", srcSet: `/api/adobe/assets/${encodedId}/as/${fileName}.webp?width=${width}` }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("source", { type: "image/jpg", srcSet: `/api/adobe/assets/${encodedId}/as/${fileName}.jpg?width=${width}` }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("source", { type: "image/webp", srcSet: `/api/adobe/assets/${asset.assetId}/as/${fileName}.webp?width=${width}` }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("source", { type: "image/jpg", srcSet: `/api/adobe/assets/${asset.assetId}/as/${fileName}.jpg?width=${width}` }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "img",
       {
         className: `${className} ${isLoaded ? "fade-in" : ""}`,
         loading: "lazy",
-        src: `/api/adobe/assets/${encodedId}/as/${fileName}.jpg?width=${width}`,
-        alt: alt || name,
+        src: `/api/adobe/assets/${asset.assetId}/as/${fileName}.jpg?width=${width}`,
+        alt: asset.alt || asset.name,
         onLoad: handleLoad,
         onError: handleError
-      },
-      id
+      }
     )
-  ] }, id) });
+  ] }) });
 };
 const SelectAllRenditionsCheckbox = ({
   assetData,
@@ -32738,7 +32734,8 @@ const DownloadRenditionsContent = ({
           {
             asset: assetData.asset,
             width: 350
-          }
+          },
+          assetData.asset.assetId
         ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "download-renditions-title", children: assetData.asset.title || assetData.asset.name }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "download-renditions-options", children: (() => {
@@ -33306,7 +33303,7 @@ const CartRequestDownload = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-list-items", children: cartAssetItems.map((item) => {
         var _a;
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-list-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset: item, width: 350 }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset: item, width: 350 }, item.assetId) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-details", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-title", children: item.title || item.name }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-type", children: [
@@ -33568,7 +33565,7 @@ const CartRequestRightsExtension = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-list-items", children: restrictedAssets.map((asset) => {
         var _a;
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-list-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset, width: 350 }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset, width: 350 }, asset.assetId) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-details", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-title", children: asset.title || asset.name }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-type", children: [
@@ -34098,7 +34095,7 @@ const CartRightsCheck = ({
           ] }),
           restrictedAssets.map((asset) => {
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "table-row", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset, width: 350 }) }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset, width: 350 }, asset.assetId) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-title", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-title", children: asset.title || asset.name }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-date", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "date-with-icon", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "date-icon", children: "📅" }),
@@ -34371,7 +34368,7 @@ const WorkflowProgress = ({
 const CartAssetItemRow = ({ item, onRemoveItem }) => {
   var _a, _b, _c;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `cart-item-row`, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset: item, width: 350 }) }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset: item, width: 350 }, item.assetId) }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-title", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-title", children: item.title || item.name }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -36753,7 +36750,8 @@ const AssetCardViewGrid = ({
               asset: image,
               width: 350,
               className: "image-container"
-            }
+            },
+            image.assetId
           )
         ]
       }
@@ -36909,7 +36907,8 @@ const AssetCardViewList = ({
               asset: image,
               width: 350,
               className: "image-container"
-            }
+            },
+            image.assetId
           )
         ]
       }
@@ -37772,7 +37771,8 @@ const AssetDetails = ({
                     asset: populatedImage,
                     width: 1200,
                     className: "asset-details-main-image"
-                  }
+                  },
+                  populatedImage.assetId
                 )
               ] }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-details-main-info-section", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-details-main-info-section-inner", children: [
@@ -38006,7 +38006,8 @@ const AssetPreview = ({
           asset: selectedImage,
           width: 350,
           className: "modal-image"
-        }
+        },
+        selectedImage.assetId
       ) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "preview-modal-details", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "preview-modal-grid", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "preview-modal-group", children: [

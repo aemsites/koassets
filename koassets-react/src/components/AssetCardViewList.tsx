@@ -113,6 +113,7 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
                     </div>
 
                     <Picture
+                        key={image.assetId}
                         asset={image}
                         width={350}
                         className="image-container"

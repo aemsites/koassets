@@ -226,6 +226,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                 </div>
                             </div>
                             <Picture
+                                key={populatedImage.assetId}
                                 asset={populatedImage}
                                 width={1200}
                                 className="asset-details-main-image"

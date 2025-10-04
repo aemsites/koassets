@@ -33,7 +33,7 @@ const CartAssetItemRow: React.FC<CartAssetItemRowProps> = ({ item, onRemoveItem 
         <div className={`cart-item-row`}>
             <div className="col-thumbnail">
                 <div className="item-thumbnail">
-                    <Picture asset={item} width={350} />
+                    <Picture key={item.assetId} asset={item} width={350} />
                 </div>
             </div>
             <div className="col-title">
