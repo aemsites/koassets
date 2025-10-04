@@ -37687,6 +37687,7 @@ const AssetDetails = ({
   };
   reactExports.useEffect(() => {
     if (showModal && selectedImage && dynamicMediaClient) {
+      setPopulatedImage(selectedImage);
       const fetchMetadata = async () => {
         const metadataCache = JSON.parse(sessionStorage.getItem("assetMetadataCache") || "{}");
         let metadata = metadataCache[selectedImage.assetId];
@@ -37773,7 +37774,7 @@ const AssetDetails = ({
                     width: 1200,
                     className: "asset-details-main-image"
                   },
-                  populatedImage.assetId
+                  selectedImage == null ? void 0 : selectedImage.assetId
                 )
               ] }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-details-main-info-section", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-details-main-info-section-inner", children: [

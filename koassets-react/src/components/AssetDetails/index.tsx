@@ -127,6 +127,8 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 
     useEffect(() => {
         if (showModal && selectedImage && dynamicMediaClient) {
+            setPopulatedImage(selectedImage as Asset);
+
             const fetchMetadata = async () => {
                 // Populate image with metadata
                 const metadataCache = JSON.parse(sessionStorage.getItem('assetMetadataCache') || '{}');
@@ -226,7 +228,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                 </div>
                             </div>
                             <Picture
-                                key={populatedImage.assetId}
+                                key={selectedImage?.assetId}
                                 asset={populatedImage}
                                 width={1200}
                                 className="asset-details-main-image"
