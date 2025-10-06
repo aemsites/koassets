@@ -1,5 +1,6 @@
 import React from 'react';
 import { AuthorizationStatus } from '../clients/fadel-client';
+import { EAGER_LOAD_IMAGE_COUNT } from '../constants/images';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type { AssetCardProps } from '../types';
 import { getBucket } from '../utils/config';
@@ -18,7 +19,8 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
     cartAssetItems = [],
     isSelected = false,
     onCheckboxChange,
-    expandAllDetails = true
+    expandAllDetails = true,
+    index = 0
 }) => {
     // Get dynamicMediaClient from context
     const { dynamicMediaClient } = useAppConfig();
@@ -117,6 +119,7 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
                         asset={image}
                         width={350}
                         className="image-container"
+                        eager={index < EAGER_LOAD_IMAGE_COUNT}
                     />
                 </div>
 

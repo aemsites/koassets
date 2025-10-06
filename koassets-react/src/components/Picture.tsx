@@ -5,12 +5,14 @@ interface PictureProps {
     asset: Asset;
     width: number;
     className?: string;
+    eager?: boolean; // Controls loading strategy: true = eager (above fold), false = lazy (below fold)
 }
 
 const Picture: React.FC<PictureProps> = ({
     asset,
     width,
-    className = ''
+    className = '',
+    eager = false // Default to lazy loading for below-the-fold images
 }) => {
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
@@ -35,7 +37,7 @@ const Picture: React.FC<PictureProps> = ({
                 <img
                     key={asset.assetId}
                     className={`${className} ${isLoaded ? 'fade-in' : ''}`}
-                    loading="lazy"
+                    loading={eager ? 'eager' : 'lazy'}
                     src={`/api/adobe/assets/${asset.assetId}/as/${fileName}.jpg?width=${width}`}
                     alt={asset.alt || asset.name}
                     onLoad={handleLoad}

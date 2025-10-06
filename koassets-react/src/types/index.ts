@@ -206,6 +206,7 @@ export interface AssetCardProps {
     isSelected?: boolean;
     onCheckboxChange?: (id: string, checked: boolean) => void;
     expandAllDetails?: boolean;
+    index?: number; // Index in the list - used for LCP optimization
 }
 
 // Query and filter types
