@@ -293,7 +293,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 ) : (
                     <>
                         <div className={viewType === 'grid' ? 'image-grid' : 'image-grid-list'}>
-                            {visibleImages.map((visibleImage) => {
+                            {visibleImages.map((visibleImage, index) => {
                                 const CardComponent = viewType === 'grid' ? AssetCardViewGrid : AssetCardViewList;
                                 return (
                                     <CardComponent
@@ -307,6 +307,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                                         isSelected={selectedCards.has(visibleImage.assetId || '')}
                                         onCheckboxChange={handleCheckboxChange}
                                         expandAllDetails={expandAllDetails}
+                                        index={index}
                                     />
                                 );
                             })}

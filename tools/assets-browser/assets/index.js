@@ -32363,7 +32363,9 @@ const useAppConfig = () => {
 const Picture = ({
   asset,
   width,
-  className = ""
+  className = "",
+  eager = false
+  // Default to lazy loading for below-the-fold images
 }) => {
   const [isLoaded, setIsLoaded] = reactExports.useState(false);
   const [hasError, setHasError] = reactExports.useState(false);
@@ -32383,7 +32385,7 @@ const Picture = ({
       "img",
       {
         className: `${className} ${isLoaded ? "fade-in" : ""}`,
-        loading: "lazy",
+        loading: eager ? "eager" : "lazy",
         src: `/api/adobe/assets/${asset.assetId}/as/${fileName}.jpg?width=${width}`,
         alt: asset.alt || asset.name,
         onLoad: handleLoad,
@@ -36576,6 +36578,7 @@ const DEFAULT_ACCORDION_CONFIG = {
 <p><b>"RIGHTS FREE" ASSETS DOWNLOAD:</b> You don't need to enter your intended use for "Rights Free" Assets! Use the "Rights Free" search filter and select yes to only view "Rights Free" assets.</p>
 <p><b>NEED ADDITIONAL SUPPORT</b>? If you have any additional questions reach out to our asset management team via <a href="mailto:assetmanagers@coca-cola.com"><b>assetmanagers@coca-cola.com</b></a> or visit our <a href="https://forms.office.com/Pages/ResponsePage.aspx?id=qyaNVKqM4UmXwqGxoGzDnPYUeiWm8X1KiF0OxjOzZ3VUNlNNTzcxME9SMVpTTUUzVzY4TkFYV1dLVS4u&amp;wdLOR=c0E1D32CE-2209-4C6C-893D-F353FDC5C295"><b>Support Portal</b></a>.</p>`
 };
+const EAGER_LOAD_IMAGE_COUNT = 9;
 const ActionButton = ({ disabled, onClick, config, hasLoadingState = false, style }) => {
   const [loading, setLoading] = reactExports.useState(false);
   const containerRef = reactExports.useRef(null);
@@ -36672,7 +36675,8 @@ const AssetCardViewGrid = ({
   cartAssetItems = [],
   isSelected = false,
   onCheckboxChange,
-  expandAllDetails = true
+  expandAllDetails = true,
+  index = 0
 }) => {
   const { dynamicMediaClient } = useAppConfig();
   const isInCart = cartAssetItems.some((cartAssetItem) => cartAssetItem.assetId === image.assetId);
@@ -36750,7 +36754,8 @@ const AssetCardViewGrid = ({
             {
               asset: image,
               width: 350,
-              className: "image-container"
+              className: "image-container",
+              eager: index < EAGER_LOAD_IMAGE_COUNT
             },
             image.assetId
           )
@@ -36829,7 +36834,8 @@ const AssetCardViewList = ({
   cartAssetItems = [],
   isSelected = false,
   onCheckboxChange,
-  expandAllDetails = true
+  expandAllDetails = true,
+  index = 0
 }) => {
   const { dynamicMediaClient } = useAppConfig();
   const isInCart = cartAssetItems.some((cartAssetItem) => cartAssetItem.assetId === image.assetId);
@@ -36907,7 +36913,8 @@ const AssetCardViewList = ({
             {
               asset: image,
               width: 350,
-              className: "image-container"
+              className: "image-container",
+              eager: index < EAGER_LOAD_IMAGE_COUNT
             },
             image.assetId
           )
@@ -37772,7 +37779,8 @@ const AssetDetails = ({
                   {
                     asset: populatedImage,
                     width: 1200,
-                    className: "asset-details-main-image"
+                    className: "asset-details-main-image",
+                    eager: true
                   },
                   selectedImage == null ? void 0 : selectedImage.assetId
                 )
@@ -38007,7 +38015,8 @@ const AssetPreview = ({
         {
           asset: selectedImage,
           width: 350,
-          className: "modal-image"
+          className: "modal-image",
+          eager: true
         },
         selectedImage.assetId
       ) }),
@@ -38535,7 +38544,7 @@ const ImageGallery = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "loading-spinner" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Loading images..." })
     ] }) : visibleImages.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "no-images", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No images to display" }) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: viewType === "grid" ? "image-grid" : "image-grid-list", children: visibleImages.map((visibleImage) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: viewType === "grid" ? "image-grid" : "image-grid-list", children: visibleImages.map((visibleImage, index) => {
         const CardComponent = viewType === "grid" ? AssetCardViewGrid : AssetCardViewList;
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           CardComponent,
@@ -38548,7 +38557,8 @@ const ImageGallery = ({
             cartAssetItems,
             isSelected: selectedCards.has(visibleImage.assetId || ""),
             onCheckboxChange: handleCheckboxChange,
-            expandAllDetails
+            expandAllDetails,
+            index
           },
           visibleImage.assetId
         );

@@ -232,6 +232,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                 asset={populatedImage}
                                 width={1200}
                                 className="asset-details-main-image"
+                                eager={true}
                             />
                         </div>
                     </div>

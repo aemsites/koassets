@@ -121,6 +121,7 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                             asset={selectedImage}
                             width={350}
                             className="modal-image"
+                            eager={true}
                         />
                     </div>
 
