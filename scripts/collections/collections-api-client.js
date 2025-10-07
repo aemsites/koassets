@@ -18,7 +18,7 @@ export class DynamicMediaCollectionsClient {
   constructor(config) {
     this.bucket = config.bucket;
     this.accessToken = config.accessToken?.replace(/^Bearer /, '');
-    this.baseURL = `https://${this.bucket}.adobeaemcloud.com`;
+    this.baseURL = `${window.location.origin}/api`;
     this.user = config.user; // Store user for auth filtering
 
     // Determine API key based on bucket using centralized config
