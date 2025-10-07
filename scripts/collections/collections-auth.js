@@ -3,8 +3,6 @@
  * Handles access control for Dynamic Media Collections based on ACLs
  */
 
-import { DEBUG_COLLECTIONS } from './collections-config.js';
-
 /**
  * Get ACL object from collection metadata
  * @param {Object} apiCollection - The collection object from API
@@ -52,13 +50,11 @@ function userInArray(userEmail, aclArray) {
  * @param {string} reason - Reason for the decision
  */
 function logAuth(collectionId, action, hasAccess, reason) {
-  if (DEBUG_COLLECTIONS) {
-    console.log(
-      `[Collections Auth] ${collectionId} - ${action}:`,
-      hasAccess ? '✓ GRANTED' : '✗ DENIED',
-      `(${reason})`,
-    );
-  }
+  console.debug(
+    `[Collections Auth] ${collectionId} - ${action}:`,
+    hasAccess ? '✓ GRANTED' : '✗ DENIED',
+    `(${reason})`,
+  );
 }
 
 /**
@@ -124,11 +120,9 @@ export function assertCollectionAccess(collections, currentUser, action = 'read'
     (collection) => hasCollectionAccess(collection, currentUser, action),
   );
 
-  if (DEBUG_COLLECTIONS) {
-    console.log(
-      `[Collections Auth] Filtered ${collections.length} collections → ${filtered.length} with ${action} access`,
-    );
-  }
+  console.debug(
+    `[Collections Auth] Filtered ${collections.length} collections → ${filtered.length} with ${action} access`,
+  );
 
   return filtered;
 }
