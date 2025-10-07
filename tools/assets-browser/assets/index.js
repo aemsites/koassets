@@ -32364,6 +32364,7 @@ const Picture = ({
   asset,
   width,
   className = "",
+  fetchPriority = "auto",
   eager = false
   // Default to lazy loading for below-the-fold images
 }) => {
@@ -32378,7 +32379,7 @@ const Picture = ({
     setIsLoaded(true);
     setHasError(true);
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `preview-image ${!isLoaded ? "skeleton" : ""} ${hasError ? "missing" : ""}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("picture", { children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `preview-image ${hasError ? "missing" : ""}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("picture", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("source", { type: "image/webp", srcSet: `/api/adobe/assets/${asset.assetId}/as/${fileName}.webp?width=${width}` }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("source", { type: "image/jpg", srcSet: `/api/adobe/assets/${asset.assetId}/as/${fileName}.jpg?width=${width}` }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -32386,6 +32387,7 @@ const Picture = ({
       {
         className: `${className} ${isLoaded ? "fade-in" : ""}`,
         loading: eager ? "eager" : "lazy",
+        fetchPriority,
         src: `/api/adobe/assets/${asset.assetId}/as/${fileName}.jpg?width=${width}`,
         alt: asset.alt || asset.name,
         onLoad: handleLoad,
@@ -36578,7 +36580,7 @@ const DEFAULT_ACCORDION_CONFIG = {
 <p><b>"RIGHTS FREE" ASSETS DOWNLOAD:</b> You don't need to enter your intended use for "Rights Free" Assets! Use the "Rights Free" search filter and select yes to only view "Rights Free" assets.</p>
 <p><b>NEED ADDITIONAL SUPPORT</b>? If you have any additional questions reach out to our asset management team via <a href="mailto:assetmanagers@coca-cola.com"><b>assetmanagers@coca-cola.com</b></a> or visit our <a href="https://forms.office.com/Pages/ResponsePage.aspx?id=qyaNVKqM4UmXwqGxoGzDnPYUeiWm8X1KiF0OxjOzZ3VUNlNNTzcxME9SMVpTTUUzVzY4TkFYV1dLVS4u&amp;wdLOR=c0E1D32CE-2209-4C6C-893D-F353FDC5C295"><b>Support Portal</b></a>.</p>`
 };
-const EAGER_LOAD_IMAGE_COUNT = 9;
+const EAGER_LOAD_IMAGE_COUNT = 6;
 const ActionButton = ({ disabled, onClick, config, hasLoadingState = false, style }) => {
   const [loading, setLoading] = reactExports.useState(false);
   const containerRef = reactExports.useRef(null);
@@ -36755,7 +36757,8 @@ const AssetCardViewGrid = ({
               asset: image,
               width: 350,
               className: "image-container",
-              eager: index < EAGER_LOAD_IMAGE_COUNT
+              eager: index < EAGER_LOAD_IMAGE_COUNT,
+              fetchPriority: index < 2 ? "high" : "auto"
             },
             image.assetId
           )
@@ -36914,7 +36917,8 @@ const AssetCardViewList = ({
               asset: image,
               width: 350,
               className: "image-container",
-              eager: index < EAGER_LOAD_IMAGE_COUNT
+              eager: index < EAGER_LOAD_IMAGE_COUNT,
+              fetchPriority: index < 2 ? "high" : "auto"
             },
             image.assetId
           )

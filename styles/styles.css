@@ -551,31 +551,6 @@ a.terms-link:hover {
   display: block;
 }
 
-/* Skeleton loading state - subtle animated background */
-.preview-image.skeleton {
-  position: relative;
-  background: linear-gradient(
-    90deg,
-    #f0f0f0 0%,
-    #f8f8f8 50%,
-    #f0f0f0 100%
-  );
-  background-size: 200% 100%;
-  animation: skeleton-pulse 1.5s ease-in-out infinite;
-}
-
-/* Skeleton animation - subtle shimmer effect */
-
-@keyframes skeleton-pulse {
-  0% {
-    background-position: 200% 0;
-  }
-
-  100% {
-    background-position: -200% 0;
-  }
-}
-
 /* Fade-in animation for loaded images */
 .preview-image img {
   width: 100%;

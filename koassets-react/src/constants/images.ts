@@ -13,5 +13,5 @@
  * - Desktop (3 columns): 9 images = 3 rows
  * - Mobile (1-2 columns): 9 images = 5-9 rows
  */
-export const EAGER_LOAD_IMAGE_COUNT = 9;
+export const EAGER_LOAD_IMAGE_COUNT = 6;
 
