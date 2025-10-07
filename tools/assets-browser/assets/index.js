@@ -32370,13 +32370,7 @@ const Picture = ({
 }) => {
   const name = (asset == null ? void 0 : asset.name) || "";
   const fileName = encodeURIComponent((name == null ? void 0 : name.replace(/\.[^/.]+$/, "")) || "thumbnail");
-  const handleError = (e) => {
-    const previewDiv = e.currentTarget.closest(".preview-image");
-    if (previewDiv) {
-      previewDiv.classList.add("missing");
-    }
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `preview-image`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("picture", { children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("picture", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("source", { type: "image/webp", srcSet: `/api/adobe/assets/${asset.assetId}/as/${fileName}.webp?width=${width}` }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("source", { type: "image/jpg", srcSet: `/api/adobe/assets/${asset.assetId}/as/${fileName}.jpg?width=${width}` }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -32387,11 +32381,14 @@ const Picture = ({
         fetchPriority,
         src: `/api/adobe/assets/${asset.assetId}/as/${fileName}.jpg?width=${width}`,
         alt: asset.alt || asset.name,
-        onError: handleError
+        onError: (e) => {
+          var _a;
+          (_a = e.target.parentElement) == null ? void 0 : _a.classList.add("missing");
+        }
       },
       asset.assetId
     )
-  ] }) });
+  ] });
 };
 const SelectAllRenditionsCheckbox = ({
   assetData,
