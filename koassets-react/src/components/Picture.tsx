@@ -1,5 +1,5 @@
 import type { Asset } from '../types';
-import React, { useState } from 'react';
+import React from 'react';
 
 interface PictureProps {
     asset: Asset;
@@ -16,34 +16,28 @@ const Picture: React.FC<PictureProps> = ({
     fetchPriority = 'auto',
     eager = false // Default to lazy loading for below-the-fold images
 }) => {
-    const [isLoaded, setIsLoaded] = useState(false);
-    const [hasError, setHasError] = useState(false);
-
     const name = asset?.name || '';
     const fileName = encodeURIComponent(name?.replace(/\.[^/.]+$/, '') || 'thumbnail');
 
-    const handleLoad = () => {
-        setIsLoaded(true);
-    };
-
-    const handleError = () => {
-        setIsLoaded(true);
-        setHasError(true);
+    const handleError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+        const previewDiv = e.currentTarget.closest('.preview-image');
+        if (previewDiv) {
+            previewDiv.classList.add('missing');
+        }
     };
 
     return (
-        <div className={`preview-image ${hasError ? 'missing' : ''}`}>
+        <div className={`preview-image`}>
             <picture>
                 <source type="image/webp" srcSet={`/api/adobe/assets/${asset.assetId}/as/${fileName}.webp?width=${width}`} />
                 <source type="image/jpg" srcSet={`/api/adobe/assets/${asset.assetId}/as/${fileName}.jpg?width=${width}`} />
                 <img
                     key={asset.assetId}
-                    className={`${className} ${isLoaded ? 'fade-in' : ''}`}
+                    className={`${className}`}
                     loading={eager ? 'eager' : 'lazy'}
                     fetchPriority={fetchPriority}
                     src={`/api/adobe/assets/${asset.assetId}/as/${fileName}.jpg?width=${width}`}
                     alt={asset.alt || asset.name}
-                    onLoad={handleLoad}
                     onError={handleError}
                 />
             </picture>

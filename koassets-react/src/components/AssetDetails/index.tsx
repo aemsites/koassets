@@ -229,10 +229,11 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                             </div>
                             <Picture
                                 key={selectedImage?.assetId}
-                                asset={populatedImage}
+                                asset={selectedImage as Asset}
                                 width={1200}
                                 className="asset-details-main-image"
                                 eager={true}
+                                fetchPriority="high"
                             />
                         </div>
                     </div>

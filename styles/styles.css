@@ -551,16 +551,10 @@ a.terms-link:hover {
   display: block;
 }
 
-/* Fade-in animation for loaded images */
 .preview-image img {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  opacity: 0;
-  transition: opacity 0.3s ease-in;
-}
-
-.preview-image img.fade-in {
   opacity: 1;
 }
 

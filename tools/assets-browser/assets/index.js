@@ -32368,29 +32368,25 @@ const Picture = ({
   eager = false
   // Default to lazy loading for below-the-fold images
 }) => {
-  const [isLoaded, setIsLoaded] = reactExports.useState(false);
-  const [hasError, setHasError] = reactExports.useState(false);
   const name = (asset == null ? void 0 : asset.name) || "";
   const fileName = encodeURIComponent((name == null ? void 0 : name.replace(/\.[^/.]+$/, "")) || "thumbnail");
-  const handleLoad = () => {
-    setIsLoaded(true);
+  const handleError = (e) => {
+    const previewDiv = e.currentTarget.closest(".preview-image");
+    if (previewDiv) {
+      previewDiv.classList.add("missing");
+    }
   };
-  const handleError = () => {
-    setIsLoaded(true);
-    setHasError(true);
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `preview-image ${hasError ? "missing" : ""}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("picture", { children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `preview-image`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("picture", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("source", { type: "image/webp", srcSet: `/api/adobe/assets/${asset.assetId}/as/${fileName}.webp?width=${width}` }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("source", { type: "image/jpg", srcSet: `/api/adobe/assets/${asset.assetId}/as/${fileName}.jpg?width=${width}` }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "img",
       {
-        className: `${className} ${isLoaded ? "fade-in" : ""}`,
+        className: `${className}`,
         loading: eager ? "eager" : "lazy",
         fetchPriority,
         src: `/api/adobe/assets/${asset.assetId}/as/${fileName}.jpg?width=${width}`,
         alt: asset.alt || asset.name,
-        onLoad: handleLoad,
         onError: handleError
       },
       asset.assetId
@@ -37781,10 +37777,11 @@ const AssetDetails = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   Picture,
                   {
-                    asset: populatedImage,
+                    asset: selectedImage,
                     width: 1200,
                     className: "asset-details-main-image",
-                    eager: true
+                    eager: true,
+                    fetchPriority: "high"
                   },
                   selectedImage == null ? void 0 : selectedImage.assetId
                 )
@@ -38020,7 +38017,8 @@ const AssetPreview = ({
           asset: selectedImage,
           width: 350,
           className: "modal-image",
-          eager: true
+          eager: true,
+          fetchPriority: "high"
         },
         selectedImage.assetId
       ) }),
@@ -38436,8 +38434,8 @@ const ImageGallery = ({
     setShowDetailsModal(true);
   };
   const closeDetailsModal = () => {
-    setShowDetailsModal(false);
     setSelectedCard(null);
+    setShowDetailsModal(false);
   };
   const handleCheckboxChange = (imageId, isChecked) => {
     setSelectedCards((prev) => {
