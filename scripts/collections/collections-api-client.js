@@ -4,27 +4,21 @@
  */
 
 // Import configuration and utilities from separate modules
-import { API_CONFIG } from './collections-config.js';
 import { hasCollectionAccess, assertCollectionAccess } from './collections-auth.js';
-import { getBucket } from './collections-utils.js';
 
 // Re-export utilities for convenience
-export { getBucket, hasCollectionAccess, assertCollectionAccess };
+export { hasCollectionAccess, assertCollectionAccess };
 
 /**
  * Dynamic Media Collections API Client
  */
 export class DynamicMediaCollectionsClient {
   constructor(config) {
-    this.bucket = config.bucket;
     this.accessToken = config.accessToken?.replace(/^Bearer /, '');
     this.baseURL = `${window.location.origin}/api`;
     this.user = config.user; // Store user for auth filtering
-
-    // Determine API key based on bucket using centralized config
-    this.apiKey = this.bucket.includes('-cmstg')
-      ? API_CONFIG.stagingApiKey
-      : API_CONFIG.productionApiKey;
+    // API key will be set by the Cloudflare worker proxy
+    this.apiKey = null;
   }
 
   isIMSAuthenticated() {

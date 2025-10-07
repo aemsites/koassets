@@ -1,5 +1,5 @@
 // Import the centralized JavaScript collections client with auth
-import { DynamicMediaCollectionsClient, getBucket } from '../../scripts/collections/collections-api-client.js';
+import { DynamicMediaCollectionsClient } from '../../scripts/collections/collections-api-client.js';
 import { transformApiCollectionToInternal } from '../../scripts/collections/collections-utils.js';
 
 // Check if we're in cookie auth mode (same logic as main app)
@@ -27,17 +27,14 @@ export default async function decorate(block) {
   try {
     const accessToken = localStorage.getItem('accessToken') || '';
     const currentUser = window.user; // Get current user for auth (now guaranteed to be loaded)
-    const bucket = getBucket(); // Get bucket dynamically
 
     collectionsClient = new DynamicMediaCollectionsClient({
-      bucket,
       accessToken,
       user: currentUser, // Pass user for auth filtering
     });
 
     // eslint-disable-next-line no-console
     console.log('🔧 [Collections Client] Initialized with:', {
-      bucket,
       hasAccessToken: Boolean(accessToken),
       isCookieAuth: isCookieAuth(),
       hasUser: Boolean(currentUser),

@@ -3,8 +3,6 @@
  * Shared utilities for collection data transformation and management
  */
 
-import { DEFAULT_BUCKET, DEBUG_COLLECTIONS } from './collections-config.js';
-
 /**
  * Transform API collection format to internal format
  * Converts the Dynamic Media API collection structure to the format used by the UI
@@ -12,6 +10,7 @@ import { DEFAULT_BUCKET, DEBUG_COLLECTIONS } from './collections-config.js';
  * @param {Object} apiCollection - Collection object from API
  * @returns {Object} Transformed collection object for UI use
  */
+// eslint-disable-next-line import/prefer-default-export
 export function transformApiCollectionToInternal(apiCollection) {
   if (!apiCollection) return null;
 
@@ -39,18 +38,4 @@ export function transformApiCollectionToInternal(apiCollection) {
     // Keep original API data for reference
     apiData: apiCollection,
   };
-}
-
-/**
- * Get Dynamic Media bucket from APP_CONFIG or use default
- * @returns {string} The bucket identifier
- */
-export function getBucket() {
-  const bucket = window.APP_CONFIG?.BUCKET || DEFAULT_BUCKET;
-
-  if (DEBUG_COLLECTIONS && bucket === DEFAULT_BUCKET) {
-    console.log('[Collections] Using default bucket (APP_CONFIG.BUCKET not set):', bucket);
-  }
-
-  return bucket;
 }
