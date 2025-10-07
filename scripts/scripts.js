@@ -47,22 +47,32 @@ function buildHeroBlock(main) {
 }
 
 /**
- * Preload critical SVG icons
+ * Lazy preload hover-state icons after initial page load
+ * This prevents blink on first hover while not blocking critical resources
+ * Uses Image objects to force immediate caching
  */
-function preloadIcons() {
-  const icons = [
+function lazyPreloadHoverIcons() {
+  const hoverIcons = [
     '/icons/shopping_cart_icon_red.svg',
     '/icons/download_icon_red.svg',
   ];
 
-  icons.forEach((iconPath) => {
-    const link = document.createElement('link');
-    link.rel = 'preload';
-    link.as = 'image';
-    link.type = 'image/svg+xml';
-    link.href = iconPath;
-    document.head.appendChild(link);
-  });
+  const preloadHoverIcons = () => {
+    hoverIcons.forEach((iconPath) => {
+      // Create Image object to force browser to load and cache
+      const img = new Image();
+      img.src = iconPath;
+    });
+  };
+
+  // Load immediately but after DOM content is ready
+  // This ensures icons are cached before user interaction
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', preloadHoverIcons);
+  } else {
+    // DOM already loaded, preload immediately
+    preloadHoverIcons();
+  }
 }
 
 /**
@@ -112,9 +122,6 @@ async function loadEager(doc) {
   document.documentElement.lang = 'en';
   decorateTemplateAndTheme();
 
-  // Preload critical icons early
-  preloadIcons();
-
   const main = doc.querySelector('main');
   if (main) {
     decorateMain(main);
@@ -152,6 +159,9 @@ async function loadLazy(doc) {
   loadCSS(`${window.hlx.codeBasePath}/styles/lazy-styles.css`);
   loadCSS(`${window.hlx.codeBasePath}/styles/add-to-collection-modal.css`);
   loadFonts();
+
+  // Lazy preload hover icons to prevent blink on first hover
+  lazyPreloadHoverIcons();
 
   // Initialize add to collection modal functionality
   import('./add-to-collection-modal.js').then(({ initAddToCollectionModal }) => {
