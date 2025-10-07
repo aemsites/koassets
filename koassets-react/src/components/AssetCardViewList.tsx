@@ -120,6 +120,7 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
                         width={350}
                         className="image-container"
                         eager={index < EAGER_LOAD_IMAGE_COUNT}
+                        fetchPriority={index < 2 ? 'high' : 'auto'}
                     />
                 </div>
 

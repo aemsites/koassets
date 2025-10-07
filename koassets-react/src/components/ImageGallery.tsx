@@ -155,8 +155,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
     // Handler to close asset details modal
     const closeDetailsModal = () => {
-        setShowDetailsModal(false);
         setSelectedCard(null);
+        setShowDetailsModal(false);
     };
 
     // Handle checkbox selection
