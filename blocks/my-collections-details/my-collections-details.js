@@ -1,4 +1,97 @@
-export default function decorate(block) {
+// Import the centralized JavaScript collections client with auth
+import { DynamicMediaCollectionsClient, getBucket } from '../../scripts/collections/collections-api-client.js';
+
+// Check if we're in cookie auth mode (same logic as main app)
+function isCookieAuth() {
+  return window.location.origin.endsWith('adobeaem.workers.dev')
+    || window.location.origin === 'http://localhost:8787';
+}
+
+// Global state for collections and API client
+let collectionsClient = null;
+let currentCollection = null;
+let isLoading = false;
+
+// API Functions
+async function loadCollectionFromAPI(collectionId) {
+  if (isLoading || !collectionsClient) return;
+
+  isLoading = true;
+  try {
+    // eslint-disable-next-line no-console
+    console.log('Loading collection items from Dynamic Media API...');
+    const data = await collectionsClient.getCollectionItems(collectionId, { limit: 100 });
+
+    // Transform API response to internal format
+    currentCollection = transformApiCollectionItemsToInternal(data, collectionId);
+
+    // eslint-disable-next-line no-console
+    console.log(`Loaded collection with ${currentCollection.contents.length} items from API`);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to load collection from API:', error);
+    currentCollection = null;
+    throw error;
+  } finally {
+    isLoading = false;
+  }
+}
+
+/**
+ * Transform API collection items response to internal format
+ * @param {Object} apiResponse - Response from getCollectionItems API
+ * @param {string} collectionId - Collection ID
+ * @returns {Object} Internal collection format
+ */
+function transformApiCollectionItemsToInternal(apiResponse, collectionId) {
+  // Extract collection metadata from self array
+  const selfData = apiResponse.self && apiResponse.self[0];
+  const collectionMetadata = selfData ? selfData.collectionMetadata : {};
+  const repositoryMetadata = selfData ? selfData.repositoryMetadata : {};
+
+  // Transform items to internal asset format
+  const contents = (apiResponse.items || []).map(transformApiItemToAsset);
+
+  return {
+    id: collectionId,
+    name: collectionMetadata.title || 'Untitled Collection',
+    description: collectionMetadata.description || '',
+    lastUpdated: repositoryMetadata['repo:modifyDate'] || new Date().toISOString(),
+    dateLastUsed: new Date(repositoryMetadata['repo:modifyDate'] || Date.now()).getTime(),
+    dateCreated: repositoryMetadata['repo:createDate'] || new Date().toISOString(),
+    createdBy: repositoryMetadata['repo:createdBy'] || '',
+    modifiedBy: repositoryMetadata['repo:modifiedBy'] || '',
+    contents,
+    favorite: false, // Not supported by API yet
+    // Keep original API data for reference
+    _apiData: apiResponse,
+  };
+}
+
+/**
+ * Transform API item to internal asset format
+ * @param {Object} apiItem - Item from API response
+ * @returns {Object} Internal asset format
+ */
+function transformApiItemToAsset(apiItem) {
+  return {
+    assetId: apiItem.id,
+    id: apiItem.id,
+    name: apiItem.id, // Use ID as name for now
+    title: apiItem.id, // Use ID as title for now
+    type: apiItem.type || 'asset',
+    repositoryId: apiItem['repo:repositoryId'],
+    // These will need to be populated when we have asset details
+    url: '',
+    previewUrl: '',
+    thumbnail: '',
+    imageUrl: '',
+    // Keep original API data
+    _apiData: apiItem,
+  };
+}
+
+export default async function decorate(block) {
   // Get collection ID from URL params
   const urlParams = new URLSearchParams(window.location.search);
   const collectionId = urlParams.get('id');
@@ -8,10 +101,48 @@ export default function decorate(block) {
     return;
   }
 
-  // Load collection data
-  const collection = loadCollection(collectionId);
-  if (!collection) {
-    displayErrorMessage(block, 'Collection not found');
+  // Load user if not already available
+  if (!window.user) {
+    // eslint-disable-next-line no-console
+    console.log('🔄 [Collections Client Details] Loading user data...');
+  }
+
+  // Initialize the Collections client with same config as main app
+  try {
+    const accessToken = localStorage.getItem('accessToken') || '';
+    const currentUser = window.user; // Get current user for auth
+    const bucket = getBucket(); // Get bucket dynamically
+
+    collectionsClient = new DynamicMediaCollectionsClient({
+      bucket,
+      accessToken,
+      user: currentUser, // Pass user for auth filtering
+    });
+
+    // eslint-disable-next-line no-console
+    console.log('🔧 [Collections Client Details] Initialized with:', {
+      bucket,
+      hasAccessToken: Boolean(accessToken),
+      isCookieAuth: isCookieAuth(),
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to initialize Collections client:', error);
+    displayErrorMessage(block, 'Failed to initialize collections service');
+    return;
+  }
+
+  // Load collection data from API
+  try {
+    await loadCollectionFromAPI(collectionId);
+    if (!currentCollection) {
+      displayErrorMessage(block, 'Collection not found');
+      return;
+    }
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to load collection:', error);
+    displayErrorMessage(block, 'Failed to load collection');
     return;
   }
 
@@ -68,13 +199,13 @@ export default function decorate(block) {
 
   const collectionName = document.createElement('p');
   collectionName.className = 'collection-name-display';
-  collectionName.textContent = collection.name;
+  collectionName.textContent = currentCollection.name;
 
   // Add description
   const descText = document.createElement('div');
   descText.className = 'collection-description-display';
-  if (collection.description && collection.description.trim()) {
-    descText.textContent = collection.description;
+  if (currentCollection.description && currentCollection.description.trim()) {
+    descText.textContent = currentCollection.description;
   } else {
     descText.textContent = 'No description';
     descText.style.color = '#999';
@@ -84,12 +215,12 @@ export default function decorate(block) {
   // Add date
   const dateText = document.createElement('div');
   dateText.className = 'collection-date-display';
-  const date = new Date(collection.lastUpdated);
+  const date = new Date(currentCollection.lastUpdated);
   dateText.textContent = `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
   const showingText = document.createElement('div');
   showingText.className = 'showing-text';
-  const totalCount = collection.contents ? collection.contents.length : 0;
+  const totalCount = currentCollection.contents ? currentCollection.contents.length : 0;
   showingText.textContent = `Displayed ${totalCount} Total ${totalCount}`;
 
   collectionInfo.appendChild(collectionName);
@@ -114,8 +245,8 @@ export default function decorate(block) {
     assetsGrid.className = 'assets-grid';
 
     // Display collection contents as asset cards
-    collection.contents.forEach((asset) => {
-      const assetCard = createAssetCard(asset, collection.id);
+    currentCollection.contents.forEach((asset) => {
+      const assetCard = createAssetCard(asset, currentCollection.id);
       assetsGrid.appendChild(assetCard);
     });
 
@@ -136,16 +267,7 @@ export default function decorate(block) {
   }
 }
 
-function loadCollection(collectionId) {
-  try {
-    const collections = JSON.parse(localStorage.getItem('koassets-my-collections') || '[]');
-    return collections.find((collection) => collection.id === collectionId);
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error loading collection:', error);
-    return null;
-  }
-}
+// Collection loading now handled by SDK
 
 // Current search state
 // eslint-disable-next-line no-unused-vars
@@ -354,49 +476,46 @@ function hideRemoveAssetModal() {
   pendingRemove = { asset: null, collectionId: null };
 }
 
-function confirmRemoveAsset() {
+async function confirmRemoveAsset() {
   const { asset, collectionId } = pendingRemove;
   if (!asset || !collectionId) return;
 
-  const collections = JSON.parse(localStorage.getItem('koassets-my-collections') || '[]');
-  const updatedCollections = collections.map((collection) => {
-    if (collection.id === collectionId) {
-      const updatedContents = (collection.contents || []).filter((item) => {
-        // item can be string or object, support multiple shapes
-        if (typeof item === 'string') {
-          return item !== (asset.assetPath || asset.assetId);
-        }
-        return !(
-          (item.id && asset.id && item.id === asset.id)
-          || (
-            item.assetId
-            && asset.assetId
-            && item.assetId === asset.assetId
-          )
-          || (
-            item.assetPath
-            && (
-              item.assetPath === asset.assetPath
-              || item.assetPath === asset.assetId
-            )
-          )
-        );
-      });
-      return {
-        ...collection,
-        contents: updatedContents,
-        lastUpdated: new Date().toISOString(),
-      };
-    }
-    return collection;
-  });
+  if (!collectionsClient) {
+    showToast('Collections service not available', 'error');
+    return;
+  }
 
-  localStorage.setItem('koassets-my-collections', JSON.stringify(updatedCollections));
-  hideRemoveAssetModal();
   try {
-    showToast('Removed from collection', 'success');
-  } catch (_) { /* no-op */ }
-  setTimeout(() => window.location.reload(), 800);
+    // Prepare remove operation data for API (API expects array format)
+    const removeData = [{
+      op: 'remove',
+      id: asset.assetId || asset.id,
+      type: 'asset',
+    }];
+
+    // eslint-disable-next-line no-console
+    console.log('🗑️ [Remove Asset] Removing asset from collection:', { collectionId, asset: asset.assetId || asset.id });
+
+    // Remove asset from collection via API
+    await collectionsClient.updateCollectionItems(collectionId, removeData);
+
+    // Hide modal first
+    hideRemoveAssetModal();
+
+    // Show success message
+    showToast('ASSET REMOVED FROM COLLECTION SUCCESSFULLY', 'success');
+
+    // Reload the page to show updated collection
+    setTimeout(() => window.location.reload(), 800);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to remove asset from collection:', error);
+
+    // Hide modal even on error
+    hideRemoveAssetModal();
+
+    showToast(`Failed to remove asset: ${error.message}`, 'error');
+  }
 }
 
 function handleRemoveFromCollection(asset, collectionId) {

@@ -345,6 +345,11 @@
     border: 1px solid #138496;
 }
 
+.toast-error {
+    background-color: #dc3545;
+    border: 1px solid #c82333;
+}
+
 .toast.show {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
@@ -374,6 +379,22 @@
     text-align: center;
     padding: 3rem 0;
     color: #666;
+    font-size: 1.1rem;
+}
+
+.collections-error {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #666;
+}
+
+.collections-error h2 {
+    color: #e60012;
+    margin-bottom: 1rem;
+}
+
+.collections-error p {
+    margin-bottom: 2rem;
     font-size: 1.1rem;
 }
 
@@ -438,26 +459,12 @@
     overflow: hidden;
 }
 
-.collection-name-container {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-bottom: 0.25rem;
-}
-
 .collection-name {
     font-size: 1rem;
     font-weight: 500;
     color: #333;
     line-height: 1.2;
-}
-
-.collection-item-count {
-    font-size: 0.9rem;
-    font-weight: 400;
-    white-space: nowrap;
-    font-style: italic;
+    margin-bottom: 0.25rem;
 }
 
 .collection-description {
@@ -576,10 +583,6 @@
 
     .collection-name {
         font-size: 0.9rem;
-    }
-
-    .collection-item-count {
-        font-size: 0.8rem;
     }
 
     .collection-description {
