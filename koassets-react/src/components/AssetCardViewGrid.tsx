@@ -118,7 +118,7 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                             <span>Add to Collection</span>
                         </div>
                     </div>
-
+                    F
                     <Picture
                         key={image.assetId}
                         asset={image}

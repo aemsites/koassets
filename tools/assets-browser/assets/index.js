@@ -36748,6 +36748,7 @@ const AssetCardViewGrid = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("i", { className: "icon add circle" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Add to Collection" })
           ] }) }),
+          "F",
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Picture,
             {
