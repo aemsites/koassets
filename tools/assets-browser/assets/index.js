@@ -31729,7 +31729,11 @@ function extractFromTcccValues(dataJson, key) {
     const tcccObj = raw["TCCC"];
     const values = tcccObj && tcccObj["#values"];
     if (Array.isArray(values)) {
-      return values.join(", ");
+      const processed = values.map((v) => {
+        const parts = v.split(" / ");
+        return parts[parts.length - 1].trim();
+      });
+      return processed.join(", ");
     }
     return "ERROR";
   }

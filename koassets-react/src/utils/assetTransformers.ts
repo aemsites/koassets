@@ -76,7 +76,11 @@ function extractFromTcccValues(dataJson: Record<string, unknown>, key: string): 
         const tcccObj = (raw as Record<string, unknown>)['TCCC'] as Record<string, unknown> | undefined;
         const values = tcccObj && (tcccObj['#values'] as unknown);
         if (Array.isArray(values)) {
-            return values.join(', ');
+            const processed = (values as string[]).map((v) => {
+                const parts = v.split(' / ');
+                return parts[parts.length - 1].trim();
+            });
+            return processed.join(', ');
         }
         return 'ERROR';
     }
