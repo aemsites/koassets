@@ -102,16 +102,16 @@ export async function originDynamicMedia(request, env) {
 
   const options = {
     method: req.method,
-    cf: {
-      // cf doesn't cache all file types by default: need to override the default behavior
-      // https://developers.cloudflare.com/cache/concepts/default-cache-behavior/#default-cached-file-extensions
-      cacheEverything: true,
-    },
   };
 
   // Disable caching for collections API to ensure fresh data
   if (url.pathname.startsWith('/adobe/assets/collections')) {
     options.cache = 'no-store';
+  } else {
+    options.cf = {
+      // cf doesn't cache html by default: need to override the default behavior
+      cacheEverything: true,
+    };
   }
 
   const resp = await fetch(req, options);
