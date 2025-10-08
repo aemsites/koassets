@@ -25,7 +25,6 @@
     height: 100%;
     border-radius: 7px 0 0 7px;
     object-fit: contain;
-    background-color: white;
     overflow-wrap: break-word;
     box-sizing: border-box;
     transition: opacity 0.2s ease, transform 0.3s ease;

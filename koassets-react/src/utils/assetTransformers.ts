@@ -203,7 +203,7 @@ export function populateAssetFromHit(hit: Record<string, unknown>): Asset {
         broadcastFormat: broadcastFormat,
         businessAffairsManager: safeStringField(hit, 'tccc-businessAffairsManager'),
         campaignActivationRemark: extractJoinedIfArrayElseSafe(hit, 'tccc-campaignActivationRemark'),
-        campaignName: safeStringField(hit, 'tccc-campaignName'),
+        campaignName: safeStringField(hit, 'tccc-campaignName', ''),
         campaignReach: campaignReach,
         campaignSubActivationRemark: extractJoinedIfArrayElseSafe(hit, 'tccc-campaignSubActivationRemark', ['tccc-campaignSubActivationRemark']),
         campaignsWKeyAssets: campaignsWKeyAssets,
@@ -444,7 +444,7 @@ export function populateAssetFromMetadata(metadata: Metadata): Asset {
     const formatedSize = repoMeta?.['repo:size'] ? formatFileSize(repoMeta['repo:size'] as number) : 'N/A';
 
     // Extract keywords from xcm:keywords if available
-    const xcmKeywords = extractFromArrayValue(assetMeta, 'xcm:keywords');
+    const xcmKeywords = extractFromArrayValue(assetMeta, 'xcm:keywords', '');
 
     return {
         agencyName: safeMetadataStringField(repoMeta, assetMeta, 'tccc:agencyName'),
@@ -459,7 +459,7 @@ export function populateAssetFromMetadata(metadata: Metadata): Asset {
         broadcastFormat: broadcastFormat,
         businessAffairsManager: safeMetadataStringField(repoMeta, assetMeta, 'tccc:businessAffairsManager'),
         campaignActivationRemark: extractJoinedIfArrayElseSafe(assetMeta, 'tccc:campaignActivationRemark'),
-        campaignName: safeMetadataStringField(repoMeta, assetMeta, 'tccc:campaignName'),
+        campaignName: safeMetadataStringField(repoMeta, assetMeta, 'tccc:campaignName', ''),
         campaignReach: campaignReach,
         campaignSubActivationRemark: extractJoinedIfArrayElseSafe(assetMeta, 'tccc:campaignSubActivationRemark'),
         campaignsWKeyAssets: campaignsWKeyAssets,
