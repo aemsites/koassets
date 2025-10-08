@@ -324,24 +324,66 @@ function handleSearch() {
   }
 }
 
-function resolveUrlValue(value) {
-  if (!value) return '';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'object') {
-    if (typeof value.url === 'string') return value.url;
-    if (typeof value.src === 'string') return value.src;
-  }
-  return '';
+/**
+ * Build asset image URL for Dynamic Media
+ * @param {Object} asset - Asset object
+ * @param {string} format - Image format (webp, jpg, etc.)
+ * @param {number} width - Image width
+ * @returns {string} Formatted image URL
+ */
+function buildAssetImageUrl(asset, format = 'jpg', width = 350) {
+  if (!asset || !asset.assetId) return '';
+  
+  // Get asset name and remove file extension
+  const assetName = asset.name || asset.title || 'thumbnail';
+  const fileName = encodeURIComponent(assetName.replace(/\.[^/.]+$/, ''));
+  
+  return `/api/adobe/assets/${asset.assetId}/as/${fileName}.${format}?width=${width}`;
 }
 
-function resolvePreviewUrlFromAsset(asset) {
-  return (
-    resolveUrlValue(asset && asset.previewUrl)
-    || resolveUrlValue(asset && asset.thumbnail)
-    || resolveUrlValue(asset && asset.imageUrl)
-    || resolveUrlValue(asset && asset.url)
-    || ''
-  );
+/**
+ * Create picture element with WebP and JPG sources
+ * @param {Object} asset - Asset object
+ * @param {number} width - Image width
+ * @returns {HTMLElement} Picture element
+ */
+function createPictureElement(asset, width = 350) {
+  const picture = document.createElement('picture');
+  
+  // WebP source
+  const webpSource = document.createElement('source');
+  webpSource.type = 'image/webp';
+  webpSource.srcset = buildAssetImageUrl(asset, 'webp', width);
+  picture.appendChild(webpSource);
+  
+  // JPG source
+  const jpgSource = document.createElement('source');
+  jpgSource.type = 'image/jpg';
+  jpgSource.srcset = buildAssetImageUrl(asset, 'jpg', width);
+  picture.appendChild(jpgSource);
+  
+  // Fallback img
+  const img = document.createElement('img');
+  img.className = 'asset-image';
+  img.alt = asset.title || asset.name || 'Asset image';
+  img.loading = 'eager';
+  img.src = buildAssetImageUrl(asset, 'jpg', width);
+  img.onerror = () => {
+    // eslint-disable-next-line no-console
+    console.error('[Collections] preview failed to load', {
+      assetId: asset.assetId || asset.id,
+      title: asset.title || asset.name,
+    });
+    const placeholder = document.createElement('div');
+    placeholder.className = 'asset-image-placeholder';
+    placeholder.textContent = 'Preview not available';
+    if (picture.parentElement) {
+      picture.parentElement.replaceChildren(placeholder);
+    }
+  };
+  picture.appendChild(img);
+  
+  return picture;
 }
 
 function createAssetCard(asset, collectionId) {
@@ -353,32 +395,13 @@ function createAssetCard(asset, collectionId) {
   imageArea.className = 'asset-image-area';
   imageArea.style.cursor = 'pointer'; // Make it clear the image is clickable
 
-  const directSrc = resolvePreviewUrlFromAsset(asset);
-  if (directSrc) {
-    const imgEl = document.createElement('img');
-    imgEl.className = 'asset-image';
-    imgEl.alt = asset.title || asset.name || 'Asset image';
-    imgEl.loading = 'eager';
-    imgEl.src = directSrc;
-    imgEl.onerror = () => {
-      // eslint-disable-next-line no-console
-      console.error(
-        '[Collections] preview failed to load',
-        {
-          assetId: asset.assetId || asset.id,
-          title: asset.title || asset.name,
-          src: directSrc,
-        },
-      );
-      const placeholder = document.createElement('div');
-      placeholder.className = 'asset-image-placeholder';
-      placeholder.textContent = 'Preview not available';
-      if (imageArea.isConnected) imageArea.replaceChildren(placeholder);
-    };
-    imageArea.appendChild(imgEl);
+  // Create picture element with WebP and JPG sources (like search does)
+  if (asset.assetId) {
+    const pictureEl = createPictureElement(asset, 350);
+    imageArea.appendChild(pictureEl);
   } else {
     // eslint-disable-next-line no-console
-    console.warn('[Collections] no preview URL found for asset', {
+    console.warn('[Collections] no assetId found for asset', {
       assetId: asset.assetId || asset.id,
       title: asset.title || asset.name,
     });
