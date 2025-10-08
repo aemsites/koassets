@@ -6,7 +6,8 @@
 /**
  * Get ACL object from collection metadata
  * @param {Object} apiCollection - The collection object from API
- * @returns {Object|null} ACL object with tccc:assetCollectionOwner, tccc:assetCollectionViewer, tccc:assetCollectionEditor
+ * @returns {Object|null} ACL object with tccc:assetCollectionOwner, tccc:assetCollectionViewer,
+ * tccc:assetCollectionEditor
  */
 function getCollectionACL(apiCollection) {
   return apiCollection?.collectionMetadata?.['tccc:metadata']?.['tccc:acl'] || null;
