@@ -1,6 +1,52 @@
-export default function decorate(block) {
+// Import the centralized JavaScript collections client with auth
+import { DynamicMediaCollectionsClient } from '../../scripts/collections/collections-api-client.js';
+import { transformApiCollectionToInternal } from '../../scripts/collections/collections-utils.js';
+
+// Check if we're in cookie auth mode (same logic as main app)
+function isCookieAuth() {
+  return window.location.origin.endsWith('adobeaem.workers.dev')
+    || window.location.origin === 'http://localhost:8787';
+}
+
+// Global state for collections and API client
+let collectionsClient = null;
+let allCollections = [];
+let isLoading = false;
+
+export default async function decorate(block) {
   // Clear existing content
   block.innerHTML = '';
+
+  // Load user if not already available
+  if (!window.user) {
+    // eslint-disable-next-line no-console
+    console.warn('⚠️ [Collections Client] Failed to load user, proceeding without user context');
+  }
+
+  // Initialize the Collections client with same config as main app (after user is loaded)
+  try {
+    const accessToken = localStorage.getItem('accessToken') || '';
+    const currentUser = window.user; // Get current user for auth (now guaranteed to be loaded)
+
+    collectionsClient = new DynamicMediaCollectionsClient({
+      accessToken,
+      user: currentUser, // Pass user for auth filtering
+    });
+
+    // eslint-disable-next-line no-console
+    console.log('🔧 [Collections Client] Initialized with:', {
+      hasAccessToken: Boolean(accessToken),
+      isCookieAuth: isCookieAuth(),
+      hasUser: Boolean(currentUser),
+      userEmail: currentUser?.email || 'anonymous',
+      userId: currentUser?.id || currentUser?.userId || 'none',
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to initialize Collections client:', error);
+    showError(block, 'Failed to initialize collections service');
+    return;
+  }
 
   // Create main container
   const container = document.createElement('div');
@@ -43,10 +89,10 @@ export default function decorate(block) {
   titleRow.appendChild(searchContainer);
 
   header.appendChild(titleRow);
-  // Load collections from localStorage
-  const collections = loadCollections();
-  const sortedCollections = sortCollectionsByLastUsed([...collections]);
-  const collectionsCount = collections.length;
+
+  // Load collections from Dynamic Media API
+  await loadCollectionsFromAPI();
+  const collectionsCount = allCollections.length;
 
   // Create controls row
   const controlsRow = document.createElement('div');
@@ -64,8 +110,8 @@ export default function decorate(block) {
   controlsRow.appendChild(showingText);
   controlsRow.appendChild(createButton);
 
-  // Create collections list
-  const collectionsList = createCollectionsList(sortedCollections);
+  // Create collections list (initially show loading, will be updated after API call)
+  const collectionsList = createCollectionsList(allCollections);
 
   // Create modals
   const createModal = createCollectionModal();
@@ -83,35 +129,64 @@ export default function decorate(block) {
   block.appendChild(container);
 }
 
-function loadCollections() {
+// API Functions
+async function loadCollectionsFromAPI() {
+  if (isLoading || !collectionsClient) return;
+
+  isLoading = true;
   try {
-    const collections = JSON.parse(localStorage.getItem('koassets-my-collections') || '[]');
-    return migrateCollections(collections);
+    // eslint-disable-next-line no-console
+    console.log('Loading collections from Dynamic Media API...');
+    const response = await collectionsClient.listCollections({ limit: 100 });
+
+    // Transform API response to internal format
+    allCollections = response.items.map(transformApiCollectionToInternal);
+
+    // eslint-disable-next-line no-console
+    console.log(`Loaded ${allCollections.length} collections from API`);
+
+    // Update the display after loading
+    updateCollectionsDisplay();
   } catch (error) {
-    console.error('Error loading collections:', error);
-    return [];
+    // eslint-disable-next-line no-console
+    console.error('Failed to load collections from API:', error);
+    showToast('Failed to load collections', 'error');
+    allCollections = [];
+  } finally {
+    isLoading = false;
   }
 }
 
-function migrateCollections(collections) {
-  let needsUpdate = false;
-  const migratedCollections = collections.map((collection) => {
-    if (!collection.dateLastUsed) {
-      needsUpdate = true;
-      return {
-        ...collection,
-        dateLastUsed: new Date(collection.lastUpdated).getTime(),
-      };
-    }
-    return collection;
-  });
+function showError(block, message) {
+  block.innerHTML = `
+    <div class="my-collections-container">
+      <div class="collections-error">
+        <h2>Error</h2>
+        <p>${message}</p>
+        <button onclick="location.reload()" class="btn-create">Retry</button>
+      </div>
+    </div>
+  `;
+}
 
-  // Save migrated collections back to localStorage if needed
-  if (needsUpdate) {
-    localStorage.setItem('koassets-my-collections', JSON.stringify(migratedCollections));
+/**
+ * Search collections by name or description
+ * @param {string} searchTerm - Search term
+ * @param {Array} collections - Collections to search
+ * @returns {Array} Filtered collections
+ */
+function searchCollections(searchTerm, collections) {
+  if (!searchTerm || !searchTerm.trim()) {
+    return collections;
   }
 
-  return migratedCollections;
+  const term = searchTerm.toLowerCase().trim();
+  return collections.filter((collection) => {
+    const nameMatch = collection.name.toLowerCase().includes(term);
+    const descMatch = collection.description
+                     && collection.description.toLowerCase().includes(term);
+    return nameMatch || descMatch;
+  });
 }
 
 // Current search state
@@ -120,7 +195,7 @@ let currentSearchTerm = '';
 function handleSearch() {
   const searchInput = document.querySelector('.search-input');
   const searchTerm = searchInput ? searchInput.value.trim() : '';
-  currentSearchTerm = searchTerm.toLowerCase();
+  currentSearchTerm = searchTerm;
   updateCollectionsDisplay();
 }
 
@@ -136,33 +211,32 @@ function clearSearch() {
 // Make clearSearch globally available for HTML onclick
 window.clearSearch = clearSearch;
 
-function filterCollections(collections, searchTerm) {
-  if (!searchTerm) {
-    return collections;
+// Filter and sort functions now handled by SDK
+
+/**
+ * Refresh the collections display by reloading from API
+ * Clears search term and updates the display
+ */
+async function refreshCollectionsDisplay() {
+  // Clear search term to ensure changes are visible
+  currentSearchTerm = '';
+  const searchInput = document.querySelector('.search-input');
+  if (searchInput) {
+    searchInput.value = '';
   }
 
-  return collections.filter((collection) => {
-    const nameMatch = collection.name.toLowerCase().includes(searchTerm);
-    const descMatch = collection.description
-      && collection.description.toLowerCase().includes(searchTerm);
-    return nameMatch || descMatch;
-  });
-}
-
-function sortCollectionsByLastUsed(collections) {
-  return collections.sort((a, b) => {
-    // Handle collections that might not have dateLastUsed (legacy collections)
-    const aLastUsed = a.dateLastUsed || new Date(a.lastUpdated).getTime();
-    const bLastUsed = b.dateLastUsed || new Date(b.lastUpdated).getTime();
-    return bLastUsed - aLastUsed; // Most recent first
-  });
+  // Reload collections from API
+  await loadCollectionsFromAPI();
 }
 
 function updateCollectionsDisplay() {
-  const allCollections = loadCollections();
-  // Create copy to avoid mutating original
-  const sortedCollections = sortCollectionsByLastUsed([...allCollections]);
-  const filteredCollections = filterCollections(sortedCollections, currentSearchTerm);
+  // Sort collections by last modified date (most recent first)
+  const sortedCollections = [...allCollections].sort((a, b) => (
+    new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
+  ));
+
+  // Filter collections based on search term
+  const filteredCollections = searchCollections(currentSearchTerm, sortedCollections);
   const totalCount = allCollections.length;
   const showingCount = filteredCollections.length;
 
@@ -320,22 +394,11 @@ function createCollectionRow(collection) {
   const nameCell = document.createElement('div');
   nameCell.className = 'row-cell cell-name';
 
-  const nameContainer = document.createElement('div');
-  nameContainer.className = 'collection-name-container';
-
   const nameText = document.createElement('div');
   nameText.className = 'collection-name clickable';
   nameText.textContent = collection.name;
   nameText.style.cursor = 'pointer';
   nameText.onclick = () => handleViewCollection(collection);
-
-  const itemCount = document.createElement('span');
-  itemCount.className = 'collection-item-count';
-  const count = collection.contents ? collection.contents.length : 0;
-  itemCount.textContent = `(${count} item${count !== 1 ? 's' : ''})`;
-
-  nameContainer.appendChild(nameText);
-  nameContainer.appendChild(itemCount);
 
   const descText = document.createElement('div');
   descText.className = 'collection-description';
@@ -351,7 +414,7 @@ function createCollectionRow(collection) {
   const date = new Date(collection.lastUpdated);
   dateText.textContent = `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
-  nameCell.appendChild(nameContainer);
+  nameCell.appendChild(nameText);
   nameCell.appendChild(descText);
   nameCell.appendChild(dateText);
 
@@ -420,14 +483,10 @@ function showToast(message, type = 'success') {
 }
 
 function updateCollectionLastUsed(collectionId) {
-  const collections = loadCollections();
-  const updatedCollections = collections.map((collection) => {
-    if (collection.id === collectionId) {
-      return { ...collection, dateLastUsed: Date.now() };
-    }
-    return collection;
-  });
-  localStorage.setItem('koassets-my-collections', JSON.stringify(updatedCollections));
+  // TODO: Implement API call to update last used timestamp
+  // For now, just log the action
+  // eslint-disable-next-line no-console
+  console.log('TODO: Update last used for collection:', collectionId);
 }
 
 function handleViewCollection(collection) {
@@ -490,7 +549,7 @@ function hideEditModal() {
   if (descInput) descInput.value = '';
 }
 
-function handleUpdateCollection() {
+async function handleUpdateCollection() {
   if (!editingCollection) return;
 
   const nameInput = document.getElementById('edit-collection-name');
@@ -503,30 +562,48 @@ function handleUpdateCollection() {
     return;
   }
 
-  // Update the collection
-  const collections = loadCollections();
-  const updatedCollections = collections.map((collection) => {
-    if (collection.id === editingCollection.id) {
-      return {
-        ...collection,
-        name,
-        description: descInput ? descInput.value.trim() : '',
-        lastUpdated: new Date().toISOString(),
-        dateLastUsed: Date.now(),
-      };
+  if (!collectionsClient) {
+    showToast('Collections service not available', 'error');
+    return;
+  }
+
+  try {
+    // Prepare update data for API (same format as test-dm)
+    const updateData = {
+      title: name, // API uses 'title' not 'name'
+    };
+
+    const description = descInput ? descInput.value.trim() : '';
+    if (description) {
+      updateData.description = description;
     }
-    return collection;
-  });
 
-  // Save to localStorage
-  localStorage.setItem('koassets-my-collections', JSON.stringify(updatedCollections));
+    // eslint-disable-next-line no-console
+    console.log('🎯 [Update Collection] Sending update data:', updateData);
 
-  // Hide modal and show success
-  hideEditModal();
-  showToast('COLLECTION UPDATED SUCCESSFULLY', 'success');
+    // Update collection via API using the collection ID from the API data
+    const collectionId = editingCollection.apiData?.id || editingCollection.id;
+    const updatedCollection = await collectionsClient.updateCollectionMetadata(
+      collectionId,
+      updateData,
+    );
 
-  // Clear search to show the updated collection
-  clearSearch();
+    // eslint-disable-next-line no-console
+    console.log('✅ [Update Collection] API response:', updatedCollection);
+
+    // Hide modal first
+    hideEditModal();
+
+    // Show success message
+    showToast('COLLECTION UPDATED SUCCESSFULLY', 'success');
+
+    // Refresh display to show the updated collection
+    await refreshCollectionsDisplay();
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to update collection:', error);
+    showToast(`Failed to update collection: ${error.message}`, 'error');
+  }
 }
 
 // Delete confirmation state
@@ -561,26 +638,38 @@ function hideDeleteModal() {
   deleteCollectionName = '';
 }
 
-function handleConfirmDelete() {
+async function handleConfirmDelete() {
   if (!deleteCollectionId) return;
 
-  // Get existing collections
-  const collections = loadCollections();
+  if (!collectionsClient) {
+    showToast('Collections service not available', 'error');
+    return;
+  }
 
-  // Filter out the collection to delete
-  const updatedCollections = collections.filter((c) => c.id !== deleteCollectionId);
+  try {
+    // eslint-disable-next-line no-console
+    console.log('🗑️ [Delete Collection] Deleting collection:', deleteCollectionId);
 
-  // Save back to localStorage
-  localStorage.setItem('koassets-my-collections', JSON.stringify(updatedCollections));
+    // Delete collection via API
+    await collectionsClient.deleteCollection(deleteCollectionId);
 
-  // Hide modal
-  hideDeleteModal();
+    // Hide modal first
+    hideDeleteModal();
 
-  // Show success toast
-  showToast('COLLECTION DELETED SUCCESSFULLY', 'success');
+    // Show success message
+    showToast('COLLECTION DELETED SUCCESSFULLY', 'success');
 
-  // Clear search to refresh the display properly
-  clearSearch();
+    // Refresh display to show the changes
+    await refreshCollectionsDisplay();
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to delete collection:', error);
+
+    // Hide modal even on error
+    hideDeleteModal();
+
+    showToast(`Failed to delete collection: ${error.message}`, 'error');
+  }
 }
 
 function createEditModal() {
@@ -826,7 +915,7 @@ function hideCreateModal() {
   document.getElementById('collection-description').value = '';
 }
 
-function handleCreateCollection() {
+async function handleCreateCollection() {
   const nameInput = document.getElementById('collection-name');
   const descInput = document.getElementById('collection-description');
 
@@ -837,24 +926,56 @@ function handleCreateCollection() {
     return;
   }
 
-  const collection = {
-    id: Date.now().toString(),
-    name,
-    description: descInput.value.trim(),
-    lastUpdated: new Date().toISOString(),
-    dateLastUsed: Date.now(),
-    contents: [],
-  };
+  if (!collectionsClient) {
+    showToast('Collections service not available', 'error');
+    return;
+  }
 
-  // Save to localStorage
-  const existingCollections = JSON.parse(localStorage.getItem('koassets-my-collections') || '[]');
-  existingCollections.push(collection);
-  localStorage.setItem('koassets-my-collections', JSON.stringify(existingCollections));
+  try {
+    // Get current user email for custom metadata
+    const currentUser = window.user;
+    const userEmail = currentUser?.email || '';
 
-  // Hide modal and show success
-  hideCreateModal();
-  showToast('COLLECTION CREATED SUCCESSFULLY', 'success');
+    // Prepare collection data for API (same format as test-dm)
+    const collectionData = {
+      title: name, // API uses 'title' not 'name'
+      accessLevel: 'private', // Default to private
+      items: [], // Required empty items array
+      // Custom metadata with ko: prefix
+      'ko:metadata': {
+        'ko:acl': {
+          owner: userEmail,
+          read: [userEmail],
+          write: [userEmail],
+        },
+      },
+    };
 
-  // Clear search to show the new collection
-  clearSearch();
+    const description = descInput.value.trim();
+    if (description) {
+      collectionData.description = description;
+    }
+
+    // eslint-disable-next-line no-console
+    console.log('🎯 [Create Collection] Sending collection data:', collectionData);
+
+    // Create collection via API
+    const newCollection = await collectionsClient.createCollection(collectionData);
+
+    // eslint-disable-next-line no-console
+    console.log('✅ [Create Collection] API response:', newCollection);
+
+    // Hide modal first
+    hideCreateModal();
+
+    // Show success message
+    showToast('COLLECTION CREATED SUCCESSFULLY', 'success');
+
+    // Refresh display to show the new collection
+    await refreshCollectionsDisplay();
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to create collection:', error);
+    showToast(`Failed to create collection: ${error.message}`, 'error');
+  }
 }

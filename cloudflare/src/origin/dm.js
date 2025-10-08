@@ -84,7 +84,11 @@ export async function originDynamicMedia(request, env) {
   req.headers.delete('cookie');
 
   try {
-    req.headers.set('x-api-key', await env.DM_CLIENT_ID.get());
+    if (url.pathname.startsWith('/adobe/assets/collections')) {
+      req.headers.set('x-api-key', 'aem-assets-content-hub-1'); // for DM Collection calls
+    } else {
+      req.headers.set('x-api-key', await env.DM_CLIENT_ID.get());
+    }
     req.headers.set('Authorization', `Bearer ${await getIMSToken(request, env)}`);
   } catch (error) {
     console.error(error);
