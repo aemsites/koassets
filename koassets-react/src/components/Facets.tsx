@@ -8,6 +8,7 @@ import Markets from './Markets';
 import MediaChannels from './MediaChannels';
 import MyDatePicker from './MyDatePicker';
 import buildSavedSearchUrl from '../../../scripts/saved-search-utils.js';
+import { getExternalParams } from '../utils/config';
 
 interface ExpandedFacetsState {
     [key: string]: boolean;
@@ -53,6 +54,125 @@ const saveSavedSearches = (searches: SavedSearch[]): void => {
     }
 };
 
+// Interface for FacetItem props
+interface FacetItemProps {
+    facetTechId: string;
+    facet: FacetValue;
+    label: string;
+    isExpanded: boolean;
+    isSearchMode: boolean;
+    searchTerm: string;
+    checkedCount: number;
+    onToggle: (facetTechId: string) => void;
+    onToggleSearch: (facetTechId: string, e: React.MouseEvent) => void;
+    onSearchChange: (facetTechId: string, value: string) => void;
+    onSearchEscape: (facetTechId: string) => void;
+    renderContent: (facetTechId: string) => React.ReactNode;
+}
+
+// Memoized FacetItem component to prevent unnecessary rerenders
+const FacetItem = React.memo<FacetItemProps>(({
+    facetTechId,
+    facet,
+    label,
+    isExpanded,
+    isSearchMode,
+    searchTerm,
+    checkedCount,
+    onToggle,
+    onToggleSearch,
+    onSearchChange,
+    onSearchEscape,
+    renderContent
+}) => {
+    return (
+        <>
+            {facetTechId === 'tccc-rightsStartDate' && (
+                <div className="facet-rights-section">
+                    <label className="facet-rights-label">Check Rights Filters</label>
+                </div>
+            )}
+            <div className="facet-filter-section">
+                {/* Render each facet search button */}
+                {isSearchMode ? (
+                    <div className="facet-filter-button facet-filter-button-search">
+                        <div className="facet-search-container">
+                            <div className="facet-search-input-wrapper">
+                                <img
+                                    src="/icons/search.svg"
+                                    alt="Search"
+                                    className="facet-search-icon-inside"
+                                />
+                                <input
+                                    type="text"
+                                    className="facet-search-input"
+                                    placeholder={`Search ${label}...`}
+                                    value={searchTerm}
+                                    autoFocus
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => onSearchChange(facetTechId, e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Escape') {
+                                            onSearchEscape(facetTechId);
+                                        }
+                                    }}
+                                />
+                                <img
+                                    src="/icons/close-menu.svg"
+                                    alt="Close"
+                                    className="facet-search-close-icon"
+                                    onClick={(e) => onToggleSearch(facetTechId, e)}
+                                />
+                            </div>
+                        </div>
+                        <div className="facet-filter-right-section">
+                            {checkedCount > 0 && (
+                                <div className="assets-details-tag tccc-tag facet-filter-count-tag">{checkedCount}</div>
+                            )}
+                            <span
+                                className={`facet-filter-arrow-top-level ${isExpanded ? 'expanded' : ''}`}
+                                onClick={() => onToggle(facetTechId)}
+                            >
+                            </span>
+                        </div>
+                    </div>
+                ) : (
+                    // Render each facet button
+                    <div
+                        className="facet-filter-button"
+                        tabIndex={0}
+                        aria-expanded={isExpanded}
+                        onClick={() => onToggle(facetTechId)}
+                    >
+                        <span className="facet-filter-label">{label}</span>
+                        <div className="facet-filter-right-section">
+                            {checkedCount > 0 && (
+                                <div className="assets-details-tag tccc-tag facet-filter-count-tag">{checkedCount}</div>
+                            )}
+                            {isExpanded && facet.type !== 'date' && (
+                                <img
+                                    src="/icons/search.svg"
+                                    alt="Search"
+                                    className="facet-search-trigger"
+                                    onClick={(e) => onToggleSearch(facetTechId, e)}
+                                />
+                            )}
+                            <span
+                                className={`facet-filter-arrow ${isExpanded ? 'expanded' : ''}`}
+                            ></span>
+                        </div>
+                    </div>
+                )}
+
+                {/* For each facet, render the appropriate checkboxes and hierarchy if needed */}
+                {renderContent(facetTechId)}
+            </div>
+        </>
+    );
+});
+
+FacetItem.displayName = 'FacetItem';
+
 const Facets: React.FC<FacetsProps> = ({
     searchResults,
     selectedFacetFilters,
@@ -75,6 +195,7 @@ const Facets: React.FC<FacetsProps> = ({
     selectedMediaChannels,
     setSelectedMediaChannels
 }) => {
+    const externalParams = useMemo(() => getExternalParams(), []);
     const [expandedFacets, setExpandedFacets] = useState<ExpandedFacetsState>({}); // Keep track of expanded facets (from EXC)
     const [expandedHierarchyItems, setExpandedHierarchyItems] = useState<ExpandedFacetsState>({}); // Keep track of expanded hierarchy items
     const [facetSearchMode, setFacetSearchMode] = useState<ExpandedFacetsState>({}); // Keep track of search mode for each facet
@@ -300,6 +421,11 @@ const Facets: React.FC<FacetsProps> = ({
         setFacetSearchTerms(prev => ({ ...prev, [facetTechId]: searchTerm }));
     }, []);
 
+    const handleFacetSearchEscape = useCallback((facetTechId: string) => {
+        setFacetSearchMode(prev => ({ ...prev, [facetTechId]: false }));
+        setFacetSearchTerms(prev => ({ ...prev, [facetTechId]: '' }));
+    }, []);
+
     // Handler for checkbox change
     const handleCheckbox = useCallback((key: string, facet: string) => {
         setChecked(prev => ({
@@ -354,6 +480,20 @@ const Facets: React.FC<FacetsProps> = ({
         return false;
     }, []);
 
+    // Helper function to map facet values to display names
+    const getDisplayName = useCallback((facetTechId: string, facetName: string): string => {
+        if (facetTechId === 'tccc-campaignName') {
+            return externalParams.campaignNameValueMapping?.[facetName] || facetName;
+        } else if (facetTechId === 'tccc-intendedBottlerCountry') {
+            return externalParams.intendedBottlerCountryValueMapping?.[facetName] || facetName;
+        } else if (facetTechId === 'tccc-packageContainerSize') {
+            return externalParams.packageContainerSizeValueMapping?.[facetName] || facetName;
+        } else if (facetTechId === 'tccc-agencyName') {
+            return externalParams.agencyNameValueMapping?.[facetName] || facetName;
+        }
+        return facetName;
+    }, [externalParams]);
+
     // Memoized function to render hierarchy levels
     const renderHierarchyLevel = useCallback((
         hierarchyData: { [level: number]: { [key: string]: number } },
@@ -370,7 +510,8 @@ const Facets: React.FC<FacetsProps> = ({
         Object.entries(levelData).forEach(([facetName, count]) => {
             // Extract the last part of the hierarchy path for display
             const pathParts = facetName.split(' / ');
-            const displayName = pathParts[pathParts.length - 1].trim();
+            const baseFacetName = pathParts[pathParts.length - 1].trim();
+            const displayName = getDisplayName(facetTechId, baseFacetName);
 
             // Filter based on search term - check full hierarchy path and descendants
             if (searchTerm && !shouldShowHierarchyItem(hierarchyData, facetName, searchTerm, level)) {
@@ -428,7 +569,7 @@ const Facets: React.FC<FacetsProps> = ({
         });
 
         return items;
-    }, [checked, handleCheckbox, expandedHierarchyItems, toggleHierarchyItem, facetSearchTerms, shouldShowHierarchyItem]);
+    }, [checked, handleCheckbox, expandedHierarchyItems, toggleHierarchyItem, facetSearchTerms, shouldShowHierarchyItem, getDisplayName]);
 
     /**
      * Renders the facet checkboxes from search results
@@ -522,18 +663,22 @@ const Facets: React.FC<FacetsProps> = ({
 
         return (
             <div className="facet-filter-checkbox-list">
-                {filteredEntries.map(([facetName, count]) => (
-                    <label key={facetName} className="facet-filter-checkbox-label">
-                        <input
-                            type="checkbox"
-                            checked={!!checked[checkboxKey]?.[facetName]}
-                            onChange={() => handleCheckbox(checkboxKey, facetName)}
-                        /> {facetName}{count > 0 ? ` (${count})` : ''}
-                    </label>
-                ))}
+                {filteredEntries.map(([facetName, count]) => {
+                    const displayName = getDisplayName(facetTechId, facetName);
+                    
+                    return (
+                        <label key={facetName} className="facet-filter-checkbox-label">
+                            <input
+                                type="checkbox"
+                                checked={!!checked[checkboxKey]?.[facetName]}
+                                onChange={() => handleCheckbox(checkboxKey, facetName)}
+                            /> {displayName}{count > 0 ? ` (${count})` : ''}
+                        </label>
+                    );
+                })}
             </div>
         );
-    }, [expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, checked, handleCheckbox, facetSearchTerms, handleClearRightsStartDate, handleRightsStartDateChange, rightsStartDate, handleClearRightsEndDate, handleRightsEndDateChange, rightsEndDate, selectedMarkets, selectedMediaChannels, setSelectedMarkets, setSelectedMediaChannels]);
+    }, [expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, checked, handleCheckbox, facetSearchTerms, handleClearRightsStartDate, handleRightsStartDateChange, rightsStartDate, handleClearRightsEndDate, handleRightsEndDateChange, rightsEndDate, selectedMarkets, selectedMediaChannels, setSelectedMarkets, setSelectedMediaChannels, getDisplayName]);
 
     // Transform the checked object into an array of facet filters
     useEffect(() => {
@@ -1013,91 +1158,21 @@ const Facets: React.FC<FacetsProps> = ({
                                 const checkedCount = getCheckedCount(facetTechId);
 
                                 return (
-                                    <>
-                                        {facetTechId === 'tccc-rightsStartDate' && (
-                                            <div className="facet-rights-section">
-                                                <label className="facet-rights-label">Check Rights Filters</label>
-                                            </div>
-                                        )}
-                                        <div key={facetTechId} className="facet-filter-section">
-                                            {/* Render each facet search button */}
-                                            {facetSearchMode[facetTechId] ? (
-                                                <div className="facet-filter-button facet-filter-button-search">
-                                                    <div className="facet-search-container">
-                                                        <div className="facet-search-input-wrapper">
-                                                            <img
-                                                                src="/icons/search.svg"
-                                                                alt="Search"
-                                                                className="facet-search-icon-inside"
-                                                            />
-                                                            <input
-                                                                type="text"
-                                                                className="facet-search-input"
-                                                                placeholder={`Search ${label}...`}
-                                                                value={facetSearchTerms[facetTechId] || ''}
-                                                                autoFocus
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                onChange={(e) => handleFacetSearchChange(facetTechId, e.target.value)}
-                                                                onKeyDown={(e) => {
-                                                                    if (e.key === 'Escape') {
-                                                                        setFacetSearchMode(prev => ({ ...prev, [facetTechId]: false }));
-                                                                        setFacetSearchTerms(prev => ({ ...prev, [facetTechId]: '' }));
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <img
-                                                                src="/icons/close-menu.svg"
-                                                                alt="Close"
-                                                                className="facet-search-close-icon"
-                                                                onClick={(e) => toggleFacetSearch(facetTechId, e)}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div className="facet-filter-right-section">
-                                                        {checkedCount > 0 && (
-                                                            <div className="assets-details-tag tccc-tag facet-filter-count-tag">{checkedCount}</div>
-                                                        )}
-                                                        <span
-                                                            className={`facet-filter-arrow-top-level ${expandedFacets[facetTechId] ? 'expanded' : ''}`}
-                                                            onClick={() => toggle(facetTechId)}
-                                                        >
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                // Render each facet button
-                                                <div
-                                                    className="facet-filter-button"
-                                                    tabIndex={0}
-                                                    aria-expanded={!!expandedFacets[facetTechId]}
-                                                    onClick={() => toggle(facetTechId)}
-                                                >
-                                                    <span
-                                                        className="facet-filter-label"
-                                                    >{label}</span>
-                                                    <div className="facet-filter-right-section">
-                                                        {checkedCount > 0 && (
-                                                            <div className="assets-details-tag tccc-tag facet-filter-count-tag">{checkedCount}</div>
-                                                        )}
-                                                        {expandedFacets[facetTechId] && facet.type !== 'date' && (
-                                                            <img
-                                                                src="/icons/search.svg"
-                                                                alt="Search"
-                                                                className="facet-search-trigger"
-                                                                onClick={(e) => toggleFacetSearch(facetTechId, e)}
-                                                            />
-                                                        )}
-                                                        <span
-                                                            className={`facet-filter-arrow ${expandedFacets[facetTechId] ? 'expanded' : ''}`}
-                                                        ></span>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* For each facet, render the appropriate checkboxes and hierarchy if needed */}
-                                            {renderFacetsFromSearchResult(facetTechId)}
-                                        </div >
-                                    </>
+                                    <FacetItem
+                                        key={facetTechId}
+                                        facetTechId={facetTechId}
+                                        facet={facet}
+                                        label={label}
+                                        isExpanded={!!expandedFacets[facetTechId]}
+                                        isSearchMode={!!facetSearchMode[facetTechId]}
+                                        searchTerm={facetSearchTerms[facetTechId] || ''}
+                                        checkedCount={checkedCount}
+                                        onToggle={toggle}
+                                        onToggleSearch={toggleFacetSearch}
+                                        onSearchChange={handleFacetSearchChange}
+                                        onSearchEscape={handleFacetSearchEscape}
+                                        renderContent={renderFacetsFromSearchResult}
+                                    />
                                 );
                             })}
                         </div >

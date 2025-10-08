@@ -370,6 +370,10 @@ export interface ExternalParams {
         username?: string;
         password?: string;
     }];
+    campaignNameValueMapping?: Record<string, string>;
+    intendedBottlerCountryValueMapping?: Record<string, string>;
+    packageContainerSizeValueMapping?: Record<string, string>;
+    agencyNameValueMapping?: Record<string, string>;
 }
 
 // Image Gallery types
