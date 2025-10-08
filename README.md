@@ -53,6 +53,14 @@ Install npm dependencies everywhere, in main and child projects:
 npm run install-all
 ```
 
+### Cleanup
+
+To cleanup the checkout (remove all `node_modules`, build and cache folders etc.) run this first in the root:
+
+```sh
+npm run clean
+```
+
 ## Local development
 
 ### Initial setup

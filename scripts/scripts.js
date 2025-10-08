@@ -119,6 +119,7 @@ export function decorateMain(main) {
  * @param {Element} doc The container element
  */
 async function loadEager(doc) {
+  await loadUser();
   document.documentElement.lang = 'en';
   decorateTemplateAndTheme();
 
@@ -144,8 +145,6 @@ async function loadEager(doc) {
  * @param {Element} doc The container element
  */
 async function loadLazy(doc) {
-  await loadUser();
-
   const main = doc.querySelector('main');
   await loadSections(main);
 
@@ -164,8 +163,8 @@ async function loadLazy(doc) {
   lazyPreloadHoverIcons();
 
   // Initialize add to collection modal functionality
-  import('./add-to-collection-modal.js').then(({ initAddToCollectionModal }) => {
-    initAddToCollectionModal();
+  import('./collections/add-to-collection-modal.js').then(async ({ initAddToCollectionModal }) => {
+    await initAddToCollectionModal();
   }).catch(() => {
     // Fallback for environments where the module might not be available
     console.log('Add to collection modal not available');
