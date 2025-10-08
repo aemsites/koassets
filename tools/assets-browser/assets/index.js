@@ -35468,6 +35468,108 @@ const saveSavedSearches = (searches) => {
     console.error("Error saving searches:", error);
   }
 };
+const FacetItem = React.memo(({
+  facetTechId,
+  facet,
+  label,
+  isExpanded,
+  isSearchMode,
+  searchTerm,
+  checkedCount,
+  onToggle,
+  onToggleSearch,
+  onSearchChange,
+  onSearchEscape,
+  renderContent
+}) => {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    facetTechId === "tccc-rightsStartDate" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "facet-rights-section", children: /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "facet-rights-label", children: "Check Rights Filters" }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "facet-filter-section", children: [
+      isSearchMode ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "facet-filter-button facet-filter-button-search", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "facet-search-container", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "facet-search-input-wrapper", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "img",
+            {
+              src: "/icons/search.svg",
+              alt: "Search",
+              className: "facet-search-icon-inside"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "text",
+              className: "facet-search-input",
+              placeholder: `Search ${label}...`,
+              value: searchTerm,
+              autoFocus: true,
+              onClick: (e) => e.stopPropagation(),
+              onChange: (e) => onSearchChange(facetTechId, e.target.value),
+              onKeyDown: (e) => {
+                if (e.key === "Escape") {
+                  onSearchEscape(facetTechId);
+                }
+              }
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "img",
+            {
+              src: "/icons/close-menu.svg",
+              alt: "Close",
+              className: "facet-search-close-icon",
+              onClick: (e) => onToggleSearch(facetTechId, e)
+            }
+          )
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "facet-filter-right-section", children: [
+          checkedCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "assets-details-tag tccc-tag facet-filter-count-tag", children: checkedCount }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "span",
+            {
+              className: `facet-filter-arrow-top-level ${isExpanded ? "expanded" : ""}`,
+              onClick: () => onToggle(facetTechId)
+            }
+          )
+        ] })
+      ] }) : (
+        // Render each facet button
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: "facet-filter-button",
+            tabIndex: 0,
+            "aria-expanded": isExpanded,
+            onClick: () => onToggle(facetTechId),
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "facet-filter-label", children: label }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "facet-filter-right-section", children: [
+                checkedCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "assets-details-tag tccc-tag facet-filter-count-tag", children: checkedCount }),
+                isExpanded && facet.type !== "date" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "img",
+                  {
+                    src: "/icons/search.svg",
+                    alt: "Search",
+                    className: "facet-search-trigger",
+                    onClick: (e) => onToggleSearch(facetTechId, e)
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "span",
+                  {
+                    className: `facet-filter-arrow ${isExpanded ? "expanded" : ""}`
+                  }
+                )
+              ] })
+            ]
+          }
+        )
+      ),
+      renderContent(facetTechId)
+    ] })
+  ] });
+});
+FacetItem.displayName = "FacetItem";
 const Facets = ({
   searchResults,
   selectedFacetFilters,
@@ -35490,6 +35592,7 @@ const Facets = ({
   selectedMediaChannels,
   setSelectedMediaChannels
 }) => {
+  const externalParams2 = reactExports.useMemo(() => getExternalParams(), []);
   const [expandedFacets, setExpandedFacets] = reactExports.useState({});
   const [expandedHierarchyItems, setExpandedHierarchyItems] = reactExports.useState({});
   const [facetSearchMode, setFacetSearchMode] = reactExports.useState({});
@@ -35650,6 +35753,10 @@ const Facets = ({
   const handleFacetSearchChange = reactExports.useCallback((facetTechId, searchTerm) => {
     setFacetSearchTerms((prev) => ({ ...prev, [facetTechId]: searchTerm }));
   }, []);
+  const handleFacetSearchEscape = reactExports.useCallback((facetTechId) => {
+    setFacetSearchMode((prev) => ({ ...prev, [facetTechId]: false }));
+    setFacetSearchTerms((prev) => ({ ...prev, [facetTechId]: "" }));
+  }, []);
   const handleCheckbox = reactExports.useCallback((key, facet) => {
     setChecked((prev) => {
       var _a;
@@ -35687,6 +35794,19 @@ const Facets = ({
     }
     return false;
   }, []);
+  const getDisplayName = reactExports.useCallback((facetTechId, facetName) => {
+    var _a, _b, _c, _d;
+    if (facetTechId === "tccc-campaignName") {
+      return ((_a = externalParams2.campaignNameValueMapping) == null ? void 0 : _a[facetName]) || facetName;
+    } else if (facetTechId === "tccc-intendedBottlerCountry") {
+      return ((_b = externalParams2.intendedBottlerCountryValueMapping) == null ? void 0 : _b[facetName]) || facetName;
+    } else if (facetTechId === "tccc-packageContainerSize") {
+      return ((_c = externalParams2.packageContainerSizeValueMapping) == null ? void 0 : _c[facetName]) || facetName;
+    } else if (facetTechId === "tccc-agencyName") {
+      return ((_d = externalParams2.agencyNameValueMapping) == null ? void 0 : _d[facetName]) || facetName;
+    }
+    return facetName;
+  }, [externalParams2]);
   const renderHierarchyLevel = reactExports.useCallback((hierarchyData, facetTechId, level, parentPath = "") => {
     const levelData = hierarchyData[level];
     if (!levelData) return [];
@@ -35695,7 +35815,8 @@ const Facets = ({
     Object.entries(levelData).forEach(([facetName, count]) => {
       var _a;
       const pathParts = facetName.split(" / ");
-      const displayName = pathParts[pathParts.length - 1].trim();
+      const baseFacetName = pathParts[pathParts.length - 1].trim();
+      const displayName = getDisplayName(facetTechId, baseFacetName);
       if (searchTerm && !shouldShowHierarchyItem(hierarchyData, facetName, searchTerm, level)) {
         return;
       }
@@ -35746,7 +35867,7 @@ const Facets = ({
       }
     });
     return items;
-  }, [checked, handleCheckbox, expandedHierarchyItems, toggleHierarchyItem, facetSearchTerms, shouldShowHierarchyItem]);
+  }, [checked, handleCheckbox, expandedHierarchyItems, toggleHierarchyItem, facetSearchTerms, shouldShowHierarchyItem, getDisplayName]);
   const renderFacetsFromSearchResult = reactExports.useCallback((facetTechId) => {
     if (!expandedFacets[facetTechId]) {
       return null;
@@ -35824,6 +35945,7 @@ const Facets = ({
     });
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "facet-filter-checkbox-list", children: filteredEntries.map(([facetName, count]) => {
       var _a;
+      const displayName = getDisplayName(facetTechId, facetName);
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "facet-filter-checkbox-label", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",
@@ -35834,11 +35956,11 @@ const Facets = ({
           }
         ),
         " ",
-        facetName,
+        displayName,
         count > 0 ? ` (${count})` : ""
       ] }, facetName);
     }) });
-  }, [expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, checked, handleCheckbox, facetSearchTerms, handleClearRightsStartDate, handleRightsStartDateChange, rightsStartDate, handleClearRightsEndDate, handleRightsEndDateChange, rightsEndDate, selectedMarkets, selectedMediaChannels, setSelectedMarkets, setSelectedMediaChannels]);
+  }, [expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, checked, handleCheckbox, facetSearchTerms, handleClearRightsStartDate, handleRightsStartDateChange, rightsStartDate, handleClearRightsEndDate, handleRightsEndDateChange, rightsEndDate, selectedMarkets, selectedMediaChannels, setSelectedMarkets, setSelectedMediaChannels, getDisplayName]);
   reactExports.useEffect(() => {
     if (isUpdatingFromExternalRef.current) {
       isUpdatingFromExternalRef.current = false;
@@ -36212,99 +36334,24 @@ const Facets = ({
       })().map(([facetTechId, facet]) => {
         const label = facet.label || facetTechId;
         const checkedCount = getCheckedCount(facetTechId);
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          facetTechId === "tccc-rightsStartDate" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "facet-rights-section", children: /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "facet-rights-label", children: "Check Rights Filters" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "facet-filter-section", children: [
-            facetSearchMode[facetTechId] ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "facet-filter-button facet-filter-button-search", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "facet-search-container", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "facet-search-input-wrapper", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "img",
-                  {
-                    src: "/icons/search.svg",
-                    alt: "Search",
-                    className: "facet-search-icon-inside"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "text",
-                    className: "facet-search-input",
-                    placeholder: `Search ${label}...`,
-                    value: facetSearchTerms[facetTechId] || "",
-                    autoFocus: true,
-                    onClick: (e) => e.stopPropagation(),
-                    onChange: (e) => handleFacetSearchChange(facetTechId, e.target.value),
-                    onKeyDown: (e) => {
-                      if (e.key === "Escape") {
-                        setFacetSearchMode((prev) => ({ ...prev, [facetTechId]: false }));
-                        setFacetSearchTerms((prev) => ({ ...prev, [facetTechId]: "" }));
-                      }
-                    }
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "img",
-                  {
-                    src: "/icons/close-menu.svg",
-                    alt: "Close",
-                    className: "facet-search-close-icon",
-                    onClick: (e) => toggleFacetSearch(facetTechId, e)
-                  }
-                )
-              ] }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "facet-filter-right-section", children: [
-                checkedCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "assets-details-tag tccc-tag facet-filter-count-tag", children: checkedCount }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "span",
-                  {
-                    className: `facet-filter-arrow-top-level ${expandedFacets[facetTechId] ? "expanded" : ""}`,
-                    onClick: () => toggle(facetTechId)
-                  }
-                )
-              ] })
-            ] }) : (
-              // Render each facet button
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "div",
-                {
-                  className: "facet-filter-button",
-                  tabIndex: 0,
-                  "aria-expanded": !!expandedFacets[facetTechId],
-                  onClick: () => toggle(facetTechId),
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "span",
-                      {
-                        className: "facet-filter-label",
-                        children: label
-                      }
-                    ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "facet-filter-right-section", children: [
-                      checkedCount > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "assets-details-tag tccc-tag facet-filter-count-tag", children: checkedCount }),
-                      expandedFacets[facetTechId] && facet.type !== "date" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "img",
-                        {
-                          src: "/icons/search.svg",
-                          alt: "Search",
-                          className: "facet-search-trigger",
-                          onClick: (e) => toggleFacetSearch(facetTechId, e)
-                        }
-                      ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "span",
-                        {
-                          className: `facet-filter-arrow ${expandedFacets[facetTechId] ? "expanded" : ""}`
-                        }
-                      )
-                    ] })
-                  ]
-                }
-              )
-            ),
-            renderFacetsFromSearchResult(facetTechId)
-          ] }, facetTechId)
-        ] });
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(
+          FacetItem,
+          {
+            facetTechId,
+            facet,
+            label,
+            isExpanded: !!expandedFacets[facetTechId],
+            isSearchMode: !!facetSearchMode[facetTechId],
+            searchTerm: facetSearchTerms[facetTechId] || "",
+            checkedCount,
+            onToggle: toggle,
+            onToggleSearch: toggleFacetSearch,
+            onSearchChange: handleFacetSearchChange,
+            onSearchEscape: handleFacetSearchEscape,
+            renderContent: renderFacetsFromSearchResult
+          },
+          facetTechId
+        );
       }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "saved-searches-list", children: savedSearches.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "saved-searches-empty", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No saved searches yet." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: 'Switch to Filters tab and click "Save Search" to save your first search.' })

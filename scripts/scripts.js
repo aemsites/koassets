@@ -274,25 +274,55 @@ export function getBlockKeyValues(block) {
 }
 
 /**
-* Fetches spreadsheet data from EDS.
+* Fetches spreadsheet data from EDS with automatic pagination.
+* Automatically fetches all pages if response.total > response.limit.
 * @param {string} sheetPath Path to the spreadsheet JSON endpoint
                             (e.g., 'data/products', 'content/pricing')
-* @returns {Promise<Object>} Object representing spreadsheet data
+* @param {string} sheetName Optional sheet name filter
+* @returns {Promise<Object>} Object representing spreadsheet data with all pages merged
 */
 export async function fetchSpreadsheetData(sheetPath, sheetName = '') {
-  return fetch(`${window.location.origin}/${sheetPath}.json${sheetName ? `?sheet=${sheetName}` : ''}`)
-    .then((resp) => {
-      if (resp.ok) {
-        return resp.json();
+  try {
+    let offset = 0;
+    let result = null;
+    let hasMoreData = true;
+
+    // Keep fetching until we have all data
+    // eslint-disable-next-line no-await-in-loop
+    while (hasMoreData) {
+      const url = `${window.location.origin}/${sheetPath}.json?offset=${offset}${sheetName ? `&sheet=${sheetName}` : ''}`;
+      // eslint-disable-next-line no-await-in-loop
+      const resp = await fetch(url);
+
+      if (!resp.ok) {
+        throw new Error(`Failed to fetch spreadsheet: ${resp.status} ${resp.statusText}`);
       }
-      throw new Error(`Failed to fetch spreadsheet: ${resp.status} ${resp.statusText}`);
-    })
-    .then((json) => json)
-    .catch((error) => {
-      // eslint-disable-next-line no-console
-      console.warn(`Failed to load spreadsheet from ${sheetPath}:`, error);
-      return [];
-    });
+
+      // eslint-disable-next-line no-await-in-loop
+      const json = await resp.json();
+
+      if (offset === 0) {
+        // First page: store as result
+        result = json;
+      } else if (json.data && Array.isArray(json.data)) {
+        // Subsequent pages: merge data
+        result.data = result.data.concat(json.data);
+      }
+
+      // Check if we need to fetch more
+      if (json.total && json.total > result.data.length) {
+        offset += json.data.length;
+      } else {
+        hasMoreData = false;
+      }
+    }
+
+    return result;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn(`Failed to load spreadsheet from ${sheetPath}:`, error);
+    return { data: [] };
+  }
 }
 
 /**

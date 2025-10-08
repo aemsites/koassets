@@ -36,6 +36,32 @@ export default async function decorate(block) {
   // Configure external parameters for block integration
   window.KOAssetsConfig = window.KOAssetsConfig || {};
 
+  const campaignNameValueMappingRaw = await fetchSpreadsheetData('config/facet-value-mapping', 'tccc:campaignName');
+  const campaignNameValueMapping = campaignNameValueMappingRaw?.data?.reduce((acc, item) => {
+    acc[item.value] = item.text;
+    return acc;
+  }, {}) || {};
+
+  const intendedBottlerCountryValueMappingRaw = await fetchSpreadsheetData('config/facet-value-mapping', 'tccc:intendedBottlerCountry');
+  const intendedBottlerCountryValueMapping = intendedBottlerCountryValueMappingRaw
+    ?.data?.reduce((acc, item) => {
+      acc[item.value] = item.text;
+      return acc;
+    }, {}) || {};
+
+  const packageContainerSizeValueMappingRaw = await fetchSpreadsheetData('config/facet-value-mapping', 'tccc:packageContainerSize');
+  const packageContainerSizeValueMapping = packageContainerSizeValueMappingRaw
+    ?.data?.reduce((acc, item) => {
+      acc[item.value] = item.text;
+      return acc;
+    }, {}) || {};
+
+  const agencyNameValueMappingRaw = await fetchSpreadsheetData('config/facet-value-mapping', 'tccc:agencyName');
+  const agencyNameValueMapping = agencyNameValueMappingRaw?.data?.reduce((acc, item) => {
+    acc[item.value] = item.text;
+    return acc;
+  }, {}) || {};
+
   // Helper function to safely parse JSON - returns empty object if not valid
   const safeJsonParse = (jsonString) => {
     if (!jsonString || jsonString.trim() === '') {
@@ -57,6 +83,10 @@ export default async function decorate(block) {
     hitsPerPage: stripHtmlAndNewlines(blockObj.hitsPerPage) || '',
     excFacets: safeJsonParse(blockObj.excFacets),
     restrictedBrands,
+    campaignNameValueMapping,
+    intendedBottlerCountryValueMapping,
+    packageContainerSizeValueMapping,
+    agencyNameValueMapping,
     presetFilters: blockObj.presetFilters ? convertHtmlListToArray(blockObj.presetFilters) : [],
     ...(window.KOAssetsConfig.externalParams || {}),
   };
