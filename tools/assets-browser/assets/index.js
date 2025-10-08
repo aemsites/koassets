@@ -36712,7 +36712,7 @@ const BUTTON_CONFIGS = {
     }
   }
 };
-const AssetCardViewGrid = ({
+const AssetCard = ({
   image,
   handleCardDetailClick,
   handlePreviewClick,
@@ -36722,7 +36722,9 @@ const AssetCardViewGrid = ({
   isSelected = false,
   onCheckboxChange,
   expandAllDetails = true,
-  index = 0
+  index = 0,
+  viewMode,
+  className = ""
 }) => {
   const { dynamicMediaClient } = useAppConfig();
   const isInCart = cartAssetItems.some((cartAssetItem) => cartAssetItem.assetId === image.assetId);
@@ -36764,7 +36766,38 @@ const AssetCardViewGrid = ({
     });
     window.dispatchEvent(event);
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-card-view-grid", id: image.assetId, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-card-view-grid-inner", children: [
+  const containerClass = `asset-card-view-${viewMode} ${className}`.trim();
+  const innerClass = `asset-card-view-${viewMode}-inner`;
+  const TitleElement = viewMode === "grid" ? "h3" : "div";
+  const firstButtonWrapper = viewMode === "grid" ? "left-buttons-wrapper" : "top-buttons-wrapper";
+  const secondButtonWrapper = viewMode === "grid" ? "right-buttons-wrapper" : "bottom-buttons-wrapper";
+  const metadataGrid = expandAllDetails && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-grid", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "SIZE" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: image.formatedSize })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "TYPE" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: image.formatLabel })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "FILE EXT" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: getFileExtension(image.name) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "RIGHTS FREE" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: image.readyToUse })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "CATEGORY" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: formatCategory(image == null ? void 0 : image.category) })
+    ] })
+  ] });
+  const authorizationStatus = /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    image.authorized === AuthorizationStatus.AVAILABLE && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-authorized-status green", children: "AUTHORIZED" }),
+    (image.authorized === AuthorizationStatus.NOT_AVAILABLE || image.authorized === AuthorizationStatus.AVAILABLE_EXCEPT) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-authorized-status red", children: "EXTENSION REQUIRED" })
+  ] });
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: containerClass, id: image.assetId, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: innerClass, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
@@ -36813,7 +36846,7 @@ const AssetCardViewGrid = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-title-section", children: [
         (image == null ? void 0 : image.campaignName) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "product-tags", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-tag tccc-tag", children: getAssetFieldDisplayName("campaignName", image == null ? void 0 : image.campaignName) }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "h3",
+          TitleElement,
           {
             className: "product-title",
             onClick: (e) => handleCardDetailClick(image, e),
@@ -36821,196 +36854,19 @@ const AssetCardViewGrid = ({
             children: image.title
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          image.authorized === AuthorizationStatus.AVAILABLE && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-authorized-status green", children: "AUTHORIZED" }),
-          (image.authorized === AuthorizationStatus.NOT_AVAILABLE || image.authorized === AuthorizationStatus.AVAILABLE_EXCEPT) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-authorized-status red", children: "EXTENSION REQUIRED" })
-        ] })
+        authorizationStatus
       ] }),
-      expandAllDetails && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-grid", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "SIZE" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: image.formatedSize })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "TYPE" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: image.formatLabel })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "FILE EXT" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: getFileExtension(image.name) })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "RIGHTS FREE" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: image.readyToUse })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "CATEGORY" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: formatCategory(image == null ? void 0 : image.category) })
-        ] })
-      ] })
+      metadataGrid
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-actions", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "left-buttons-wrapper", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: firstButtonWrapper, children: viewMode === "grid" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
           className: `add-to-cart-btn${isInCart ? " remove-from-cart" : ""}`,
           onClick: handleAddRemoveCart,
           children: isInCart ? "Remove From Cart" : "Add To Cart"
         }
-      ) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "right-buttons-wrapper", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        ActionButton,
-        {
-          config: BUTTON_CONFIGS.download,
-          hasLoadingState: true,
-          onClick: handleClickDownload,
-          style: {
-            display: "none"
-          }
-        }
-      ) })
-    ] })
-  ] }) });
-};
-const AssetCardViewList = ({
-  image,
-  handleCardDetailClick,
-  handlePreviewClick,
-  handleAddToCart,
-  handleRemoveFromCart,
-  cartAssetItems = [],
-  isSelected = false,
-  onCheckboxChange,
-  expandAllDetails = true,
-  index = 0
-}) => {
-  const { dynamicMediaClient } = useAppConfig();
-  const isInCart = cartAssetItems.some((cartAssetItem) => cartAssetItem.assetId === image.assetId);
-  const handleAddRemoveCart = (e) => {
-    e.stopPropagation();
-    if (isInCart) {
-      handleRemoveFromCart == null ? void 0 : handleRemoveFromCart(image);
-    } else {
-      handleAddToCart == null ? void 0 : handleAddToCart(image, e);
-    }
-  };
-  const handleCheckboxClick = (e) => {
-    onCheckboxChange == null ? void 0 : onCheckboxChange(image.assetId || "", e.target.checked);
-  };
-  const handleCheckboxClickOnly = (e) => {
-    e.stopPropagation();
-  };
-  const handleClickDownload = async () => {
-    if (!image || !dynamicMediaClient) {
-      console.warn("No asset or dynamic media client available for download");
-      return;
-    }
-    try {
-      console.log("Downloading original asset:", image.assetId);
-      await dynamicMediaClient.downloadAsset(image);
-    } catch (error) {
-      console.error("Failed to download asset:", error);
-    }
-  };
-  const handleAddToCollection = (e) => {
-    e.stopPropagation();
-    const previewUrl = dynamicMediaClient && image.assetId && image.name ? dynamicMediaClient.getOptimizedDeliveryPreviewUrl(image.assetId, image.name, 350) : void 0;
-    const dmBucket = dynamicMediaClient ? getBucket() : void 0;
-    const event = new CustomEvent("openCollectionModal", {
-      detail: {
-        asset: { ...image, previewUrl, dmBucket },
-        assetPath: image.repositoryPath || image.assetId
-      }
-    });
-    window.dispatchEvent(event);
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-card-view-list", id: image.assetId, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-card-view-list-inner", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "div",
-      {
-        className: "image-wrapper",
-        onClick: (e) => handleCardDetailClick(image, e),
-        style: { cursor: "pointer" },
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "checkbox",
-              className: "tccc-checkbox",
-              checked: isSelected,
-              onChange: handleCheckboxClick,
-              onClick: handleCheckboxClickOnly
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              className: "image-preview-button",
-              onClick: (e) => handlePreviewClick(image, e),
-              title: "View larger image",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { viewBox: "0 0 256.001 256.001", xmlns: "http://www.w3.org/2000/svg", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M159.997 116a12 12 0 0 1-12 12h-20v20a12 12 0 0 1-24 0v-20h-20a12 12 0 0 1 0-24h20V84a12 12 0 0 1 24 0v20h20a12 12 0 0 1 12 12Zm72.48 116.482a12 12 0 0 1-16.971 0l-40.679-40.678a96.105 96.105 0 1 1 16.972-16.97l40.678 40.678a12 12 0 0 1 0 16.97Zm-116.48-44.486a72 72 0 1 0-72-72 72.081 72.081 0 0 0 72 72Z" }) })
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "add-to-collection-overlay", onClick: handleAddToCollection, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "add-to-collection-content", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("i", { className: "icon add circle" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Add to Collection" })
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Picture,
-            {
-              asset: image,
-              width: 350,
-              className: "image-container",
-              eager: index < EAGER_LOAD_IMAGE_COUNT,
-              fetchPriority: index < 2 ? "high" : "auto"
-            },
-            image.assetId
-          )
-        ]
-      }
-    ),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "product-info-container", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-info", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-title-section", children: [
-        (image == null ? void 0 : image.campaignName) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "product-tags", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-tag tccc-tag", children: getAssetFieldDisplayName("campaignName", image == null ? void 0 : image.campaignName) }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "div",
-          {
-            className: "product-title",
-            onClick: (e) => handleCardDetailClick(image, e),
-            style: { cursor: "pointer" },
-            children: image.title
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          image.authorized === AuthorizationStatus.AVAILABLE && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-authorized-status green", children: "AUTHORIZED" }),
-          (image.authorized === AuthorizationStatus.NOT_AVAILABLE || image.authorized === AuthorizationStatus.AVAILABLE_EXCEPT) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-authorized-status red", children: "EXTENSION REQUIRED" })
-        ] })
-      ] }),
-      expandAllDetails && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-grid", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "SIZE" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: image.formatedSize })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "TYPE" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: image.formatLabel })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "FILE EXT" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: getFileExtension(image.name) })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "RIGHTS FREE" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: image.readyToUse })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "CATEGORY" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: formatCategory(image == null ? void 0 : image.category) })
-        ] })
-      ] })
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-actions", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "top-buttons-wrapper", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
         ActionButton,
         {
           config: BUTTON_CONFIGS.download,
@@ -37021,7 +36877,17 @@ const AssetCardViewList = ({
           }
         }
       ) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bottom-buttons-wrapper", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: secondButtonWrapper, children: viewMode === "grid" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+        ActionButton,
+        {
+          config: BUTTON_CONFIGS.download,
+          hasLoadingState: true,
+          onClick: handleClickDownload,
+          style: {
+            display: "none"
+          }
+        }
+      ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
           className: `add-to-cart-btn${isInCart ? " remove-from-cart" : ""}`,
@@ -38595,10 +38461,10 @@ const ImageGallery = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Loading images..." })
     ] }) : visibleImages.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "no-images", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No images to display" }) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: viewType === "grid" ? "image-grid" : "image-grid-list", children: visibleImages.map((visibleImage, index) => {
-        const CardComponent = viewType === "grid" ? AssetCardViewGrid : AssetCardViewList;
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
-          CardComponent,
+          AssetCard,
           {
+            viewMode: viewType,
             image: visibleImage,
             handleCardDetailClick,
             handlePreviewClick: handleCardPreviewClick,

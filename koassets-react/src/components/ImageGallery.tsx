@@ -4,8 +4,7 @@ import { AuthorizationStatus } from '../clients/fadel-client';
 import { DEFAULT_ACCORDION_CONFIG } from '../constants/accordion';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type { Asset, ImageGalleryProps } from '../types';
-import AssetCardViewGrid from './AssetCardViewGrid';
-import AssetCardViewList from './AssetCardViewList';
+import AssetCard from './AssetCard';
 import AssetDetails from './AssetDetails/';
 import AssetPreview from './AssetPreview';
 import './ImageGallery.css';
@@ -294,10 +293,10 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                     <>
                         <div className={viewType === 'grid' ? 'image-grid' : 'image-grid-list'}>
                             {visibleImages.map((visibleImage, index) => {
-                                const CardComponent = viewType === 'grid' ? AssetCardViewGrid : AssetCardViewList;
                                 return (
-                                    <CardComponent
+                                    <AssetCard
                                         key={visibleImage.assetId}
+                                        viewMode={viewType}
                                         image={visibleImage}
                                         handleCardDetailClick={handleCardDetailClick}
                                         handlePreviewClick={handleCardPreviewClick}
