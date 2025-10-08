@@ -333,11 +333,11 @@ function handleSearch() {
  */
 function buildAssetImageUrl(asset, format = 'jpg', width = 350) {
   if (!asset || !asset.assetId) return '';
-  
+
   // Get asset name and remove file extension
   const assetName = asset.name || asset.title || 'thumbnail';
   const fileName = encodeURIComponent(assetName.replace(/\.[^/.]+$/, ''));
-  
+
   return `/api/adobe/assets/${asset.assetId}/as/${fileName}.${format}?width=${width}`;
 }
 
@@ -349,19 +349,19 @@ function buildAssetImageUrl(asset, format = 'jpg', width = 350) {
  */
 function createPictureElement(asset, width = 350) {
   const picture = document.createElement('picture');
-  
+
   // WebP source
   const webpSource = document.createElement('source');
   webpSource.type = 'image/webp';
   webpSource.srcset = buildAssetImageUrl(asset, 'webp', width);
   picture.appendChild(webpSource);
-  
+
   // JPG source
   const jpgSource = document.createElement('source');
   jpgSource.type = 'image/jpg';
   jpgSource.srcset = buildAssetImageUrl(asset, 'jpg', width);
   picture.appendChild(jpgSource);
-  
+
   // Fallback img
   const img = document.createElement('img');
   img.className = 'asset-image';
@@ -382,7 +382,7 @@ function createPictureElement(asset, width = 350) {
     }
   };
   picture.appendChild(img);
-  
+
   return picture;
 }
 
