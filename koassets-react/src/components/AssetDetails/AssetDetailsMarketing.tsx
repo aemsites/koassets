@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { Asset } from '../../types';
+import { getAssetFieldDisplayName } from '../../utils/displayUtils';
 
 interface AssetDetailsMarketingProps {
     selectedImage: Asset;
@@ -31,7 +32,7 @@ const AssetDetailsMarketing: React.FC<AssetDetailsMarketingProps> = ({ selectedI
                     <div className="asset-details-grid">
                         <div className="asset-details-group">
                             <h4 className="asset-details-main-metadata-label">Campaign Name</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.campaignName as string}</span>
+                            <span className="asset-details-main-metadata-value">{selectedImage?.campaignName ? getAssetFieldDisplayName('campaignName', selectedImage.campaignName as string) : ''}</span>
                         </div>
 
                         <div className="asset-details-group">
@@ -66,7 +67,7 @@ const AssetDetailsMarketing: React.FC<AssetDetailsMarketingProps> = ({ selectedI
 
                         <div className="asset-details-group">
                             <h4 className="asset-details-main-metadata-label">Agency Name</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.agencyName as string}</span>
+                            <span className="asset-details-main-metadata-value">{selectedImage?.agencyName ? getAssetFieldDisplayName('agencyName', selectedImage.agencyName as string) : ''}</span>
                         </div>
                     </div>
                 </div>
