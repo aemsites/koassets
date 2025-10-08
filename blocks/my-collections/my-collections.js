@@ -583,14 +583,19 @@ async function handleUpdateCollection() {
 
     // Update collection via API using the collection ID from the API data
     const collectionId = editingCollection.apiData?.id || editingCollection.id;
-    const result = await collectionsClient.updateCollectionMetadata(collectionId, updateData);
+    const updatedCollection = await collectionsClient.updateCollectionMetadata(
+      collectionId,
+      updateData,
+    );
+
+    // eslint-disable-next-line no-console
+    console.log('✅ [Update Collection] API response:', updatedCollection);
 
     // Hide modal first
     hideEditModal();
 
     // Show success message
-    const collectionTitle = result.collectionMetadata?.title || result.title || name;
-    showToast(`COLLECTION "${collectionTitle}" UPDATED SUCCESSFULLY`, 'success');
+    showToast('COLLECTION UPDATED SUCCESSFULLY', 'success');
 
     // Refresh display to show the updated collection
     await refreshCollectionsDisplay();
@@ -652,7 +657,7 @@ async function handleConfirmDelete() {
     hideDeleteModal();
 
     // Show success message
-    showToast(`COLLECTION "${deleteCollectionName}" DELETED SUCCESSFULLY`, 'success');
+    showToast('COLLECTION DELETED SUCCESSFULLY', 'success');
 
     // Refresh display to show the changes
     await refreshCollectionsDisplay();
@@ -955,14 +960,16 @@ async function handleCreateCollection() {
     console.log('🎯 [Create Collection] Sending collection data:', collectionData);
 
     // Create collection via API
-    const result = await collectionsClient.createCollection(collectionData);
+    const newCollection = await collectionsClient.createCollection(collectionData);
+
+    // eslint-disable-next-line no-console
+    console.log('✅ [Create Collection] API response:', newCollection);
 
     // Hide modal first
     hideCreateModal();
 
     // Show success message
-    const collectionTitle = result.collectionMetadata?.title || result.title || 'Unknown';
-    showToast(`COLLECTION "${collectionTitle}" CREATED SUCCESSFULLY`, 'success');
+    showToast('COLLECTION CREATED SUCCESSFULLY', 'success');
 
     // Refresh display to show the new collection
     await refreshCollectionsDisplay();

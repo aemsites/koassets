@@ -104,12 +104,16 @@ export class DynamicMediaCollectionsClient {
           return allowUndefinedResponse ? undefined : {};
         }
 
-        // Handle JSON responses
+        // Handle JSON responses - always return data + headers
         if (contentType && contentType.includes('application/json')) {
           const responseData = await response.json();
           // eslint-disable-next-line no-console
           console.log('✅ [Collections Client] Response:', responseData);
-          return responseData;
+
+          return {
+            data: responseData,
+            headers: Object.fromEntries(response.headers.entries()),
+          };
         }
 
         // Handle text responses
@@ -119,7 +123,10 @@ export class DynamicMediaCollectionsClient {
           if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
             try {
               const parsed = JSON.parse(text);
-              return parsed;
+              return {
+                data: parsed,
+                headers: Object.fromEntries(response.headers.entries()),
+              };
             } catch {
               return allowUndefinedResponse ? undefined : text;
             }
@@ -130,7 +137,10 @@ export class DynamicMediaCollectionsClient {
         // For unknown content types, attempt JSON parsing as fallback
         try {
           const responseData = await response.json();
-          return responseData;
+          return {
+            data: responseData,
+            headers: Object.fromEntries(response.headers.entries()),
+          };
         } catch {
           return allowUndefinedResponse ? undefined : {};
         }
@@ -205,12 +215,16 @@ export class DynamicMediaCollectionsClient {
           return allowUndefinedResponse ? undefined : {};
         }
 
-        // Handle JSON responses
+        // Handle JSON responses - always return data + headers
         if (contentType && contentType.includes('application/json')) {
           const responseData = await response.json();
           // eslint-disable-next-line no-console
           console.log('✅ [Collections Client] Response:', responseData);
-          return responseData;
+
+          return {
+            data: responseData,
+            headers: Object.fromEntries(response.headers.entries()),
+          };
         }
 
         // Handle text responses
@@ -220,7 +234,10 @@ export class DynamicMediaCollectionsClient {
           if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
             try {
               const parsed = JSON.parse(text);
-              return parsed;
+              return {
+                data: parsed,
+                headers: Object.fromEntries(response.headers.entries()),
+              };
             } catch {
               return allowUndefinedResponse ? undefined : text;
             }
@@ -231,7 +248,10 @@ export class DynamicMediaCollectionsClient {
         // For unknown content types, attempt JSON parsing as fallback
         try {
           const responseData = await response.json();
-          return responseData;
+          return {
+            data: responseData,
+            headers: Object.fromEntries(response.headers.entries()),
+          };
         } catch {
           return allowUndefinedResponse ? undefined : {};
         }
@@ -241,6 +261,21 @@ export class DynamicMediaCollectionsClient {
         throw error;
       }
     }
+  }
+
+  // ==========================================
+  // Helper Methods
+  // ==========================================
+
+  /**
+   * Extract ETag from response headers
+   * @param {Object} headers - Response headers object
+   * @returns {string|null} ETag value or null
+   * @private
+   */
+  // eslint-disable-next-line class-methods-use-this
+  getETag(headers) {
+    return headers?.etag || headers?.ETag || null;
   }
 
   // ==========================================
@@ -256,17 +291,17 @@ export class DynamicMediaCollectionsClient {
     try {
       // eslint-disable-next-line no-console
       console.trace('DynamicMediaCollectionsClient.listCollections() REQUEST');
-      const response = await this.makeRequest({
+      const { data } = await this.makeRequest({
         url: '/adobe/assets/collections',
         method: 'GET',
         params: options,
       });
 
       // Apply authorization filtering to the collections
-      const filteredItems = assertCollectionAccess(response.items, this.user, 'read');
+      const filteredItems = assertCollectionAccess(data.items, this.user, 'read');
 
       return {
-        ...response,
+        ...data,
         items: filteredItems,
       };
     } catch (error) {
@@ -293,11 +328,13 @@ export class DynamicMediaCollectionsClient {
         items: collectionData.items || [],
       };
 
-      return await this.makeRequest({
+      const { data } = await this.makeRequest({
         url: '/adobe/assets/collections',
         method: 'POST',
         data: requestData,
       });
+
+      return data;
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`Failed to create collection: ${error.message}`);
@@ -309,13 +346,13 @@ export class DynamicMediaCollectionsClient {
   /**
    * Retrieve collection metadata
    * @param {string} collectionId - Collection ID
-   * @returns {Promise} Promise with collection metadata
+   * @returns {Promise} Promise with collection metadata (includes _etag property)
    */
   async getCollectionMetadata(collectionId) {
     try {
       // eslint-disable-next-line no-console
       console.trace('DynamicMediaCollectionsClient.getCollectionMetadata() REQUEST');
-      const collection = await this.makeRequest({
+      const { data: collection, headers } = await this.makeRequest({
         url: `/adobe/assets/collections/${collectionId}`,
         method: 'GET',
       });
@@ -323,6 +360,13 @@ export class DynamicMediaCollectionsClient {
       // Check read access for this collection
       if (!hasCollectionAccess(collection, this.user, 'read')) {
         throw new Error(`Access denied: You do not have permission to view collection "${collectionId}"`);
+      }
+
+      // Attach ETag to collection object for later use
+      const etag = this.getETag(headers);
+      if (etag) {
+        // eslint-disable-next-line no-underscore-dangle
+        collection._etag = etag;
       }
 
       return collection;
@@ -351,61 +395,20 @@ export class DynamicMediaCollectionsClient {
       }
 
       // Use If-Match: * to delete regardless of ETag value
-      return await this.makeRequest({
+      const { data } = await this.makeRequest({
         url: `/adobe/assets/collections/${collectionId}`,
         method: 'DELETE',
         headers: {
           'If-Match': '*',
         },
       });
+
+      return data;
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`Failed to delete collection "${collectionId}": ${error.message}`);
       }
       throw error;
-    }
-  }
-
-  /**
-   * Get collection ETag for updates
-   * @param {string} collectionId - Collection ID
-   * @returns {Promise<string>} Promise with ETag value
-   */
-  async getCollectionETag(collectionId) {
-    try {
-      // Make a direct HEAD request to get ETag from headers
-      const url = `/adobe/assets/collections/${collectionId}`;
-
-      if (this.isIMSAuthenticated()) {
-        const fetchUrl = `${this.baseURL}${url}`;
-        const response = await fetch(fetchUrl, {
-          method: 'HEAD',
-          headers: {
-            Authorization: `Bearer ${this.accessToken}`,
-            'x-api-key': this.apiKey,
-            'x-adobe-accept-experimental': '1',
-          },
-        });
-
-        if (response.ok) {
-          const etag = response.headers.get('etag');
-          return etag || '*';
-        }
-      } else {
-        // Cookie auth fallback - use GET request and ignore body
-        await this.makeRequest({
-          url,
-          method: 'GET',
-        });
-        // For cookie auth, we can't easily get ETag, so use wildcard
-        return '*';
-      }
-
-      return '*';
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.warn(`Failed to get ETag for collection ${collectionId}, using wildcard:`, error);
-      return '*'; // Fallback to wildcard
     }
   }
 
@@ -421,7 +424,7 @@ export class DynamicMediaCollectionsClient {
       console.trace('DynamicMediaCollectionsClient.updateCollectionMetadata() REQUEST');
 
       // First get current collection metadata to preserve existing data
-      // This also checks read access
+      // This also checks read access AND retrieves the ETag
       const currentCollection = await this.getCollectionMetadata(collectionId);
 
       // Check write access before updating
@@ -429,15 +432,17 @@ export class DynamicMediaCollectionsClient {
         throw new Error(`Access denied: You do not have permission to modify collection "${collectionId}"`);
       }
 
-      // Get current ETag for the collection
-      const etag = await this.getCollectionETag(collectionId);
+      // Use ETag from getCollectionMetadata response (fallback to wildcard if not available)
+      // eslint-disable-next-line no-underscore-dangle
+      const etag = currentCollection._etag || '*';
 
       // Merge current metadata with updates (preserve all existing metadata)
       const mergedMetadata = {
         ...currentCollection.collectionMetadata,
         ...updateData, // Only override the fields being updated
       };
-      return await this.makeRequest({
+
+      const { data } = await this.makeRequest({
         url: `/adobe/assets/collections/${collectionId}`,
         method: 'POST',
         data: mergedMetadata,
@@ -445,6 +450,8 @@ export class DynamicMediaCollectionsClient {
           'If-Match': etag,
         },
       });
+
+      return data;
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`Failed to update collection metadata for "${collectionId}": ${error.message}`);
@@ -469,11 +476,13 @@ export class DynamicMediaCollectionsClient {
 
       // If we got here, access check in getCollectionMetadata passed
       // Now get the items
-      return await this.makeRequest({
+      const { data } = await this.makeRequest({
         url: `/adobe/assets/collections/${collectionId}/items`,
         method: 'GET',
         params: options,
       });
+
+      return data;
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`Failed to get collection items for "${collectionId}": ${error.message}`);
@@ -499,7 +508,7 @@ export class DynamicMediaCollectionsClient {
         throw new Error(`Access denied: You do not have permission to modify collection "${collectionId}"`);
       }
 
-      return await this.makeRequest({
+      const { data } = await this.makeRequest({
         url: `/adobe/assets/collections/${collectionId}/items`,
         method: 'POST',
         data: itemsData,
@@ -507,6 +516,8 @@ export class DynamicMediaCollectionsClient {
           'If-Match': '*', // Always allow add/remove operations regardless of ETag
         },
       });
+
+      return data;
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`Failed to update collection items for "${collectionId}": ${error.message}`);
