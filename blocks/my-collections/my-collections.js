@@ -941,12 +941,12 @@ async function handleCreateCollection() {
       title: name, // API uses 'title' not 'name'
       accessLevel: 'private', // Default to private
       items: [], // Required empty items array
-      // Custom metadata with ko: prefix
-      'ko:metadata': {
-        'ko:acl': {
-          owner: userEmail,
-          read: [userEmail],
-          write: [userEmail],
+      // Custom metadata with tccc: prefix
+      'tccc:metadata': {
+        'tccc:acl': {
+          'tccc:assetCollectionOwner': userEmail,
+          'tccc:assetCollectionViewer': [],
+          'tccc:assetCollectionEditor': [],
         },
       },
     };

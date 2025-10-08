@@ -16,7 +16,7 @@ export function transformApiCollectionToInternal(apiCollection) {
 
   const metadata = apiCollection.collectionMetadata || {};
   const repoMetadata = apiCollection.repositoryMetadata || {};
-  const koMetadata = metadata['ko:metadata'] || {};
+  const tcccMetadata = metadata['tccc:metadata'] || {};
 
   return {
     id: apiCollection.collectionId || apiCollection.id,
@@ -32,7 +32,7 @@ export function transformApiCollectionToInternal(apiCollection) {
     accessLevel: metadata.accessLevel || 'private',
     itemCount: apiCollection.itemCount || 0,
     thumbnailUrl: metadata['dam:thumbnailUrl'] || '',
-    acl: koMetadata['ko:acl'] || null,
+    acl: tcccMetadata['tccc:acl'] || null,
     contents: [],
     favorite: false,
     // Keep original API data for reference
