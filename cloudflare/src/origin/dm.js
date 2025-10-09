@@ -98,7 +98,7 @@ export async function originDynamicMedia(request, env) {
   req.headers.set('user-agent', req.headers.get('user-agent'));
   req.headers.set('x-forwarded-host', req.headers.get('host'));
 
-  // console.log('>>>', req.method, req.url, req.headers);
+  console.log('>>>', req.method, req.url, req.headers);
 
   const options = {
     method: req.method,
@@ -116,7 +116,7 @@ export async function originDynamicMedia(request, env) {
 
   const resp = await fetch(req, options);
 
-  // console.log('<<<', resp.status, resp.headers);
+  console.log('<<<', resp.status, resp.headers);
 
   return resp;
 }
