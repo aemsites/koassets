@@ -441,12 +441,9 @@ export class DynamicMediaCollectionsClient {
         throw new Error(`Access denied: You do not have permission to modify collection "${collectionId}"`);
       }
 
-      // Use ETag from getCollectionMetadata response (fallback to wildcard if not available)
+      // Use ETag from getCollectionMetadata response
       // eslint-disable-next-line no-underscore-dangle
       const etag = currentCollection._etag;
-
-      // eslint-disable-next-line no-console
-      console.trace('DynamicMediaCollectionsClient.updateCollectionMetadata() ETAG', etag);
 
       // Merge current metadata with updates (preserve all existing metadata)
       const mergedMetadata = {

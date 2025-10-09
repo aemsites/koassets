@@ -98,25 +98,18 @@ export async function originDynamicMedia(request, env) {
   req.headers.set('user-agent', req.headers.get('user-agent'));
   req.headers.set('x-forwarded-host', req.headers.get('host'));
 
-  console.log('>>>', req.method, req.url, req.headers);
+  // console.log('>>>', req.method, req.url, req.headers);
 
-  const options = {
+  const resp = await fetch(req, {
     method: req.method,
-  };
-
-  // Disable caching for collections API to ensure fresh data
-  if (url.pathname.startsWith('/adobe/assets/collections')) {
-    options.cache = 'no-store';
-  } else {
-    options.cf = {
-      // cf doesn't cache html by default: need to override the default behavior
+    cf: {
+      // cf doesn't cache all file types by default: need to override the default behavior
+      // https://developers.cloudflare.com/cache/concepts/default-cache-behavior/#default-cached-file-extensions
       cacheEverything: true,
-    };
-  }
+    },
+  });
 
-  const resp = await fetch(req, options);
-
-  console.log('<<<', resp.status, resp.headers);
+  // console.log('<<<', resp.status, resp.headers);
 
   return resp;
 }
