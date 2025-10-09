@@ -4,7 +4,8 @@ import { EAGER_LOAD_IMAGE_COUNT } from '../constants/images';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type { AssetCardProps } from '../types';
 import { getBucket } from '../utils/config';
-import { formatCategory, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
+import { formatCategory, getFileExtension } from '../utils/formatters';
+import { getAssetFieldDisplayFacetName } from '../utils/displayUtils';
 import ActionButton from './ActionButton';
 import { BUTTON_CONFIGS } from './ActionButtonConfigs';
 import './AssetCardViewGrid.css';
@@ -132,11 +133,9 @@ const AssetCardViewGrid: React.FC<AssetCardProps> = ({
                 <div className="product-info-container">
                     <div className="product-info">
                         <div className="product-title-section">
-                            <div className="product-tags">
-                                {(image?.campaignName as string) && (
-                                    <span className="product-tag tccc-tag">{removeHyphenTitleCase(image?.campaignName as string)}</span>
-                                )}
-                            </div>
+                            {image?.campaignName && <div className="product-tags">
+                                <span className="product-tag tccc-tag">{getAssetFieldDisplayFacetName('campaignName', image?.campaignName as string)}</span>
+                            </div>}
                             <h3
                                 className="product-title"
                                 onClick={(e) => handleCardDetailClick(image, e)}
