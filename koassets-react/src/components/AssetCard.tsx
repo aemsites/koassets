@@ -31,10 +31,14 @@ const AssetCard: React.FC<AssetCardBaseProps> = ({
     expandAllDetails = true,
     index = 0,
     viewMode,
-    className = ''
+    className = '',
+    onFacetCheckbox // eslint-disable-line @typescript-eslint/no-unused-vars
 }) => {
     // Get dynamicMediaClient from context
     const { dynamicMediaClient } = useAppConfig();
+    
+    // onFacetCheckbox can be used to call Facets' handleFacetCheckbox method
+    // Example usage: onFacetCheckbox?.('facetKey', 'facetValue')
     
     // Check if this item is already in the cart
     const isInCart = cartAssetItems.some(cartAssetItem => cartAssetItem.assetId === image.assetId);
@@ -51,13 +55,8 @@ const AssetCard: React.FC<AssetCardBaseProps> = ({
     };
 
     // Handle checkbox change
-    const handleCheckboxClick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleSelectCard = (e: React.ChangeEvent<HTMLInputElement>) => {
         onCheckboxChange?.(image.assetId || '', e.target.checked);
-    };
-
-    // Handle checkbox click to prevent propagation
-    const handleCheckboxClickOnly = (e: React.MouseEvent) => {
-        e.stopPropagation(); // Prevent card click when clicking checkbox
     };
 
     // Handle action button click
@@ -153,8 +152,8 @@ const AssetCard: React.FC<AssetCardBaseProps> = ({
                         type="checkbox"
                         className="tccc-checkbox"
                         checked={isSelected}
-                        onChange={handleCheckboxClick}
-                        onClick={handleCheckboxClickOnly}
+                        onChange={handleSelectCard}
+                        onClick={(e) => e.stopPropagation()}
                     />
 
                     <button
