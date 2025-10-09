@@ -434,7 +434,9 @@ export class DynamicMediaCollectionsClient {
 
       // Use ETag from getCollectionMetadata response (fallback to wildcard if not available)
       // eslint-disable-next-line no-underscore-dangle
-      const etag = currentCollection._etag || '*';
+      const etag = currentCollection._etag;
+
+      console.trace('DynamicMediaCollectionsClient.updateCollectionMetadata() ETAG', etag);
 
       // Merge current metadata with updates (preserve all existing metadata)
       const mergedMetadata = {
