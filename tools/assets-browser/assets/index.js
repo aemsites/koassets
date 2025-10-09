@@ -36645,7 +36645,6 @@ const AssetCard = ({
   viewMode,
   className = "",
   onFacetCheckbox
-  // eslint-disable-line @typescript-eslint/no-unused-vars
 }) => {
   const { dynamicMediaClient } = useAppConfig();
   const isInCart = cartAssetItems.some((cartAssetItem) => cartAssetItem.assetId === image.assetId);
@@ -36762,7 +36761,18 @@ const AssetCard = ({
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "product-info-container", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-info", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-title-section", children: [
-        (image == null ? void 0 : image.campaignName) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "product-tags", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-tag tccc-tag", children: getAssetFieldDisplayFacetName("campaignName", image == null ? void 0 : image.campaignName) }) }),
+        (image == null ? void 0 : image.campaignName) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "product-tags", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "span",
+          {
+            className: "product-tag tccc-tag",
+            onClick: (e) => {
+              e.stopPropagation();
+              onFacetCheckbox == null ? void 0 : onFacetCheckbox("tccc-campaignName", image == null ? void 0 : image.campaignName);
+            },
+            style: { cursor: "pointer" },
+            children: getAssetFieldDisplayFacetName("campaignName", image == null ? void 0 : image.campaignName)
+          }
+        ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           TitleElement,
           {

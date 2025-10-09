@@ -32,7 +32,7 @@ const AssetCard: React.FC<AssetCardBaseProps> = ({
     index = 0,
     viewMode,
     className = '',
-    onFacetCheckbox // eslint-disable-line @typescript-eslint/no-unused-vars
+    onFacetCheckbox
 }) => {
     // Get dynamicMediaClient from context
     const { dynamicMediaClient } = useAppConfig();
@@ -189,7 +189,14 @@ const AssetCard: React.FC<AssetCardBaseProps> = ({
                         <div className="product-title-section">
                             {image?.campaignName && (
                                 <div className="product-tags">
-                                    <span className="product-tag tccc-tag">
+                                    <span 
+                                        className="product-tag tccc-tag"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onFacetCheckbox?.('tccc-campaignName', image?.campaignName as string);
+                                        }}
+                                        style={{ cursor: 'pointer' }}
+                                    >
                                         {getAssetFieldDisplayFacetName('campaignName', image?.campaignName as string)}
                                     </span>
                                 </div>
