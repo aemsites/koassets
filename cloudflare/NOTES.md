@@ -79,3 +79,18 @@ Post logout redirect not working:
 * [StackOverflow: Is it safe to store the state parameter value in cookie?](https://security.stackexchange.com/questions/140883/is-it-safe-to-store-the-state-parameter-value-in-cookie)
 * [cookie-signature](https://github.com/tj/node-cookie-signature) - no expiry
 * [Blog: Creating and verifying JWTs using npm jose](https://medium.com/@hasindusithmin64/creating-and-verifying-jwts-using-npm-jose-a-step-by-step-guide-e07c4fdb3346)
+
+## Email
+
+* [AEM config for mail service](https://github.com/search?q=repo%3AThe-Coca-Cola-Company%2Fko-assets+smtp&type=code)
+* [Sending emails with Outlook SMTP](https://learn.microsoft.com/en-us/exchange/mail-flow-best-practices/how-to-set-up-a-multifunction-device-or-application-to-send-email-using-microsoft-365-or-office-365)
+  * [Oauth for Outlook SMTP](https://learn.microsoft.com/en-us/exchange/client-developer/legacy-protocols/how-to-authenticate-an-imap-pop-smtp-application-by-using-oauth)
+
+* [TCP sockets in CF workers](https://developers.cloudflare.com/workers/runtime-apis/tcp-sockets/)
+* [worker-mailer](https://github.com/zou-yu/worker-mailer) - works in CF but needs Node.js compat
+  * Minimal [Node dependencies](https://github.com/search?q=repo%3Azou-yu%2Fworker-mailer%20crypto&type=code)
+  * Can be replaced with [WebCrypto support in CF](https://developers.cloudflare.com/workers/runtime-apis/web-crypto/)
+  * [hmac stuff for CRAM-MD5](https://github.com/zou-yu/worker-mailer/blob/9952d2bfffddaef5ef37a56a19b4f4fe9f6ba717/src/mailer.ts#L408)
+  * [google search hmac with webcrypto](https://www.google.com/search?client=safari&rls=en&q=webcrypto+create+hmac+md5+hex&ie=UTF-8&oe=UTF-8)
+  * [Fork with some fixes](https://github.com/wujiyu305/worker-mailer/commits/main/)
+* [nodemailer](https://www.npmjs.com/package/nodemailer) - only works with Node.js
