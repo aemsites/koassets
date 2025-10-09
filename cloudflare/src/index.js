@@ -16,6 +16,7 @@ import { originDynamicMedia } from './origin/dm';
 import { originHelix } from './origin/helix';
 import { originFadel } from './origin/fadel';
 import { cors } from './util/itty';
+import { apiUser } from './user';
 
 const { preflight, corsify } = cors({
   origin: [
@@ -66,6 +67,9 @@ router
 
   // from here on authentication required (middleware)
   .all('*', withAuthentication)
+
+  // user info
+  .get('/api/user', apiUser)
 
   // dynamic media
   .all('/api/adobe/assets/*', originDynamicMedia)

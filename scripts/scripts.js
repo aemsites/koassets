@@ -22,7 +22,7 @@ async function loadUser() {
 
   window.user = undefined;
   try {
-    const user = await fetch(`${window.location.origin}/auth/user`);
+    const user = await fetch(`${window.location.origin}/api/user`);
     if (user.ok) {
       window.user = await user.json();
     }
