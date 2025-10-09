@@ -6,7 +6,7 @@ import { getExternalParams } from './config';
  * @param facetName - The raw facet name to be mapped
  * @returns The display name if a mapping exists, otherwise the original facet name
  */
-export const getDisplayName = (facetTechId: string, facetName: string): string => {
+export const getDisplayFacetName = (facetTechId: string, facetName: string): string => {
     const externalParams = getExternalParams();
     
     if (facetTechId === 'tccc-campaignName') {
@@ -29,7 +29,7 @@ export const getDisplayName = (facetTechId: string, facetName: string): string =
  * @param value - The field value to be mapped
  * @returns The display name if a mapping exists, otherwise the original value
  */
-export const getAssetFieldDisplayName = (fieldType: string, value: string): string => {
+export const getAssetFieldDisplayFacetName = (fieldType: string, value: string): string => {
     const facetTechId = `tccc-${fieldType}`;
-    return getDisplayName(facetTechId, value);
+    return getDisplayFacetName(facetTechId, value);
 };

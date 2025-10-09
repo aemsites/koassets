@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type { AssetPreviewProps, Rendition } from '../types';
 import { formatCategory, getFileExtension } from '../utils/formatters';
-import { getAssetFieldDisplayName } from '../utils/displayUtils';
+import { getAssetFieldDisplayFacetName } from '../utils/displayUtils';
 import ActionButton from './ActionButton';
 import { BUTTON_CONFIGS } from './ActionButtonConfigs';
 import './AssetPreview.css';
@@ -108,7 +108,7 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                     <div className="modal-header">
                         <div className="preview-tags">
                             {(selectedImage?.campaignName as string) && (
-                                <span className="preview-tag tccc-tag">{getAssetFieldDisplayName('campaignName', selectedImage?.campaignName as string)}</span>
+                                <span className="preview-tag tccc-tag">{getAssetFieldDisplayFacetName('campaignName', selectedImage?.campaignName as string)}</span>
                             )}
                         </div>
                         <h3 className="modal-title">

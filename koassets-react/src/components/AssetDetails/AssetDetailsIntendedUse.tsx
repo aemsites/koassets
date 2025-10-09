@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { Asset } from '../../types';
-import { getAssetFieldDisplayName } from '../../utils/displayUtils';
+import { getAssetFieldDisplayFacetName } from '../../utils/displayUtils';
 
 interface AssetDetailsIntendedUseProps {
     selectedImage: Asset;
@@ -30,7 +30,7 @@ const AssetDetailsIntendedUse: React.FC<AssetDetailsIntendedUseProps> = ({ selec
                     <div className="asset-details-grid">
                         <div className="asset-details-group">
                             <h4 className="asset-details-main-metadata-label">Intended Bottler Country</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.intendedBottlerCountry ? getAssetFieldDisplayName('intendedBottlerCountry', selectedImage.intendedBottlerCountry as string) : ''}</span>
+                            <span className="asset-details-main-metadata-value">{selectedImage?.intendedBottlerCountry ? getAssetFieldDisplayFacetName('intendedBottlerCountry', selectedImage.intendedBottlerCountry as string) : ''}</span>
                         </div>
 
                         <div className="asset-details-group">

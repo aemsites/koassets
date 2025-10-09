@@ -8,7 +8,7 @@ import Markets from './Markets';
 import MediaChannels from './MediaChannels';
 import MyDatePicker from './MyDatePicker';
 import buildSavedSearchUrl from '../../../scripts/saved-search-utils.js';
-import { getDisplayName } from '../utils/displayUtils';
+import { getDisplayFacetName } from '../utils/displayUtils';
 
 interface ExpandedFacetsState {
     [key: string]: boolean;
@@ -447,6 +447,7 @@ const Facets: React.FC<FacetsProps> = ({
     // Helper function to check if hierarchy item should be shown based on search
     const shouldShowHierarchyItem = useCallback((
         hierarchyData: { [level: number]: { [key: string]: number } },
+        facetTechId: string,
         facetName: string,
         searchTerm: string,
         level: number
@@ -456,7 +457,8 @@ const Facets: React.FC<FacetsProps> = ({
         const lowerSearchTerm = searchTerm.toLowerCase();
 
         // Check if the full hierarchy path contains the search term
-        if (facetName.toLowerCase().includes(lowerSearchTerm)) {
+        const displayedFacetName = getDisplayFacetName(facetTechId, facetName);
+        if (displayedFacetName.toLowerCase().includes(lowerSearchTerm)) {
             return true;
         }
 
@@ -469,7 +471,8 @@ const Facets: React.FC<FacetsProps> = ({
                 // Check if this deeper item is a descendant of the current item
                 if (deeperFacetName.startsWith(facetName + ' / ')) {
                     // Check if the descendant matches the search term
-                    if (deeperFacetName.toLowerCase().includes(lowerSearchTerm)) {
+                    const displayedDeeperFacetName = getDisplayFacetName(facetTechId, deeperFacetName);
+                    if (displayedDeeperFacetName.toLowerCase().includes(lowerSearchTerm)) {
                         return true;
                     }
                 }
@@ -497,10 +500,10 @@ const Facets: React.FC<FacetsProps> = ({
             // Extract the last part of the hierarchy path for display
             const pathParts = facetName.split(' / ');
             const baseFacetName = pathParts[pathParts.length - 1].trim();
-            const displayName = getDisplayName(facetTechId, baseFacetName);
+            const displayName = getDisplayFacetName(facetTechId, baseFacetName);
 
             // Filter based on search term - check full hierarchy path and descendants
-            if (searchTerm && !shouldShowHierarchyItem(hierarchyData, facetName, searchTerm, level)) {
+            if (searchTerm && !shouldShowHierarchyItem(hierarchyData, facetTechId, facetName, searchTerm, level)) {
                 return; // Skip this item if it doesn't match search
             }
 
@@ -644,13 +647,14 @@ const Facets: React.FC<FacetsProps> = ({
         const filteredEntries = Object.entries((combinedFacets && combinedFacets[facetTechId]) || {})
             .filter(([facetName]) => {
                 if (!searchTerm) return true;
-                return facetName.toLowerCase().includes(searchTerm.toLowerCase());
+                const displayFacetName = getDisplayFacetName(facetTechId, facetName);
+                return displayFacetName.toLowerCase().includes(searchTerm.toLowerCase());
             });
 
         return (
             <div className="facet-filter-checkbox-list">
                 {filteredEntries.map(([facetName, count]) => {
-                    const displayName = getDisplayName(facetTechId, facetName);
+                    const displayName = getDisplayFacetName(facetTechId, facetName);
                     
                     return (
                         <label key={facetName} className="facet-filter-checkbox-label">

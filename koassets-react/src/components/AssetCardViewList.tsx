@@ -5,7 +5,7 @@ import { useAppConfig } from '../hooks/useAppConfig';
 import type { AssetCardProps } from '../types';
 import { getBucket } from '../utils/config';
 import { formatCategory, getFileExtension } from '../utils/formatters';
-import { getAssetFieldDisplayName } from '../utils/displayUtils';
+import { getAssetFieldDisplayFacetName } from '../utils/displayUtils';
 import ActionButton from './ActionButton';
 import { BUTTON_CONFIGS } from './ActionButtonConfigs';
 import './AssetCardViewList.css';
@@ -129,7 +129,7 @@ const AssetCardViewList: React.FC<AssetCardProps> = ({
                     <div className="product-info">
                         <div className="product-title-section">
                             {image?.campaignName && <div className="product-tags">
-                                <span className="product-tag tccc-tag">{getAssetFieldDisplayName('campaignName', image?.campaignName as string)}</span>
+                                <span className="product-tag tccc-tag">{getAssetFieldDisplayFacetName('campaignName', image?.campaignName as string)}</span>
                             </div>}
                             <div
                                 className="product-title"
