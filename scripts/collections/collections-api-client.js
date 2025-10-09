@@ -275,7 +275,16 @@ export class DynamicMediaCollectionsClient {
    */
   // eslint-disable-next-line class-methods-use-this
   getETag(headers) {
-    return headers?.etag || headers?.ETag || null;
+    let etag = headers?.etag || headers?.ETag || null;
+
+    // Strip W/ prefix if present (weak ETag indicator)
+    // W/"430548e5-0000-0200-0000-68e7236f0000" -> "430548e5-0000-0200-0000-68e7236f0000"
+    if (etag && etag.startsWith('W/')) {
+      console.trace('DynamicMediaCollectionsClient.getETag() - fixing weak ETag,', etag);
+      etag = etag.substring(2);
+    }
+
+    return etag;
   }
 
   // ==========================================
@@ -432,9 +441,9 @@ export class DynamicMediaCollectionsClient {
         throw new Error(`Access denied: You do not have permission to modify collection "${collectionId}"`);
       }
 
-      // Use ETag from getCollectionMetadata response (fallback to wildcard if not available)
+      // Use ETag from getCollectionMetadata response
       // eslint-disable-next-line no-underscore-dangle
-      const etag = currentCollection._etag || '*';
+      const etag = currentCollection._etag;
 
       // Merge current metadata with updates (preserve all existing metadata)
       const mergedMetadata = {
