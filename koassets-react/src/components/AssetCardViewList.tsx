@@ -8,18 +8,10 @@ import { formatCategory, getFileExtension } from '../utils/formatters';
 import { getAssetFieldDisplayFacetName } from '../utils/displayUtils';
 import ActionButton from './ActionButton';
 import { BUTTON_CONFIGS } from './ActionButtonConfigs';
-import Picture from './Picture';
-import './AssetCardViewGrid.css';
 import './AssetCardViewList.css';
+import Picture from './Picture';
 
-export type ViewMode = 'grid' | 'list';
-
-interface AssetCardBaseProps extends AssetCardProps {
-    viewMode: ViewMode;
-    className?: string;
-}
-
-const AssetCard: React.FC<AssetCardBaseProps> = ({
+const AssetCardViewList: React.FC<AssetCardProps> = ({
     image,
     handleCardDetailClick,
     handlePreviewClick,
@@ -29,13 +21,10 @@ const AssetCard: React.FC<AssetCardBaseProps> = ({
     isSelected = false,
     onCheckboxChange,
     expandAllDetails = true,
-    index = 0,
-    viewMode,
-    className = ''
+    index = 0
 }) => {
     // Get dynamicMediaClient from context
     const { dynamicMediaClient } = useAppConfig();
-    
     // Check if this item is already in the cart
     const isInCart = cartAssetItems.some(cartAssetItem => cartAssetItem.assetId === image.assetId);
 
@@ -93,58 +82,9 @@ const AssetCard: React.FC<AssetCardBaseProps> = ({
         window.dispatchEvent(event);
     };
 
-    // Dynamic classes and elements based on view mode
-    const containerClass = `asset-card-view-${viewMode} ${className}`.trim();
-    const innerClass = `asset-card-view-${viewMode}-inner`;
-    
-    // Title element - h3 for grid, div for list
-    const TitleElement = viewMode === 'grid' ? 'h3' : 'div';
-    
-    // Action button wrappers
-    const firstButtonWrapper = viewMode === 'grid' ? 'left-buttons-wrapper' : 'top-buttons-wrapper';
-    const secondButtonWrapper = viewMode === 'grid' ? 'right-buttons-wrapper' : 'bottom-buttons-wrapper';
-
-    // Metadata grid (shared between both views)
-    const metadataGrid = expandAllDetails && (
-        <div className="product-meta-grid">
-            <div className="product-meta-item">
-                <span className="product-meta-label tccc-metadata-label">SIZE</span>
-                <span className="product-meta-value tccc-metadata-value">{image.formatedSize as string}</span>
-            </div>
-            <div className="product-meta-item">
-                <span className="product-meta-label tccc-metadata-label">TYPE</span>
-                <span className="product-meta-value tccc-metadata-value">{image.formatLabel}</span>
-            </div>
-            <div className="product-meta-item">
-                <span className="product-meta-label tccc-metadata-label">FILE EXT</span>
-                <span className="product-meta-value tccc-metadata-value">{getFileExtension(image.name as string)}</span>
-            </div>
-            <div className="product-meta-item">
-                <span className="product-meta-label tccc-metadata-label">RIGHTS FREE</span>
-                <span className="product-meta-value tccc-metadata-value">{image.readyToUse}</span>
-            </div>
-            <div className="product-meta-item">
-                <span className="product-meta-label tccc-metadata-label">CATEGORY</span>
-                <span className="product-meta-value tccc-metadata-value">{formatCategory(image?.category as string)}</span>
-            </div>
-        </div>
-    );
-
-    // Authorization status (shared between both views)
-    const authorizationStatus = (
-        <>
-            {(image.authorized === AuthorizationStatus.AVAILABLE) && (
-                <span className="product-authorized-status green">AUTHORIZED</span>
-            )}
-            {(image.authorized === AuthorizationStatus.NOT_AVAILABLE || image.authorized === AuthorizationStatus.AVAILABLE_EXCEPT) && (
-                <span className="product-authorized-status red">EXTENSION REQUIRED</span>
-            )}
-        </>
-    );
-
     return (
-        <div className={containerClass} id={image.assetId}>
-            <div className={innerClass}>
+        <div className="asset-card-view-list" id={image.assetId}>
+            <div className="asset-card-view-list-inner">
                 <div className="image-wrapper"
                     onClick={(e) => handleCardDetailClick(image, e)}
                     style={{ cursor: 'pointer' }}
@@ -188,65 +128,71 @@ const AssetCard: React.FC<AssetCardBaseProps> = ({
                 <div className="product-info-container">
                     <div className="product-info">
                         <div className="product-title-section">
-                            {image?.campaignName && (
-                                <div className="product-tags">
-                                    <span className="product-tag tccc-tag">
-                                        {getAssetFieldDisplayFacetName('campaignName', image?.campaignName as string)}
-                                    </span>
-                                </div>
-                            )}
-                            <TitleElement
+                            {image?.campaignName && <div className="product-tags">
+                                <span className="product-tag tccc-tag">{getAssetFieldDisplayFacetName('campaignName', image?.campaignName as string)}</span>
+                            </div>}
+                            <div
                                 className="product-title"
                                 onClick={(e) => handleCardDetailClick(image, e)}
                                 style={{ cursor: 'pointer' }}
                             >
                                 {image.title}
-                            </TitleElement>
-                            {authorizationStatus}
+                            </div>
+                            <>
+                                {(image.authorized === AuthorizationStatus.AVAILABLE) && (
+                                    <span className="product-authorized-status green">AUTHORIZED</span>
+                                )}
+                                {(image.authorized === AuthorizationStatus.NOT_AVAILABLE || image.authorized === AuthorizationStatus.AVAILABLE_EXCEPT) && (
+                                    <span className="product-authorized-status red">EXTENSION REQUIRED</span>
+                                )}
+                            </>
                         </div>
 
-                        {metadataGrid}
+                        {expandAllDetails && (
+                            <div className="product-meta-grid">
+                                <div className="product-meta-item">
+                                    <span className="product-meta-label tccc-metadata-label">SIZE</span>
+                                    <span className="product-meta-value tccc-metadata-value">{image.formatedSize as string}</span>
+                                </div>
+                                <div className="product-meta-item">
+                                    <span className="product-meta-label tccc-metadata-label">TYPE</span>
+                                    <span className="product-meta-value tccc-metadata-value">{image.formatLabel}</span>
+                                </div>
+                                <div className="product-meta-item">
+                                    <span className="product-meta-label tccc-metadata-label">FILE EXT</span>
+                                    <span className="product-meta-value tccc-metadata-value">{getFileExtension(image.name as string)}</span>
+                                </div>
+                                <div className="product-meta-item">
+                                    <span className="product-meta-label tccc-metadata-label">RIGHTS FREE</span>
+                                    <span className="product-meta-value tccc-metadata-value">{image.readyToUse}</span>
+                                </div>
+                                <div className="product-meta-item">
+                                    <span className="product-meta-label tccc-metadata-label">CATEGORY</span>
+                                    <span className="product-meta-value tccc-metadata-value">{formatCategory(image?.category as string)}</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 <div className="product-actions">
-                    <div className={firstButtonWrapper}>
-                        {viewMode === 'grid' ? (
-                            <button
-                                className={`add-to-cart-btn${isInCart ? ' remove-from-cart' : ''}`}
-                                onClick={handleAddRemoveCart}
-                            >
-                                {isInCart ? 'Remove From Cart' : 'Add To Cart'}
-                            </button>
-                        ) : (
-                            <ActionButton
-                                config={BUTTON_CONFIGS.download}
-                                hasLoadingState={true}
-                                onClick={handleClickDownload}
-                                style={{
-                                    display: 'none'
-                                }}
-                            />
-                        )}
+                    <div className="top-buttons-wrapper">
+                        <ActionButton
+                            config={BUTTON_CONFIGS.download}
+                            hasLoadingState={true}
+                            onClick={handleClickDownload}
+                            style={{
+                                display: 'none'
+                            }}
+                        />
                     </div>
-                    <div className={secondButtonWrapper}>
-                        {viewMode === 'grid' ? (
-                            <ActionButton
-                                config={BUTTON_CONFIGS.download}
-                                hasLoadingState={true}
-                                onClick={handleClickDownload}
-                                style={{
-                                    display: 'none'
-                                }}
-                            />
-                        ) : (
-                            <button
-                                className={`add-to-cart-btn${isInCart ? ' remove-from-cart' : ''}`}
-                                onClick={handleAddRemoveCart}
-                            >
-                                {isInCart ? 'Remove From Cart' : 'Add To Cart'}
-                            </button>
-                        )}
+                    <div className="bottom-buttons-wrapper">
+                        <button
+                            className={`add-to-cart-btn${isInCart ? ' remove-from-cart' : ''}`}
+                            onClick={handleAddRemoveCart}
+                        >
+                            {isInCart ? 'Remove From Cart' : 'Add To Cart'}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -254,4 +200,4 @@ const AssetCard: React.FC<AssetCardBaseProps> = ({
     );
 };
 
-export default AssetCard;
+export default AssetCardViewList; 

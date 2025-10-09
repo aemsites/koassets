@@ -35429,7 +35429,7 @@ function buildSavedSearchUrl(search) {
   const baseUrl = `${currentUrl.protocol}//${currentUrl.host}${searchPath}`;
   return `${baseUrl}?${params.toString()}`;
 }
-const getDisplayName = (facetTechId, facetName) => {
+const getDisplayFacetName = (facetTechId, facetName) => {
   var _a, _b, _c, _d;
   const externalParams2 = getExternalParams();
   if (facetTechId === "tccc-campaignName") {
@@ -35443,9 +35443,9 @@ const getDisplayName = (facetTechId, facetName) => {
   }
   return facetName;
 };
-const getAssetFieldDisplayName = (fieldType, value) => {
+const getAssetFieldDisplayFacetName = (fieldType, value) => {
   const facetTechId = `tccc-${fieldType}`;
-  return getDisplayName(facetTechId, value);
+  return getDisplayFacetName(facetTechId, value);
 };
 const HIERARCHY_PREFIX = "TCCC.#hierarchy.lvl";
 const loadSavedSearches = () => {
@@ -35788,10 +35788,11 @@ const Facets = ({
       [key]: [startDate ? startDate.getTime() / 1e3 : void 0, endDate ? endDate.getTime() / 1e3 : void 0]
     }));
   }, []);
-  const shouldShowHierarchyItem = reactExports.useCallback((hierarchyData, facetName, searchTerm, level) => {
+  const shouldShowHierarchyItem = reactExports.useCallback((hierarchyData, facetTechId, facetName, searchTerm, level) => {
     if (!searchTerm) return true;
     const lowerSearchTerm = searchTerm.toLowerCase();
-    if (facetName.toLowerCase().includes(lowerSearchTerm)) {
+    const displayedFacetName = getDisplayFacetName(facetTechId, facetName);
+    if (displayedFacetName.toLowerCase().includes(lowerSearchTerm)) {
       return true;
     }
     for (let deeperLevel = level + 1; deeperLevel < 10; deeperLevel++) {
@@ -35799,7 +35800,8 @@ const Facets = ({
       if (!deeperLevelData) continue;
       for (const [deeperFacetName] of Object.entries(deeperLevelData)) {
         if (deeperFacetName.startsWith(facetName + " / ")) {
-          if (deeperFacetName.toLowerCase().includes(lowerSearchTerm)) {
+          const displayedDeeperFacetName = getDisplayFacetName(facetTechId, deeperFacetName);
+          if (displayedDeeperFacetName.toLowerCase().includes(lowerSearchTerm)) {
             return true;
           }
         }
@@ -35816,8 +35818,8 @@ const Facets = ({
       var _a;
       const pathParts = facetName.split(" / ");
       const baseFacetName = pathParts[pathParts.length - 1].trim();
-      const displayName = getDisplayName(facetTechId, baseFacetName);
-      if (searchTerm && !shouldShowHierarchyItem(hierarchyData, facetName, searchTerm, level)) {
+      const displayName = getDisplayFacetName(facetTechId, baseFacetName);
+      if (searchTerm && !shouldShowHierarchyItem(hierarchyData, facetTechId, facetName, searchTerm, level)) {
         return;
       }
       const currentPath = pathParts.slice(0, -1).join(" / ");
@@ -35941,11 +35943,12 @@ const Facets = ({
     const checkboxKey = `${facetTechId}`;
     const filteredEntries = Object.entries(combinedFacets && combinedFacets[facetTechId] || {}).filter(([facetName]) => {
       if (!searchTerm) return true;
-      return facetName.toLowerCase().includes(searchTerm.toLowerCase());
+      const displayFacetName = getDisplayFacetName(facetTechId, facetName);
+      return displayFacetName.toLowerCase().includes(searchTerm.toLowerCase());
     });
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "facet-filter-checkbox-list", children: filteredEntries.map(([facetName, count]) => {
       var _a;
-      const displayName = getDisplayName(facetTechId, facetName);
+      const displayName = getDisplayFacetName(facetTechId, facetName);
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "facet-filter-checkbox-label", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",
@@ -36844,7 +36847,7 @@ const AssetCard = ({
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "product-info-container", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-info", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-title-section", children: [
-        (image == null ? void 0 : image.campaignName) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "product-tags", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-tag tccc-tag", children: getAssetFieldDisplayName("campaignName", image == null ? void 0 : image.campaignName) }) }),
+        (image == null ? void 0 : image.campaignName) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "product-tags", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-tag tccc-tag", children: getAssetFieldDisplayFacetName("campaignName", image == null ? void 0 : image.campaignName) }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           TitleElement,
           {
@@ -37071,7 +37074,7 @@ const AssetDetailsIntendedUse = ({ selectedImage, forceCollapse }) => {
     isExpanded && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-details-content", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-details-grid", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-details-group", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "asset-details-main-metadata-label", children: "Intended Bottler Country" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "asset-details-main-metadata-value", children: (selectedImage == null ? void 0 : selectedImage.intendedBottlerCountry) ? getAssetFieldDisplayName("intendedBottlerCountry", selectedImage.intendedBottlerCountry) : "" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "asset-details-main-metadata-value", children: (selectedImage == null ? void 0 : selectedImage.intendedBottlerCountry) ? getAssetFieldDisplayFacetName("intendedBottlerCountry", selectedImage.intendedBottlerCountry) : "" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-details-group", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "asset-details-main-metadata-label", children: "Intended Customers" }),
@@ -37175,7 +37178,7 @@ const AssetDetailsMarketing = ({ selectedImage, forceCollapse }) => {
     expanded && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-details-content", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-details-grid", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-details-group", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "asset-details-main-metadata-label", children: "Campaign Name" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "asset-details-main-metadata-value", children: (selectedImage == null ? void 0 : selectedImage.campaignName) ? getAssetFieldDisplayName("campaignName", selectedImage.campaignName) : "" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "asset-details-main-metadata-value", children: (selectedImage == null ? void 0 : selectedImage.campaignName) ? getAssetFieldDisplayFacetName("campaignName", selectedImage.campaignName) : "" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-details-group", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "asset-details-main-metadata-label", children: "Experience ID" }),
@@ -37203,7 +37206,7 @@ const AssetDetailsMarketing = ({ selectedImage, forceCollapse }) => {
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-details-group", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "asset-details-main-metadata-label", children: "Agency Name" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "asset-details-main-metadata-value", children: (selectedImage == null ? void 0 : selectedImage.agencyName) ? getAssetFieldDisplayName("agencyName", selectedImage.agencyName) : "" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "asset-details-main-metadata-value", children: (selectedImage == null ? void 0 : selectedImage.agencyName) ? getAssetFieldDisplayFacetName("agencyName", selectedImage.agencyName) : "" })
       ] })
     ] }) })
   ] });
@@ -37233,7 +37236,7 @@ const AssetDetailsMarketingPackageContainer = ({ selectedImage, forceCollapse })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-details-group", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "asset-details-main-metadata-label", children: "Package or Container Size" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "asset-details-main-metadata-value", children: (selectedImage == null ? void 0 : selectedImage.packageOrContainerSize) ? getAssetFieldDisplayName("packageContainerSize", selectedImage.packageOrContainerSize) : "" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "asset-details-main-metadata-value", children: (selectedImage == null ? void 0 : selectedImage.packageOrContainerSize) ? getAssetFieldDisplayFacetName("packageContainerSize", selectedImage.packageOrContainerSize) : "" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-details-group", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "asset-details-main-metadata-label", children: "Secondary Packaging" }),
@@ -37922,7 +37925,7 @@ const AssetPreview = ({
     /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: "modal-close-button", onClick: closeModal, children: "✕" }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-preview-modal-container", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "modal-header", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "preview-tags", children: (selectedImage == null ? void 0 : selectedImage.campaignName) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "preview-tag tccc-tag", children: getAssetFieldDisplayName("campaignName", selectedImage == null ? void 0 : selectedImage.campaignName) }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "preview-tags", children: (selectedImage == null ? void 0 : selectedImage.campaignName) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "preview-tag tccc-tag", children: getAssetFieldDisplayFacetName("campaignName", selectedImage == null ? void 0 : selectedImage.campaignName) }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "modal-title", children: selectedImage == null ? void 0 : selectedImage.title })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-image-container", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
