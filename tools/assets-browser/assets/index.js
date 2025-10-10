@@ -32390,6 +32390,7 @@ const Picture = ({
     )
   ] });
 };
+const EAGER_LOAD_IMAGE_COUNT = 6;
 const SelectAllRenditionsCheckbox = ({
   assetData,
   selectedRenditions,
@@ -32731,7 +32732,8 @@ const DownloadRenditionsContent = ({
           Picture,
           {
             asset: assetData.asset,
-            width: 350
+            width: 350,
+            eager: index < EAGER_LOAD_IMAGE_COUNT
           },
           assetData.asset.assetId
         ) }),
@@ -33298,10 +33300,10 @@ const CartRequestDownload = ({
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "cart-request-download", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "cart-request-download-content", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "cart-request-download-assets", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Asset List" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-list-items", children: cartAssetItems.map((item) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-list-items", children: cartAssetItems.map((item, index) => {
         var _a;
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-list-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset: item, width: 350 }, item.assetId) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset: item, width: 350, eager: index < EAGER_LOAD_IMAGE_COUNT }, item.assetId) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-details", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-title", children: item.title || item.name }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-type", children: [
@@ -33560,10 +33562,10 @@ const CartRequestRightsExtension = ({
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-list-items", children: restrictedAssets.map((asset) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-list-items", children: restrictedAssets.map((asset, index) => {
         var _a;
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-list-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset, width: 350 }, asset.assetId) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset, width: 350, eager: index < EAGER_LOAD_IMAGE_COUNT }, asset.assetId) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-details", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-title", children: asset.title || asset.name }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-type", children: [
@@ -34091,9 +34093,9 @@ const CartRightsCheck = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-markets", children: "INTENDED MARKETS" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-media", children: "INTENDED MEDIA" })
           ] }),
-          restrictedAssets.map((asset) => {
+          restrictedAssets.map((asset, index) => {
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "table-row", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset, width: 350 }, asset.assetId) }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset, width: 350, eager: index < EAGER_LOAD_IMAGE_COUNT }, asset.assetId) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-title", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-title", children: asset.title || asset.name }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-date", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "date-with-icon", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "date-icon", children: "📅" }),
@@ -34363,10 +34365,10 @@ const WorkflowProgress = ({
     ] })
   ] });
 };
-const CartAssetItemRow = ({ item, onRemoveItem }) => {
+const CartAssetItemRow = ({ item, onRemoveItem, eager = false }) => {
   var _a, _b, _c;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `cart-asset-row`, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset: item, width: 350 }, item.assetId) }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset: item, width: 350, eager }, item.assetId) }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-title", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-title", children: item.title || item.name }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -34759,11 +34761,12 @@ const CartPanelAssets = ({
           " in your cart"
         ] }),
         tableHeader,
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "cart-items-table", children: cartAssetItems.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "cart-items-table", children: cartAssetItems.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(
           CartAssetItemRow,
           {
             item,
-            onRemoveItem: handleRemoveItem
+            onRemoveItem: handleRemoveItem,
+            eager: index < EAGER_LOAD_IMAGE_COUNT
           },
           item.assetId
         )) })
@@ -36543,7 +36546,6 @@ const DEFAULT_ACCORDION_CONFIG = {
 <p><b>"RIGHTS FREE" ASSETS DOWNLOAD:</b> You don't need to enter your intended use for "Rights Free" Assets! Use the "Rights Free" search filter and select yes to only view "Rights Free" assets.</p>
 <p><b>NEED ADDITIONAL SUPPORT</b>? If you have any additional questions reach out to our asset management team via <a href="mailto:assetmanagers@coca-cola.com"><b>assetmanagers@coca-cola.com</b></a> or visit our <a href="https://forms.office.com/Pages/ResponsePage.aspx?id=qyaNVKqM4UmXwqGxoGzDnPYUeiWm8X1KiF0OxjOzZ3VUNlNNTzcxME9SMVpTTUUzVzY4TkFYV1dLVS4u&amp;wdLOR=c0E1D32CE-2209-4C6C-893D-F353FDC5C295"><b>Support Portal</b></a>.</p>`
 };
-const EAGER_LOAD_IMAGE_COUNT = 6;
 const ActionButton = ({ disabled, onClick, config, hasLoadingState = false, style }) => {
   const [loading, setLoading] = reactExports.useState(false);
   const containerRef = reactExports.useRef(null);

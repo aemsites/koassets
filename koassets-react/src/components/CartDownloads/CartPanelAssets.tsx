@@ -21,19 +21,21 @@ import CartRequestRightsExtension from './CartRequestRightsExtension';
 import CartRightsCheck from './CartRightsCheck';
 import EmptyCartDownloadContent from './EmptyCartDownloadContent';
 import { WorkflowProgress } from './WorkflowProgress';
+import { EAGER_LOAD_IMAGE_COUNT } from '../../constants/images';
 
 // Component for rendering individual cart item row
 interface CartAssetItemRowProps {
     item: Asset;
     onRemoveItem: (item: Asset) => void;
+    eager?: boolean;
 }
 
-const CartAssetItemRow: React.FC<CartAssetItemRowProps> = ({ item, onRemoveItem }) => {
+const CartAssetItemRow: React.FC<CartAssetItemRowProps> = ({ item, onRemoveItem, eager = false }) => {
     return (
         <div className={`cart-asset-row`}>
             <div className="col-thumbnail">
                 <div className="item-thumbnail">
-                    <Picture key={item.assetId} asset={item} width={350} />
+                    <Picture key={item.assetId} asset={item} width={350} eager={eager} />
                 </div>
             </div>
             <div className="col-title">
@@ -574,11 +576,12 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
 
                         {/* Cart Items */}
                         <div className="cart-items-table">
-                            {cartAssetItems.map((item: Asset) => (
+                            {cartAssetItems.map((item: Asset, index: number) => (
                                 <CartAssetItemRow
                                     key={item.assetId}
                                     item={item}
                                     onRemoveItem={handleRemoveItem}
+                                    eager={index < EAGER_LOAD_IMAGE_COUNT}
                                 />
                             ))}
                         </div>

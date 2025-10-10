@@ -6,6 +6,7 @@ import MediaChannels from '../MediaChannels';
 import MyDatePicker from '../MyDatePicker';
 import Picture from '../Picture';
 import './CartRequestDownload.css';
+import { EAGER_LOAD_IMAGE_COUNT } from '../../constants/images';
 
 interface CartRequestDownloadProps {
     cartAssetItems: Asset[];
@@ -115,11 +116,11 @@ const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
                 <div className="cart-request-download-assets">
                     <h3>Asset List</h3>
                     <div className="asset-list-items">
-                        {cartAssetItems.map((item: Asset) => (
+                        {cartAssetItems.map((item: Asset, index: number) => (
                             <div key={item.assetId} className="asset-list-item">
                                 <div className="asset-thumbnail">
                                     <div className="item-thumbnail">
-                                        <Picture key={item.assetId} asset={item} width={350} />
+                                        <Picture key={item.assetId} asset={item} width={350} eager={index < EAGER_LOAD_IMAGE_COUNT} />
                                     </div>
                                 </div>
                                 <div className="asset-details">
