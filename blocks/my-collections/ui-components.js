@@ -339,9 +339,8 @@ export function createCollectionsList(collections, handlers, currentUser, curren
 
     if (currentSearchTerm) {
       const safeSearchTerm = escapeHTML(currentSearchTerm);
-      emptyState.innerHTML =
-        `<p>No collections found matching "${safeSearchTerm}".</p>` +
-        `<p style="font-size: 0.9rem; color: #999; margin-top: 0.5rem;">Try different search terms or <button onclick="clearSearch()" style="background: none; border: none; color: #e60012; text-decoration: underline; cursor: pointer;">clear search</button> to see all collections.</p>`;
+      emptyState.innerHTML = `<p>No collections found matching "${safeSearchTerm}".</p>`
+        + '<p style="font-size: 0.9rem; color: #999; margin-top: 0.5rem;">Try different search terms or <button onclick="clearSearch()" style="background: none; border: none; color: #e60012; text-decoration: underline; cursor: pointer;">clear search</button> to see all collections.</p>';
     } else {
       emptyState.textContent = 'No collections yet. Create your first collection!';
     }
