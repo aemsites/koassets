@@ -119,7 +119,11 @@
 
 /* Modal Styles */
 .collection-modal,
-.delete-modal {
+.edit-modal,
+.delete-modal,
+.share-modal,
+.view-access-modal,
+.remove-user-modal {
     display: none;
     position: fixed;
     top: 0;
@@ -140,6 +144,10 @@
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 10px 30px rgb(0 0 0 / 30%);
+}
+
+.modal-content-small {
+    max-width: 450px;
 }
 
 .modal-header {
@@ -216,6 +224,120 @@
     min-height: 80px;
 }
 
+.form-select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: #f9f9f9;
+    box-sizing: border-box;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: #e60012;
+    background-color: white;
+}
+
+/* View Access Modal Content */
+.view-access-content {
+    max-height: 400px;
+    overflow: hidden auto;
+    padding: 1rem 0;
+}
+
+/* Subtle scroll indicator */
+.view-access-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.view-access-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.view-access-content::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+
+.view-access-content::-webkit-scrollbar-thumb:hover {
+    background: #999;
+}
+
+.access-role-group {
+    margin-bottom: 0.75rem;
+}
+
+.access-role-group:last-child {
+    margin-bottom: 0;
+}
+
+.access-role-label {
+    font-weight: 700;
+    color: #555;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+.access-user-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.access-user-item {
+    padding: 0.25rem 0 0.25rem 1.25rem;
+    color: #666;
+    font-size: 0.9rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.access-user-item::before {
+    content: '•';
+    position: absolute;
+    left: 0.5rem;
+    color: #999;
+}
+
+.access-user-email {
+    flex: 1;
+}
+
+.access-user-remove-btn {
+    background: none;
+    border: none;
+    color: #ccc;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 0.5rem;
+    margin-left: 0.5rem;
+    transition: color 0.2s ease;
+}
+
+.access-user-item:hover .access-user-remove-btn {
+    color: #999;
+}
+
+.access-user-remove-btn:hover {
+    color: #e60012;
+}
+
+.access-empty {
+    padding: 0.5rem 0;
+    color: #999;
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
 .modal-footer {
     display: flex;
     justify-content: flex-end;
@@ -271,6 +393,26 @@
 
 .btn-delete:hover {
     background-color: #c82333;
+}
+
+/* Remove User Modal */
+.remove-user-message {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #333;
+}
+
+.remove-user-message p {
+    margin: 0 0 1rem;
+}
+
+.remove-user-message p:last-child {
+    margin-bottom: 0;
+}
+
+.remove-user-message strong {
+    font-weight: 600;
+    color: #000;
 }
 
 /* Responsive design */
@@ -400,7 +542,7 @@
 
 .collections-header {
     display: grid;
-    grid-template-columns: 80px 1fr 160px;
+    grid-template-columns: 80px 1fr 150px 160px;
     gap: 1rem;
     padding: 1rem 0;
     border-bottom: 1px solid #dcd1d1;
@@ -423,7 +565,7 @@
 
 .collection-row {
     display: grid;
-    grid-template-columns: 80px 1fr 160px;
+    grid-template-columns: 80px 1fr 150px 160px;
     gap: 1rem;
     align-items: center;
     padding: 0.5rem 0;
@@ -497,6 +639,32 @@
     flex-shrink: 0;
 }
 
+.cell-access {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+}
+
+.access-role-text {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #333;
+}
+
+.access-shared-text {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.access-shared-text.clickable {
+    color: #e60012;
+}
+
+.access-shared-text.clickable:hover {
+    color: #cc0010;
+    font-weight: 500;
+}
+
 .cell-action {
     justify-content: center;
 }
@@ -566,14 +734,19 @@
 /* Responsive design for collections list */
 @media (width <= 768px) {
     .collections-header {
-        grid-template-columns: 60px 1fr 140px;
+        grid-template-columns: 60px 1fr 120px 100px;
         gap: 0.5rem;
     }
 
     .collection-row {
-        grid-template-columns: 60px 1fr 140px;
+        grid-template-columns: 60px 1fr 120px 100px;
         gap: 0.5rem;
         padding: 0.75rem 0;
+    }
+
+    .access-role-text,
+    .access-shared-text {
+        font-size: 0.8rem;
     }
 
     .preview-placeholder svg {
