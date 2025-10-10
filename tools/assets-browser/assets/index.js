@@ -31663,6 +31663,37 @@ const calendarDateToEpoch = (calendarDate) => {
   const date = new Date(calendarDate.year, calendarDate.month - 1, calendarDate.day);
   return date.getTime();
 };
+const epochToCalendarDate = (epochSeconds) => {
+  const date = new Date(epochSeconds * 1e3);
+  return new $35ea8db9cb2ccb90$export$99faa760c7908e4f(
+    date.getFullYear(),
+    date.getMonth() + 1,
+    // CalendarDate uses 1-based months
+    date.getDate()
+  );
+};
+const calendarDatesAreEqual = (date1, date2) => {
+  if (!date1 || !date2) return false;
+  const cal2 = date2;
+  return date1.year === cal2.year && date1.month === cal2.month && date1.day === cal2.day;
+};
+const parseNumericFiltersForDates = (selectedNumericFilters) => {
+  let parsedStartDate = null;
+  let parsedEndDate = null;
+  selectedNumericFilters.forEach((filter) => {
+    const match = filter.match(/repo-createDate\s*([><=]+)\s*(\d+)/);
+    if (match) {
+      const operator = match[1].trim();
+      const epochValue = parseInt(match[2], 10);
+      if (operator === ">=" && !parsedStartDate) {
+        parsedStartDate = epochToCalendarDate(epochValue);
+      } else if (operator === "<=" && !parsedEndDate) {
+        parsedEndDate = epochToCalendarDate(epochValue);
+      }
+    }
+  });
+  return { startDate: parsedStartDate, endDate: parsedEndDate };
+};
 function split(string, separator, num) {
   const parts = string.split(separator);
   if (parts.length <= num) return parts;
@@ -35354,6 +35385,17 @@ const DownloadPanel = ({
 const DateRange = reactExports.forwardRef(({ onDateRangeChange, selectedNumericFilters }, ref) => {
   const [startDate, setStartDate] = reactExports.useState(null);
   const [endDate, setEndDate] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    if (selectedNumericFilters.length > 0) {
+      const { startDate: parsedStartDate, endDate: parsedEndDate } = parseNumericFiltersForDates(selectedNumericFilters);
+      if (parsedStartDate && !calendarDatesAreEqual(parsedStartDate, startDate)) {
+        setStartDate(parsedStartDate);
+      }
+      if (parsedEndDate && !calendarDatesAreEqual(parsedEndDate, endDate)) {
+        setEndDate(parsedEndDate);
+      }
+    }
+  }, [selectedNumericFilters, startDate, endDate, onDateRangeChange]);
   const handleChangeStartDate = (date) => {
     setStartDate(date);
     if (onDateRangeChange) {

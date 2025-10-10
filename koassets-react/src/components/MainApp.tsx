@@ -114,7 +114,7 @@ function MainApp(): React.JSX.Element {
     const searchDisabledRef = useRef<boolean>(false);
     const isRightsSearchRef = useRef<boolean>(false);
 
-    // Derive selectedFacetFilters from facetCheckedState
+    // Derive selectedFacetFilters (used for search API) from facetCheckedState
     const selectedFacetFilters = useMemo(() => {
         const newSelectedFacetFilters: string[][] = [];
         Object.keys(facetCheckedState).forEach(key => {
