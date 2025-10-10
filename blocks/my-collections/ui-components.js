@@ -319,6 +319,16 @@ export function createCollectionRow(collection, handlers, currentUser) {
  * @param {string} currentSearchTerm - Current search term (for empty state)
  * @returns {HTMLElement} Collections list element
  */
+// Escapes HTML meta-characters in a string (simple XSS prevention)
+function escapeHTML(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function createCollectionsList(collections, handlers, currentUser, currentSearchTerm = '') {
   const listContainer = document.createElement('div');
   listContainer.className = 'collections-list';
@@ -328,10 +338,10 @@ export function createCollectionsList(collections, handlers, currentUser, curren
     emptyState.className = 'collections-empty';
 
     if (currentSearchTerm) {
-      emptyState.innerHTML = `
-        <p>No collections found matching "${currentSearchTerm}".</p>
-        <p style="font-size: 0.9rem; color: #999; margin-top: 0.5rem;">Try different search terms or <button onclick="clearSearch()" style="background: none; border: none; color: #e60012; text-decoration: underline; cursor: pointer;">clear search</button> to see all collections.</p>
-      `;
+      const safeSearchTerm = escapeHTML(currentSearchTerm);
+      emptyState.innerHTML =
+        `<p>No collections found matching "${safeSearchTerm}".</p>` +
+        `<p style="font-size: 0.9rem; color: #999; margin-top: 0.5rem;">Try different search terms or <button onclick="clearSearch()" style="background: none; border: none; color: #e60012; text-decoration: underline; cursor: pointer;">clear search</button> to see all collections.</p>`;
     } else {
       emptyState.textContent = 'No collections yet. Create your first collection!';
     }
