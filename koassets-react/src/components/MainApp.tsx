@@ -226,6 +226,13 @@ function MainApp(): React.JSX.Element {
         };
     }, []);
 
+    useEffect(() => {
+        const queryElement = document.querySelector("input.query-input") as HTMLInputElement;
+        if (queryElement) {
+            queryElement.value = query;
+        }
+     }, [query]);
+
     // Sort state
     const [selectedSortType, setSelectedSortType] = useState<string>('Date Created');
     const [selectedSortDirection, setSelectedSortDirection] = useState<string>('Ascending');

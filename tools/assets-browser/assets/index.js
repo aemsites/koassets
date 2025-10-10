@@ -38584,6 +38584,12 @@ function MainApp() {
       delete window.toggleDownloadPanel;
     };
   }, []);
+  reactExports.useEffect(() => {
+    const queryElement = document.querySelector("input.query-input");
+    if (queryElement) {
+      queryElement.value = query;
+    }
+  }, [query]);
   const [selectedSortType, setSelectedSortType] = reactExports.useState("Date Created");
   const [selectedSortDirection, setSelectedSortDirection] = reactExports.useState("Ascending");
   const settingsLoadedRef = reactExports.useRef(false);
