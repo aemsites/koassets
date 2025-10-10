@@ -51,6 +51,7 @@ function userInArray(userEmail, aclArray) {
  * @param {string} reason - Reason for the decision
  */
 function logAuth(collectionId, action, hasAccess, reason) {
+  // eslint-disable-next-line no-console
   console.debug(
     `[Collections Auth] ${collectionId} - ${action}:`,
     hasAccess ? '✓ GRANTED' : '✗ DENIED',
@@ -121,6 +122,7 @@ export function assertCollectionAccess(collections, currentUser, action = 'read'
     (collection) => hasCollectionAccess(collection, currentUser, action),
   );
 
+  // eslint-disable-next-line no-console
   console.debug(
     `[Collections Auth] Filtered ${collections.length} collections → ${filtered.length} with ${action} access`,
   );

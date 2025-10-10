@@ -280,6 +280,7 @@ export class DynamicMediaCollectionsClient {
     // Strip W/ prefix if present (weak ETag indicator)
     // W/"430548e5-0000-0200-0000-68e7236f0000" -> "430548e5-0000-0200-0000-68e7236f0000"
     if (etag && etag.startsWith('W/')) {
+      // eslint-disable-next-line no-console
       console.trace('DynamicMediaCollectionsClient.getETag() - fixing weak ETag,', etag);
       etag = etag.substring(2);
     }

@@ -2,6 +2,40 @@
 import { DynamicMediaCollectionsClient } from '../../scripts/collections/collections-api-client.js';
 import { transformApiCollectionToInternal } from '../../scripts/collections/collections-utils.js';
 
+// Import collection helpers (constants and utility functions)
+import { ACL_FIELDS, ACL_ROLES, getCollectionACL } from './collection-helpers.js';
+
+// Import UI components
+import { showToast, createCollectionsList } from './ui-components.js';
+
+// Import modals and modal management
+import {
+  createShareModal,
+  createViewAccessModal,
+  createRemoveUserModal,
+  createEditModal,
+  createDeleteModal,
+  createCollectionModal,
+  showShareModal,
+  hideShareModal,
+  setSharingState,
+  getSharingState,
+  showViewAccessModal,
+  hideViewAccessModal,
+  updateViewAccessDisplay,
+  showRemoveUserConfirmation,
+  hideRemoveUserModal,
+  getPendingRemoveUser,
+  showEditModal,
+  hideEditModal,
+  getEditingCollection,
+  showDeleteModal,
+  hideDeleteModal,
+  getDeleteState,
+  showCreateModal,
+  hideCreateModal,
+} from './modals.js';
+
 // Check if we're in cookie auth mode (same logic as main app)
 function isCookieAuth() {
   return window.location.origin.endsWith('adobeaem.workers.dev')
@@ -12,6 +46,9 @@ function isCookieAuth() {
 let collectionsClient = null;
 let allCollections = [];
 let isLoading = false;
+
+// Current search state
+let currentSearchTerm = '';
 
 export default async function decorate(block) {
   // Clear existing content
@@ -34,7 +71,7 @@ export default async function decorate(block) {
     });
 
     // eslint-disable-next-line no-console
-    console.log('🔧 [Collections Client] Initialized with:', {
+    console.trace('🔧 [Collections Client] Initialized with:', {
       hasAccessToken: Boolean(accessToken),
       isCookieAuth: isCookieAuth(),
       hasUser: Boolean(currentUser),
@@ -111,12 +148,33 @@ export default async function decorate(block) {
   controlsRow.appendChild(createButton);
 
   // Create collections list (initially show loading, will be updated after API call)
-  const collectionsList = createCollectionsList(allCollections);
+  const currentUser = window.user;
+  const handlers = {
+    onView: handleViewCollection,
+    onEdit: handleEditCollection,
+    onDelete: handleDeleteCollection,
+    onShare: handleShareCollection,
+    onViewAccess: (collectionId, collectionName) => {
+      showViewAccessModal(collectionId, collectionName, collectionsClient);
+    },
+  };
+  const collectionsList = createCollectionsList(
+    allCollections,
+    handlers,
+    currentUser,
+    currentSearchTerm,
+  );
 
   // Create modals
-  const createModal = createCollectionModal();
-  const editModal = createEditModal();
-  const deleteModal = createDeleteModal();
+  const shareModal = createShareModal(handleShareSubmit, hideShareModal);
+  const viewAccessModal = createViewAccessModal(
+    hideViewAccessModal,
+    showRemoveUserConfirmation,
+  );
+  const removeUserModal = createRemoveUserModal(handleRemoveUser, hideRemoveUserModal);
+  const editModal = createEditModal(handleUpdateCollection, hideEditModal);
+  const deleteModal = createDeleteModal(handleConfirmDelete, hideDeleteModal);
+  const createModal = createCollectionModal(handleCreateCollection, hideCreateModal);
 
   // Assemble the component
   container.appendChild(header);
@@ -125,6 +183,9 @@ export default async function decorate(block) {
   container.appendChild(createModal);
   container.appendChild(editModal);
   container.appendChild(deleteModal);
+  container.appendChild(shareModal);
+  container.appendChild(viewAccessModal);
+  container.appendChild(removeUserModal);
 
   block.appendChild(container);
 }
@@ -136,14 +197,14 @@ async function loadCollectionsFromAPI() {
   isLoading = true;
   try {
     // eslint-disable-next-line no-console
-    console.log('Loading collections from Dynamic Media API...');
+    console.trace('Loading collections from Dynamic Media API...');
     const response = await collectionsClient.listCollections({ limit: 100 });
 
     // Transform API response to internal format
     allCollections = response.items.map(transformApiCollectionToInternal);
 
     // eslint-disable-next-line no-console
-    console.log(`Loaded ${allCollections.length} collections from API`);
+    console.trace(`Loaded ${allCollections.length} collections from API`);
 
     // Update the display after loading
     updateCollectionsDisplay();
@@ -189,9 +250,6 @@ function searchCollections(searchTerm, collections) {
   });
 }
 
-// Current search state
-let currentSearchTerm = '';
-
 function handleSearch() {
   const searchInput = document.querySelector('.search-input');
   const searchTerm = searchInput ? searchInput.value.trim() : '';
@@ -210,8 +268,6 @@ function clearSearch() {
 
 // Make clearSearch globally available for HTML onclick
 window.clearSearch = clearSearch;
-
-// Filter and sort functions now handled by SDK
 
 /**
  * Refresh the collections display by reloading from API
@@ -253,233 +309,28 @@ function updateCollectionsDisplay() {
   // Update collections list
   const existingList = document.querySelector('.collections-list');
   if (existingList) {
-    const newList = createCollectionsList(filteredCollections);
+    const currentUser = window.user;
+    const handlers = {
+      onView: handleViewCollection,
+      onEdit: handleEditCollection,
+      onDelete: handleDeleteCollection,
+      onShare: handleShareCollection,
+      onViewAccess: (collectionId, collectionName) => {
+        showViewAccessModal(
+          collectionId,
+          collectionName,
+          collectionsClient,
+        );
+      },
+    };
+    const newList = createCollectionsList(
+      filteredCollections,
+      handlers,
+      currentUser,
+      currentSearchTerm,
+    );
     existingList.parentNode.replaceChild(newList, existingList);
   }
-}
-
-function createCollectionsList(collections) {
-  const listContainer = document.createElement('div');
-  listContainer.className = 'collections-list';
-
-  if (collections.length === 0) {
-    const emptyState = document.createElement('div');
-    emptyState.className = 'collections-empty';
-
-    if (currentSearchTerm) {
-      emptyState.innerHTML = `
-        <p>No collections found matching "${currentSearchTerm}".</p>
-        <p style="font-size: 0.9rem; color: #999; margin-top: 0.5rem;">Try different search terms or <button onclick="clearSearch()" style="background: none; border: none; color: #e60012; text-decoration: underline; cursor: pointer;">clear search</button> to see all collections.</p>
-      `;
-    } else {
-      emptyState.textContent = 'No collections yet. Create your first collection!';
-    }
-
-    listContainer.appendChild(emptyState);
-    return listContainer;
-  }
-
-  // Create table header
-  const header = document.createElement('div');
-  header.className = 'collections-header';
-
-  const previewHeader = document.createElement('div');
-  previewHeader.className = 'header-cell header-preview';
-  previewHeader.textContent = 'PREVIEW';
-
-  const nameHeader = document.createElement('div');
-  nameHeader.className = 'header-cell header-name';
-  nameHeader.textContent = 'NAME';
-
-  const actionHeader = document.createElement('div');
-  actionHeader.className = 'header-cell header-action';
-  actionHeader.textContent = 'ACTION';
-
-  header.appendChild(previewHeader);
-  header.appendChild(nameHeader);
-  header.appendChild(actionHeader);
-
-  // Create collections rows
-  const rowsContainer = document.createElement('div');
-  rowsContainer.className = 'collections-rows';
-
-  collections.forEach((collection) => {
-    const row = createCollectionRow(collection);
-    rowsContainer.appendChild(row);
-  });
-
-  listContainer.appendChild(header);
-  listContainer.appendChild(rowsContainer);
-
-  return listContainer;
-}
-
-// Helpers to resolve preview URL from stored asset
-function resolveUrlValue(value) {
-  if (!value) return '';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'object') {
-    if (typeof value.url === 'string') return value.url;
-    if (typeof value.src === 'string') return value.src;
-  }
-  return '';
-}
-
-function resolvePreviewUrlFromAsset(asset) {
-  return (
-    resolveUrlValue(asset && asset.previewUrl)
-    || resolveUrlValue(asset && asset.thumbnail)
-    || resolveUrlValue(asset && asset.imageUrl)
-    || resolveUrlValue(asset && asset.url)
-    || ''
-  );
-}
-
-function createCollectionRow(collection) {
-  const row = document.createElement('div');
-  row.className = 'collection-row';
-
-  // Preview placeholder
-  const previewCell = document.createElement('div');
-  previewCell.className = 'row-cell cell-preview';
-
-  const firstAsset = (
-    collection
-    && Array.isArray(collection.contents)
-    && collection.contents.length > 0
-  )
-    ? collection.contents[0]
-    : null;
-  const previewSrc = firstAsset ? resolvePreviewUrlFromAsset(firstAsset) : '';
-
-  if (previewSrc) {
-    const img = document.createElement('img');
-    img.alt = (firstAsset && (firstAsset.title || firstAsset.name)) || 'Collection preview';
-    img.src = previewSrc;
-    img.loading = 'eager';
-    img.className = 'collection-preview-image';
-    img.onerror = () => {
-      // eslint-disable-next-line no-console
-      console.error('[Collections] preview failed to load (list view)', {
-        assetId: firstAsset && (firstAsset.assetId || firstAsset.id),
-        title: firstAsset && (firstAsset.title || firstAsset.name),
-        src: previewSrc,
-        collectionId: collection && collection.id,
-        collectionName: collection && collection.name,
-      });
-      const placeholder = document.createElement('div');
-      placeholder.className = 'preview-placeholder';
-      placeholder.innerHTML = `
-        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-          <rect x="6" y="8" width="28" height="24" rx="2" fill="#f0f0f0" stroke="#ddd"/>
-          <text x="20" y="22" text-anchor="middle" font-family="Arial" font-size="16" fill="#999">?</text>
-        </svg>
-      `;
-      if (previewCell.isConnected) previewCell.replaceChildren(placeholder);
-    };
-    previewCell.appendChild(img);
-  } else {
-    const previewIcon = document.createElement('div');
-    previewIcon.className = 'preview-placeholder';
-    previewIcon.innerHTML = `
-      <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-        <rect x="6" y="8" width="28" height="24" rx="2" fill="#f0f0f0" stroke="#ddd"/>
-        <text x="20" y="22" text-anchor="middle" font-family="Arial" font-size="16" fill="#999">?</text>
-      </svg>
-    `;
-    previewCell.appendChild(previewIcon);
-  }
-
-  // Name and date cell
-  const nameCell = document.createElement('div');
-  nameCell.className = 'row-cell cell-name';
-
-  const nameText = document.createElement('div');
-  nameText.className = 'collection-name clickable';
-  nameText.textContent = collection.name;
-  nameText.style.cursor = 'pointer';
-  nameText.onclick = () => handleViewCollection(collection);
-
-  const descText = document.createElement('div');
-  descText.className = 'collection-description';
-  if (collection.description && collection.description.trim()) {
-    descText.textContent = collection.description;
-  } else {
-    descText.textContent = 'No description';
-    descText.style.color = '#999';
-  }
-
-  const dateText = document.createElement('div');
-  dateText.className = 'collection-date';
-  const date = new Date(collection.lastUpdated);
-  dateText.textContent = `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-
-  nameCell.appendChild(nameText);
-  nameCell.appendChild(descText);
-  nameCell.appendChild(dateText);
-
-  // Action cell
-  const actionCell = document.createElement('div');
-  actionCell.className = 'row-cell cell-action';
-
-  const editBtn = document.createElement('button');
-  editBtn.className = 'action-btn edit-btn';
-  // Icon applied via CSS background
-  editBtn.innerHTML = '';
-  editBtn.title = 'Edit Collection';
-  editBtn.setAttribute('aria-label', 'Edit Collection');
-  editBtn.onclick = () => handleEditCollection(collection);
-
-  const deleteBtn = document.createElement('button');
-  deleteBtn.className = 'action-btn delete-btn';
-  // Icon applied via CSS background per design guidelines
-  deleteBtn.innerHTML = '';
-  deleteBtn.title = 'Delete Collection';
-  deleteBtn.setAttribute('aria-label', 'Delete Collection');
-  deleteBtn.onclick = () => handleDeleteCollection(collection.id, collection.name);
-
-  const shareBtn = document.createElement('button');
-  shareBtn.className = 'action-btn share-btn';
-  // Icon applied via CSS background
-  shareBtn.innerHTML = '';
-  shareBtn.title = 'Share Collection';
-  shareBtn.setAttribute('aria-label', 'Share Collection');
-  shareBtn.onclick = () => handleShareCollection(collection.id);
-
-  actionCell.appendChild(editBtn);
-  actionCell.appendChild(deleteBtn);
-  actionCell.appendChild(shareBtn);
-
-  row.appendChild(previewCell);
-  row.appendChild(nameCell);
-  row.appendChild(actionCell);
-
-  return row;
-}
-
-function showToast(message, type = 'success') {
-  // Create toast element
-  const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.textContent = message;
-
-  // Add to document
-  document.body.appendChild(toast);
-
-  // Trigger animation
-  setTimeout(() => {
-    toast.classList.add('show');
-  }, 10);
-
-  // Remove after timeout
-  setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => {
-      if (toast.parentNode) {
-        document.body.removeChild(toast);
-      }
-    }, 300);
-  }, 3000);
 }
 
 function updateCollectionLastUsed(collectionId) {
@@ -497,59 +348,210 @@ function handleViewCollection(collection) {
   window.location.href = `/my-collections-details?id=${collection.id}`;
 }
 
+/**
+ * Handle share collection action - opens the share modal for a collection
+ * @param {string} collectionId - ID of the collection to share
+ */
 function handleShareCollection(collectionId) {
   // Update last used when user interacts with collection
   updateCollectionLastUsed(collectionId);
 
-  showToast('Share Collection feature is not implemented yet.', 'info');
+  // Find collection name
+  const collection = allCollections.find((c) => c.id === collectionId);
+  setSharingState(collectionId, collection ? collection.name : 'Collection');
+
+  showShareModal();
 
   // Refresh display to show updated sort order
   updateCollectionsDisplay();
 }
 
-// Edit collection state
-let editingCollection = null;
+/**
+ * Handle share form submission - adds users to collection with selected role
+ * Reads email addresses from the form, validates them, and updates collection ACL
+ */
+async function handleShareSubmit() {
+  const {
+    collectionId: sharingCollectionId,
+    collectionName: sharingCollectionName,
+  } = getSharingState();
+  if (!sharingCollectionId) return;
+
+  const emailInput = document.getElementById('share-collection-emails');
+  const roleSelect = document.getElementById('share-collection-role');
+
+  const emails = emailInput ? emailInput.value.trim() : '';
+  const role = roleSelect ? roleSelect.value : 'Viewer';
+
+  if (!emails) {
+    showToast('Please enter at least one email address', 'info');
+    if (emailInput) emailInput.focus();
+    return;
+  }
+
+  if (!collectionsClient) {
+    showToast('Collections service not available', 'error');
+    return;
+  }
+
+  try {
+    // Parse emails (split by comma, semicolon, space, or newline)
+    const emailList = emails
+      .split(/[,;\s\n]+/)
+      .map((e) => e.trim())
+      .filter((e) => e.length > 0);
+
+    if (emailList.length === 0) {
+      showToast('Please enter valid email addresses', 'info');
+      return;
+    }
+
+    // eslint-disable-next-line no-console
+    console.log('🤝 [Share Collection] Sharing collection:', {
+      collectionId: sharingCollectionId,
+      collectionName: sharingCollectionName,
+      emails: emailList,
+      role,
+    });
+
+    // Get current collection metadata to update ACL
+    const currentCollection = await collectionsClient.getCollectionMetadata(sharingCollectionId);
+    const currentAcl = getCollectionACL(currentCollection) || {};
+
+    // Determine which ACL array to update based on role
+    const aclField = role === ACL_ROLES.EDITOR ? ACL_FIELDS.EDITOR : ACL_FIELDS.VIEWER;
+
+    // Get existing users in the selected role
+    const existingUsers = Array.isArray(currentAcl[aclField]) ? [...currentAcl[aclField]] : [];
+
+    // Add new users (avoid duplicates)
+    emailList.forEach((email) => {
+      if (!existingUsers.includes(email)) {
+        existingUsers.push(email);
+      }
+    });
+
+    // Update collection metadata with new ACL
+    const updateData = {
+      'tccc:metadata': {
+        'tccc:acl': {
+          ...currentAcl,
+          [aclField]: existingUsers,
+        },
+      },
+    };
+
+    await collectionsClient.updateCollectionMetadata(sharingCollectionId, updateData);
+
+    // Show success message
+    showToast(`COLLECTION SHARED SUCCESSFULLY WITH ${emailList.length} USER(S)`, 'success');
+
+    // Clear email input
+    if (emailInput) emailInput.value = '';
+
+    // Refresh main display to update share counts
+    await refreshCollectionsDisplay();
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to share collection:', error);
+
+    // Hide modal even on error
+    hideShareModal();
+
+    showToast(`Failed to share collection: ${error.message}`, 'error');
+  }
+}
+
+/**
+ * Handle user removal from collection after confirmation
+ * Updates the collection's ACL, refreshes displays, and handles self-removal
+ */
+async function handleRemoveUser() {
+  const {
+    email, role, collectionId, collectionName,
+  } = getPendingRemoveUser();
+
+  if (!email || !role || !collectionId) {
+    showToast('Invalid removal request', 'error');
+    hideRemoveUserModal();
+    return;
+  }
+
+  try {
+    // Get current ACL
+    const collection = await collectionsClient.getCollectionMetadata(collectionId);
+    const currentAcl = getCollectionACL(collection) || {};
+
+    // Determine which ACL field to update based on role
+    let aclField;
+    if (role === 'editor') {
+      aclField = ACL_FIELDS.EDITOR;
+    } else if (role === 'viewer') {
+      aclField = ACL_FIELDS.VIEWER;
+    } else {
+      throw new Error('Cannot remove owner from collection');
+    }
+
+    // Get current list and remove the user
+    const currentUsers = currentAcl[aclField] || [];
+    const updatedUsers = currentUsers.filter((userEmail) => userEmail !== email);
+
+    // Update collection metadata with new ACL
+    const updateData = {
+      'tccc:metadata': {
+        'tccc:acl': {
+          ...currentAcl,
+          [aclField]: updatedUsers,
+        },
+      },
+    };
+
+    await collectionsClient.updateCollectionMetadata(collectionId, updateData);
+
+    // Check if user removed themselves
+    const currentUserEmail = (window.user?.email || '').toLowerCase();
+    const removedSelf = currentUserEmail === email.toLowerCase();
+
+    // Hide the remove modal
+    hideRemoveUserModal();
+
+    // Show success message
+    if (removedSelf) {
+      showToast(`YOU'VE BEEN REMOVED FROM '${collectionName}'`, 'success');
+
+      // Refresh the main collections list to remove this collection if they lost all access
+      hideViewAccessModal();
+      await refreshCollectionsDisplay();
+    } else {
+      showToast('USER REMOVED FROM COLLECTION', 'success');
+
+      // Refresh the view access modal to show updated list
+      await updateViewAccessDisplay(collectionId, collectionsClient, showRemoveUserConfirmation);
+
+      // Also refresh main display to update share counts
+      await refreshCollectionsDisplay();
+    }
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to remove user:', error);
+
+    hideRemoveUserModal();
+    showToast(`Failed to remove user: ${error.message}`, 'error');
+  }
+}
 
 function handleEditCollection(collection) {
   // Update last used when user interacts with collection
   updateCollectionLastUsed(collection.id);
 
-  editingCollection = { ...collection };
-  showEditModal();
+  showEditModal(collection);
 
   // Refresh display to show updated sort order
   updateCollectionsDisplay();
 }
 
-function showEditModal() {
-  const modal = document.querySelector('.edit-modal');
-  const nameInput = document.getElementById('edit-collection-name');
-  const descInput = document.getElementById('edit-collection-description');
-
-  if (nameInput && editingCollection) {
-    nameInput.value = editingCollection.name;
-  }
-  if (descInput && editingCollection) {
-    descInput.value = editingCollection.description || '';
-  }
-
-  modal.style.display = 'flex';
-  if (nameInput) nameInput.focus();
-}
-
-function hideEditModal() {
-  const modal = document.querySelector('.edit-modal');
-  modal.style.display = 'none';
-  editingCollection = null;
-
-  // Clear form
-  const nameInput = document.getElementById('edit-collection-name');
-  const descInput = document.getElementById('edit-collection-description');
-  if (nameInput) nameInput.value = '';
-  if (descInput) descInput.value = '';
-}
-
 async function handleUpdateCollection() {
+  const editingCollection = getEditingCollection();
   if (!editingCollection) return;
 
   const nameInput = document.getElementById('edit-collection-name');
@@ -606,39 +608,18 @@ async function handleUpdateCollection() {
   }
 }
 
-// Delete confirmation state
-let deleteCollectionId = null;
-let deleteCollectionName = '';
-
 function handleDeleteCollection(collectionId, collectionName) {
   // Update last used when user interacts with collection
   updateCollectionLastUsed(collectionId);
 
-  deleteCollectionId = collectionId;
-  deleteCollectionName = collectionName;
-  showDeleteModal();
+  showDeleteModal(collectionId, collectionName);
 
   // Refresh display to show updated sort order
   updateCollectionsDisplay();
 }
 
-function showDeleteModal() {
-  const modal = document.querySelector('.delete-modal');
-  const nameElement = document.getElementById('delete-collection-name');
-  if (nameElement) {
-    nameElement.textContent = deleteCollectionName;
-  }
-  modal.style.display = 'flex';
-}
-
-function hideDeleteModal() {
-  const modal = document.querySelector('.delete-modal');
-  modal.style.display = 'none';
-  deleteCollectionId = null;
-  deleteCollectionName = '';
-}
-
 async function handleConfirmDelete() {
+  const { collectionId: deleteCollectionId } = getDeleteState();
   if (!deleteCollectionId) return;
 
   if (!collectionsClient) {
@@ -672,249 +653,6 @@ async function handleConfirmDelete() {
   }
 }
 
-function createEditModal() {
-  const modal = document.createElement('div');
-  modal.className = 'edit-modal';
-  modal.style.display = 'none';
-
-  const modalContent = document.createElement('div');
-  modalContent.className = 'modal-content';
-
-  // Modal header
-  const modalHeader = document.createElement('div');
-  modalHeader.className = 'modal-header';
-
-  const modalTitle = document.createElement('h2');
-  modalTitle.className = 'modal-title';
-  modalTitle.textContent = 'Edit Collection';
-
-  const closeBtn = document.createElement('button');
-  closeBtn.className = 'modal-close';
-  closeBtn.innerHTML = '&times;';
-  closeBtn.onclick = hideEditModal;
-
-  modalHeader.appendChild(modalTitle);
-  modalHeader.appendChild(closeBtn);
-
-  // Modal body
-  const modalBody = document.createElement('div');
-  modalBody.className = 'modal-body';
-
-  const nameLabel = document.createElement('label');
-  nameLabel.textContent = 'Collection Name';
-  nameLabel.className = 'form-label';
-
-  const nameInput = document.createElement('input');
-  nameInput.type = 'text';
-  nameInput.id = 'edit-collection-name';
-  nameInput.className = 'form-input';
-  nameInput.required = true;
-
-  const descLabel = document.createElement('label');
-  descLabel.textContent = 'Collection Description (optional)';
-  descLabel.className = 'form-label';
-
-  const descTextarea = document.createElement('textarea');
-  descTextarea.id = 'edit-collection-description';
-  descTextarea.className = 'form-textarea';
-  descTextarea.rows = 4;
-
-  modalBody.appendChild(nameLabel);
-  modalBody.appendChild(nameInput);
-  modalBody.appendChild(descLabel);
-  modalBody.appendChild(descTextarea);
-
-  // Modal footer
-  const modalFooter = document.createElement('div');
-  modalFooter.className = 'modal-footer';
-
-  const cancelBtn = document.createElement('button');
-  cancelBtn.className = 'btn-cancel';
-  cancelBtn.textContent = 'Cancel';
-  cancelBtn.onclick = hideEditModal;
-
-  const updateBtn = document.createElement('button');
-  updateBtn.className = 'btn-create';
-  updateBtn.textContent = 'Update';
-  updateBtn.onclick = handleUpdateCollection;
-
-  modalFooter.appendChild(cancelBtn);
-  modalFooter.appendChild(updateBtn);
-
-  modalContent.appendChild(modalHeader);
-  modalContent.appendChild(modalBody);
-  modalContent.appendChild(modalFooter);
-  modal.appendChild(modalContent);
-
-  return modal;
-}
-
-function createDeleteModal() {
-  const modal = document.createElement('div');
-  modal.className = 'delete-modal';
-  modal.style.display = 'none';
-
-  const modalContent = document.createElement('div');
-  modalContent.className = 'modal-content';
-
-  // Modal header
-  const modalHeader = document.createElement('div');
-  modalHeader.className = 'modal-header';
-
-  const modalTitle = document.createElement('h2');
-  modalTitle.className = 'modal-title';
-  modalTitle.textContent = 'Delete Collection';
-
-  const closeBtn = document.createElement('button');
-  closeBtn.className = 'modal-close';
-  closeBtn.innerHTML = '&times;';
-  closeBtn.onclick = hideDeleteModal;
-
-  modalHeader.appendChild(modalTitle);
-  modalHeader.appendChild(closeBtn);
-
-  // Modal body
-  const modalBody = document.createElement('div');
-  modalBody.className = 'modal-body';
-  modalBody.style.textAlign = 'center';
-  modalBody.style.padding = '2rem';
-
-  const warningText = document.createElement('p');
-  warningText.style.fontSize = '1.1rem';
-  warningText.style.marginBottom = '1rem';
-  warningText.textContent = 'Are you sure you want to delete this collection?';
-
-  const collectionNameText = document.createElement('p');
-  collectionNameText.style.fontWeight = 'bold';
-  collectionNameText.style.color = '#e60012';
-  collectionNameText.id = 'delete-collection-name';
-
-  const cautionText = document.createElement('p');
-  cautionText.style.fontSize = '0.9rem';
-  cautionText.style.color = '#666';
-  cautionText.style.marginTop = '1rem';
-  cautionText.textContent = 'This action cannot be undone.';
-
-  modalBody.appendChild(warningText);
-  modalBody.appendChild(collectionNameText);
-  modalBody.appendChild(cautionText);
-
-  // Modal footer
-  const modalFooter = document.createElement('div');
-  modalFooter.className = 'modal-footer';
-
-  const cancelBtn = document.createElement('button');
-  cancelBtn.className = 'btn-cancel';
-  cancelBtn.textContent = 'Cancel';
-  cancelBtn.onclick = hideDeleteModal;
-
-  const deleteBtn = document.createElement('button');
-  deleteBtn.className = 'btn-delete';
-  deleteBtn.textContent = 'Delete';
-  deleteBtn.onclick = handleConfirmDelete;
-
-  modalFooter.appendChild(cancelBtn);
-  modalFooter.appendChild(deleteBtn);
-
-  modalContent.appendChild(modalHeader);
-  modalContent.appendChild(modalBody);
-  modalContent.appendChild(modalFooter);
-  modal.appendChild(modalContent);
-
-  return modal;
-}
-
-function createCollectionModal() {
-  const modal = document.createElement('div');
-  modal.className = 'collection-modal';
-  modal.style.display = 'none';
-
-  const modalContent = document.createElement('div');
-  modalContent.className = 'modal-content';
-
-  // Modal header
-  const modalHeader = document.createElement('div');
-  modalHeader.className = 'modal-header';
-
-  const modalTitle = document.createElement('h2');
-  modalTitle.className = 'modal-title';
-  modalTitle.textContent = 'Create Collection';
-
-  const closeBtn = document.createElement('button');
-  closeBtn.className = 'modal-close';
-  closeBtn.innerHTML = '&times;';
-  closeBtn.onclick = hideCreateModal;
-
-  modalHeader.appendChild(modalTitle);
-  modalHeader.appendChild(closeBtn);
-
-  // Modal body
-  const modalBody = document.createElement('div');
-  modalBody.className = 'modal-body';
-
-  const nameLabel = document.createElement('label');
-  nameLabel.textContent = 'Collection Name';
-  nameLabel.className = 'form-label';
-
-  const nameInput = document.createElement('input');
-  nameInput.type = 'text';
-  nameInput.id = 'collection-name';
-  nameInput.className = 'form-input';
-  nameInput.required = true;
-
-  const descLabel = document.createElement('label');
-  descLabel.textContent = 'Collection Description (optional)';
-  descLabel.className = 'form-label';
-
-  const descTextarea = document.createElement('textarea');
-  descTextarea.id = 'collection-description';
-  descTextarea.className = 'form-textarea';
-  descTextarea.rows = 4;
-
-  modalBody.appendChild(nameLabel);
-  modalBody.appendChild(nameInput);
-  modalBody.appendChild(descLabel);
-  modalBody.appendChild(descTextarea);
-
-  // Modal footer
-  const modalFooter = document.createElement('div');
-  modalFooter.className = 'modal-footer';
-
-  const cancelBtn = document.createElement('button');
-  cancelBtn.className = 'btn-cancel';
-  cancelBtn.textContent = 'Cancel';
-  cancelBtn.onclick = hideCreateModal;
-
-  const createBtn = document.createElement('button');
-  createBtn.className = 'btn-create';
-  createBtn.textContent = 'Create';
-  createBtn.onclick = handleCreateCollection;
-
-  modalFooter.appendChild(cancelBtn);
-  modalFooter.appendChild(createBtn);
-
-  modalContent.appendChild(modalHeader);
-  modalContent.appendChild(modalBody);
-  modalContent.appendChild(modalFooter);
-  modal.appendChild(modalContent);
-
-  return modal;
-}
-
-function showCreateModal() {
-  const modal = document.querySelector('.collection-modal');
-  modal.style.display = 'flex';
-  document.getElementById('collection-name').focus();
-}
-
-function hideCreateModal() {
-  const modal = document.querySelector('.collection-modal');
-  modal.style.display = 'none';
-  // Clear form
-  document.getElementById('collection-name').value = '';
-  document.getElementById('collection-description').value = '';
-}
-
 async function handleCreateCollection() {
   const nameInput = document.getElementById('collection-name');
   const descInput = document.getElementById('collection-description');
@@ -944,9 +682,9 @@ async function handleCreateCollection() {
       // Custom metadata with tccc: prefix
       'tccc:metadata': {
         'tccc:acl': {
-          'tccc:assetCollectionOwner': userEmail,
-          'tccc:assetCollectionViewer': [],
-          'tccc:assetCollectionEditor': [],
+          [ACL_FIELDS.OWNER]: userEmail,
+          [ACL_FIELDS.VIEWER]: [],
+          [ACL_FIELDS.EDITOR]: [],
         },
       },
     };
