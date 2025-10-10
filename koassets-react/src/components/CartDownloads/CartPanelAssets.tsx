@@ -30,16 +30,16 @@ interface CartAssetItemRowProps {
 
 const CartAssetItemRow: React.FC<CartAssetItemRowProps> = ({ item, onRemoveItem }) => {
     return (
-        <div className={`cart-item-row`}>
+        <div className={`cart-asset-row`}>
             <div className="col-thumbnail">
                 <div className="item-thumbnail">
                     <Picture key={item.assetId} asset={item} width={350} />
                 </div>
             </div>
             <div className="col-title">
-                <div className="item-title">{item.title || item.name}</div>
+                <div className="asset-title">{item.title || item.name}</div>
                 <br />
-                <div className="item-type">TYPE: {item.formatLabel?.toUpperCase()}</div>
+                <div className="asset-type">TYPE: {item.formatLabel?.toUpperCase()}</div>
             </div>
             <div className="col-rights">
                 <span className="rights-badge">

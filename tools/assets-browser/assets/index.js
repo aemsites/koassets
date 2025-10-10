@@ -34365,12 +34365,12 @@ const WorkflowProgress = ({
 };
 const CartAssetItemRow = ({ item, onRemoveItem }) => {
   var _a, _b, _c;
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `cart-item-row`, children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `cart-asset-row`, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset: item, width: 350 }, item.assetId) }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-title", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-title", children: item.title || item.name }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-title", children: item.title || item.name }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "item-type", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-type", children: [
         "TYPE: ",
         (_a = item.formatLabel) == null ? void 0 : _a.toUpperCase()
       ] })

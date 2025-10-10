@@ -340,3 +340,21 @@ button:disabled:hover {
 .item-thumbnail {
   font-size: 12px;
 }
+
+.download-renditions-title,
+.cart-panel .asset-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.4;
+  font-family: "TCCC UnityText Regular", sans-serif;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+.cart-panel .asset-type {
+  font-size: 12px;
+  color: #666;
+  font-weight: 600;
+}
