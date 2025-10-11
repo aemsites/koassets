@@ -4,7 +4,7 @@
  */
 declare function buildSavedSearchUrl(search: {
     searchTerm: string;
-    facetFilters: string[][];
+    facetFilters: FacetCheckedState;
     numericFilters: string[];
     searchType?: string; // Optional
 }): string;

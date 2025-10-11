@@ -1,7 +1,7 @@
 import { ToastQueue } from '@react-spectrum/toast';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DateValue } from 'react-aria-components';
-import type { FacetCheckedState, FacetsProps, FacetValue, SavedSearch, SearchResult } from '../types';
+import type { FacetsProps, FacetValue, SavedSearch, SearchResult } from '../types';
 import DateRange, { DateRangeRef } from './DateRange';
 import './Facets.css';
 import Markets from './Markets';
@@ -93,7 +93,7 @@ const FacetItem = React.memo<FacetItemProps>(({
                 </div>
             )}
             <div className="facet-filter-section">
-                {/* Render each facet search button */}
+                {/* Render each facetTechId's search button */}
                 {isSearchMode ? (
                     <div className="facet-filter-button facet-filter-button-search">
                         <div className="facet-search-container">
@@ -137,7 +137,7 @@ const FacetItem = React.memo<FacetItemProps>(({
                         </div>
                     </div>
                 ) : (
-                    // Render each facet button
+                    // Render each facetTechId's button
                     <div
                         className="facet-filter-button"
                         tabIndex={0}
@@ -175,8 +175,6 @@ FacetItem.displayName = 'FacetItem';
 
 const Facets: React.FC<FacetsProps> = ({
     searchResults,
-    selectedFacetFilters,
-    setSelectedFacetFilters,
     search,
     excFacets = {},
     selectedNumericFilters = [],
@@ -193,39 +191,20 @@ const Facets: React.FC<FacetsProps> = ({
     selectedMarkets,
     setSelectedMarkets,
     selectedMediaChannels,
-    setSelectedMediaChannels
+    setSelectedMediaChannels,
+    facetCheckedState,
+    setFacetCheckedState,
+    onFacetCheckbox,
+    onClearAllFacets
 }) => {
     const [expandedFacets, setExpandedFacets] = useState<ExpandedFacetsState>({}); // Keep track of expanded facets (from EXC)
     const [expandedHierarchyItems, setExpandedHierarchyItems] = useState<ExpandedFacetsState>({}); // Keep track of expanded hierarchy items
     const [facetSearchMode, setFacetSearchMode] = useState<ExpandedFacetsState>({}); // Keep track of search mode for each facet
     const [facetSearchTerms, setFacetSearchTerms] = useState<{ [key: string]: string }>({}); // Keep track of search terms for each facet
-    const [checked, setChecked] = useState<FacetCheckedState>({}); // Keep track of checked state of facets and nested facets if any
     const [dateRanges, setDateRanges] = useState<{ [key: string]: [number | undefined, number | undefined] }>({});
     const dateRangeRef = useRef<DateRangeRef>(null);
     const isUpdatingFromExternalRef = useRef(false);
 
-    // Function to load selected facet filters into checked state
-    const loadSelectedFacetFilters = useCallback((selectedFacetFilters: string[][] | undefined): FacetCheckedState => {
-        const newChecked: FacetCheckedState = {};
-
-        if (selectedFacetFilters && selectedFacetFilters.length > 0) {
-            selectedFacetFilters.forEach((filterGroup: string[]) => {
-                filterGroup.forEach((filter: string) => {
-                    const colonIndex = filter.indexOf(':');
-                    const key = colonIndex > -1 ? filter.substring(0, colonIndex) : filter;
-                    const value = colonIndex > -1 ? filter.substring(colonIndex + 1) : '';
-                    if (key && value) {
-                        if (!newChecked[key]) {
-                            newChecked[key] = {};
-                        }
-                        newChecked[key][value] = true;
-                    }
-                });
-            });
-        }
-
-        return newChecked;
-    }, []);
 
     // Rights date picker handlers
     const handleRightsStartDateChange = useCallback((date: DateValue | null) => {
@@ -271,51 +250,7 @@ const Facets: React.FC<FacetsProps> = ({
         return combined;
     }, [searchResults]);
 
-    // Clean up checked state when facets are no longer available or have zero counts
-    // BUT preserve facets that are currently applied as filters (user-selected)
-    useEffect(() => {
-        setChecked(prevChecked => {
-            const updatedChecked = { ...prevChecked };
-            let hasChanges = false;
-
-            // Get currently applied facet filters to preserve them
-            const appliedFacets = new Set<string>();
-            selectedFacetFilters?.forEach(filterGroup => {
-                filterGroup.forEach(filter => {
-                    appliedFacets.add(filter);
-                });
-            });
-
-            // For each entry of checked of (facetTechId, value)
-            Object.entries(prevChecked).forEach(([facetTechId, value]) => {
-                // For each entry of value of (facetName, isChecked)
-                Object.entries(value).forEach(([facetName, isChecked]) => {
-                    const facetFilter = `${facetTechId}:${facetName}`;
-
-                    // Don't clean up facets that are currently applied as filters
-                    const isCurrentlyApplied = appliedFacets.has(facetFilter);
-
-                    // If facetTechId not in combinedFacets.keys or facetName not in combinedFacets[facetTechId] or combinedFacets[facetTechId][facetName] === 0
-                    if (!isCurrentlyApplied &&
-                        (!combinedFacets ||
-                            !(facetTechId in combinedFacets) ||
-                            !(facetName in (combinedFacets[facetTechId] || {})) ||
-                            (combinedFacets[facetTechId] && combinedFacets[facetTechId][facetName] === 0))) {
-                        // Set checked[facetTechId][facetName] to false
-                        if (isChecked) {
-                            updatedChecked[facetTechId] = {
-                                ...updatedChecked[facetTechId],
-                                [facetName]: false
-                            };
-                            hasChanges = true;
-                        }
-                    }
-                });
-            });
-
-            return hasChanges ? updatedChecked : prevChecked;
-        });
-    }, [combinedFacets, selectedFacetFilters]);
+    // Note: Cleanup logic for checked state is now handled in the parent component (MainApp)
 
     // Memoized hierarchy data computation for all facets
     const hierarchyDataByFacet = useMemo(() => {
@@ -425,16 +360,6 @@ const Facets: React.FC<FacetsProps> = ({
         setFacetSearchTerms(prev => ({ ...prev, [facetTechId]: '' }));
     }, []);
 
-    // Handler for checkbox change
-    const handleCheckbox = useCallback((key: string, facet: string) => {
-        setChecked(prev => ({
-            ...prev,
-            [key]: {
-                ...prev[key],
-                [facet]: !prev[key]?.[facet]
-            }
-        }));
-    }, []);
 
     // Handler for date range change
     const handleDateRangeChange = useCallback((key: string, startDate: Date | undefined, endDate: Date | undefined) => {
@@ -482,19 +407,36 @@ const Facets: React.FC<FacetsProps> = ({
         return false;
     }, []);
 
+    /**
+     * Helper function to deselect facet items that no longer exist in search results
+     */
+    const deselectFacetCheckedState = useCallback((checkboxKey: string, facetDataMap: Record<string, number>) => {
+        if (facetCheckedState[checkboxKey]) {
+            Object.entries(facetCheckedState[checkboxKey]).forEach(([key, value]) => {
+                if (value === true) {
+                    if (!(key in facetDataMap) || facetDataMap[key] === 0) {
+                        onFacetCheckbox(checkboxKey, key);
+                    }
+                }
+            });
+        }
+    }, [facetCheckedState, onFacetCheckbox]);
+    
 
     // Memoized function to render hierarchy levels
     const renderHierarchyLevel = useCallback((
-        hierarchyData: { [level: number]: { [key: string]: number } },
+        facetTechIdHierarchyData: { [level: number]: { [key: string]: number } },
         facetTechId: string,
         level: number,
         parentPath: string = ''
     ): React.ReactNode[] => {
-        const levelData = hierarchyData[level];
+        const levelData = facetTechIdHierarchyData[level];
         if (!levelData) return [];
 
         const searchTerm = facetSearchTerms[facetTechId] || '';
         const items: React.ReactNode[] = [];
+        const checkboxKey = `${facetTechId}.${HIERARCHY_PREFIX}${level}`;
+        deselectFacetCheckedState(checkboxKey, levelData);
 
         Object.entries(levelData).forEach(([facetName, count]) => {
             // Extract the last part of the hierarchy path for display
@@ -503,7 +445,7 @@ const Facets: React.FC<FacetsProps> = ({
             const displayName = getDisplayFacetName(facetTechId, baseFacetName);
 
             // Filter based on search term - check full hierarchy path and descendants
-            if (searchTerm && !shouldShowHierarchyItem(hierarchyData, facetTechId, facetName, searchTerm, level)) {
+            if (searchTerm && !shouldShowHierarchyItem(facetTechIdHierarchyData, facetTechId, facetName, searchTerm, level)) {
                 return; // Skip this item if it doesn't match search
             }
 
@@ -514,8 +456,8 @@ const Facets: React.FC<FacetsProps> = ({
                 const itemKey = `${facetTechId}-${facetName}`;
 
                 // Check if this item has sub-levels
-                const hasSubLevels = hierarchyData[level + 1] &&
-                    Object.keys(hierarchyData[level + 1]).some(subFacetName =>
+                const hasSubLevels = facetTechIdHierarchyData[level + 1] &&
+                    Object.keys(facetTechIdHierarchyData[level + 1]).some(subFacetName =>
                         subFacetName.startsWith(fullPath + ' / ')
                     );
 
@@ -526,7 +468,6 @@ const Facets: React.FC<FacetsProps> = ({
                     hasSubLevels ? 'facet-hierarchy-container-with-sublevel' : ''
                 ].filter(Boolean).join(' ');
 
-                const checkboxKey = `${facetTechId}.${HIERARCHY_PREFIX}${level}`;
                 const hierarchyItemKey = `${facetTechId}-${fullPath}`;
                 const isHierarchyItemExpanded = expandedHierarchyItems[hierarchyItemKey];
 
@@ -537,28 +478,28 @@ const Facets: React.FC<FacetsProps> = ({
                                 <input
                                     className="facet-filter-checkbox-input"
                                     type="checkbox"
-                                    checked={!!checked[checkboxKey]?.[facetName]}
-                                    onChange={() => handleCheckbox(checkboxKey, facetName)}
+                                    checked={!!facetCheckedState[checkboxKey]?.[facetName]}
+                                    onChange={() => onFacetCheckbox(checkboxKey, facetName)}
                                 /> {displayName}{count > 0 ? ` (${count})` : ''}
                             </label>
                             {hasSubLevels && (
                                 <span
                                     className="facet-filter-arrow-sub-level"
-                                    onClick={() => toggleHierarchyItem(hierarchyItemKey, facetTechId, fullPath, hierarchyData)}
+                                    onClick={() => toggleHierarchyItem(hierarchyItemKey, facetTechId, fullPath, facetTechIdHierarchyData)}
                                 >
                                     {isHierarchyItemExpanded ? '▼' : '▶'}
                                 </span>
                             )}
                         </div>
                         {/* Render child levels only if expanded */}
-                        {hasSubLevels && isHierarchyItemExpanded && renderHierarchyLevel(hierarchyData, facetTechId, level + 1, fullPath)}
+                        {hasSubLevels && isHierarchyItemExpanded && renderHierarchyLevel(facetTechIdHierarchyData, facetTechId, level + 1, fullPath)}
                     </div>
                 );
             }
         });
 
         return items;
-    }, [checked, handleCheckbox, expandedHierarchyItems, toggleHierarchyItem, facetSearchTerms, shouldShowHierarchyItem]);
+    }, [facetCheckedState, onFacetCheckbox, expandedHierarchyItems, toggleHierarchyItem, facetSearchTerms, shouldShowHierarchyItem, deselectFacetCheckedState]);
 
     /**
      * Renders the facet checkboxes from search results
@@ -623,28 +564,31 @@ const Facets: React.FC<FacetsProps> = ({
         }
 
         // Get hierarchy data for this facet if it exists
-        const hierarchyData = hierarchyDataByFacet[facetTechId];
-        const isHierarchyFacet = !!hierarchyData;
+        const facetTechIdHierarchyData = hierarchyDataByFacet[facetTechId];
+        const isHierarchyFacet = !!facetTechIdHierarchyData;
 
-        // Render hierarchy facets
+        // Render each facetTechId's hierarchy items
         if (isHierarchyFacet) {
             return (
                 <div className="facet-filter-checkbox-list">
-                    {renderHierarchyLevel(hierarchyData, facetTechId, 1)}
+                    {renderHierarchyLevel(facetTechIdHierarchyData, facetTechId, 1)}
                 </div>
             );
         }
 
-        // Render non-hierarchy facets
+        // Render each facetTechId's non-hierarchy items
         if (!expandedFacets[facetTechId] || !combinedFacets || !combinedFacets[facetTechId] || Object.keys(combinedFacets[facetTechId] || {}).length === 0) {
             return null;
         }
 
         const searchTerm = facetSearchTerms[facetTechId] || '';
         const checkboxKey = `${facetTechId}`;
+        const facetTechIdDataMap = combinedFacets && combinedFacets[facetTechId] || {};
+        
+        deselectFacetCheckedState(checkboxKey, facetTechIdDataMap);
 
         // Filter facet entries based on search term
-        const filteredEntries = Object.entries((combinedFacets && combinedFacets[facetTechId]) || {})
+        const filteredEntries = Object.entries(facetTechIdDataMap)
             .filter(([facetName]) => {
                 if (!searchTerm) return true;
                 const displayFacetName = getDisplayFacetName(facetTechId, facetName);
@@ -660,36 +604,15 @@ const Facets: React.FC<FacetsProps> = ({
                         <label key={facetName} className="facet-filter-checkbox-label">
                             <input
                                 type="checkbox"
-                                checked={!!checked[checkboxKey]?.[facetName]}
-                                onChange={() => handleCheckbox(checkboxKey, facetName)}
+                                checked={!!facetCheckedState[checkboxKey]?.[facetName]}
+                                onChange={() => onFacetCheckbox(checkboxKey, facetName)}
                             /> {displayName}{count > 0 ? ` (${count})` : ''}
                         </label>
                     );
                 })}
             </div>
         );
-    }, [expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, checked, handleCheckbox, facetSearchTerms, handleClearRightsStartDate, handleRightsStartDateChange, rightsStartDate, handleClearRightsEndDate, handleRightsEndDateChange, rightsEndDate, selectedMarkets, selectedMediaChannels, setSelectedMarkets, setSelectedMediaChannels]);
-
-    // Transform the checked object into an array of facet filters
-    useEffect(() => {
-        // Skip if we're currently updating from external source (like URL params)
-        if (isUpdatingFromExternalRef.current) {
-            isUpdatingFromExternalRef.current = false;
-            return;
-        }
-
-        const newSelectedFacetFilters: string[][] = [];
-        Object.keys(checked).forEach(key => {
-            const facetFilter: string[] = [];
-            Object.entries(checked[key]).forEach(([facet, isChecked]) => {
-                if (isChecked) {
-                    facetFilter.push(`${key}:${facet}`);
-                }
-            });
-            facetFilter.length > 0 && newSelectedFacetFilters.push(facetFilter);
-        });
-        setSelectedFacetFilters(newSelectedFacetFilters);
-    }, [checked, setSelectedFacetFilters]);
+    }, [expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, facetCheckedState, onFacetCheckbox, facetSearchTerms, handleClearRightsStartDate, handleRightsStartDateChange, rightsStartDate, handleClearRightsEndDate, handleRightsEndDateChange, rightsEndDate, selectedMarkets, selectedMediaChannels, setSelectedMarkets, setSelectedMediaChannels, deselectFacetCheckedState]);
 
     // Convert date ranges to numeric filters for search
     useEffect(() => {
@@ -712,22 +635,10 @@ const Facets: React.FC<FacetsProps> = ({
         // because handleClearAllChecks handles this directly to avoid double searches
     }, [dateRanges, setSelectedNumericFilters]);
 
-    // Sync internal checked state when selectedFacetFilters changes (e.g., from URL parameters)
-    useEffect(() => {
-        if (selectedFacetFilters !== undefined) {
-            const newChecked = loadSelectedFacetFilters(selectedFacetFilters);
-
-            // Set flag to indicate we're updating from external source
-            isUpdatingFromExternalRef.current = true;
-            setChecked(newChecked);
-        }
-    }, [selectedFacetFilters, loadSelectedFacetFilters]);
-
-
     // Count checked facets for a specific facetTechId
     const getCheckedCount = useCallback((facetTechId: string): number => {
         let count = 0;
-        Object.entries(checked).forEach(([key, facetChecked]) => {
+        Object.entries(facetCheckedState).forEach(([key, facetChecked]) => {
             if (key === facetTechId || key.startsWith(`${facetTechId}.`)) {
                 Object.values(facetChecked).forEach(isChecked => {
                     if (isChecked) count++;
@@ -735,23 +646,22 @@ const Facets: React.FC<FacetsProps> = ({
             }
         });
         return count;
-    }, [checked]);
+    }, [facetCheckedState]);
 
     // Count all checked facets across all categories
     const getTotalCheckedCount = useCallback((): number => {
         let totalCount = 0;
-        Object.values(checked).forEach(facetChecked => {
+        Object.values(facetCheckedState).forEach(facetChecked => {
             Object.values(facetChecked).forEach(isChecked => {
                 if (isChecked) totalCount++;
             });
         });
         return totalCount;
-    }, [checked]);
+    }, [facetCheckedState]);
 
     const handleClearAllChecks = useCallback(() => {
         isUpdatingFromExternalRef.current = true;
-        setChecked({});
-        setSelectedFacetFilters([]);
+        onClearAllFacets(); // Use callback to clear facet state in parent
         setDateRanges({});
         setExpandedFacets({}); // Collapse all facets
         setExpandedHierarchyItems({}); // Collapse all hierarchy items
@@ -763,7 +673,7 @@ const Facets: React.FC<FacetsProps> = ({
         dateRangeRef.current?.reset();
         setSelectedMarkets(new Set());
         setSelectedMediaChannels(new Set());
-    }, [setSelectedFacetFilters, setSelectedNumericFilters, setRightsStartDate, setRightsEndDate, setSelectedMarkets, setSelectedMediaChannels]);
+    }, [onClearAllFacets, setSelectedNumericFilters, setRightsStartDate, setRightsEndDate, setSelectedMarkets, setSelectedMediaChannels]);
 
     const handleApplyFilters = useCallback(() => {
         search();
@@ -810,16 +720,6 @@ const Facets: React.FC<FacetsProps> = ({
 
     const handleSaveSearchConfirm = () => {
         if (saveSearchName.trim()) {
-            const facetFilterGroups = Object.keys(checked).map(key => {
-                const facetFilter: string[] = [];
-                Object.entries(checked[key]).forEach(([facet, isChecked]) => {
-                    if (isChecked) {
-                        facetFilter.push(`${key}:${facet}`);
-                    }
-                });
-                return facetFilter;
-            }).filter(filter => filter.length > 0);
-
             // Capture current search type from URL path
             const currentPath = window.location.pathname;
             let searchType = '/search/all'; // default fallback
@@ -836,7 +736,7 @@ const Facets: React.FC<FacetsProps> = ({
                 id: now.toString(),
                 name: saveSearchName.trim(),
                 searchTerm: query,
-                facetFilters: [...facetFilterGroups],
+                facetFilters: facetCheckedState,
                 numericFilters: [...selectedNumericFilters],
                 dateCreated: now,
                 dateLastModified: now,
@@ -879,15 +779,12 @@ const Facets: React.FC<FacetsProps> = ({
         handleHideTooltip();
 
         // Reset current filters
-        setChecked({});
+        onClearAllFacets(); // Clear facet state in parent
         setDateRanges({});
         setExpandedFacets({});
         setExpandedHierarchyItems({});
         setFacetSearchMode({});
         setFacetSearchTerms({});
-
-        // Load saved facet filters
-        const newChecked = loadSelectedFacetFilters(savedSearch.facetFilters);
 
         // Load saved search term FIRST and ensure it's set before other updates
         const searchTerm = savedSearch.searchTerm || '';
@@ -898,11 +795,10 @@ const Facets: React.FC<FacetsProps> = ({
         setTimeout(() => {
             // Set flag to indicate we're updating from saved search loading
             isUpdatingFromExternalRef.current = true;
-            setChecked(newChecked);
 
-            // Then update filters - this will trigger the auto-search useEffect in MainApp
+            // Update filters - this will trigger the auto-search useEffect in MainApp
             // which will use the updated query state
-            setSelectedFacetFilters(savedSearch.facetFilters);
+            setFacetCheckedState(savedSearch.facetFilters);
             setSelectedNumericFilters(savedSearch.numericFilters);
 
             // Switch back to filters view
@@ -980,7 +876,12 @@ const Facets: React.FC<FacetsProps> = ({
 
     // Count total filters in saved search
     const countFilters = (savedSearch: SavedSearch): number => {
-        const facetFilterCount = savedSearch.facetFilters.reduce((total, filterGroup) => total + filterGroup.length, 0);
+        let facetFilterCount = 0;
+        Object.values(savedSearch.facetFilters).forEach(facetChecked => {
+            Object.values(facetChecked).forEach(isChecked => {
+                if (isChecked) facetFilterCount++;
+            });
+        });
         const numericFilterCount = savedSearch.numericFilters.length;
         return facetFilterCount + numericFilterCount;
     };
@@ -1045,16 +946,6 @@ const Facets: React.FC<FacetsProps> = ({
             setShowEditLinkModal(false);
             return;
         }
-        // Build current search details from state
-        const facetFilterGroups = Object.keys(checked).map(key => {
-            const facetFilter: string[] = [];
-            Object.entries(checked[key]).forEach(([facet, isChecked]) => {
-                if (isChecked) {
-                    facetFilter.push(`${key}:${facet}`);
-                }
-            });
-            return facetFilter;
-        }).filter(group => group.length > 0);
 
         const now = Date.now();
         const updated = savedSearches.map(s => (
@@ -1063,7 +954,7 @@ const Facets: React.FC<FacetsProps> = ({
                     ...s,
                     name: editingSearchName.trim() || s.name, // Use new name or keep existing if empty
                     searchTerm: query,
-                    facetFilters: [...facetFilterGroups],
+                    facetFilters: facetCheckedState,
                     numericFilters: [...selectedNumericFilters],
                     dateLastModified: now
                 }

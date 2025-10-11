@@ -207,6 +207,7 @@ export interface AssetCardProps {
     onCheckboxChange?: (id: string, checked: boolean) => void;
     expandAllDetails?: boolean;
     index?: number; // Index in the list - used for LCP optimization
+    onFacetCheckbox?: (key: string, facet: string) => void;
 }
 
 // Query and filter types
@@ -303,7 +304,7 @@ export interface SavedSearch {
     id: string;
     name: string;
     searchTerm: string;
-    facetFilters: string[][];
+    facetFilters: FacetCheckedState;
     numericFilters: string[];
     dateCreated: number;
     dateLastModified: number;
@@ -319,8 +320,6 @@ export interface FacetValue {
 
 export interface FacetsProps {
     searchResults?: SearchResults['results'] | null;
-    selectedFacetFilters?: string[][];
-    setSelectedFacetFilters: React.Dispatch<React.SetStateAction<string[][]>>;
     search: (searchQuery?: string) => void;
     excFacets?: Record<string, FacetValue>;
     selectedNumericFilters?: string[];
@@ -338,6 +337,10 @@ export interface FacetsProps {
     setSelectedMarkets: React.Dispatch<React.SetStateAction<Set<RightsData>>>;
     selectedMediaChannels: Set<RightsData>;
     setSelectedMediaChannels: React.Dispatch<React.SetStateAction<Set<RightsData>>>;
+    facetCheckedState: FacetCheckedState;
+    setFacetCheckedState: React.Dispatch<React.SetStateAction<FacetCheckedState>>;
+    onFacetCheckbox: (key: string, facet: string) => void;
+    onClearAllFacets: () => void;
 }
 
 // Phase 3 Component Types
@@ -414,6 +417,7 @@ export interface ImageGalleryProps {
     };
     fetchAssetRenditions?: (asset: Asset) => Promise<void>;
     isRightsSearch?: boolean;
+    onFacetCheckbox?: (key: string, facet: string) => void;
 }
 
 // Main App types (for the most complex component)
