@@ -35496,7 +35496,17 @@ const HIERARCHY_PREFIX = "TCCC.#hierarchy.lvl";
 const loadSavedSearches = () => {
   try {
     const saved = localStorage.getItem("koassets-saved-searches");
-    return saved ? JSON.parse(saved) : [];
+    if (!saved) return [];
+    const parsedSearches = JSON.parse(saved);
+    return parsedSearches.map((search) => ({
+      ...search,
+      rightsFilters: {
+        rightsStartDate: search.rightsFilters.rightsStartDate ? epochToCalendarDate(search.rightsFilters.rightsStartDate / 1e3) : null,
+        rightsEndDate: search.rightsFilters.rightsEndDate ? epochToCalendarDate(search.rightsFilters.rightsEndDate / 1e3) : null,
+        markets: new Set(search.rightsFilters.markets || []),
+        mediaChannels: new Set(search.rightsFilters.mediaChannels || [])
+      }
+    }));
   } catch (error) {
     console.error("Error loading saved searches:", error);
     return [];
@@ -35522,7 +35532,16 @@ const rightsFacets = {
 };
 const saveSavedSearches = (searches) => {
   try {
-    localStorage.setItem("koassets-saved-searches", JSON.stringify(searches));
+    const searchesForSaving = searches.map((search) => ({
+      ...search,
+      rightsFilters: {
+        rightsStartDate: search.rightsFilters.rightsStartDate ? calendarDateToEpoch(search.rightsFilters.rightsStartDate) : null,
+        rightsEndDate: search.rightsFilters.rightsEndDate ? calendarDateToEpoch(search.rightsFilters.rightsEndDate) : null,
+        markets: Array.from(search.rightsFilters.markets),
+        mediaChannels: Array.from(search.rightsFilters.mediaChannels)
+      }
+    }));
+    localStorage.setItem("koassets-saved-searches", JSON.stringify(searchesForSaving));
   } catch (error) {
     console.error("Error saving searches:", error);
   }
@@ -36043,7 +36062,7 @@ const Facets = ({
   const handleSaveSearch = () => {
     setShowSaveModal(true);
   };
-  const handleSaveSearchConfirm = () => {
+  const handleSaveSearchConfirm = reactExports.useCallback(() => {
     if (saveSearchName.trim()) {
       const currentPath = window.location.pathname;
       let searchType = "/search/all";
@@ -36054,6 +36073,12 @@ const Facets = ({
       } else if (currentPath.includes("/search/all")) {
         searchType = "/search/all";
       }
+      const rightsFilters = {
+        rightsStartDate,
+        rightsEndDate,
+        markets: new Set(selectedMarkets),
+        mediaChannels: new Set(selectedMediaChannels)
+      };
       const now = Date.now();
       const newSearch = {
         id: now.toString(),
@@ -36061,6 +36086,7 @@ const Facets = ({
         searchTerm: query,
         facetFilters: facetCheckedState,
         numericFilters: [...selectedNumericFilters],
+        rightsFilters,
         dateCreated: now,
         dateLastModified: now,
         dateLastUsed: now,
@@ -36074,7 +36100,7 @@ const Facets = ({
       setSaveSearchName("");
       setShowSaveModal(false);
     }
-  };
+  }, [saveSearchName, selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate, query, facetCheckedState, selectedNumericFilters, savedSearches]);
   const handleSaveSearchCancel = () => {
     setSaveSearchName("");
     setShowSaveModal(false);
@@ -36101,6 +36127,12 @@ const Facets = ({
       isUpdatingFromExternalRef.current = true;
       setFacetCheckedState(savedSearch.facetFilters);
       setSelectedNumericFilters(savedSearch.numericFilters);
+      if (savedSearch.rightsFilters) {
+        setRightsStartDate == null ? void 0 : setRightsStartDate(savedSearch.rightsFilters.rightsStartDate);
+        setRightsEndDate == null ? void 0 : setRightsEndDate(savedSearch.rightsFilters.rightsEndDate);
+        setSelectedMarkets(new Set(savedSearch.rightsFilters.markets));
+        setSelectedMediaChannels(new Set(savedSearch.rightsFilters.mediaChannels));
+      }
       setActiveView("filters");
       const now = Date.now();
       const usedUpdated = savedSearches.map((s) => s.id === savedSearch.id ? { ...s, dateLastUsed: now } : s);
@@ -36209,11 +36241,17 @@ const Facets = ({
     setEditingSearchName("");
     setEditingSearchId(null);
   };
-  const handleConfirmEditLink = () => {
+  const handleConfirmEditLink = reactExports.useCallback(() => {
     if (!editingSearchId) {
       setShowEditLinkModal(false);
       return;
     }
+    const rightsFilters = {
+      rightsStartDate,
+      rightsEndDate,
+      markets: new Set(selectedMarkets),
+      mediaChannels: new Set(selectedMediaChannels)
+    };
     const now = Date.now();
     const updated = savedSearches.map((s) => s.id === editingSearchId ? {
       ...s,
@@ -36222,6 +36260,7 @@ const Facets = ({
       searchTerm: query,
       facetFilters: facetCheckedState,
       numericFilters: [...selectedNumericFilters],
+      rightsFilters,
       dateLastModified: now
     } : s);
     setSavedSearches(updated);
@@ -36231,7 +36270,7 @@ const Facets = ({
     setEditLinkText("");
     setEditingSearchName("");
     setEditingSearchId(null);
-  };
+  }, [editingSearchId, selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate, query, facetCheckedState, selectedNumericFilters, savedSearches, editingSearchName]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "facet-filter-container", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "facet-filter", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "facet-filter-header", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "facet-filter-tabs", children: [

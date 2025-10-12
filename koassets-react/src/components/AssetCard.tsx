@@ -37,9 +37,6 @@ const AssetCard: React.FC<AssetCardBaseProps> = ({
     // Get dynamicMediaClient from context
     const { dynamicMediaClient } = useAppConfig();
     
-    // onFacetCheckbox can be used to call Facets' handleFacetCheckbox method
-    // Example usage: onFacetCheckbox?.('facetKey', 'facetValue')
-    
     // Check if this item is already in the cart
     const isInCart = cartAssetItems.some(cartAssetItem => cartAssetItem.assetId === image.assetId);
 

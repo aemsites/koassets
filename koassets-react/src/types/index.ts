@@ -11,6 +11,13 @@ export interface RightsData {
     children?: RightsData[];
 }
 
+export interface RightsFilters {
+    rightsStartDate: DateValue;
+    rightsEndDate: DateValue;
+    markets: Set<RightsData>;
+    mediaChannels: Set<RightsData>;
+}
+
 // Step form data interfaces for persistence
 export interface RequestDownloadStepData {
     airDate?: import('@internationalized/date').CalendarDate | null;
@@ -306,6 +313,7 @@ export interface SavedSearch {
     searchTerm: string;
     facetFilters: FacetCheckedState;
     numericFilters: string[];
+    rightsFilters: RightsFilters;
     dateCreated: number;
     dateLastModified: number;
     dateLastUsed?: number;

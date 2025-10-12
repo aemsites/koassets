@@ -1,7 +1,8 @@
 import { ToastQueue } from '@react-spectrum/toast';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DateValue } from 'react-aria-components';
-import type { FacetsProps, FacetValue, SavedSearch, SearchResult } from '../types';
+import { CalendarDate } from '@internationalized/date';
+import type { FacetsProps, FacetValue, RightsFilters, SavedSearch, SearchResult, RightsData } from '../types';
 import DateRange, { DateRangeRef } from './DateRange';
 import './Facets.css';
 import Markets from './Markets';
@@ -9,6 +10,7 @@ import MediaChannels from './MediaChannels';
 import MyDatePicker from './MyDatePicker';
 import buildSavedSearchUrl from '../../../scripts/saved-search-utils.js';
 import { getDisplayFacetName } from '../utils/displayUtils';
+import { calendarDateToEpoch, epochToCalendarDate } from '../utils/formatters';
 
 interface ExpandedFacetsState {
     [key: string]: boolean;
@@ -20,7 +22,27 @@ const HIERARCHY_PREFIX = 'TCCC.#hierarchy.lvl';
 const loadSavedSearches = (): SavedSearch[] => {
     try {
         const saved = localStorage.getItem('koassets-saved-searches');
-        return saved ? JSON.parse(saved) : [];
+        if (!saved) return [];
+        
+        const parsedSearches = JSON.parse(saved);
+        
+        // Convert Arrays back to Sets and epoch timestamps back to DateValues after JSON deserialization
+        return parsedSearches.map((search: SavedSearch & {
+            rightsFilters: Omit<RightsFilters, 'markets' | 'mediaChannels' | 'rightsStartDate' | 'rightsEndDate'> & {
+                rightsStartDate: number | null;
+                rightsEndDate: number | null;
+                markets: RightsData[];
+                mediaChannels: RightsData[];
+            }
+        }) => ({
+            ...search,
+            rightsFilters: {
+                rightsStartDate: search.rightsFilters.rightsStartDate ? epochToCalendarDate(search.rightsFilters.rightsStartDate / 1000) : null,
+                rightsEndDate: search.rightsFilters.rightsEndDate ? epochToCalendarDate(search.rightsFilters.rightsEndDate / 1000) : null,
+                markets: new Set(search.rightsFilters.markets || []),
+                mediaChannels: new Set(search.rightsFilters.mediaChannels || [])
+            }
+        }));
     } catch (error) {
         console.error('Error loading saved searches:', error);
         return [];
@@ -48,7 +70,18 @@ const rightsFacets: Record<string, FacetValue> = {
 
 const saveSavedSearches = (searches: SavedSearch[]): void => {
     try {
-        localStorage.setItem('koassets-saved-searches', JSON.stringify(searches));
+        // Convert Sets to Arrays and DateValues to epoch for JSON serialization
+        const searchesForSaving = searches.map(search => ({
+            ...search,
+            rightsFilters: {
+                rightsStartDate: search.rightsFilters.rightsStartDate ? calendarDateToEpoch(search.rightsFilters.rightsStartDate as CalendarDate) : null,
+                rightsEndDate: search.rightsFilters.rightsEndDate ? calendarDateToEpoch(search.rightsFilters.rightsEndDate as CalendarDate) : null,
+                markets: Array.from(search.rightsFilters.markets),
+                mediaChannels: Array.from(search.rightsFilters.mediaChannels)
+            }
+        }));
+        
+        localStorage.setItem('koassets-saved-searches', JSON.stringify(searchesForSaving));
     } catch (error) {
         console.error('Error saving searches:', error);
     }
@@ -204,7 +237,6 @@ const Facets: React.FC<FacetsProps> = ({
     const [dateRanges, setDateRanges] = useState<{ [key: string]: [number | undefined, number | undefined] }>({});
     const dateRangeRef = useRef<DateRangeRef>(null);
     const isUpdatingFromExternalRef = useRef(false);
-
 
     // Rights date picker handlers
     const handleRightsStartDateChange = useCallback((date: DateValue | null) => {
@@ -718,7 +750,7 @@ const Facets: React.FC<FacetsProps> = ({
         setShowSaveModal(true);
     };
 
-    const handleSaveSearchConfirm = () => {
+    const handleSaveSearchConfirm = useCallback(() => {
         if (saveSearchName.trim()) {
             // Capture current search type from URL path
             const currentPath = window.location.pathname;
@@ -731,6 +763,13 @@ const Facets: React.FC<FacetsProps> = ({
                 searchType = '/search/all';
             }
 
+            const rightsFilters: RightsFilters = {
+                rightsStartDate: rightsStartDate as DateValue,
+                rightsEndDate: rightsEndDate as DateValue,
+                markets: new Set(selectedMarkets),
+                mediaChannels: new Set(selectedMediaChannels)
+            };
+
             const now = Date.now();
             const newSearch: SavedSearch = {
                 id: now.toString(),
@@ -738,6 +777,7 @@ const Facets: React.FC<FacetsProps> = ({
                 searchTerm: query,
                 facetFilters: facetCheckedState,
                 numericFilters: [...selectedNumericFilters],
+                rightsFilters: rightsFilters,
                 dateCreated: now,
                 dateLastModified: now,
                 dateLastUsed: now,
@@ -755,7 +795,7 @@ const Facets: React.FC<FacetsProps> = ({
             setSaveSearchName('');
             setShowSaveModal(false);
         }
-    };
+    }, [saveSearchName, selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate, query, facetCheckedState, selectedNumericFilters, savedSearches]);
 
     const handleSaveSearchCancel = () => {
         setSaveSearchName('');
@@ -800,6 +840,14 @@ const Facets: React.FC<FacetsProps> = ({
             // which will use the updated query state
             setFacetCheckedState(savedSearch.facetFilters);
             setSelectedNumericFilters(savedSearch.numericFilters);
+
+            // Restore rights filters (markets and media channels)
+            if (savedSearch.rightsFilters) {
+                setRightsStartDate?.(savedSearch.rightsFilters.rightsStartDate);
+                setRightsEndDate?.(savedSearch.rightsFilters.rightsEndDate);
+                setSelectedMarkets(new Set(savedSearch.rightsFilters.markets));
+                setSelectedMediaChannels(new Set(savedSearch.rightsFilters.mediaChannels));
+            }
 
             // Switch back to filters view
             setActiveView('filters');
@@ -941,12 +989,19 @@ const Facets: React.FC<FacetsProps> = ({
         setEditingSearchId(null);
     };
 
-    const handleConfirmEditLink = () => {
+    const handleConfirmEditLink = useCallback(() => {
         if (!editingSearchId) {
             setShowEditLinkModal(false);
             return;
         }
 
+        const rightsFilters: RightsFilters = {
+            rightsStartDate: rightsStartDate as DateValue,
+            rightsEndDate: rightsEndDate as DateValue,
+            markets: new Set(selectedMarkets),
+            mediaChannels: new Set(selectedMediaChannels)
+        };
+        
         const now = Date.now();
         const updated = savedSearches.map(s => (
             s.id === editingSearchId
@@ -956,6 +1011,7 @@ const Facets: React.FC<FacetsProps> = ({
                     searchTerm: query,
                     facetFilters: facetCheckedState,
                     numericFilters: [...selectedNumericFilters],
+                    rightsFilters: rightsFilters,
                     dateLastModified: now
                 }
                 : s
@@ -971,7 +1027,7 @@ const Facets: React.FC<FacetsProps> = ({
         setEditLinkText('');
         setEditingSearchName('');
         setEditingSearchId(null);
-    };
+    }, [editingSearchId, selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate, query, facetCheckedState, selectedNumericFilters, savedSearches, editingSearchName]);
 
     return (
         <>
