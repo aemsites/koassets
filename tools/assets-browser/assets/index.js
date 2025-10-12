@@ -33235,11 +33235,16 @@ const MediaChannels = ({
   ] }, channel.rightId)) });
 };
 function MyDatePicker({ description, errorMessage, showClearButton = false, onClear, className, ...props }) {
+  const dropdownButtonRef = reactExports.useRef(null);
+  const handleDateInputClick = () => {
+    var _a;
+    (_a = dropdownButtonRef.current) == null ? void 0 : _a.click();
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs($06d5b8ec9ee5d538$export$5109c6dd95d8fb00, { ...props, className: `my-date-picker ${className}`, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "date-picker-wrapper", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs($a049562f99e7db0e$export$eb2fcfdbd7ba97d4, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx($40825cdb76e74f70$export$7edc06cf1783b30f, { children: (segment) => /* @__PURE__ */ jsxRuntimeExports.jsx($40825cdb76e74f70$export$336ab7fa954c4b5f, { segment }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx($d2b4bc8c273e7be6$export$353f5b6fc5456de1, { children: "▼" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx($40825cdb76e74f70$export$7edc06cf1783b30f, { onClick: handleDateInputClick, children: (segment) => /* @__PURE__ */ jsxRuntimeExports.jsx($40825cdb76e74f70$export$336ab7fa954c4b5f, { segment }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx($d2b4bc8c273e7be6$export$353f5b6fc5456de1, { ref: dropdownButtonRef, children: "▼" })
       ] }),
       showClearButton && /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
