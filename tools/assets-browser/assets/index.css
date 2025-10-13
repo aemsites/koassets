@@ -5464,6 +5464,8 @@ button:disabled:hover {
 }
 
 .item-thumbnail {
+  width: 92px;
+  height: 72px;
   overflow: hidden;
   display: flex;
   align-items: center;
