@@ -9000,8 +9000,7 @@ button[slot="next"]:hover {
 .facet-filter-arrow-sub-level {
   cursor: pointer;
   font-size: 12px;
-  color: #666;
-  margin-left: 8px;
+  padding: 5px 0 5px 10%;
   font-weight: bold;
 }
 
@@ -9098,7 +9097,6 @@ button[slot="next"]:hover {
   color: #404040;
   display: flex;
   align-items: center;
-  gap: 8px;
   cursor: pointer;
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -9156,7 +9154,7 @@ button[slot="next"]:hover {
 .facet-hierarchy-container-with-sublevel {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 3px;
 }
 
 /* Facet Filter Panel Layout */
@@ -9831,6 +9829,7 @@ button[slot="next"]:hover {
   gap: 20px;
   flex-shrink: 0;
   min-width: 0;
+  padding-left: 7%;
 }
 
 /* Prevent buttons from retaining focus/active states after click */
@@ -9872,6 +9871,27 @@ button[slot="next"]:hover {
 .facet-filter-section .media-channels-list {
   border: none;
   padding: 0 8px 8px 8px;
+}
+
+.caret-icon::before {
+  content: "\f0da";
+  cursor: pointer;
+  font-family: FontAwesome;
+  font-size: 16px;
+  margin-left: auto;
+  padding: 0px 8px 0px 30%;
+  right: 0;
+  top: 50%;
+  -webkit-transform: translateY(-50%);
+  transform: translateY(-50%);
+}
+
+.caret-icon.expanded::before {
+  content: "\f0d7";
+}
+
+.caret-icon:hover::before {
+  color: var(--primary-color);
 }/* Base button styles - applied to all action buttons */
 .action-button {
   -webkit-text-size-adjust: 100%;
