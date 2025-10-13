@@ -215,6 +215,7 @@ export interface AssetCardProps {
     expandAllDetails?: boolean;
     index?: number; // Index in the list - used for LCP optimization
     onFacetCheckbox?: (key: string, facet: string) => void;
+    onClearAllFacets?: () => void;
 }
 
 // Query and filter types
@@ -348,7 +349,7 @@ export interface FacetsProps {
     facetCheckedState: FacetCheckedState;
     setFacetCheckedState: React.Dispatch<React.SetStateAction<FacetCheckedState>>;
     onFacetCheckbox: (key: string, facet: string) => void;
-    onClearAllFacets: () => void;
+    onClearAllFacets?: (clearFunction: () => void) => void;
 }
 
 // Phase 3 Component Types
@@ -426,6 +427,7 @@ export interface ImageGalleryProps {
     fetchAssetRenditions?: (asset: Asset) => Promise<void>;
     isRightsSearch?: boolean;
     onFacetCheckbox?: (key: string, facet: string) => void;
+    onClearAllFacets?: () => void;
 }
 
 // Main App types (for the most complex component)

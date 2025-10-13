@@ -693,19 +693,26 @@ const Facets: React.FC<FacetsProps> = ({
 
     const handleClearAllChecks = useCallback(() => {
         isUpdatingFromExternalRef.current = true;
-        onClearAllFacets(); // Use callback to clear facet state in parent
+        setFacetCheckedState({});
+        setSelectedNumericFilters([]);
+        setRightsStartDate?.(null);
+        setRightsEndDate?.(null);
+        setSelectedMarkets(new Set());
+        setSelectedMediaChannels(new Set());
+        
+        // Clear Facets-specific UI state
         setDateRanges({});
         setExpandedFacets({}); // Collapse all facets
         setExpandedHierarchyItems({}); // Collapse all hierarchy items
         setFacetSearchMode({}); // Exit all search modes
         setFacetSearchTerms({}); // Clear all search terms
-        setSelectedNumericFilters([]);
-        setRightsStartDate?.(null); // Clear rights start date
-        setRightsEndDate?.(null); // Clear rights end date
         dateRangeRef.current?.reset();
-        setSelectedMarkets(new Set());
-        setSelectedMediaChannels(new Set());
-    }, [onClearAllFacets, setSelectedNumericFilters, setRightsStartDate, setRightsEndDate, setSelectedMarkets, setSelectedMediaChannels]);
+    }, [setFacetCheckedState, setSelectedNumericFilters, setRightsStartDate, setRightsEndDate, setSelectedMarkets, setSelectedMediaChannels]);
+
+    // Pass handleClearAllChecks function to parent
+    useEffect(() => {
+        onClearAllFacets?.(handleClearAllChecks);
+    }, [handleClearAllChecks, onClearAllFacets]);
 
     const handleApplyFilters = useCallback(() => {
         search();
@@ -819,12 +826,7 @@ const Facets: React.FC<FacetsProps> = ({
         handleHideTooltip();
 
         // Reset current filters
-        onClearAllFacets(); // Clear facet state in parent
-        setDateRanges({});
-        setExpandedFacets({});
-        setExpandedHierarchyItems({});
-        setFacetSearchMode({});
-        setFacetSearchTerms({});
+        handleClearAllChecks();
 
         // Load saved search term FIRST and ensure it's set before other updates
         const searchTerm = savedSearch.searchTerm || '';
@@ -836,12 +838,10 @@ const Facets: React.FC<FacetsProps> = ({
             // Set flag to indicate we're updating from saved search loading
             isUpdatingFromExternalRef.current = true;
 
-            // Update filters - this will trigger the auto-search useEffect in MainApp
-            // which will use the updated query state
-            setFacetCheckedState(savedSearch.facetFilters);
-            setSelectedNumericFilters(savedSearch.numericFilters);
+            setFacetCheckedState(savedSearch.facetFilters); // populate the selected facets
+            setSelectedNumericFilters(savedSearch.numericFilters); // populate the selected numeric filters (createDate)
 
-            // Restore rights filters (markets and media channels)
+            // populate the rights filters (start date, end date, markets and media channels)
             if (savedSearch.rightsFilters) {
                 setRightsStartDate?.(savedSearch.rightsFilters.rightsStartDate);
                 setRightsEndDate?.(savedSearch.rightsFilters.rightsEndDate);
