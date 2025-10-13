@@ -5498,7 +5498,7 @@ button:disabled:hover {
   font-weight: 600;
 }
 
-.koassets-search-container picture {
+.koassets-search-container picture:not(.missing) {
   background-color: rgb(249 249 249);
 }/* Base Panel Styles - Shared across all panels */
 
