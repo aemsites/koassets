@@ -111,6 +111,7 @@ function MainApp(): React.JSX.Element {
     const [rightsEndDate, setRightsEndDate] = useState<DateValue | null>(null);
     const [selectedMarkets, setSelectedMarkets] = useState<Set<RightsData>>(new Set());
     const [selectedMediaChannels, setSelectedMediaChannels] = useState<Set<RightsData>>(new Set());
+    const [clearAllFacetsFunction, setClearAllFacetsFunction] = useState<(() => void) | null>(null);
     const searchDisabledRef = useRef<boolean>(false);
     const isRightsSearchRef = useRef<boolean>(false);
 
@@ -154,9 +155,9 @@ function MainApp(): React.JSX.Element {
         }));
     }, []);
 
-    // Handler for clearing all facet checks - lifted from Facets component
-    const handleClearAllFacets = useCallback(() => {
-        setFacetCheckedState({});
+    // Callback to receive handleClearAllChecks function from Facets
+    const handleReceiveClearAllFacets = useCallback((clearFunction: () => void) => {
+        setClearAllFacetsFunction(() => clearFunction);
     }, []);
 
     const [presetFilters, setPresetFilters] = useState<string[]>(() =>
@@ -286,7 +287,7 @@ function MainApp(): React.JSX.Element {
                     let processedImages: Asset[] = hits.map(populateAssetFromHit);
 
                     // When performing a rights search, we need to check the rights of the assets
-                    if (isRightsSearchRef.current) {
+                    if (isRightsSearchRef.current && rightsStartDate && rightsEndDate && selectedMediaChannels.size > 0 && selectedMarkets.size > 0) {
                         const checkRightsRequest: CheckRightsRequest = {
                             inDate: calendarDateToEpoch(rightsStartDate as CalendarDate),
                             outDate: calendarDateToEpoch(rightsEndDate as CalendarDate),
@@ -665,6 +666,7 @@ function MainApp(): React.JSX.Element {
                     fetchAssetRenditions={fetchAssetRenditions}
                     isRightsSearch={isRightsSearch}
                     onFacetCheckbox={handleFacetCheckbox}
+                    onClearAllFacets={clearAllFacetsFunction || undefined}
                 />
             ) : (
                 <></>
@@ -735,7 +737,7 @@ function MainApp(): React.JSX.Element {
                                         facetCheckedState={facetCheckedState}
                                         setFacetCheckedState={setFacetCheckedState}
                                         onFacetCheckbox={handleFacetCheckbox}
-                                        onClearAllFacets={handleClearAllFacets}
+                                        onClearAllFacets={handleReceiveClearAllFacets}
                                     />
                                 </div>
                             </div>

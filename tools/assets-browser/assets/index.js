@@ -36028,19 +36028,22 @@ const Facets = ({
   const handleClearAllChecks = reactExports.useCallback(() => {
     var _a;
     isUpdatingFromExternalRef.current = true;
-    onClearAllFacets();
+    setFacetCheckedState({});
+    setSelectedNumericFilters([]);
+    setRightsStartDate == null ? void 0 : setRightsStartDate(null);
+    setRightsEndDate == null ? void 0 : setRightsEndDate(null);
+    setSelectedMarkets(/* @__PURE__ */ new Set());
+    setSelectedMediaChannels(/* @__PURE__ */ new Set());
     setDateRanges({});
     setExpandedFacets({});
     setExpandedHierarchyItems({});
     setFacetSearchMode({});
     setFacetSearchTerms({});
-    setSelectedNumericFilters([]);
-    setRightsStartDate == null ? void 0 : setRightsStartDate(null);
-    setRightsEndDate == null ? void 0 : setRightsEndDate(null);
     (_a = dateRangeRef.current) == null ? void 0 : _a.reset();
-    setSelectedMarkets(/* @__PURE__ */ new Set());
-    setSelectedMediaChannels(/* @__PURE__ */ new Set());
-  }, [onClearAllFacets, setSelectedNumericFilters, setRightsStartDate, setRightsEndDate, setSelectedMarkets, setSelectedMediaChannels]);
+  }, [setFacetCheckedState, setSelectedNumericFilters, setRightsStartDate, setRightsEndDate, setSelectedMarkets, setSelectedMediaChannels]);
+  reactExports.useEffect(() => {
+    onClearAllFacets == null ? void 0 : onClearAllFacets(handleClearAllChecks);
+  }, [handleClearAllChecks, onClearAllFacets]);
   const handleApplyFilters = reactExports.useCallback(() => {
     search();
   }, [search]);
@@ -36120,12 +36123,7 @@ const Facets = ({
       }
     }
     handleHideTooltip();
-    onClearAllFacets();
-    setDateRanges({});
-    setExpandedFacets({});
-    setExpandedHierarchyItems({});
-    setFacetSearchMode({});
-    setFacetSearchTerms({});
+    handleClearAllChecks();
     const searchTerm = savedSearch.searchTerm || "";
     setQuery(searchTerm);
     setTimeout(() => {
@@ -36732,7 +36730,8 @@ const AssetCard = ({
   index = 0,
   viewMode,
   className = "",
-  onFacetCheckbox
+  onFacetCheckbox,
+  onClearAllFacets
 }) => {
   const { dynamicMediaClient } = useAppConfig();
   const isInCart = cartAssetItems.some((cartAssetItem) => cartAssetItem.assetId === image.assetId);
@@ -36855,6 +36854,7 @@ const AssetCard = ({
             className: "product-tag tccc-tag",
             onClick: (e) => {
               e.stopPropagation();
+              onClearAllFacets == null ? void 0 : onClearAllFacets();
               onFacetCheckbox == null ? void 0 : onFacetCheckbox("tccc-campaignName", image == null ? void 0 : image.campaignName);
             },
             style: { cursor: "pointer" },
@@ -38286,7 +38286,8 @@ const ImageGallery = ({
   assetRenditionsCache = {},
   fetchAssetRenditions,
   isRightsSearch = false,
-  onFacetCheckbox
+  onFacetCheckbox,
+  onClearAllFacets
 }) => {
   const { externalParams: externalParams2 } = useAppConfig();
   const accordionTitle = (externalParams2 == null ? void 0 : externalParams2.accordionTitle) || DEFAULT_ACCORDION_CONFIG.accordionTitle;
@@ -38492,7 +38493,8 @@ const ImageGallery = ({
             onCheckboxChange: handleCheckboxChange,
             expandAllDetails,
             index,
-            onFacetCheckbox
+            onFacetCheckbox,
+            onClearAllFacets
           },
           visibleImage.assetId
         );
@@ -38593,6 +38595,7 @@ function MainApp() {
   const [rightsEndDate, setRightsEndDate] = reactExports.useState(null);
   const [selectedMarkets, setSelectedMarkets] = reactExports.useState(/* @__PURE__ */ new Set());
   const [selectedMediaChannels, setSelectedMediaChannels] = reactExports.useState(/* @__PURE__ */ new Set());
+  const [clearAllFacetsFunction, setClearAllFacetsFunction] = reactExports.useState(null);
   const searchDisabledRef = reactExports.useRef(false);
   const isRightsSearchRef = reactExports.useRef(false);
   const selectedFacetFilters = reactExports.useMemo(() => {
@@ -38630,8 +38633,8 @@ function MainApp() {
       };
     });
   }, []);
-  const handleClearAllFacets = reactExports.useCallback(() => {
-    setFacetCheckedState({});
+  const handleReceiveClearAllFacets = reactExports.useCallback((clearFunction) => {
+    setClearAllFacetsFunction(() => clearFunction);
   }, []);
   const [presetFilters, setPresetFilters] = reactExports.useState(
     () => externalParams2.presetFilters || []
@@ -38715,7 +38718,7 @@ function MainApp() {
         const hits = results[0].hits;
         if (hits.length > 0) {
           let processedImages = hits.map(populateAssetFromHit);
-          if (isRightsSearchRef.current) {
+          if (isRightsSearchRef.current && rightsStartDate && rightsEndDate && selectedMediaChannels.size > 0 && selectedMarkets.size > 0) {
             const checkRightsRequest = {
               inDate: calendarDateToEpoch(rightsStartDate),
               outDate: calendarDateToEpoch(rightsEndDate),
@@ -39002,7 +39005,8 @@ function MainApp() {
       assetRenditionsCache,
       fetchAssetRenditions,
       isRightsSearch,
-      onFacetCheckbox: handleFacetCheckbox
+      onFacetCheckbox: handleFacetCheckbox,
+      onClearAllFacets: clearAllFacetsFunction || void 0
     }
   ) : /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {}) });
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -39067,7 +39071,7 @@ function MainApp() {
               facetCheckedState,
               setFacetCheckedState,
               onFacetCheckbox: handleFacetCheckbox,
-              onClearAllFacets: handleClearAllFacets
+              onClearAllFacets: handleReceiveClearAllFacets
             }
           ) })
         ] }) }) }) })

@@ -32,7 +32,8 @@ const AssetCard: React.FC<AssetCardBaseProps> = ({
     index = 0,
     viewMode,
     className = '',
-    onFacetCheckbox
+    onFacetCheckbox,
+    onClearAllFacets
 }) => {
     // Get dynamicMediaClient from context
     const { dynamicMediaClient } = useAppConfig();
@@ -190,6 +191,9 @@ const AssetCard: React.FC<AssetCardBaseProps> = ({
                                         className="product-tag tccc-tag"
                                         onClick={(e) => {
                                             e.stopPropagation();
+                                            // Clear all facets first
+                                            onClearAllFacets?.();
+                                            // Then select only this campaign facet
                                             onFacetCheckbox?.('tccc-campaignName', image?.campaignName as string);
                                         }}
                                         style={{ cursor: 'pointer' }}

@@ -38,7 +38,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     assetRenditionsCache = {},
     fetchAssetRenditions,
     isRightsSearch = false,
-    onFacetCheckbox
+    onFacetCheckbox,
+    onClearAllFacets
 }: ImageGalleryProps) => {
     // Get external params and dynamic media client from context
     const { externalParams } = useAppConfig();
@@ -309,6 +310,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                                         expandAllDetails={expandAllDetails}
                                         index={index}
                                         onFacetCheckbox={onFacetCheckbox}
+                                        onClearAllFacets={onClearAllFacets}
                                     />
                                 );
                             })}
