@@ -35880,9 +35880,8 @@ const Facets = ({
               hasSubLevels && /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "span",
                 {
-                  className: "facet-filter-arrow-sub-level",
-                  onClick: () => toggleHierarchyItem(hierarchyItemKey, facetTechId, fullPath, facetTechIdHierarchyData),
-                  children: isHierarchyItemExpanded ? "▼" : "▶"
+                  className: `facet-filter-arrow-sub-level caret-icon ${isHierarchyItemExpanded ? "expanded" : ""}`,
+                  onClick: () => toggleHierarchyItem(hierarchyItemKey, facetTechId, fullPath, facetTechIdHierarchyData)
                 }
               )
             ] }),
