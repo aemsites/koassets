@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import type { DatePickerProps, DateValue, ValidationResult } from 'react-aria-components';
 import { Button, Calendar, CalendarCell, CalendarGrid, DateInput, DatePicker, DateSegment, Dialog, FieldError, Group, Heading, Popover, Text } from 'react-aria-components';
 import './MyDatePicker.css';
@@ -15,15 +16,22 @@ export default function MyDatePicker<T extends DateValue>(
     { description, errorMessage, showClearButton = false, onClear, className, ...props }:
         MyDatePickerProps<T>
 ) {
+    const dropdownButtonRef = useRef<HTMLButtonElement>(null);
+
+    const handleDateInputClick = () => {
+        // Programmatically click the dropdown button
+        dropdownButtonRef.current?.click();
+    };
+
     return (
         <DatePicker {...props} className={`my-date-picker ${className}`}>
             {/* <Label>{label}</Label> */}
             <div className="date-picker-wrapper">
                 <Group>
-                    <DateInput>
+                    <DateInput onClick={handleDateInputClick}>
                         {(segment) => <DateSegment segment={segment} />}
                     </DateInput>
-                    <Button>
+                    <Button ref={dropdownButtonRef}>
                         ▼
                     </Button>
                 </Group>

@@ -1,5 +1,5 @@
 import { ToastQueue } from '@react-spectrum/toast';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DateValue } from 'react-aria-components';
 import '../MainApp.css';
 
@@ -13,6 +13,7 @@ import type {
     Collection,
     CurrentView,
     ExternalParams,
+    FacetCheckedState,
     LoadingState,
     Rendition,
     RightsData,
@@ -68,6 +69,8 @@ function isCookieAuth(): boolean {
         || window.location.origin === 'http://localhost:8787';
 }
 
+const EMPTY_FACET_FILTERS: string[][] = [];
+
 function MainApp(): React.JSX.Element {
     // External parameters from plain JavaScript
     const [externalParams] = useState<ExternalParams>(() => {
@@ -100,7 +103,7 @@ function MainApp(): React.JSX.Element {
     const [loading, setLoading] = useState<LoadingState>({ [LOADING.dmImages]: false, [LOADING.collections]: false });
     const [currentView, setCurrentView] = useState<CurrentView>(CURRENT_VIEW.images);
     const [selectedQueryType, setSelectedQueryType] = useState<string>(QUERY_TYPES.ALL);
-    const [selectedFacetFilters, setSelectedFacetFilters] = useState<string[][]>([]);
+    const [facetCheckedState, setFacetCheckedState] = useState<FacetCheckedState>({});
     const [selectedNumericFilters, setSelectedNumericFilters] = useState<string[]>([]);
     const [searchDisabled, setSearchDisabled] = useState<boolean>(false);
     const [isRightsSearch, setIsRightsSearch] = useState<boolean>(false);
@@ -111,6 +114,25 @@ function MainApp(): React.JSX.Element {
     const searchDisabledRef = useRef<boolean>(false);
     const isRightsSearchRef = useRef<boolean>(false);
 
+    // Derive selectedFacetFilters (used for search API) from facetCheckedState
+    const selectedFacetFilters = useMemo(() => {
+        const newSelectedFacetFilters: string[][] = [];
+        Object.keys(facetCheckedState).forEach(key => {
+            const facetFilter: string[] = [];
+            Object.entries(facetCheckedState[key]).forEach(([facet, isChecked]) => {
+                if (isChecked) {
+                    facetFilter.push(`${key}:${facet}`);
+                }
+            });
+            if (facetFilter.length > 0) {
+                newSelectedFacetFilters.push(facetFilter);
+            }
+        });
+        
+        // Return the same reference for empty arrays
+        return newSelectedFacetFilters.length === 0 ? EMPTY_FACET_FILTERS : newSelectedFacetFilters;
+    }, [facetCheckedState]);
+
     const handleSetSearchDisabled = useCallback((disabled: boolean) => {
         searchDisabledRef.current = disabled; // Update ref immediately
         setSearchDisabled(disabled);
@@ -119,6 +141,22 @@ function MainApp(): React.JSX.Element {
     const handleSetIsRightsSearch = useCallback((isRights: boolean) => {
         isRightsSearchRef.current = isRights; // Update ref immediately
         setIsRightsSearch(isRights);
+    }, []);
+
+    // Handler for facet checkbox change - lifted from Facets component
+    const handleFacetCheckbox = useCallback((key: string, facet: string) => {
+        setFacetCheckedState(prev => ({
+            ...prev,
+            [key]: {
+                ...prev[key],
+                [facet]: !prev[key]?.[facet]
+            }
+        }));
+    }, []);
+
+    // Handler for clearing all facet checks - lifted from Facets component
+    const handleClearAllFacets = useCallback(() => {
+        setFacetCheckedState({});
     }, []);
 
     const [presetFilters, setPresetFilters] = useState<string[]>(() =>
@@ -187,6 +225,13 @@ function MainApp(): React.JSX.Element {
             delete window.toggleDownloadPanel;
         };
     }, []);
+
+    useEffect(() => {
+        const queryElement = document.querySelector("input.query-input") as HTMLInputElement;
+        if (queryElement) {
+            queryElement.value = query;
+        }
+     }, [query]);
 
     // Sort state
     const [selectedSortType, setSelectedSortType] = useState<string>('Date Created');
@@ -348,10 +393,6 @@ function MainApp(): React.JSX.Element {
         performSearchImages(queryToUse, 0);
     }, [performSearchImages, query]);
 
-
-
-
-
     // Read query and selectedQueryType from URL on mount
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -386,7 +427,7 @@ function MainApp(): React.JSX.Element {
                 if (fulltext) setQuery(fulltext);
                 if (facetFiltersParam) {
                     const facetFilters = JSON.parse(decodeURIComponent(facetFiltersParam));
-                    setSelectedFacetFilters(facetFilters);
+                    setFacetCheckedState(facetFilters);
                 }
                 if (numericFiltersParam) {
                     const numericFilters = JSON.parse(decodeURIComponent(numericFiltersParam));
@@ -401,7 +442,7 @@ function MainApp(): React.JSX.Element {
                 console.warn('Error parsing URL search parameters:', error);
             }
         }
-    }, [dynamicMediaClient, setSelectedFacetFilters, setSelectedNumericFilters, performSearchImages]);
+    }, [dynamicMediaClient, setSelectedNumericFilters, performSearchImages]);
 
     useEffect(() => {
         if (!dynamicMediaClient) return;
@@ -428,9 +469,6 @@ function MainApp(): React.JSX.Element {
             settingsLoadedRef.current = true;
         }
     }, [authenticated, externalParams.excFacets, externalParams.presetFilters]);
-
-    // Rights data fetching moved to individual Markets and MediaChannels components
-
 
 
     // Function to fetch and cache static renditions for a specific asset
@@ -573,8 +611,6 @@ function MainApp(): React.JSX.Element {
         // TODO: Implement actual sorting logic
     };
 
-
-
     // Toggle mobile filter panel
     const handleToggleMobileFilter = (): void => {
         setIsMobileFilterOpen(!isMobileFilterOpen);
@@ -628,6 +664,7 @@ function MainApp(): React.JSX.Element {
                     assetRenditionsCache={assetRenditionsCache}
                     fetchAssetRenditions={fetchAssetRenditions}
                     isRightsSearch={isRightsSearch}
+                    onFacetCheckbox={handleFacetCheckbox}
                 />
             ) : (
                 <></>
@@ -678,8 +715,6 @@ function MainApp(): React.JSX.Element {
                                 <div className={`facet-filter-panel ${isMobileFilterOpen ? 'mobile-open' : ''}`}>
                                     <Facets
                                         searchResults={searchResults}
-                                        selectedFacetFilters={selectedFacetFilters}
-                                        setSelectedFacetFilters={setSelectedFacetFilters}
                                         search={search}
                                         excFacets={excFacets}
                                         selectedNumericFilters={selectedNumericFilters}
@@ -697,6 +732,10 @@ function MainApp(): React.JSX.Element {
                                         setSelectedMarkets={setSelectedMarkets}
                                         selectedMediaChannels={selectedMediaChannels}
                                         setSelectedMediaChannels={setSelectedMediaChannels}
+                                        facetCheckedState={facetCheckedState}
+                                        setFacetCheckedState={setFacetCheckedState}
+                                        onFacetCheckbox={handleFacetCheckbox}
+                                        onClearAllFacets={handleClearAllFacets}
                                     />
                                 </div>
                             </div>

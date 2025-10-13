@@ -5470,6 +5470,8 @@ button:disabled:hover {
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  background-color: rgb(249 249 249);
+  font-size: 12px;
 }
 
 .item-thumbnail img {
@@ -5478,8 +5480,26 @@ button:disabled:hover {
   object-fit: contain;
 }
 
-.item-thumbnail {
+.download-renditions-title,
+.cart-panel .asset-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.4;
+  font-family: "TCCC UnityText Regular", sans-serif;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+.cart-panel .asset-type {
   font-size: 12px;
+  color: #666;
+  font-weight: 600;
+}
+
+.koassets-search-container picture {
+  background-color: rgb(249 249 249);
 }/* Base Panel Styles - Shared across all panels */
 
 .base-panel-overlay {
@@ -6012,16 +6032,6 @@ html.base-panel-open {
     }
 }
 
-/* Title */
-.download-renditions-title {
-    font-size: 14px;
-    color: #333;
-    font-weight: 500;
-    line-height: 1.4;
-    overflow-wrap: break-word;
-    word-wrap: break-word;
-}
-
 /* Options */
 .download-renditions-options {
     display: flex;
@@ -6387,7 +6397,7 @@ html.base-panel-open {
     background: #a8a8a8;
 }
 
-.cart-panel .cart-item-row {
+.cart-panel .cart-asset-row {
     display: grid;
     grid-template-columns: 0.5fr 1fr 0.5fr 0.5fr;
     gap: 16px;
@@ -6396,7 +6406,7 @@ html.base-panel-open {
     align-items: center;
 }
 
-.cart-panel .cart-item-row.disabled {
+.cart-panel .cart-asset-row.disabled {
     opacity: 0.6;
     background-color: #fafafa;
 }
@@ -6420,19 +6430,6 @@ html.base-panel-open {
 .cart-panel .col-action {
     display: flex;
     justify-content: flex-end;
-}
-
-.cart-panel .item-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #333;
-    line-height: 1.4;
-}
-
-.cart-panel .item-type {
-    font-size: 12px;
-    color: #666;
-    font-weight: 600;
 }
 
 .cart-panel .rights-badge {
@@ -6884,21 +6881,6 @@ button[slot="next"]:hover {
 .asset-details {
     flex: 1;
     min-width: 0;
-}
-
-.asset-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #333;
-    line-height: 1.4;
-    margin-bottom: 6px;
-    word-wrap: break-word;
-}
-
-.asset-type {
-    font-size: 12px;
-    color: #666;
-    font-weight: 600;
 }
 
 /* Intended Use Form Column */
@@ -7418,12 +7400,6 @@ button[slot="next"]:hover {
     word-wrap: break-word;
 }
 
-.asset-type {
-    font-size: 12px;
-    color: #666;
-    font-weight: 600;
-}
-
 /* Request Rights Extension Form Column */
 .cart-request-rights-extension-form {
     display: flex;
@@ -7845,14 +7821,6 @@ button[slot="next"]:hover {
     display: flex;
     flex-direction: column;
     gap: 4px;
-}
-
-.asset-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #333;
-    line-height: 1.4;
-    font-family: "TCCC UnityText Regular", sans-serif;
 }
 
 .asset-date {
