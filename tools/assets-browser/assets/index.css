@@ -5496,6 +5496,10 @@ button:disabled:hover {
   font-size: 12px;
   color: #666;
   font-weight: 600;
+}
+
+.koassets-search-container picture {
+  background-color: rgb(249 249 249);
 }/* Base Panel Styles - Shared across all panels */
 
 .base-panel-overlay {

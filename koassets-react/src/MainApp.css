@@ -356,3 +356,7 @@ button:disabled:hover {
   color: #666;
   font-weight: 600;
 }
+
+.koassets-search-container picture {
+  background-color: rgb(249 249 249);
+}
