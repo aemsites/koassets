@@ -516,10 +516,9 @@ const Facets: React.FC<FacetsProps> = ({
                             </label>
                             {hasSubLevels && (
                                 <span
-                                    className="facet-filter-arrow-sub-level"
+                                    className={`facet-filter-arrow-sub-level caret-icon ${isHierarchyItemExpanded ? 'expanded' : ''}`}
                                     onClick={() => toggleHierarchyItem(hierarchyItemKey, facetTechId, fullPath, facetTechIdHierarchyData)}
                                 >
-                                    {isHierarchyItemExpanded ? '▼' : '▶'}
                                 </span>
                             )}
                         </div>
