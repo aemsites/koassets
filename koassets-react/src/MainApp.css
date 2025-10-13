@@ -329,6 +329,8 @@ button:disabled:hover {
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  background-color: rgb(249 249 249);
+  font-size: 12px;
 }
 
 .item-thumbnail img {
@@ -337,6 +339,24 @@ button:disabled:hover {
   object-fit: contain;
 }
 
-.item-thumbnail {
+.download-renditions-title,
+.cart-panel .asset-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.4;
+  font-family: "TCCC UnityText Regular", sans-serif;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+.cart-panel .asset-type {
   font-size: 12px;
+  color: #666;
+  font-weight: 600;
+}
+
+.koassets-search-container picture {
+  background-color: rgb(249 249 249);
 }

@@ -31663,6 +31663,37 @@ const calendarDateToEpoch = (calendarDate) => {
   const date = new Date(calendarDate.year, calendarDate.month - 1, calendarDate.day);
   return date.getTime();
 };
+const epochToCalendarDate = (epochSeconds) => {
+  const date = new Date(epochSeconds * 1e3);
+  return new $35ea8db9cb2ccb90$export$99faa760c7908e4f(
+    date.getFullYear(),
+    date.getMonth() + 1,
+    // CalendarDate uses 1-based months
+    date.getDate()
+  );
+};
+const calendarDatesAreEqual = (date1, date2) => {
+  if (!date1 || !date2) return false;
+  const cal2 = date2;
+  return date1.year === cal2.year && date1.month === cal2.month && date1.day === cal2.day;
+};
+const parseNumericFiltersForDates = (selectedNumericFilters) => {
+  let parsedStartDate = null;
+  let parsedEndDate = null;
+  selectedNumericFilters.forEach((filter) => {
+    const match = filter.match(/repo-createDate\s*([><=]+)\s*(\d+)/);
+    if (match) {
+      const operator = match[1].trim();
+      const epochValue = parseInt(match[2], 10);
+      if (operator === ">=" && !parsedStartDate) {
+        parsedStartDate = epochToCalendarDate(epochValue);
+      } else if (operator === "<=" && !parsedEndDate) {
+        parsedEndDate = epochToCalendarDate(epochValue);
+      }
+    }
+  });
+  return { startDate: parsedStartDate, endDate: parsedEndDate };
+};
 function split(string, separator, num) {
   const parts = string.split(separator);
   if (parts.length <= num) return parts;
@@ -32390,6 +32421,7 @@ const Picture = ({
     )
   ] });
 };
+const EAGER_LOAD_IMAGE_COUNT = 6;
 const SelectAllRenditionsCheckbox = ({
   assetData,
   selectedRenditions,
@@ -32731,7 +32763,8 @@ const DownloadRenditionsContent = ({
           Picture,
           {
             asset: assetData.asset,
-            width: 350
+            width: 350,
+            eager: index < EAGER_LOAD_IMAGE_COUNT
           },
           assetData.asset.assetId
         ) }),
@@ -33202,11 +33235,16 @@ const MediaChannels = ({
   ] }, channel.rightId)) });
 };
 function MyDatePicker({ description, errorMessage, showClearButton = false, onClear, className, ...props }) {
+  const dropdownButtonRef = reactExports.useRef(null);
+  const handleDateInputClick = () => {
+    var _a;
+    (_a = dropdownButtonRef.current) == null ? void 0 : _a.click();
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs($06d5b8ec9ee5d538$export$5109c6dd95d8fb00, { ...props, className: `my-date-picker ${className}`, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "date-picker-wrapper", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs($a049562f99e7db0e$export$eb2fcfdbd7ba97d4, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx($40825cdb76e74f70$export$7edc06cf1783b30f, { children: (segment) => /* @__PURE__ */ jsxRuntimeExports.jsx($40825cdb76e74f70$export$336ab7fa954c4b5f, { segment }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx($d2b4bc8c273e7be6$export$353f5b6fc5456de1, { children: "▼" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx($40825cdb76e74f70$export$7edc06cf1783b30f, { onClick: handleDateInputClick, children: (segment) => /* @__PURE__ */ jsxRuntimeExports.jsx($40825cdb76e74f70$export$336ab7fa954c4b5f, { segment }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx($d2b4bc8c273e7be6$export$353f5b6fc5456de1, { ref: dropdownButtonRef, children: "▼" })
       ] }),
       showClearButton && /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
@@ -33298,10 +33336,10 @@ const CartRequestDownload = ({
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "cart-request-download", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "cart-request-download-content", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "cart-request-download-assets", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { children: "Asset List" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-list-items", children: cartAssetItems.map((item) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-list-items", children: cartAssetItems.map((item, index) => {
         var _a;
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-list-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset: item, width: 350 }, item.assetId) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset: item, width: 350, eager: index < EAGER_LOAD_IMAGE_COUNT }, item.assetId) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-details", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-title", children: item.title || item.name }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-type", children: [
@@ -33560,10 +33598,10 @@ const CartRequestRightsExtension = ({
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-list-items", children: restrictedAssets.map((asset) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-list-items", children: restrictedAssets.map((asset, index) => {
         var _a;
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-list-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset, width: 350 }, asset.assetId) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset, width: 350, eager: index < EAGER_LOAD_IMAGE_COUNT }, asset.assetId) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-details", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-title", children: asset.title || asset.name }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-type", children: [
@@ -34091,9 +34129,9 @@ const CartRightsCheck = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-markets", children: "INTENDED MARKETS" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-media", children: "INTENDED MEDIA" })
           ] }),
-          restrictedAssets.map((asset) => {
+          restrictedAssets.map((asset, index) => {
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "table-row", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset, width: 350 }, asset.assetId) }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset, width: 350, eager: index < EAGER_LOAD_IMAGE_COUNT }, asset.assetId) }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-title", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-title", children: asset.title || asset.name }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-date", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "date-with-icon", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "date-icon", children: "📅" }),
@@ -34363,14 +34401,14 @@ const WorkflowProgress = ({
     ] })
   ] });
 };
-const CartAssetItemRow = ({ item, onRemoveItem }) => {
+const CartAssetItemRow = ({ item, onRemoveItem, eager = false }) => {
   var _a, _b, _c;
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `cart-item-row`, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset: item, width: 350 }, item.assetId) }) }),
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `cart-asset-row`, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "col-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-thumbnail", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Picture, { asset: item, width: 350, eager }, item.assetId) }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "col-title", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "item-title", children: item.title || item.name }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-title", children: item.title || item.name }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "item-type", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-type", children: [
         "TYPE: ",
         (_a = item.formatLabel) == null ? void 0 : _a.toUpperCase()
       ] })
@@ -34759,11 +34797,12 @@ const CartPanelAssets = ({
           " in your cart"
         ] }),
         tableHeader,
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "cart-items-table", children: cartAssetItems.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "cart-items-table", children: cartAssetItems.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(
           CartAssetItemRow,
           {
             item,
-            onRemoveItem: handleRemoveItem
+            onRemoveItem: handleRemoveItem,
+            eager: index < EAGER_LOAD_IMAGE_COUNT
           },
           item.assetId
         )) })
@@ -35351,6 +35390,17 @@ const DownloadPanel = ({
 const DateRange = reactExports.forwardRef(({ onDateRangeChange, selectedNumericFilters }, ref) => {
   const [startDate, setStartDate] = reactExports.useState(null);
   const [endDate, setEndDate] = reactExports.useState(null);
+  reactExports.useEffect(() => {
+    if (selectedNumericFilters.length > 0) {
+      const { startDate: parsedStartDate, endDate: parsedEndDate } = parseNumericFiltersForDates(selectedNumericFilters);
+      if (parsedStartDate && !calendarDatesAreEqual(parsedStartDate, startDate)) {
+        setStartDate(parsedStartDate);
+      }
+      if (parsedEndDate && !calendarDatesAreEqual(parsedEndDate, endDate)) {
+        setEndDate(parsedEndDate);
+      }
+    }
+  }, [selectedNumericFilters, startDate, endDate, onDateRangeChange]);
   const handleChangeStartDate = (date) => {
     setStartDate(date);
     if (onDateRangeChange) {
@@ -35451,7 +35501,17 @@ const HIERARCHY_PREFIX = "TCCC.#hierarchy.lvl";
 const loadSavedSearches = () => {
   try {
     const saved = localStorage.getItem("koassets-saved-searches");
-    return saved ? JSON.parse(saved) : [];
+    if (!saved) return [];
+    const parsedSearches = JSON.parse(saved);
+    return parsedSearches.map((search) => ({
+      ...search,
+      rightsFilters: {
+        rightsStartDate: search.rightsFilters.rightsStartDate ? epochToCalendarDate(search.rightsFilters.rightsStartDate / 1e3) : null,
+        rightsEndDate: search.rightsFilters.rightsEndDate ? epochToCalendarDate(search.rightsFilters.rightsEndDate / 1e3) : null,
+        markets: new Set(search.rightsFilters.markets || []),
+        mediaChannels: new Set(search.rightsFilters.mediaChannels || [])
+      }
+    }));
   } catch (error) {
     console.error("Error loading saved searches:", error);
     return [];
@@ -35477,7 +35537,16 @@ const rightsFacets = {
 };
 const saveSavedSearches = (searches) => {
   try {
-    localStorage.setItem("koassets-saved-searches", JSON.stringify(searches));
+    const searchesForSaving = searches.map((search) => ({
+      ...search,
+      rightsFilters: {
+        rightsStartDate: search.rightsFilters.rightsStartDate ? calendarDateToEpoch(search.rightsFilters.rightsStartDate) : null,
+        rightsEndDate: search.rightsFilters.rightsEndDate ? calendarDateToEpoch(search.rightsFilters.rightsEndDate) : null,
+        markets: Array.from(search.rightsFilters.markets),
+        mediaChannels: Array.from(search.rightsFilters.mediaChannels)
+      }
+    }));
+    localStorage.setItem("koassets-saved-searches", JSON.stringify(searchesForSaving));
   } catch (error) {
     console.error("Error saving searches:", error);
   }
@@ -35547,7 +35616,7 @@ const FacetItem = React.memo(({
           )
         ] })
       ] }) : (
-        // Render each facet button
+        // Render each facetTechId's button
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
@@ -35586,8 +35655,6 @@ const FacetItem = React.memo(({
 FacetItem.displayName = "FacetItem";
 const Facets = ({
   searchResults,
-  selectedFacetFilters,
-  setSelectedFacetFilters,
   search,
   excFacets = {},
   selectedNumericFilters = [],
@@ -35604,35 +35671,19 @@ const Facets = ({
   selectedMarkets,
   setSelectedMarkets,
   selectedMediaChannels,
-  setSelectedMediaChannels
+  setSelectedMediaChannels,
+  facetCheckedState,
+  setFacetCheckedState,
+  onFacetCheckbox,
+  onClearAllFacets
 }) => {
   const [expandedFacets, setExpandedFacets] = reactExports.useState({});
   const [expandedHierarchyItems, setExpandedHierarchyItems] = reactExports.useState({});
   const [facetSearchMode, setFacetSearchMode] = reactExports.useState({});
   const [facetSearchTerms, setFacetSearchTerms] = reactExports.useState({});
-  const [checked, setChecked] = reactExports.useState({});
   const [dateRanges, setDateRanges] = reactExports.useState({});
   const dateRangeRef = reactExports.useRef(null);
   const isUpdatingFromExternalRef = reactExports.useRef(false);
-  const loadSelectedFacetFilters = reactExports.useCallback((selectedFacetFilters2) => {
-    const newChecked = {};
-    if (selectedFacetFilters2 && selectedFacetFilters2.length > 0) {
-      selectedFacetFilters2.forEach((filterGroup) => {
-        filterGroup.forEach((filter) => {
-          const colonIndex = filter.indexOf(":");
-          const key = colonIndex > -1 ? filter.substring(0, colonIndex) : filter;
-          const value = colonIndex > -1 ? filter.substring(colonIndex + 1) : "";
-          if (key && value) {
-            if (!newChecked[key]) {
-              newChecked[key] = {};
-            }
-            newChecked[key][value] = true;
-          }
-        });
-      });
-    }
-    return newChecked;
-  }, []);
   const handleRightsStartDateChange = reactExports.useCallback((date) => {
     setRightsStartDate == null ? void 0 : setRightsStartDate(date);
   }, [setRightsStartDate]);
@@ -35665,34 +35716,6 @@ const Facets = ({
     });
     return combined;
   }, [searchResults]);
-  reactExports.useEffect(() => {
-    setChecked((prevChecked) => {
-      const updatedChecked = { ...prevChecked };
-      let hasChanges = false;
-      const appliedFacets = /* @__PURE__ */ new Set();
-      selectedFacetFilters == null ? void 0 : selectedFacetFilters.forEach((filterGroup) => {
-        filterGroup.forEach((filter) => {
-          appliedFacets.add(filter);
-        });
-      });
-      Object.entries(prevChecked).forEach(([facetTechId, value]) => {
-        Object.entries(value).forEach(([facetName, isChecked]) => {
-          const facetFilter = `${facetTechId}:${facetName}`;
-          const isCurrentlyApplied = appliedFacets.has(facetFilter);
-          if (!isCurrentlyApplied && (!combinedFacets || !(facetTechId in combinedFacets) || !(facetName in (combinedFacets[facetTechId] || {})) || combinedFacets[facetTechId] && combinedFacets[facetTechId][facetName] === 0)) {
-            if (isChecked) {
-              updatedChecked[facetTechId] = {
-                ...updatedChecked[facetTechId],
-                [facetName]: false
-              };
-              hasChanges = true;
-            }
-          }
-        });
-      });
-      return hasChanges ? updatedChecked : prevChecked;
-    });
-  }, [combinedFacets, selectedFacetFilters]);
   const hierarchyDataByFacet = reactExports.useMemo(() => {
     const hierarchyMap = {};
     Object.keys(excFacets).forEach((facetTechId) => {
@@ -35770,18 +35793,6 @@ const Facets = ({
     setFacetSearchMode((prev) => ({ ...prev, [facetTechId]: false }));
     setFacetSearchTerms((prev) => ({ ...prev, [facetTechId]: "" }));
   }, []);
-  const handleCheckbox = reactExports.useCallback((key, facet) => {
-    setChecked((prev) => {
-      var _a;
-      return {
-        ...prev,
-        [key]: {
-          ...prev[key],
-          [facet]: !((_a = prev[key]) == null ? void 0 : _a[facet])
-        }
-      };
-    });
-  }, []);
   const handleDateRangeChange = reactExports.useCallback((key, startDate, endDate) => {
     setDateRanges((prev) => ({
       ...prev,
@@ -35809,24 +35820,37 @@ const Facets = ({
     }
     return false;
   }, []);
-  const renderHierarchyLevel = reactExports.useCallback((hierarchyData, facetTechId, level, parentPath = "") => {
-    const levelData = hierarchyData[level];
+  const deselectFacetCheckedState = reactExports.useCallback((checkboxKey, facetDataMap) => {
+    if (facetCheckedState[checkboxKey]) {
+      Object.entries(facetCheckedState[checkboxKey]).forEach(([key, value]) => {
+        if (value === true) {
+          if (!(key in facetDataMap) || facetDataMap[key] === 0) {
+            onFacetCheckbox(checkboxKey, key);
+          }
+        }
+      });
+    }
+  }, [facetCheckedState, onFacetCheckbox]);
+  const renderHierarchyLevel = reactExports.useCallback((facetTechIdHierarchyData, facetTechId, level, parentPath = "") => {
+    const levelData = facetTechIdHierarchyData[level];
     if (!levelData) return [];
     const searchTerm = facetSearchTerms[facetTechId] || "";
     const items = [];
+    const checkboxKey = `${facetTechId}.${HIERARCHY_PREFIX}${level}`;
+    deselectFacetCheckedState(checkboxKey, levelData);
     Object.entries(levelData).forEach(([facetName, count]) => {
       var _a;
       const pathParts = facetName.split(" / ");
       const baseFacetName = pathParts[pathParts.length - 1].trim();
       const displayName = getDisplayFacetName(facetTechId, baseFacetName);
-      if (searchTerm && !shouldShowHierarchyItem(hierarchyData, facetTechId, facetName, searchTerm, level)) {
+      if (searchTerm && !shouldShowHierarchyItem(facetTechIdHierarchyData, facetTechId, facetName, searchTerm, level)) {
         return;
       }
       const currentPath = pathParts.slice(0, -1).join(" / ");
       if (level === 1 || currentPath === parentPath) {
         const fullPath = facetName;
         const itemKey = `${facetTechId}-${facetName}`;
-        const hasSubLevels = hierarchyData[level + 1] && Object.keys(hierarchyData[level + 1]).some(
+        const hasSubLevels = facetTechIdHierarchyData[level + 1] && Object.keys(facetTechIdHierarchyData[level + 1]).some(
           (subFacetName) => subFacetName.startsWith(fullPath + " / ")
         );
         const containerClasses = [
@@ -35834,7 +35858,6 @@ const Facets = ({
           level > 1 ? "facet-hierarchy-container-indented" : "",
           hasSubLevels ? "facet-hierarchy-container-with-sublevel" : ""
         ].filter(Boolean).join(" ");
-        const checkboxKey = `${facetTechId}.${HIERARCHY_PREFIX}${level}`;
         const hierarchyItemKey = `${facetTechId}-${fullPath}`;
         const isHierarchyItemExpanded = expandedHierarchyItems[hierarchyItemKey];
         items.push(
@@ -35846,8 +35869,8 @@ const Facets = ({
                   {
                     className: "facet-filter-checkbox-input",
                     type: "checkbox",
-                    checked: !!((_a = checked[checkboxKey]) == null ? void 0 : _a[facetName]),
-                    onChange: () => handleCheckbox(checkboxKey, facetName)
+                    checked: !!((_a = facetCheckedState[checkboxKey]) == null ? void 0 : _a[facetName]),
+                    onChange: () => onFacetCheckbox(checkboxKey, facetName)
                   }
                 ),
                 " ",
@@ -35858,18 +35881,18 @@ const Facets = ({
                 "span",
                 {
                   className: "facet-filter-arrow-sub-level",
-                  onClick: () => toggleHierarchyItem(hierarchyItemKey, facetTechId, fullPath, hierarchyData),
+                  onClick: () => toggleHierarchyItem(hierarchyItemKey, facetTechId, fullPath, facetTechIdHierarchyData),
                   children: isHierarchyItemExpanded ? "▼" : "▶"
                 }
               )
             ] }),
-            hasSubLevels && isHierarchyItemExpanded && renderHierarchyLevel(hierarchyData, facetTechId, level + 1, fullPath)
+            hasSubLevels && isHierarchyItemExpanded && renderHierarchyLevel(facetTechIdHierarchyData, facetTechId, level + 1, fullPath)
           ] }, itemKey)
         );
       }
     });
     return items;
-  }, [checked, handleCheckbox, expandedHierarchyItems, toggleHierarchyItem, facetSearchTerms, shouldShowHierarchyItem]);
+  }, [facetCheckedState, onFacetCheckbox, expandedHierarchyItems, toggleHierarchyItem, facetSearchTerms, shouldShowHierarchyItem, deselectFacetCheckedState]);
   const renderFacetsFromSearchResult = reactExports.useCallback((facetTechId) => {
     if (!expandedFacets[facetTechId]) {
       return null;
@@ -35931,17 +35954,19 @@ const Facets = ({
         }
       );
     }
-    const hierarchyData = hierarchyDataByFacet[facetTechId];
-    const isHierarchyFacet = !!hierarchyData;
+    const facetTechIdHierarchyData = hierarchyDataByFacet[facetTechId];
+    const isHierarchyFacet = !!facetTechIdHierarchyData;
     if (isHierarchyFacet) {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "facet-filter-checkbox-list", children: renderHierarchyLevel(hierarchyData, facetTechId, 1) });
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "facet-filter-checkbox-list", children: renderHierarchyLevel(facetTechIdHierarchyData, facetTechId, 1) });
     }
     if (!expandedFacets[facetTechId] || !combinedFacets || !combinedFacets[facetTechId] || Object.keys(combinedFacets[facetTechId] || {}).length === 0) {
       return null;
     }
     const searchTerm = facetSearchTerms[facetTechId] || "";
     const checkboxKey = `${facetTechId}`;
-    const filteredEntries = Object.entries(combinedFacets && combinedFacets[facetTechId] || {}).filter(([facetName]) => {
+    const facetTechIdDataMap = combinedFacets && combinedFacets[facetTechId] || {};
+    deselectFacetCheckedState(checkboxKey, facetTechIdDataMap);
+    const filteredEntries = Object.entries(facetTechIdDataMap).filter(([facetName]) => {
       if (!searchTerm) return true;
       const displayFacetName = getDisplayFacetName(facetTechId, facetName);
       return displayFacetName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -35954,8 +35979,8 @@ const Facets = ({
           "input",
           {
             type: "checkbox",
-            checked: !!((_a = checked[checkboxKey]) == null ? void 0 : _a[facetName]),
-            onChange: () => handleCheckbox(checkboxKey, facetName)
+            checked: !!((_a = facetCheckedState[checkboxKey]) == null ? void 0 : _a[facetName]),
+            onChange: () => onFacetCheckbox(checkboxKey, facetName)
           }
         ),
         " ",
@@ -35963,24 +35988,7 @@ const Facets = ({
         count > 0 ? ` (${count})` : ""
       ] }, facetName);
     }) });
-  }, [expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, checked, handleCheckbox, facetSearchTerms, handleClearRightsStartDate, handleRightsStartDateChange, rightsStartDate, handleClearRightsEndDate, handleRightsEndDateChange, rightsEndDate, selectedMarkets, selectedMediaChannels, setSelectedMarkets, setSelectedMediaChannels]);
-  reactExports.useEffect(() => {
-    if (isUpdatingFromExternalRef.current) {
-      isUpdatingFromExternalRef.current = false;
-      return;
-    }
-    const newSelectedFacetFilters = [];
-    Object.keys(checked).forEach((key) => {
-      const facetFilter = [];
-      Object.entries(checked[key]).forEach(([facet, isChecked]) => {
-        if (isChecked) {
-          facetFilter.push(`${key}:${facet}`);
-        }
-      });
-      facetFilter.length > 0 && newSelectedFacetFilters.push(facetFilter);
-    });
-    setSelectedFacetFilters(newSelectedFacetFilters);
-  }, [checked, setSelectedFacetFilters]);
+  }, [expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, facetCheckedState, onFacetCheckbox, facetSearchTerms, handleClearRightsStartDate, handleRightsStartDateChange, rightsStartDate, handleClearRightsEndDate, handleRightsEndDateChange, rightsEndDate, selectedMarkets, selectedMediaChannels, setSelectedMarkets, setSelectedMediaChannels, deselectFacetCheckedState]);
   reactExports.useEffect(() => {
     if (Object.keys(dateRanges).length > 0) {
       setTimeout(() => {
@@ -35997,16 +36005,9 @@ const Facets = ({
       }, 0);
     }
   }, [dateRanges, setSelectedNumericFilters]);
-  reactExports.useEffect(() => {
-    if (selectedFacetFilters !== void 0) {
-      const newChecked = loadSelectedFacetFilters(selectedFacetFilters);
-      isUpdatingFromExternalRef.current = true;
-      setChecked(newChecked);
-    }
-  }, [selectedFacetFilters, loadSelectedFacetFilters]);
   const getCheckedCount = reactExports.useCallback((facetTechId) => {
     let count = 0;
-    Object.entries(checked).forEach(([key, facetChecked]) => {
+    Object.entries(facetCheckedState).forEach(([key, facetChecked]) => {
       if (key === facetTechId || key.startsWith(`${facetTechId}.`)) {
         Object.values(facetChecked).forEach((isChecked) => {
           if (isChecked) count++;
@@ -36014,21 +36015,20 @@ const Facets = ({
       }
     });
     return count;
-  }, [checked]);
+  }, [facetCheckedState]);
   const getTotalCheckedCount = reactExports.useCallback(() => {
     let totalCount = 0;
-    Object.values(checked).forEach((facetChecked) => {
+    Object.values(facetCheckedState).forEach((facetChecked) => {
       Object.values(facetChecked).forEach((isChecked) => {
         if (isChecked) totalCount++;
       });
     });
     return totalCount;
-  }, [checked]);
+  }, [facetCheckedState]);
   const handleClearAllChecks = reactExports.useCallback(() => {
     var _a;
     isUpdatingFromExternalRef.current = true;
-    setChecked({});
-    setSelectedFacetFilters([]);
+    onClearAllFacets();
     setDateRanges({});
     setExpandedFacets({});
     setExpandedHierarchyItems({});
@@ -36040,7 +36040,7 @@ const Facets = ({
     (_a = dateRangeRef.current) == null ? void 0 : _a.reset();
     setSelectedMarkets(/* @__PURE__ */ new Set());
     setSelectedMediaChannels(/* @__PURE__ */ new Set());
-  }, [setSelectedFacetFilters, setSelectedNumericFilters, setRightsStartDate, setRightsEndDate, setSelectedMarkets, setSelectedMediaChannels]);
+  }, [onClearAllFacets, setSelectedNumericFilters, setRightsStartDate, setRightsEndDate, setSelectedMarkets, setSelectedMediaChannels]);
   const handleApplyFilters = reactExports.useCallback(() => {
     search();
   }, [search]);
@@ -36067,17 +36067,8 @@ const Facets = ({
   const handleSaveSearch = () => {
     setShowSaveModal(true);
   };
-  const handleSaveSearchConfirm = () => {
+  const handleSaveSearchConfirm = reactExports.useCallback(() => {
     if (saveSearchName.trim()) {
-      const facetFilterGroups = Object.keys(checked).map((key) => {
-        const facetFilter = [];
-        Object.entries(checked[key]).forEach(([facet, isChecked]) => {
-          if (isChecked) {
-            facetFilter.push(`${key}:${facet}`);
-          }
-        });
-        return facetFilter;
-      }).filter((filter) => filter.length > 0);
       const currentPath = window.location.pathname;
       let searchType = "/search/all";
       if (currentPath.includes("/search/assets")) {
@@ -36087,13 +36078,20 @@ const Facets = ({
       } else if (currentPath.includes("/search/all")) {
         searchType = "/search/all";
       }
+      const rightsFilters = {
+        rightsStartDate,
+        rightsEndDate,
+        markets: new Set(selectedMarkets),
+        mediaChannels: new Set(selectedMediaChannels)
+      };
       const now = Date.now();
       const newSearch = {
         id: now.toString(),
         name: saveSearchName.trim(),
         searchTerm: query,
-        facetFilters: [...facetFilterGroups],
+        facetFilters: facetCheckedState,
         numericFilters: [...selectedNumericFilters],
+        rightsFilters,
         dateCreated: now,
         dateLastModified: now,
         dateLastUsed: now,
@@ -36107,7 +36105,7 @@ const Facets = ({
       setSaveSearchName("");
       setShowSaveModal(false);
     }
-  };
+  }, [saveSearchName, selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate, query, facetCheckedState, selectedNumericFilters, savedSearches]);
   const handleSaveSearchCancel = () => {
     setSaveSearchName("");
     setShowSaveModal(false);
@@ -36122,20 +36120,24 @@ const Facets = ({
       }
     }
     handleHideTooltip();
-    setChecked({});
+    onClearAllFacets();
     setDateRanges({});
     setExpandedFacets({});
     setExpandedHierarchyItems({});
     setFacetSearchMode({});
     setFacetSearchTerms({});
-    const newChecked = loadSelectedFacetFilters(savedSearch.facetFilters);
     const searchTerm = savedSearch.searchTerm || "";
     setQuery(searchTerm);
     setTimeout(() => {
       isUpdatingFromExternalRef.current = true;
-      setChecked(newChecked);
-      setSelectedFacetFilters(savedSearch.facetFilters);
+      setFacetCheckedState(savedSearch.facetFilters);
       setSelectedNumericFilters(savedSearch.numericFilters);
+      if (savedSearch.rightsFilters) {
+        setRightsStartDate == null ? void 0 : setRightsStartDate(savedSearch.rightsFilters.rightsStartDate);
+        setRightsEndDate == null ? void 0 : setRightsEndDate(savedSearch.rightsFilters.rightsEndDate);
+        setSelectedMarkets(new Set(savedSearch.rightsFilters.markets));
+        setSelectedMediaChannels(new Set(savedSearch.rightsFilters.mediaChannels));
+      }
       setActiveView("filters");
       const now = Date.now();
       const usedUpdated = savedSearches.map((s) => s.id === savedSearch.id ? { ...s, dateLastUsed: now } : s);
@@ -36194,7 +36196,12 @@ const Facets = ({
     }
   };
   const countFilters = (savedSearch) => {
-    const facetFilterCount = savedSearch.facetFilters.reduce((total, filterGroup) => total + filterGroup.length, 0);
+    let facetFilterCount = 0;
+    Object.values(savedSearch.facetFilters).forEach((facetChecked) => {
+      Object.values(facetChecked).forEach((isChecked) => {
+        if (isChecked) facetFilterCount++;
+      });
+    });
     const numericFilterCount = savedSearch.numericFilters.length;
     return facetFilterCount + numericFilterCount;
   };
@@ -36239,28 +36246,26 @@ const Facets = ({
     setEditingSearchName("");
     setEditingSearchId(null);
   };
-  const handleConfirmEditLink = () => {
+  const handleConfirmEditLink = reactExports.useCallback(() => {
     if (!editingSearchId) {
       setShowEditLinkModal(false);
       return;
     }
-    const facetFilterGroups = Object.keys(checked).map((key) => {
-      const facetFilter = [];
-      Object.entries(checked[key]).forEach(([facet, isChecked]) => {
-        if (isChecked) {
-          facetFilter.push(`${key}:${facet}`);
-        }
-      });
-      return facetFilter;
-    }).filter((group) => group.length > 0);
+    const rightsFilters = {
+      rightsStartDate,
+      rightsEndDate,
+      markets: new Set(selectedMarkets),
+      mediaChannels: new Set(selectedMediaChannels)
+    };
     const now = Date.now();
     const updated = savedSearches.map((s) => s.id === editingSearchId ? {
       ...s,
       name: editingSearchName.trim() || s.name,
       // Use new name or keep existing if empty
       searchTerm: query,
-      facetFilters: [...facetFilterGroups],
+      facetFilters: facetCheckedState,
       numericFilters: [...selectedNumericFilters],
+      rightsFilters,
       dateLastModified: now
     } : s);
     setSavedSearches(updated);
@@ -36270,7 +36275,7 @@ const Facets = ({
     setEditLinkText("");
     setEditingSearchName("");
     setEditingSearchId(null);
-  };
+  }, [editingSearchId, selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate, query, facetCheckedState, selectedNumericFilters, savedSearches, editingSearchName]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "facet-filter-container", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "facet-filter", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "facet-filter-header", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "facet-filter-tabs", children: [
@@ -36627,7 +36632,6 @@ const DEFAULT_ACCORDION_CONFIG = {
 <p><b>"RIGHTS FREE" ASSETS DOWNLOAD:</b> You don't need to enter your intended use for "Rights Free" Assets! Use the "Rights Free" search filter and select yes to only view "Rights Free" assets.</p>
 <p><b>NEED ADDITIONAL SUPPORT</b>? If you have any additional questions reach out to our asset management team via <a href="mailto:assetmanagers@coca-cola.com"><b>assetmanagers@coca-cola.com</b></a> or visit our <a href="https://forms.office.com/Pages/ResponsePage.aspx?id=qyaNVKqM4UmXwqGxoGzDnPYUeiWm8X1KiF0OxjOzZ3VUNlNNTzcxME9SMVpTTUUzVzY4TkFYV1dLVS4u&amp;wdLOR=c0E1D32CE-2209-4C6C-893D-F353FDC5C295"><b>Support Portal</b></a>.</p>`
 };
-const EAGER_LOAD_IMAGE_COUNT = 6;
 const ActionButton = ({ disabled, onClick, config, hasLoadingState = false, style }) => {
   const [loading, setLoading] = reactExports.useState(false);
   const containerRef = reactExports.useRef(null);
@@ -36715,7 +36719,7 @@ const BUTTON_CONFIGS = {
     }
   }
 };
-const AssetCardViewGrid = ({
+const AssetCard = ({
   image,
   handleCardDetailClick,
   handlePreviewClick,
@@ -36725,7 +36729,10 @@ const AssetCardViewGrid = ({
   isSelected = false,
   onCheckboxChange,
   expandAllDetails = true,
-  index = 0
+  index = 0,
+  viewMode,
+  className = "",
+  onFacetCheckbox
 }) => {
   const { dynamicMediaClient } = useAppConfig();
   const isInCart = cartAssetItems.some((cartAssetItem) => cartAssetItem.assetId === image.assetId);
@@ -36737,11 +36744,8 @@ const AssetCardViewGrid = ({
       handleAddToCart == null ? void 0 : handleAddToCart(image, e);
     }
   };
-  const handleCheckboxClick = (e) => {
+  const handleSelectCard = (e) => {
     onCheckboxChange == null ? void 0 : onCheckboxChange(image.assetId || "", e.target.checked);
-  };
-  const handleCheckboxClickOnly = (e) => {
-    e.stopPropagation();
   };
   const handleClickDownload = async () => {
     if (!image || !dynamicMediaClient) {
@@ -36767,7 +36771,38 @@ const AssetCardViewGrid = ({
     });
     window.dispatchEvent(event);
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-card-view-grid", id: image.assetId, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-card-view-grid-inner", children: [
+  const containerClass = `asset-card-view-${viewMode} ${className}`.trim();
+  const innerClass = `asset-card-view-${viewMode}-inner`;
+  const TitleElement = viewMode === "grid" ? "h3" : "div";
+  const firstButtonWrapper = viewMode === "grid" ? "left-buttons-wrapper" : "top-buttons-wrapper";
+  const secondButtonWrapper = viewMode === "grid" ? "right-buttons-wrapper" : "bottom-buttons-wrapper";
+  const metadataGrid = expandAllDetails && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-grid", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "SIZE" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: image.formatedSize })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "TYPE" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: image.formatLabel })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "FILE EXT" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: getFileExtension(image.name) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "RIGHTS FREE" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: image.readyToUse })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "CATEGORY" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: formatCategory(image == null ? void 0 : image.category) })
+    ] })
+  ] });
+  const authorizationStatus = /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    image.authorized === AuthorizationStatus.AVAILABLE && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-authorized-status green", children: "AUTHORIZED" }),
+    (image.authorized === AuthorizationStatus.NOT_AVAILABLE || image.authorized === AuthorizationStatus.AVAILABLE_EXCEPT) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-authorized-status red", children: "EXTENSION REQUIRED" })
+  ] });
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: containerClass, id: image.assetId, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: innerClass, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
@@ -36781,8 +36816,8 @@ const AssetCardViewGrid = ({
               type: "checkbox",
               className: "tccc-checkbox",
               checked: isSelected,
-              onChange: handleCheckboxClick,
-              onClick: handleCheckboxClickOnly
+              onChange: handleSelectCard,
+              onClick: (e) => e.stopPropagation()
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -36814,9 +36849,20 @@ const AssetCardViewGrid = ({
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "product-info-container", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-info", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-title-section", children: [
-        (image == null ? void 0 : image.campaignName) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "product-tags", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-tag tccc-tag", children: getAssetFieldDisplayFacetName("campaignName", image == null ? void 0 : image.campaignName) }) }),
+        (image == null ? void 0 : image.campaignName) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "product-tags", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "span",
+          {
+            className: "product-tag tccc-tag",
+            onClick: (e) => {
+              e.stopPropagation();
+              onFacetCheckbox == null ? void 0 : onFacetCheckbox("tccc-campaignName", image == null ? void 0 : image.campaignName);
+            },
+            style: { cursor: "pointer" },
+            children: getAssetFieldDisplayFacetName("campaignName", image == null ? void 0 : image.campaignName)
+          }
+        ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "h3",
+          TitleElement,
           {
             className: "product-title",
             onClick: (e) => handleCardDetailClick(image, e),
@@ -36824,196 +36870,19 @@ const AssetCardViewGrid = ({
             children: image.title
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          image.authorized === AuthorizationStatus.AVAILABLE && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-authorized-status green", children: "AUTHORIZED" }),
-          (image.authorized === AuthorizationStatus.NOT_AVAILABLE || image.authorized === AuthorizationStatus.AVAILABLE_EXCEPT) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-authorized-status red", children: "EXTENSION REQUIRED" })
-        ] })
+        authorizationStatus
       ] }),
-      expandAllDetails && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-grid", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "SIZE" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: image.formatedSize })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "TYPE" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: image.formatLabel })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "FILE EXT" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: getFileExtension(image.name) })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "RIGHTS FREE" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: image.readyToUse })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "CATEGORY" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: formatCategory(image == null ? void 0 : image.category) })
-        ] })
-      ] })
+      metadataGrid
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-actions", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "left-buttons-wrapper", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: firstButtonWrapper, children: viewMode === "grid" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
           className: `add-to-cart-btn${isInCart ? " remove-from-cart" : ""}`,
           onClick: handleAddRemoveCart,
           children: isInCart ? "Remove From Cart" : "Add To Cart"
         }
-      ) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "right-buttons-wrapper", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        ActionButton,
-        {
-          config: BUTTON_CONFIGS.download,
-          hasLoadingState: true,
-          onClick: handleClickDownload,
-          style: {
-            display: "none"
-          }
-        }
-      ) })
-    ] })
-  ] }) });
-};
-const AssetCardViewList = ({
-  image,
-  handleCardDetailClick,
-  handlePreviewClick,
-  handleAddToCart,
-  handleRemoveFromCart,
-  cartAssetItems = [],
-  isSelected = false,
-  onCheckboxChange,
-  expandAllDetails = true,
-  index = 0
-}) => {
-  const { dynamicMediaClient } = useAppConfig();
-  const isInCart = cartAssetItems.some((cartAssetItem) => cartAssetItem.assetId === image.assetId);
-  const handleAddRemoveCart = (e) => {
-    e.stopPropagation();
-    if (isInCart) {
-      handleRemoveFromCart == null ? void 0 : handleRemoveFromCart(image);
-    } else {
-      handleAddToCart == null ? void 0 : handleAddToCart(image, e);
-    }
-  };
-  const handleCheckboxClick = (e) => {
-    onCheckboxChange == null ? void 0 : onCheckboxChange(image.assetId || "", e.target.checked);
-  };
-  const handleCheckboxClickOnly = (e) => {
-    e.stopPropagation();
-  };
-  const handleClickDownload = async () => {
-    if (!image || !dynamicMediaClient) {
-      console.warn("No asset or dynamic media client available for download");
-      return;
-    }
-    try {
-      console.log("Downloading original asset:", image.assetId);
-      await dynamicMediaClient.downloadAsset(image);
-    } catch (error) {
-      console.error("Failed to download asset:", error);
-    }
-  };
-  const handleAddToCollection = (e) => {
-    e.stopPropagation();
-    const previewUrl = dynamicMediaClient && image.assetId && image.name ? dynamicMediaClient.getOptimizedDeliveryPreviewUrl(image.assetId, image.name, 350) : void 0;
-    const dmBucket = dynamicMediaClient ? getBucket() : void 0;
-    const event = new CustomEvent("openCollectionModal", {
-      detail: {
-        asset: { ...image, previewUrl, dmBucket },
-        assetPath: image.repositoryPath || image.assetId
-      }
-    });
-    window.dispatchEvent(event);
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "asset-card-view-list", id: image.assetId, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "asset-card-view-list-inner", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "div",
-      {
-        className: "image-wrapper",
-        onClick: (e) => handleCardDetailClick(image, e),
-        style: { cursor: "pointer" },
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "input",
-            {
-              type: "checkbox",
-              className: "tccc-checkbox",
-              checked: isSelected,
-              onChange: handleCheckboxClick,
-              onClick: handleCheckboxClickOnly
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              className: "image-preview-button",
-              onClick: (e) => handlePreviewClick(image, e),
-              title: "View larger image",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { viewBox: "0 0 256.001 256.001", xmlns: "http://www.w3.org/2000/svg", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M159.997 116a12 12 0 0 1-12 12h-20v20a12 12 0 0 1-24 0v-20h-20a12 12 0 0 1 0-24h20V84a12 12 0 0 1 24 0v20h20a12 12 0 0 1 12 12Zm72.48 116.482a12 12 0 0 1-16.971 0l-40.679-40.678a96.105 96.105 0 1 1 16.972-16.97l40.678 40.678a12 12 0 0 1 0 16.97Zm-116.48-44.486a72 72 0 1 0-72-72 72.081 72.081 0 0 0 72 72Z" }) })
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "add-to-collection-overlay", onClick: handleAddToCollection, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "add-to-collection-content", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("i", { className: "icon add circle" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Add to Collection" })
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Picture,
-            {
-              asset: image,
-              width: 350,
-              className: "image-container",
-              eager: index < EAGER_LOAD_IMAGE_COUNT,
-              fetchPriority: index < 2 ? "high" : "auto"
-            },
-            image.assetId
-          )
-        ]
-      }
-    ),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "product-info-container", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-info", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-title-section", children: [
-        (image == null ? void 0 : image.campaignName) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "product-tags", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-tag tccc-tag", children: getAssetFieldDisplayFacetName("campaignName", image == null ? void 0 : image.campaignName) }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "div",
-          {
-            className: "product-title",
-            onClick: (e) => handleCardDetailClick(image, e),
-            style: { cursor: "pointer" },
-            children: image.title
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          image.authorized === AuthorizationStatus.AVAILABLE && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-authorized-status green", children: "AUTHORIZED" }),
-          (image.authorized === AuthorizationStatus.NOT_AVAILABLE || image.authorized === AuthorizationStatus.AVAILABLE_EXCEPT) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-authorized-status red", children: "EXTENSION REQUIRED" })
-        ] })
-      ] }),
-      expandAllDetails && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-grid", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "SIZE" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: image.formatedSize })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "TYPE" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: image.formatLabel })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "FILE EXT" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: getFileExtension(image.name) })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "RIGHTS FREE" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: image.readyToUse })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-meta-item", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-label tccc-metadata-label", children: "CATEGORY" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "product-meta-value tccc-metadata-value", children: formatCategory(image == null ? void 0 : image.category) })
-        ] })
-      ] })
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "product-actions", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "top-buttons-wrapper", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
         ActionButton,
         {
           config: BUTTON_CONFIGS.download,
@@ -37024,7 +36893,17 @@ const AssetCardViewList = ({
           }
         }
       ) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bottom-buttons-wrapper", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: secondButtonWrapper, children: viewMode === "grid" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+        ActionButton,
+        {
+          config: BUTTON_CONFIGS.download,
+          hasLoadingState: true,
+          onClick: handleClickDownload,
+          style: {
+            display: "none"
+          }
+        }
+      ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
           className: `add-to-cart-btn${isInCart ? " remove-from-cart" : ""}`,
@@ -38406,7 +38285,8 @@ const ImageGallery = ({
   imagePresets = {},
   assetRenditionsCache = {},
   fetchAssetRenditions,
-  isRightsSearch = false
+  isRightsSearch = false,
+  onFacetCheckbox
 }) => {
   const { externalParams: externalParams2 } = useAppConfig();
   const accordionTitle = (externalParams2 == null ? void 0 : externalParams2.accordionTitle) || DEFAULT_ACCORDION_CONFIG.accordionTitle;
@@ -38598,10 +38478,10 @@ const ImageGallery = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "Loading images..." })
     ] }) : visibleImages.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "no-images", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "No images to display" }) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: viewType === "grid" ? "image-grid" : "image-grid-list", children: visibleImages.map((visibleImage, index) => {
-        const CardComponent = viewType === "grid" ? AssetCardViewGrid : AssetCardViewList;
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
-          CardComponent,
+          AssetCard,
           {
+            viewMode: viewType,
             image: visibleImage,
             handleCardDetailClick,
             handlePreviewClick: handleCardPreviewClick,
@@ -38611,7 +38491,8 @@ const ImageGallery = ({
             isSelected: selectedCards.has(visibleImage.assetId || ""),
             onCheckboxChange: handleCheckboxChange,
             expandAllDetails,
-            index
+            index,
+            onFacetCheckbox
           },
           visibleImage.assetId
         );
@@ -38679,6 +38560,7 @@ function transformExcFacetsToHierarchyArray(excFacets) {
 function isCookieAuth() {
   return window.location.origin.endsWith("adobeaem.workers.dev") || window.location.origin === "http://localhost:8787";
 }
+const EMPTY_FACET_FILTERS = [];
 function MainApp() {
   var _a;
   const [externalParams2] = reactExports.useState(() => {
@@ -38703,7 +38585,7 @@ function MainApp() {
   const [loading, setLoading] = reactExports.useState({ [LOADING.dmImages]: false, [LOADING.collections]: false });
   const [currentView, setCurrentView] = reactExports.useState(CURRENT_VIEW.images);
   const [selectedQueryType, setSelectedQueryType] = reactExports.useState(QUERY_TYPES.ALL);
-  const [selectedFacetFilters, setSelectedFacetFilters] = reactExports.useState([]);
+  const [facetCheckedState, setFacetCheckedState] = reactExports.useState({});
   const [selectedNumericFilters, setSelectedNumericFilters] = reactExports.useState([]);
   const [searchDisabled, setSearchDisabled] = reactExports.useState(false);
   const [isRightsSearch, setIsRightsSearch] = reactExports.useState(false);
@@ -38713,6 +38595,21 @@ function MainApp() {
   const [selectedMediaChannels, setSelectedMediaChannels] = reactExports.useState(/* @__PURE__ */ new Set());
   const searchDisabledRef = reactExports.useRef(false);
   const isRightsSearchRef = reactExports.useRef(false);
+  const selectedFacetFilters = reactExports.useMemo(() => {
+    const newSelectedFacetFilters = [];
+    Object.keys(facetCheckedState).forEach((key) => {
+      const facetFilter = [];
+      Object.entries(facetCheckedState[key]).forEach(([facet, isChecked]) => {
+        if (isChecked) {
+          facetFilter.push(`${key}:${facet}`);
+        }
+      });
+      if (facetFilter.length > 0) {
+        newSelectedFacetFilters.push(facetFilter);
+      }
+    });
+    return newSelectedFacetFilters.length === 0 ? EMPTY_FACET_FILTERS : newSelectedFacetFilters;
+  }, [facetCheckedState]);
   const handleSetSearchDisabled = reactExports.useCallback((disabled) => {
     searchDisabledRef.current = disabled;
     setSearchDisabled(disabled);
@@ -38720,6 +38617,21 @@ function MainApp() {
   const handleSetIsRightsSearch = reactExports.useCallback((isRights) => {
     isRightsSearchRef.current = isRights;
     setIsRightsSearch(isRights);
+  }, []);
+  const handleFacetCheckbox = reactExports.useCallback((key, facet) => {
+    setFacetCheckedState((prev) => {
+      var _a2;
+      return {
+        ...prev,
+        [key]: {
+          ...prev[key],
+          [facet]: !((_a2 = prev[key]) == null ? void 0 : _a2[facet])
+        }
+      };
+    });
+  }, []);
+  const handleClearAllFacets = reactExports.useCallback(() => {
+    setFacetCheckedState({});
   }, []);
   const [presetFilters, setPresetFilters] = reactExports.useState(
     () => externalParams2.presetFilters || []
@@ -38760,6 +38672,12 @@ function MainApp() {
       delete window.toggleDownloadPanel;
     };
   }, []);
+  reactExports.useEffect(() => {
+    const queryElement = document.querySelector("input.query-input");
+    if (queryElement) {
+      queryElement.value = query;
+    }
+  }, [query]);
   const [selectedSortType, setSelectedSortType] = reactExports.useState("Date Created");
   const [selectedSortDirection, setSelectedSortDirection] = reactExports.useState("Ascending");
   const settingsLoadedRef = reactExports.useRef(false);
@@ -38908,7 +38826,7 @@ function MainApp() {
         if (fulltext) setQuery(fulltext);
         if (facetFiltersParam) {
           const facetFilters = JSON.parse(decodeURIComponent(facetFiltersParam));
-          setSelectedFacetFilters(facetFilters);
+          setFacetCheckedState(facetFilters);
         }
         if (numericFiltersParam) {
           const numericFilters = JSON.parse(decodeURIComponent(numericFiltersParam));
@@ -38922,7 +38840,7 @@ function MainApp() {
         console.warn("Error parsing URL search parameters:", error);
       }
     }
-  }, [dynamicMediaClient, setSelectedFacetFilters, setSelectedNumericFilters, performSearchImages]);
+  }, [dynamicMediaClient, setSelectedNumericFilters, performSearchImages]);
   reactExports.useEffect(() => {
     if (!dynamicMediaClient) return;
     const url = new URL(window.location.href);
@@ -39083,7 +39001,8 @@ function MainApp() {
       imagePresets,
       assetRenditionsCache,
       fetchAssetRenditions,
-      isRightsSearch
+      isRightsSearch,
+      onFacetCheckbox: handleFacetCheckbox
     }
   ) : /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, {}) });
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -39128,8 +39047,6 @@ function MainApp() {
             Facets,
             {
               searchResults,
-              selectedFacetFilters,
-              setSelectedFacetFilters,
               search,
               excFacets,
               selectedNumericFilters,
@@ -39146,7 +39063,11 @@ function MainApp() {
               selectedMarkets,
               setSelectedMarkets,
               selectedMediaChannels,
-              setSelectedMediaChannels
+              setSelectedMediaChannels,
+              facetCheckedState,
+              setFacetCheckedState,
+              onFacetCheckbox: handleFacetCheckbox,
+              onClearAllFacets: handleClearAllFacets
             }
           ) })
         ] }) }) }) })
