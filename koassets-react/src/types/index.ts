@@ -325,6 +325,7 @@ export interface SavedSearch {
 export interface FacetValue {
     label: string;
     type: string;
+    sortDirection?: string; // 'asc' or 'desc'
 }
 
 export interface FacetsProps {

@@ -309,6 +309,26 @@ const Facets: React.FC<FacetsProps> = ({
                     }
                 });
 
+                // Sort each level based on facet's sortDirection setting
+                const sortDirection = excFacets[facetTechId]?.sortDirection?.toLowerCase();
+                if (sortDirection === 'asc' || sortDirection === 'desc') {
+                    Object.keys(hierarchyData).forEach(level => {
+                        const levelNum = parseInt(level);
+                        const sortedEntries = Object.entries(hierarchyData[levelNum])
+                            .sort(([facetNameA], [facetNameB]) => {
+                                // Extract the last part of the hierarchy path for sorting
+                                const lastTokenA = facetNameA.split(' / ').pop()?.trim() || '';
+                                const lastTokenB = facetNameB.split(' / ').pop()?.trim() || '';
+                                if (sortDirection === 'asc') {
+                                    return lastTokenA.localeCompare(lastTokenB);
+                                } else {
+                                    return lastTokenB.localeCompare(lastTokenA);
+                                }
+                            });
+                        hierarchyData[levelNum] = Object.fromEntries(sortedEntries);
+                    });
+                }
+
                 hierarchyMap[facetTechId] = hierarchyData;
             }
         });
@@ -598,7 +618,7 @@ const Facets: React.FC<FacetsProps> = ({
         const facetTechIdHierarchyData = hierarchyDataByFacet[facetTechId];
         const isHierarchyFacet = !!facetTechIdHierarchyData;
 
-        // Render each facetTechId's hierarchy items
+        // Render each facetTechId's hierarchy items, e.g. 'Brand', 'Asset Category & Asset Type Execution'
         if (isHierarchyFacet) {
             return (
                 <div className="facet-filter-checkbox-list">
@@ -607,7 +627,7 @@ const Facets: React.FC<FacetsProps> = ({
             );
         }
 
-        // Render each facetTechId's non-hierarchy items
+        // Render each facetTechId's non-hierarchy items, e.g. 'Campaign', 'Rights Free'
         if (!expandedFacets[facetTechId] || !combinedFacets || !combinedFacets[facetTechId] || Object.keys(combinedFacets[facetTechId] || {}).length === 0) {
             return null;
         }
@@ -619,12 +639,27 @@ const Facets: React.FC<FacetsProps> = ({
         deselectFacetCheckedState(checkboxKey, facetTechIdDataMap);
 
         // Filter facet entries based on search term
-        const filteredEntries = Object.entries(facetTechIdDataMap)
+        let filteredEntries = Object.entries(facetTechIdDataMap)
             .filter(([facetName]) => {
                 if (!searchTerm) return true;
                 const displayFacetName = getDisplayFacetName(facetTechId, facetName);
                 return displayFacetName.toLowerCase().includes(searchTerm.toLowerCase());
             });
+
+        // Sort based on facet's sortDirection setting
+        const sortDirection = excFacets[facetTechId]?.sortDirection?.toLowerCase();
+        if (sortDirection === 'asc' || sortDirection === 'desc') {
+            filteredEntries = filteredEntries.sort(([facetNameA], [facetNameB]) => {
+                // Sort alphabetically by display name
+                const displayNameA = getDisplayFacetName(facetTechId, facetNameA);
+                const displayNameB = getDisplayFacetName(facetTechId, facetNameB);
+                if (sortDirection === 'asc') {
+                    return displayNameA.localeCompare(displayNameB);
+                } else {
+                    return displayNameB.localeCompare(displayNameA);
+                }
+            });
+        }
 
         return (
             <div className="facet-filter-checkbox-list">
