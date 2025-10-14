@@ -1,3 +1,5 @@
+import { ROLE } from '../user';
+
 // create IMS token using Oauth server-to-server credentials
 async function createIMSToken(request, clientId, clientSecret, scope) {
   const response = await fetch('https://ims-na1.adobelogin.com/ims/token/v4', {
@@ -55,7 +57,7 @@ async function getIMSToken(request, env) {
   }
 }
 
-function forceSearchFilter(search, constraint) {
+function forceSearchFilter(request, search, constraint) {
   // skip if constraint is empty or not set
   if (!constraint || constraint.length === 0) {
     return;
@@ -63,7 +65,6 @@ function forceSearchFilter(search, constraint) {
 
   for (let i = 0; i < search.requests?.length; i++) {
     const searchReq = search.requests[i];
-    // console.log('>>> Search', i, JSON.stringify(searchReq, null, 2));
 
     const filter = searchReq.params.filters;
     if (!filter || filter.length === 0) {
@@ -74,108 +75,41 @@ function forceSearchFilter(search, constraint) {
       searchReq.params.filters = `(${filter}) AND ${constraint}`;
     }
 
-    console.log('Search filter:', searchReq.params.filters);
+    console.log(`Search filter [${i}] for ${request.user.email}: ${searchReq.params.filters}`);
   }
-}
-
-const USER_TYPE = {
-  EMPLOYEE: 'employee',
-  CONTIGENT_WORKER: 'contigent',
-  AGENCY: 'agency',
-  CUSTOMER: 'customer',
-  BOTTLER: 'bottler',
-  UNKNOWN: 'unknown',
-};
-
-function getUserType(user) {
-  if (user.domain === 'coca-cola.com') {
-    if (user.usertype === '10') {
-      return USER_TYPE.EMPLOYEE;
-    } else if (user.usertype === '11') {
-      return USER_TYPE.CONTIGENT_WORKER;
-    }
-  }
-
-  // TODO: make agency, customer & bottler authorable in EDS sheet
-  // change all toLowerCase() when reading
-  const AGENCIES = ['bertelsmann.de'];
-  const CUSTOMERS = ['mcdonalds.com'];
-  const BOTTLERS = ['brn.com.mx', 'carlsberg.dk'];
-
-  if (AGENCIES.includes(user.domain)) {
-    return USER_TYPE.AGENCY;
-  } else if (CUSTOMERS.includes(user.domain)) {
-    return USER_TYPE.CUSTOMER;
-  } else if (BOTTLERS.includes(user.domain)) {
-    return USER_TYPE.BOTTLER;
-  }
-
-  return USER_TYPE.UNKNOWN;
-}
-
-function getCustomer(user) {
-  // TODO: this needs customizable domain mapping (but only for special cases)
-  const CUSTOMER_MAPPING = {
-    'exxonmobil.com': 'exxon-mobil',
-    'mcdonalds.com': 'mcdonald-',
-    'mcdonaldsfoodcenter.com': 'mcdonald-s',
-    'sodexo.com': 'sodexo',
-    'walmart.com': 'walmart-usa',
-  };
-  return CUSTOMER_MAPPING[user.domain] ? CUSTOMER_MAPPING[user.domain] : user.domain.replace(/[^a-zA-Z0-9-]/g, '-');
-}
-
-function getRestrictedBrands(user) {
-  // TODO: make users access to restricted brands configurable - pull from EDS sheet
-  return ['nestea'];
 }
 
 async function searchAuthorization(request) {
+  const user = request.user;
   const search = await request.json();
 
-  request.user.domain = request.user.email.split('@').pop().toLowerCase();
-  const user = {
-    country: request.user.country?.toLowerCase(),
-    type: getUserType(request.user),
-    customer: getCustomer(request.user),
-    restrictedBrands: getRestrictedBrands(request.user),
-  }
-  console.log('user', user);
-
-  // RESTRICTED BRAND CHECK ------------------------------------------------------
-  // TODO: make list of restricted brands configurable - pull from EDS sheet
-  const restrictedBrands = ['kirks-ko','carlysle-farm-ko','chill-out','m-hydro-ko','diet-canada-dry-ko','lemon-paerora','live','roar-ko','aloe-gloe','burn','deep-spring','diet-dr-pepper-ko','dr-pepper-ko','enviga','full-throttle','gladiator','kirks','monster-ko','mother','moxie-ko','nalu','nestea','nestea-cool','nos','relentless'];
-  // const restrictedBrands = ['nalu' ,'nestea'];
-
-  const hasBrandOfUser = user.restrictedBrands.map(brand => `tccc-brand._tagIDs:'tccc:brand/${brand}'`).join(' OR ');
-  const hasNoRestrictedBrand = restrictedBrands.map(brand => `tccc-brand._tagIDs:'tccc:brand/${brand}'`).join(' OR ');
-
-  // TODO: DISABLED for now. does not seem possible with Algolia and current index setup
-  // Problem: 'a OR (b AND c)' is not supported by Aloglia
-  // https://www.algolia.com/doc/guides/managing-results/refine-results/filtering/in-depth/combining-boolean-operators#use-of-parentheses
-  // const restrictedBrand = `(${hasBrandOfUser} OR NOT (${hasNoRestrictedBrand}))`;
+  // RESTRICTED BRAND CHECK
+  // TODO: DISABLED until we have the right search index support
   const restrictedBrand = '';
 
-  // INTENDED BOTTLER COUNTRY CHECK ---------------------------------------------
+  // INTENDED BOTTLER COUNTRY CHECK
   let intendedBottlerCountry = '';
-  if (user.type === USER_TYPE.EMPLOYEE || user.type === USER_TYPE.CONTIGENT_WORKER || user.type === USER_TYPE.AGENCY) {
-    // these userscan access everything wrt bottlers
-    intendedBottlerCountry = '';
-  } else {
-    // TODO: can the user be in multiple countries via manual group configuration?
-    intendedBottlerCountry = `tccc-intendedBottlerCountry:'${user.country}'`;
-    if (user.type === USER_TYPE.BOTTLER) {
-      // bottlers can access all countries
-      intendedBottlerCountry = `(tccc-intendedBottlerCountry:'all-countries' OR ${intendedBottlerCountry})`;
+  // these users can see every bottler country
+  if (![ROLE.EMPLOYEE, ROLE.CONTINGENT_WORKER, ROLE.AGENCY].some(r => user.roles.includes(r))) {
+    const countries = user.bottlerCountries || [];
+    if (user.roles.includes(ROLE.BOTTLER)) {
+      countries.push('all-countries');
+    }
+    if (countries.length > 0) {
+      intendedBottlerCountry = `(${countries.map(c => `tccc-intendedBottlerCountry:'${c}'`).join(' OR ')})`;
+    } else {
+      // should normally not happen, but safety net: ensure no hits
+      intendedBottlerCountry = `tccc-intendedBottlerCountry:'___does_not_exist___'`;
     }
   }
 
-  // INTENDED CUSTOMER CHECK ----------------------------------------------------
-  const intendedCustomer = `(NOT tccc-assetType:'customers' OR tccc-intendedCustomers:'${user.customer}')`;
+  // INTENDED CUSTOMER CHECK
+  const intendedCustomer = `(NOT tccc-assetType:'customers'${user.customers.map(c => ` OR tccc-intendedCustomers:'${c}'`).join('')})`;
 
+  // all checks are required (AND)
   const constraint = [restrictedBrand, intendedBottlerCountry, intendedCustomer].filter(c => c).join(' AND ');
 
-  forceSearchFilter(search, constraint);
+  forceSearchFilter(request, search, constraint);
 
   return JSON.stringify(search);
 }
@@ -240,10 +174,6 @@ export async function originDynamicMedia(request, env) {
   });
 
   // console.log('<<<', resp.status, resp.headers);
-
-  if (url.pathname === '/adobe/assets/search' &&resp.status !== 200) {
-    console.error('DM error', resp.status, resp.statusText);
-  }
 
   return resp;
 }
