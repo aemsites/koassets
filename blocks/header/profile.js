@@ -14,7 +14,7 @@ function createProfileModal() {
   modal.id = 'profile-modal';
   modal.className = 'profile-modal';
 
-  const canSudo = window.user?.canSudo === true;
+  const canSudo = window.user?.permissions?.includes('sudo');
 
   // Add sudo-mode class if user can sudo
   if (canSudo) {
@@ -25,7 +25,7 @@ function createProfileModal() {
   const currentName = window.user?.name || '';
   const currentEmail = window.user?.email || '';
   const currentCountry = window.user?.country || '';
-  const currentUserType = window.user?.usertype || '';
+  const currentEmployeeType = window.user?.employeeType || '';
 
   modal.innerHTML = `
     <div class="profile-modal-content">
@@ -60,22 +60,26 @@ function createProfileModal() {
              ${canSudo ? `<input type="text" class="profile-input" id="profile-country-input" value="${currentCountry}" style="display: none;">` : ''}
            </div>
            ${window.user?.su || canSudo ? `
-           <div class="profile-field" id="usertype-field" style="${!window.user?.su ? 'display: none;' : ''}">
-             <label>USER TYPE (In Microsoft Directory)</label>
-             <div class="profile-value" id="profile-usertype">${currentUserType}</div>
-             <div class="profile-usertype-dropdown" id="profile-usertype-dropdown" style="display: none;">
-               <select class="profile-input" id="profile-usertype-select">
-                 <option value="" ${currentUserType === '' ? 'selected' : ''}>Select user type...</option>
-                 <option value="10" ${currentUserType === '10' ? 'selected' : ''}>Employee - 10</option>
-                 <option value="11" ${currentUserType === '11' ? 'selected' : ''}>Contingent Worker - 11</option>
-                 <option value="custom" ${currentUserType !== '10' && currentUserType !== '11' && currentUserType !== '' ? 'selected' : ''}>Other</option>
+           <div class="profile-field" id="employeetype-field" style="${!window.user?.su ? 'display: none;' : ''}">
+             <label>EMPLOYEE TYPE</label>
+             <div class="profile-value" id="profile-employeetype">${currentEmployeeType}</div>
+             <div class="profile-employeetype-dropdown" id="profile-employeetype-dropdown" style="display: none;">
+               <select class="profile-input" id="profile-employeetype-select">
+                 <option value="" ${currentEmployeeType === '' ? 'selected' : ''}>Select employee type...</option>
+                 <option value="10" ${currentEmployeeType === '10' ? 'selected' : ''}>Employee (10)</option>
+                 <option value="11" ${currentEmployeeType === '11' ? 'selected' : ''}>Contingent Worker (11)</option>
+                 <option value="99" ${currentEmployeeType === '99' ? 'selected' : ''}>External (99)</option>
+                 <option value="custom" ${currentEmployeeType !== '10' && currentEmployeeType !== '11' && currentEmployeeType !== '99' && currentEmployeeType !== '' ? 'selected' : ''}>Other</option>
                </select>
-               <input type="text" class="profile-input profile-usertype-custom" id="profile-usertype-custom" value="${currentUserType !== '10' && currentUserType !== '11' ? currentUserType : ''}" placeholder="Enter custom user type" style="${currentUserType !== '10' && currentUserType !== '11' && currentUserType !== '' ? 'display: block; margin-top: 8px;' : 'display: none; margin-top: 8px;'}">
+               <input type="text" class="profile-input profile-employeetype-custom" id="profile-employeetype-custom" value="${currentEmployeeType !== '10' && currentEmployeeType !== '11' && currentEmployeeType !== '99' ? currentEmployeeType : ''}" placeholder="Enter custom employee type" style="${currentEmployeeType !== '10' && currentEmployeeType !== '11' && currentEmployeeType !== '99' && currentEmployeeType !== '' ? 'display: block; margin-top: 8px;' : 'display: none; margin-top: 8px;'}">
              </div>
            </div>
            ` : ''}
          </div>
          ${canSudo ? `
+         <div class="sudo-edit-note" id="sudo-edit-note" style="display: none;">
+           Enter values as provided in Microsoft Directory.
+         </div>
          <div class="profile-buttons">
            <button class="edit-button" id="profile-edit-btn" type="button">
              <svg class="edit-icon" width="16" height="18" viewBox="0 0 18 21" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -167,6 +171,12 @@ function toggleEditMode() {
 ${window.user?.su ? 'Simulating User' : 'Simulate User'}
     `;
 
+    // Hide sudo edit note
+    const sudoEditNote = document.getElementById('sudo-edit-note');
+    if (sudoEditNote) {
+      sudoEditNote.style.display = 'none';
+    }
+
     // Hide inline save button
     if (inlineSaveBtn) {
       inlineSaveBtn.style.display = 'none';
@@ -180,17 +190,17 @@ ${window.user?.su ? 'Simulating User' : 'Simulate User'}
     document.getElementById('profile-email-input').style.display = 'none';
     document.getElementById('profile-country-input').style.display = 'none';
 
-    // Handle USER TYPE field visibility
-    const userTypeField = document.getElementById('usertype-field');
-    const userTypeValue = document.getElementById('profile-usertype');
-    const userTypeDropdown = document.getElementById('profile-usertype-dropdown');
-    if (userTypeField && userTypeValue && userTypeDropdown) {
-      // Hide USER TYPE field if not currently impersonating
+    // Handle EMPLOYEE TYPE field visibility
+    const employeeTypeField = document.getElementById('employeetype-field');
+    const employeeTypeValue = document.getElementById('profile-employeetype');
+    const employeeTypeDropdown = document.getElementById('profile-employeetype-dropdown');
+    if (employeeTypeField && employeeTypeValue && employeeTypeDropdown) {
+      // Hide EMPLOYEE TYPE field if not currently impersonating
       if (!window.user?.su) {
-        userTypeField.style.display = 'none';
+        employeeTypeField.style.display = 'none';
       }
-      userTypeValue.style.display = 'block';
-      userTypeDropdown.style.display = 'none';
+      employeeTypeValue.style.display = 'block';
+      employeeTypeDropdown.style.display = 'none';
     }
   } else {
     // Switch to edit mode
@@ -210,6 +220,12 @@ ${window.user?.su ? 'Simulating User' : 'Simulate User'}
       Cancel
     `;
 
+    // Show sudo edit note
+    const sudoEditNote = document.getElementById('sudo-edit-note');
+    if (sudoEditNote) {
+      sudoEditNote.style.display = 'block';
+    }
+
     // Show inline save button
     if (inlineSaveBtn) {
       inlineSaveBtn.style.display = 'block';
@@ -223,15 +239,15 @@ ${window.user?.su ? 'Simulating User' : 'Simulate User'}
     document.getElementById('profile-email-input').style.display = 'block';
     document.getElementById('profile-country-input').style.display = 'block';
 
-    // Show and handle USER TYPE field in edit mode
-    const userTypeField = document.getElementById('usertype-field');
-    const userTypeValue = document.getElementById('profile-usertype');
-    const userTypeDropdown = document.getElementById('profile-usertype-dropdown');
-    if (userTypeField && userTypeValue && userTypeDropdown) {
-      // Always show USER TYPE field in edit mode (for sudo users)
-      userTypeField.style.display = 'block';
-      userTypeValue.style.display = 'none';
-      userTypeDropdown.style.display = 'block';
+    // Show and handle EMPLOYEE TYPE field in edit mode
+    const employeeTypeField = document.getElementById('employeetype-field');
+    const employeeTypeValue = document.getElementById('profile-employeetype');
+    const employeeTypeDropdown = document.getElementById('profile-employeetype-dropdown');
+    if (employeeTypeField && employeeTypeValue && employeeTypeDropdown) {
+      // Always show EMPLOYEE TYPE field in edit mode (for sudo users)
+      employeeTypeField.style.display = 'block';
+      employeeTypeValue.style.display = 'none';
+      employeeTypeDropdown.style.display = 'block';
     }
   }
 }
@@ -241,22 +257,22 @@ function handleReset() {
   removeCookie('SUDO_NAME');
   removeCookie('SUDO_EMAIL');
   removeCookie('SUDO_COUNTRY');
-  removeCookie('SUDO_USERTYPE');
+  removeCookie('SUDO_EMPLOYEE_TYPE');
 
   // Reload the page
   window.location.reload();
 }
 
 function handleSave() {
-  const canSudo = window.user?.canSudo === true;
+  const canSudo = window.user?.permissions?.includes('sudo');
 
   if (canSudo) {
     // Get values from input fields
     const nameInput = document.getElementById('profile-name-input');
     const emailInput = document.getElementById('profile-email-input');
     const countryInput = document.getElementById('profile-country-input');
-    const userTypeSelect = document.getElementById('profile-usertype-select');
-    const userTypeCustom = document.getElementById('profile-usertype-custom');
+    const employeeTypeSelect = document.getElementById('profile-employeetype-select');
+    const employeeTypeCustom = document.getElementById('profile-employeetype-custom');
 
     if (nameInput && emailInput && countryInput) {
       let needsReload = false;
@@ -277,16 +293,16 @@ function handleSave() {
         needsReload = true;
       }
 
-      if (userTypeSelect) {
-        let userTypeValue = '';
-        if (userTypeSelect.value === 'custom') {
-          userTypeValue = userTypeCustom ? userTypeCustom.value : '';
+      if (employeeTypeSelect) {
+        let employeeTypeValue = '';
+        if (employeeTypeSelect.value === 'custom') {
+          employeeTypeValue = employeeTypeCustom ? employeeTypeCustom.value : '';
         } else {
-          userTypeValue = userTypeSelect.value;
+          employeeTypeValue = employeeTypeSelect.value;
         }
 
-        if (userTypeValue !== (window.user?.usertype || '')) {
-          setCookie('SUDO_USERTYPE', userTypeValue);
+        if (employeeTypeValue !== (window.user?.employeeType || '')) {
+          setCookie('SUDO_EMPLOYEE_TYPE', employeeTypeValue);
           needsReload = true;
         }
       }
@@ -329,10 +345,10 @@ export default function showProfileModal() {
     const nameInput = modal.querySelector('#profile-name-input');
     const emailInput = modal.querySelector('#profile-email-input');
     const countryInput = modal.querySelector('#profile-country-input');
-    const userTypeSelect = modal.querySelector('#profile-usertype-select');
-    const userTypeCustom = modal.querySelector('#profile-usertype-custom');
+    const employeeTypeSelect = modal.querySelector('#profile-employeetype-select');
+    const employeeTypeCustom = modal.querySelector('#profile-employeetype-custom');
 
-    [nameInput, emailInput, countryInput, userTypeCustom].forEach((input) => {
+    [nameInput, emailInput, countryInput, employeeTypeCustom].forEach((input) => {
       if (input) {
         input.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
@@ -343,10 +359,10 @@ export default function showProfileModal() {
       }
     });
 
-    // Add change event listener to usertype select to show/hide custom input
-    if (userTypeSelect) {
-      userTypeSelect.addEventListener('change', (e) => {
-        const customInput = document.getElementById('profile-usertype-custom');
+    // Add change event listener to employeeType select to show/hide custom input
+    if (employeeTypeSelect) {
+      employeeTypeSelect.addEventListener('change', (e) => {
+        const customInput = document.getElementById('profile-employeetype-custom');
         if (customInput) {
           if (e.target.value === 'custom') {
             customInput.style.display = 'block';
