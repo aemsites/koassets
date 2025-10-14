@@ -250,54 +250,49 @@ authRouter
   })
 
   .post('/callback', async (request, env) => {
-    try {
-      const state = await validateSignedCookie(request, await env.COOKIE_SECRET.get(), COOKIE_STATE);
-      if (!state) {
-        return unauthorized(request);
-      }
-
-      const formData = await validateMicrosoftSignInCallback(request, state.state);
-      if (!formData) {
-        return unauthorized(request);
-      }
-
-      request.idToken = await validateIdToken(request, formData.get('id_token'), env, state.nonce);
-      if (!request.idToken) {
-        return unauthorized(request);
-      }
-
-      const session = await createSession(request, env);
-      if (!session) {
-        request.error = request.error || 'User not allowed to access this application';
-        return unauthorized(request);
-      }
-
-      const sessionJWT = await createSessionJWT(request, env, session);
-
-      let redirectUrl = `${request.uri.origin}/`;
-      // get original redirect url from state parameter (if present)
-      const originalUrl = state.state.split('|')[1];
-      if (originalUrl?.startsWith('/')
-          && originalUrl !== env.LOGIN_PAGE
-          && originalUrl !== `${AUTH_PREFIX}/login`) {
-        redirectUrl = originalUrl;
-      }
-
-      const response = redirect(redirectUrl);
-      // set session cookie
-      setCookie(response, COOKIE_SESSION, sessionJWT, {
-        // SameSite=Lax because this request is considered cross-site because it originates from the OIDC provider
-        SameSite: 'Lax',
-        // Safari does not like Secure on http://localhost (non SSL)
-        Secure: request.uri.hostname !== 'localhost',
-      });
-      // remove temporary cookies
-      deleteCookie(response, COOKIE_STATE);
-      return response;
-    } catch (error) {
-      console.error('Error in /auth/callback:', error);
-      return new Response(`Internal Server Error\n\n${error.stack}`, { status: 500 });
+    const state = await validateSignedCookie(request, await env.COOKIE_SECRET.get(), COOKIE_STATE);
+    if (!state) {
+      return unauthorized(request);
     }
+
+    const formData = await validateMicrosoftSignInCallback(request, state.state);
+    if (!formData) {
+      return unauthorized(request);
+    }
+
+    request.idToken = await validateIdToken(request, formData.get('id_token'), env, state.nonce);
+    if (!request.idToken) {
+      return unauthorized(request);
+    }
+
+    const session = await createSession(request, env);
+    if (!session) {
+      request.error = request.error || 'User not allowed to access this application';
+      return unauthorized(request);
+    }
+
+    const sessionJWT = await createSessionJWT(request, env, session);
+
+    let redirectUrl = `${request.uri.origin}/`;
+    // get original redirect url from state parameter (if present)
+    const originalUrl = state.state.split('|')[1];
+    if (originalUrl?.startsWith('/')
+        && originalUrl !== env.LOGIN_PAGE
+        && originalUrl !== `${AUTH_PREFIX}/login`) {
+      redirectUrl = originalUrl;
+    }
+
+    const response = redirect(redirectUrl);
+    // set session cookie
+    setCookie(response, COOKIE_SESSION, sessionJWT, {
+      // SameSite=Lax because this request is considered cross-site because it originates from the OIDC provider
+      SameSite: 'Lax',
+      // Safari does not like Secure on http://localhost (non SSL)
+      Secure: request.uri.hostname !== 'localhost',
+    });
+    // remove temporary cookies
+    deleteCookie(response, COOKIE_STATE);
+    return response;
   })
 
   .get('/logout', withAuthentication, (request, env) => {
