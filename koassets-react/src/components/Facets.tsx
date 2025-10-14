@@ -678,7 +678,7 @@ const Facets: React.FC<FacetsProps> = ({
                 })}
             </div>
         );
-    }, [expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, facetCheckedState, onFacetCheckbox, facetSearchTerms, handleClearRightsStartDate, handleRightsStartDateChange, rightsStartDate, handleClearRightsEndDate, handleRightsEndDateChange, rightsEndDate, selectedMarkets, selectedMediaChannels, setSelectedMarkets, setSelectedMediaChannels, deselectFacetCheckedState]);
+    }, [excFacets, expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, facetCheckedState, onFacetCheckbox, facetSearchTerms, handleClearRightsStartDate, handleRightsStartDateChange, rightsStartDate, handleClearRightsEndDate, handleRightsEndDateChange, rightsEndDate, selectedMarkets, selectedMediaChannels, setSelectedMarkets, setSelectedMediaChannels, deselectFacetCheckedState]);
 
     // Convert date ranges to numeric filters for search
     useEffect(() => {

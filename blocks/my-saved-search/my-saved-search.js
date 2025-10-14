@@ -234,8 +234,15 @@ function createSavedSearchRow(search) {
 
   nameContainer.appendChild(nameText);
 
-  const filtersCount = (search.facetFilters ? search.facetFilters.flat().length : 0)
-                      + (search.numericFilters ? search.numericFilters.length : 0);
+  const facetFiltersCount = search.facetFilters
+    ? Object.values(search.facetFilters).reduce((total, facetGroup) => {
+      const selectedCount = Object.values(facetGroup)
+        .filter((isSelected) => isSelected === true).length;
+      return total + selectedCount;
+    }, 0)
+    : 0;
+  const filtersCount = facetFiltersCount
+    + (search.numericFilters ? search.numericFilters.length : 0);
   const filtersText = document.createElement('div');
   filtersText.className = 'saved-search-filters';
   filtersText.textContent = `${filtersCount} filter${filtersCount !== 1 ? 's' : ''} applied`;

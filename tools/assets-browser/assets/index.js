@@ -35468,8 +35468,11 @@ function buildSavedSearchUrl(search) {
   if (search.searchTerm) {
     params.set("fulltext", search.searchTerm);
   }
-  if (search.facetFilters && search.facetFilters.length > 0) {
+  if (search.facetFilters && Object.keys(search.facetFilters).length > 0) {
     params.set("facetFilters", encodeURIComponent(JSON.stringify(search.facetFilters)));
+  }
+  if (search.rightsFilters && Object.keys(search.rightsFilters).length > 0) {
+    params.set("rightsFilters", encodeURIComponent(JSON.stringify(search.rightsFilters)));
   }
   if (search.numericFilters && search.numericFilters.length > 0) {
     params.set("numericFilters", encodeURIComponent(JSON.stringify(search.numericFilters)));
@@ -36018,7 +36021,7 @@ const Facets = ({
         count > 0 ? ` (${count})` : ""
       ] }, facetName);
     }) });
-  }, [expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, facetCheckedState, onFacetCheckbox, facetSearchTerms, handleClearRightsStartDate, handleRightsStartDateChange, rightsStartDate, handleClearRightsEndDate, handleRightsEndDateChange, rightsEndDate, selectedMarkets, selectedMediaChannels, setSelectedMarkets, setSelectedMediaChannels, deselectFacetCheckedState]);
+  }, [excFacets, expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, facetCheckedState, onFacetCheckbox, facetSearchTerms, handleClearRightsStartDate, handleRightsStartDateChange, rightsStartDate, handleClearRightsEndDate, handleRightsEndDateChange, rightsEndDate, selectedMarkets, selectedMediaChannels, setSelectedMarkets, setSelectedMediaChannels, deselectFacetCheckedState]);
   reactExports.useEffect(() => {
     if (Object.keys(dateRanges).length > 0) {
       setTimeout(() => {
@@ -38841,6 +38844,7 @@ function MainApp() {
     const fulltext = params.get("fulltext");
     const facetFiltersParam = params.get("facetFilters");
     const numericFiltersParam = params.get("numericFilters");
+    const rightsFiltersParam = params.get("rightsFilters");
     if (urlQuery !== null) setQuery(urlQuery);
     if (queryType !== null && Object.values(QUERY_TYPES).includes(queryType)) {
       setSelectedQueryType(queryType);
@@ -38854,7 +38858,8 @@ function MainApp() {
         setSelectedQueryType(QUERY_TYPES.PRODUCTS);
       }
     }
-    if (fulltext || facetFiltersParam || numericFiltersParam) {
+    if (fulltext || facetFiltersParam || numericFiltersParam || rightsFiltersParam) {
+      loadingFromUrlRef.current = true;
       try {
         if (fulltext) setQuery(fulltext);
         if (facetFiltersParam) {
@@ -38865,24 +38870,34 @@ function MainApp() {
           const numericFilters = JSON.parse(decodeURIComponent(numericFiltersParam));
           setSelectedNumericFilters(numericFilters);
         }
+        if (rightsFiltersParam) {
+          const rightsFilters = JSON.parse(decodeURIComponent(rightsFiltersParam));
+          setRightsStartDate(rightsFilters.rightsStartDate ? epochToCalendarDate(rightsFilters.rightsStartDate / 1e3) : null);
+          setRightsEndDate(rightsFilters.rightsEndDate ? epochToCalendarDate(rightsFilters.rightsEndDate / 1e3) : null);
+          setSelectedMarkets(new Set(rightsFilters.markets));
+          setSelectedMediaChannels(new Set(rightsFilters.mediaChannels));
+        }
         setTimeout(() => {
           setCurrentPage(0);
           performSearchImages(fulltext || "", 0);
+          loadingFromUrlRef.current = false;
         }, 100);
       } catch (error) {
         console.warn("Error parsing URL search parameters:", error);
+        loadingFromUrlRef.current = false;
       }
     }
-  }, [dynamicMediaClient, setSelectedNumericFilters, performSearchImages]);
+  }, [dynamicMediaClient, performSearchImages]);
   reactExports.useEffect(() => {
     if (!dynamicMediaClient) return;
     const url = new URL(window.location.href);
-    ["query", "selectedQueryType", "fulltext", "facetFilters", "numericFilters"].forEach((key) => url.searchParams.delete(key));
+    ["query", "selectedQueryType", "fulltext", "facetFilters", "numericFilters", "rightsFilters"].forEach((key) => url.searchParams.delete(key));
     const next = url.pathname + (url.search ? `?${url.searchParams.toString()}` : "");
     window.history.replaceState({}, "", next);
   }, [selectedQueryType, dynamicMediaClient]);
+  const loadingFromUrlRef = reactExports.useRef(false);
   reactExports.useEffect(() => {
-    if (!searchDisabled && authenticated && dynamicMediaClient && excFacets !== void 0 && document.querySelector(".koassets-search-wrapper")) {
+    if (!loadingFromUrlRef.current && !searchDisabled && authenticated && dynamicMediaClient && excFacets !== void 0 && document.querySelector(".koassets-search-wrapper")) {
       search();
     }
   }, [dynamicMediaClient, authenticated, excFacets, selectedFacetFilters, selectedNumericFilters, searchDisabled, selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate]);
