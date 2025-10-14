@@ -190,6 +190,71 @@ export default async function decorate(block) {
   block.appendChild(container);
 }
 
+/**
+ * Build asset preview URL for Dynamic Media
+ * @param {Object} asset - Asset object with assetId and name
+ * @param {string} format - Image format (webp, jpg, etc.)
+ * @param {number} width - Image width
+ * @returns {string} Formatted preview URL
+ */
+function buildAssetPreviewUrl(asset, format = 'jpg', width = 80) {
+  if (!asset || !asset.assetId) return '';
+
+  // For collection preview, use a generic filename since we might not have the actual filename
+  // The API will resolve the correct asset based on the assetId
+  const fileName = 'thumbnail';
+
+  return `/api/adobe/assets/${asset.assetId}/as/${fileName}.${format}?width=${width}`;
+}
+
+/**
+ * Fetch collection items and extract preview info from first asset
+ * @param {Object} collection - Collection object
+ * @returns {Promise<Object|null>} Preview asset info or null
+ */
+async function fetchCollectionPreview(collection) {
+  try {
+    const itemsResponse = await collectionsClient.getCollectionItems(collection.id, { limit: 1 });
+
+    if (itemsResponse && itemsResponse.items && itemsResponse.items.length > 0) {
+      const firstItem = itemsResponse.items[0];
+
+      // API returns 'id' field, not 'assetId'
+      // Use the ID as both assetId and name (same approach as my-collections-details)
+      const assetId = firstItem.id;
+      const assetName = firstItem.name || firstItem.title || assetId;
+
+      // Build preview URL from the first asset
+      const previewAsset = {
+        assetId,
+        name: assetName,
+        title: assetName,
+      };
+
+      const previewUrl = buildAssetPreviewUrl(previewAsset, 'jpg', 80);
+
+      // eslint-disable-next-line no-console
+      console.log(`📸 [Preview] Generated preview URL for collection ${collection.name}:`, {
+        assetId,
+        previewUrl,
+      });
+
+      return {
+        assetId,
+        name: assetName,
+        title: assetName,
+        previewUrl,
+      };
+    }
+
+    return null;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn(`Failed to fetch preview for collection ${collection.id}:`, error);
+    return null;
+  }
+}
+
 // API Functions
 async function loadCollectionsFromAPI() {
   if (isLoading || !collectionsClient) return;
@@ -205,6 +270,24 @@ async function loadCollectionsFromAPI() {
 
     // eslint-disable-next-line no-console
     console.trace(`Loaded ${allCollections.length} collections from API`);
+
+    // Fetch preview info for each collection (in parallel for better performance)
+    // eslint-disable-next-line no-console
+    console.trace('Fetching preview images for collections...');
+    const previewPromises = allCollections.map(async (collection) => {
+      const preview = await fetchCollectionPreview(collection);
+      if (preview) {
+        // Add the first asset as contents for preview display
+        collection.contents = [preview];
+      }
+      return collection;
+    });
+
+    // Wait for all previews to be fetched
+    await Promise.all(previewPromises);
+
+    // eslint-disable-next-line no-console
+    console.trace('Finished loading collection previews');
 
     // Update the display after loading
     updateCollectionsDisplay();
