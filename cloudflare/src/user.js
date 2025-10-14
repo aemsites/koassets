@@ -47,17 +47,19 @@ async function getUserAttributes(env, user) {
     }
   });
 
-  if (companies.customers[domain]) {
-    pushUnique(attributes.customers, companies.customers[domain].name);
-  }
+  if (companies) {
+    if (companies.customers[domain]) {
+      pushUnique(attributes.customers, companies.customers[domain].name);
+    }
 
-  if (companies.bottlers[domain]) {
-    pushUnique(attributes.roles, ROLE.BOTTLER);
-    pushUnique(attributes.bottlerCountries, companies.bottlers[domain].countries);
-  }
+    if (companies.bottlers[domain]) {
+      pushUnique(attributes.roles, ROLE.BOTTLER);
+      pushUnique(attributes.bottlerCountries, companies.bottlers[domain].countries);
+    }
 
-  if (companies.agencies[domain]) {
-    pushUnique(attributes.roles, ROLE.AGENCY);
+    if (companies.agencies[domain]) {
+      pushUnique(attributes.roles, ROLE.AGENCY);
+    }
   }
 
   const users = await fetchHelixSheet(env, '/config/access/users', {
@@ -67,7 +69,7 @@ async function getUserAttributes(env, user) {
     }
   });
 
-  const userOverride = users[email];
+  const userOverride = users?.[email];
   if (userOverride) {
     pushUnique(attributes.roles, userOverride.roles);
     pushUnique(attributes.bottlerCountries, userOverride.bottlerCountries);
@@ -148,6 +150,11 @@ export async function createSession(request, env) {
   const access = await fetchHelixSheet(env, '/config/access/permissions', {
     sheet: { key: 'email', arrays: ['permissions'] },
   });
+
+  if (!access) {
+    console.warn('No /config/access/permissions sheet found');
+    return false;
+  }
 
   if (!access[domain] && !access[email]) {
     console.warn('User email or domain not listed in /config/access/permissions sheet:', email);
