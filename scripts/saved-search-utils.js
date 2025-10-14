@@ -8,7 +8,8 @@
  * expected by the search application
  * @param {Object} search - The saved search object
  * @param {string} search.searchTerm - The search term
- * @param {Array<Array<string>>} search.facetFilters - Array of facet filter groups
+ * @param {Object} search.facetFilters - Object with facet selections (facetTechId -> facetName -> boolean)
+ * @param {Object} search.rightsFilters - Rights filter settings (dates, markets, media channels)
  * @param {Array<string>} search.numericFilters - Array of numeric filters
  * @param {string} [search.searchType] - The search type path (optional)
  * @returns {string} The complete shareable URL
@@ -20,8 +21,12 @@ export default function buildSavedSearchUrl(search) {
     params.set('fulltext', search.searchTerm);
   }
 
-  if (search.facetFilters && search.facetFilters.length > 0) {
+  if (search.facetFilters && Object.keys(search.facetFilters).length > 0) {
     params.set('facetFilters', encodeURIComponent(JSON.stringify(search.facetFilters)));
+  }
+
+  if (search.rightsFilters && Object.keys(search.rightsFilters).length > 0) {
+    params.set('rightsFilters', encodeURIComponent(JSON.stringify(search.rightsFilters)));
   }
 
   if (search.numericFilters && search.numericFilters.length > 0) {

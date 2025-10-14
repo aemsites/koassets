@@ -29,7 +29,7 @@ import { AppConfigProvider } from './AppConfigProvider';
 import { CalendarDate } from '@internationalized/date';
 import { createPortal } from 'react-dom';
 import { AuthorizationStatus, CheckRightsRequest, FadelClient } from '../clients/fadel-client';
-import { calendarDateToEpoch } from '../utils/formatters';
+import { calendarDateToEpoch, epochToCalendarDate } from '../utils/formatters';
 import CartPanel from './CartDownloads/CartPanel';
 import DownloadPanel from './CartDownloads/DownloadPanel';
 import Facets from './Facets';
@@ -404,6 +404,7 @@ function MainApp(): React.JSX.Element {
         const fulltext = params.get('fulltext');
         const facetFiltersParam = params.get('facetFilters');
         const numericFiltersParam = params.get('numericFilters');
+        const rightsFiltersParam = params.get('rightsFilters');
 
         if (urlQuery !== null) setQuery(urlQuery);
 
@@ -423,7 +424,8 @@ function MainApp(): React.JSX.Element {
         }
 
         // Apply saved search parameters if present
-        if (fulltext || facetFiltersParam || numericFiltersParam) {
+        if (fulltext || facetFiltersParam || numericFiltersParam || rightsFiltersParam) {
+            loadingFromUrlRef.current = true; // Prevent auto-search during URL loading
             try {
                 if (fulltext) setQuery(fulltext);
                 if (facetFiltersParam) {
@@ -434,30 +436,42 @@ function MainApp(): React.JSX.Element {
                     const numericFilters = JSON.parse(decodeURIComponent(numericFiltersParam));
                     setSelectedNumericFilters(numericFilters);
                 }
+                if (rightsFiltersParam) {
+                    const rightsFilters = JSON.parse(decodeURIComponent(rightsFiltersParam));
+                    setRightsStartDate(rightsFilters.rightsStartDate ? epochToCalendarDate(rightsFilters.rightsStartDate / 1000) : null);
+                    setRightsEndDate(rightsFilters.rightsEndDate ? epochToCalendarDate(rightsFilters.rightsEndDate / 1000) : null);
+                    setSelectedMarkets(new Set(rightsFilters.markets));
+                    setSelectedMediaChannels(new Set(rightsFilters.mediaChannels));
+                }
                 // Trigger search after a brief delay to ensure all state is updated
                 setTimeout(() => {
                     setCurrentPage(0);
                     performSearchImages(fulltext || '', 0);
+                    loadingFromUrlRef.current = false; // Re-enable auto-search after URL loading is complete
                 }, 100);
             } catch (error) {
                 console.warn('Error parsing URL search parameters:', error);
+                loadingFromUrlRef.current = false; // Re-enable auto-search on error
             }
         }
-    }, [dynamicMediaClient, setSelectedNumericFilters, performSearchImages]);
+    }, [dynamicMediaClient, performSearchImages]);
 
     useEffect(() => {
         if (!dynamicMediaClient) return;
         const url = new URL(window.location.href);
         // Only strip app-specific params; preserve others like id
-        ['query', 'selectedQueryType', 'fulltext', 'facetFilters', 'numericFilters']
+        ['query', 'selectedQueryType', 'fulltext', 'facetFilters', 'numericFilters', 'rightsFilters']
             .forEach((key) => url.searchParams.delete(key));
         const next = url.pathname + (url.search ? `?${url.searchParams.toString()}` : '');
         window.history.replaceState({}, '', next);
     }, [selectedQueryType, dynamicMediaClient]);
 
+    // Track if we're loading from URL parameters to prevent auto-search interference
+    const loadingFromUrlRef = useRef<boolean>(false);
+
     // Auto-search with empty query on app load
     useEffect(() => {
-        if (!searchDisabled && authenticated && dynamicMediaClient && excFacets !== undefined && document.querySelector('.koassets-search-wrapper')) {
+        if (!loadingFromUrlRef.current && !searchDisabled && authenticated && dynamicMediaClient && excFacets !== undefined && document.querySelector('.koassets-search-wrapper')) {
             search();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
