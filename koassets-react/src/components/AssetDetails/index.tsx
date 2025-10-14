@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppConfig } from '../../hooks/useAppConfig';
-import type { AssetDetailsProps, Rendition } from '../../types';
+import type { AssetDetailsProps, Rendition, Asset, Metadata } from '../../types';
 
 import { AuthorizationStatus } from '../../clients/fadel-client';
-import { fetchOptimizedDeliveryBlob } from '../../utils/blobCache';
-import { removeHyphenTitleCase } from '../../utils/formatters';
 import ActionButton from '../ActionButton';
 import { BUTTON_CONFIGS } from '../ActionButtonConfigs';
 import DownloadRenditionsModal from '../DownloadRenditionsModal';
+import Picture from '../Picture';
 import './AssetDetails.css';
 import AssetDetailsDRM from './AssetDetailsDRM';
 import AssetDetailsGeneralInfo from './AssetDetailsGeneralInfo';
@@ -22,6 +21,7 @@ import AssetDetailsScheduledActivation from './AssetDetailsScheduledActivation';
 import AssetDetailsSystem from './AssetDetailsSystem';
 import AssetDetailsSystemInfoLegacy from './AssetDetailsSystemInfoLegacy';
 import AssetDetailsTechnicalInfo from './AssetDetailsTechnicalInfo';
+import { populateAssetFromMetadata } from '../../utils/assetTransformers';
 
 /* Displayed on the asset details modal header section
 campaignName 
@@ -42,32 +42,31 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 }) => {
     // Get dynamicMediaClient from context
     const { dynamicMediaClient } = useAppConfig();
-    const [blobUrl, setBlobUrl] = useState<string | null>(null);
-    const [imageLoading, setImageLoading] = useState<boolean>(false);
     const [collapseAll, setCollapseAll] = useState<boolean>(false);
     const [showDownloadRenditionsModal, setShowDownloadRenditionsModal] = useState<boolean>(false);
     const [actionButtonEnable, setActionButtonEnable] = useState<boolean>(false);
     const [watermarkRendition, setWatermarkRendition] = useState<Rendition | undefined>(undefined);
+    const [populatedImage, setPopulatedImage] = useState<Asset>(selectedImage as Asset);
 
-    const rightsFree: boolean = (selectedImage?.readyToUse?.toLowerCase() === 'yes' || selectedImage?.authorized === AuthorizationStatus.AVAILABLE) ? true : false;
+    const rightsFree: boolean = (populatedImage?.readyToUse?.toLowerCase() === 'yes' || populatedImage?.authorized === AuthorizationStatus.AVAILABLE) ? true : false;
 
     const handleToggleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setCollapseAll(e.target.checked);
     };
 
     // Check if this item is already in the cart
-    const isInCart = selectedImage ? cartAssetItems.some(cartAssetItem => cartAssetItem.assetId === selectedImage.assetId) : false;
+    const isInCart = populatedImage ? cartAssetItems.some(cartAssetItem => cartAssetItem.assetId === populatedImage.assetId) : false;
 
     // Handle button click - either add or remove from cart
     const handleAddRemoveCart = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation();
 
-        if (!selectedImage) return;
+        if (!populatedImage) return;
 
         if (isInCart) {
-            handleRemoveFromCart?.(selectedImage);
+            handleRemoveFromCart?.(populatedImage);
         } else {
-            handleAddToCart?.(selectedImage, e);
+            handleAddToCart?.(populatedImage, e);
         }
     };
 
@@ -83,7 +82,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 
     // Handle action button click
     const handleDownloadPreview = async () => {
-        if (!selectedImage || !dynamicMediaClient) {
+        if (!populatedImage || !dynamicMediaClient) {
             console.warn('No asset or dynamic media client available for download');
             return;
         }
@@ -95,7 +94,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 
         try {
             console.log('Downloading watermark rendition:', watermarkRendition.name);
-            await dynamicMediaClient.downloadAsset(selectedImage, watermarkRendition);
+            await dynamicMediaClient.downloadAsset(populatedImage, watermarkRendition);
         } catch (error) {
             console.error('Failed to download asset:', error);
         }
@@ -109,13 +108,13 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     const handleAddToCollection = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        if (!selectedImage) return;
+        if (!populatedImage) return;
         try {
             const previewUrl = dynamicMediaClient?.getOptimizedDeliveryPreviewUrl
-                ? dynamicMediaClient.getOptimizedDeliveryPreviewUrl(selectedImage.assetId || '', selectedImage.name || '', 350)
+                ? dynamicMediaClient.getOptimizedDeliveryPreviewUrl(populatedImage.assetId || '', populatedImage.name || '', 350)
                 : undefined;
-            const assetForModal = previewUrl ? { ...selectedImage, previewUrl } : selectedImage;
-            const detail = { asset: assetForModal, assetPath: selectedImage.assetId } as unknown as Record<string, unknown>;
+            const assetForModal = previewUrl ? { ...populatedImage, previewUrl } : populatedImage;
+            const detail = { asset: assetForModal, assetPath: populatedImage.assetId } as unknown as Record<string, unknown>;
             window.dispatchEvent(new CustomEvent('openCollectionModal', { detail }));
         } catch (error) {
             console.warn('Failed to open Add to Collection modal from AssetDetails:', error);
@@ -128,44 +127,47 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 
     useEffect(() => {
         if (showModal && selectedImage && dynamicMediaClient) {
-            setImageLoading(true);
-            setBlobUrl(null);
+            setPopulatedImage(selectedImage as Asset);
+
+            const fetchMetadata = async () => {
+                // Populate image with metadata
+                const metadataCache = JSON.parse(sessionStorage.getItem('assetMetadataCache') || '{}');
+                let metadata = metadataCache[selectedImage.assetId];
+
+                if (!metadata) {
+                    // Fetch metadata if not in cache
+                    metadata = await dynamicMediaClient?.getMetadata(selectedImage.assetId);
+
+                    // Store in sessionStorage
+                    if (metadata) {
+                        metadataCache[selectedImage.assetId] = metadata;
+                        sessionStorage.setItem('assetMetadataCache', JSON.stringify(metadataCache));
+                    }
+                }
+
+                console.debug('Metadata:', metadata);
+                setPopulatedImage(
+                    { ...selectedImage, ...populateAssetFromMetadata(metadata as Metadata) }
+                );
+            }
+
+            fetchMetadata();
+        };
+    }, [showModal, selectedImage, dynamicMediaClient]);
+
+    useEffect(() => {
+        if (showModal && populatedImage) {
             setActionButtonEnable(false);
             setWatermarkRendition(undefined);
-
-            const fetchHighResImage = async () => {
-                try {
-                    // Just fetch high-res image directly, no caching for viewing
-                    const blobUrl = await fetchOptimizedDeliveryBlob(
-                        dynamicMediaClient,
-                        selectedImage,
-                        1200,
-                        {
-                            cache: false,
-                            cacheKey: `${selectedImage.assetId}-1200`,
-                            fallbackUrl: selectedImage.url
-                        }
-                    );
-                    setBlobUrl(blobUrl);
-                } catch (error) {
-                    console.error(`Error getting optimized delivery blob for asset ${selectedImage.assetId}: ${error}`);
-                    // Fallback to original URL
-                    setBlobUrl(selectedImage.url);
-                } finally {
-                    setImageLoading(false);
-                }
-            };
-
-            fetchHighResImage();
-        }
-    }, [showModal, selectedImage, dynamicMediaClient]);
+        };
+    }, [showModal, populatedImage]);
 
     // Fetch static renditions when modal opens
     useEffect(() => {
-        if (showModal && selectedImage && fetchAssetRenditions) {
-            fetchAssetRenditions(selectedImage);
+        if (showModal && populatedImage && fetchAssetRenditions) {
+            fetchAssetRenditions(populatedImage);
         }
-    }, [showModal, selectedImage, fetchAssetRenditions]);
+    }, [showModal, populatedImage, fetchAssetRenditions]);
 
     // Update watermarkRendition state based on renditions
     useEffect(() => {
@@ -182,46 +184,58 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 
     // Image presets are now fetched automatically by fetchAssetRenditions in MainApp
 
-    // Separate effect for cleanup
-    useEffect(() => {
-        return () => {
-            if (blobUrl && blobUrl.startsWith('blob:')) {
-                URL.revokeObjectURL(blobUrl);
-            }
-        };
-    }, [blobUrl]);
+    if (!showModal || !populatedImage) return null;
 
-    if (!showModal || !selectedImage) return null;
+    // Get or create the modal root container - insert before header to ensure proper stacking
+    const getModalRoot = () => {
+        let modalRoot = document.getElementById('modal-root');
+        if (!modalRoot) {
+            modalRoot = document.createElement('div');
+            modalRoot.id = 'modal-root';
+            modalRoot.style.position = 'fixed';
+            modalRoot.style.top = '0';
+            modalRoot.style.left = '0';
+            modalRoot.style.width = '100%';
+            modalRoot.style.height = '100%';
+            modalRoot.style.zIndex = '1'; // Very low z-index
+            modalRoot.style.pointerEvents = 'none';
+
+            // Insert before the header element to ensure proper DOM order
+            const header = document.querySelector('header');
+            if (header) {
+                document.body.insertBefore(modalRoot, header);
+            } else {
+                document.body.appendChild(modalRoot);
+            }
+        }
+        return modalRoot;
+    };
 
     return (
-        <div className="asset-details-modal portal-modal" onClick={handleOverlayClick}>
+        createPortal(<div className="asset-details-modal portal-modal"
+            onClick={handleOverlayClick}
+            style={{ pointerEvents: 'auto' }} // Re-enable pointer events for the modal
+        >
             <div className="asset-details-modal-inner" onClick={handleModalClick}>
                 <div className="asset-details-main-main-section">
                     <div className="asset-details-main-image-section">
-                        {imageLoading ? (
-                            <div className="asset-details-main-image-loading">
-                                <div className="loading-spinner"></div>
-                                <p>Loading high resolution image...</p>
-                            </div>
-                        ) : (
-                            <div className="asset-details-image-wrapper">
-                                {/* Add to Collection Overlay */}
-                                <div className="add-to-collection-overlay" onClick={handleAddToCollection}>
-                                    <div className="add-to-collection-content">
-                                        <i className="icon add circle"></i>
-                                        <span>Add to Collection</span>
-                                    </div>
-                                </div>
-                                <div className="preview-image">
-                                    <img
-                                        src={blobUrl || selectedImage.url}
-                                        alt={selectedImage.alt || selectedImage.name}
-                                        className="asset-details-main-image"
-                                        onError={(e) => { (e.target as HTMLImageElement)?.parentElement?.classList.add('missing'); }}
-                                    />
+                        <div className="asset-details-image-wrapper">
+                            {/* Add to Collection Overlay */}
+                            <div className="add-to-collection-overlay" onClick={handleAddToCollection}>
+                                <div className="add-to-collection-content">
+                                    <i className="icon add circle"></i>
+                                    <span>Add to Collection</span>
                                 </div>
                             </div>
-                        )}
+                            <Picture
+                                key={selectedImage?.assetId}
+                                asset={selectedImage as Asset}
+                                width={1200}
+                                className="asset-details-main-image"
+                                eager={true}
+                                fetchPriority="high"
+                            />
+                        </div>
                     </div>
 
                     <div className="asset-details-main-info-section">
@@ -230,20 +244,20 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                 <button className="asset-details-main-close-button" onClick={closeModal}>
                                     ×
                                 </button>
-                                {selectedImage?.xcmKeywords && (
+                                {populatedImage?.xcmKeywords && (
                                     <div className="asset-details-main-tags">
-                                        {selectedImage.xcmKeywords.split(',').map((keyword, index) => (
+                                        {populatedImage.xcmKeywords.split(',').map((keyword, index) => (
                                             <span key={index} className="asset-details-main-tag tccc-tag">
-                                                {removeHyphenTitleCase(keyword.trim())}
+                                                {keyword.trim()}
                                             </span>
                                         ))}
                                     </div>
                                 )}
                                 <div className="modal-title">
-                                    {selectedImage.title}
+                                    {populatedImage.title}
                                 </div>
-                                {selectedImage?.description && (
-                                    <p className="modal-description">{selectedImage?.description}</p>
+                                {populatedImage?.description && (
+                                    <p className="modal-description">{populatedImage?.description}</p>
                                 )}
                             </div>
 
@@ -251,35 +265,35 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                 <div className="details-modal-grid">
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">CREATED</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.createDate}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{populatedImage.createDate}</span>
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">TYPE</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.formatLabel}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{populatedImage.illustratorType as string}</span>
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">SIZE</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.formatedSize as string}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{populatedImage.formatedSize as string}</span>
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">LAST MODIFIED</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.lastModified}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{populatedImage.lastModified}</span>
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">RES.</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.resolution as string}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{populatedImage.resolution as string}</span>
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">EXPIRED</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.expired}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{populatedImage.expired}</span>
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">USAGE</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.usage as string}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{populatedImage.usage as string}</span>
                                     </div>
                                     <div className="details-modal-group">
                                         <span className="details-metadata-label tccc-metadata-label">RIGHTS FREE</span>
-                                        <span className="details-metadata-value tccc-metadata-value">{selectedImage.readyToUse}</span>
+                                        <span className="details-metadata-value tccc-metadata-value">{populatedImage.readyToUse}</span>
                                     </div>
                                 </div>
                             </div>
@@ -290,23 +304,23 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     <div className="tccc-assets-rights-grid">
                                         <div className="tccc-assets-rights-group">
                                             <span className="tccc-metadata-label">RIGHTS PROFILE TITLE</span>
-                                            <span className="tccc-metadata-value">{selectedImage?.rightsProfileTitle as string}</span>
+                                            <span className="tccc-metadata-value">{populatedImage?.rightsProfileTitle as string}</span>
                                         </div>
                                         <div className="tccc-assets-rights-group">
                                             <span className="tccc-metadata-label">MARKET COVERED</span>
-                                            <span className="tccc-metadata-value">{selectedImage?.marketCovered as string}</span>
+                                            <span className="tccc-metadata-value">{populatedImage?.marketCovered as string}</span>
                                         </div>
                                         <div className="tccc-assets-rights-group">
                                             <span className="tccc-metadata-label">RIGHTS START DATE</span>
-                                            <span className="tccc-metadata-value">{selectedImage?.rightsStartDate as string}</span>
+                                            <span className="tccc-metadata-value">{populatedImage?.rightsStartDate as string}</span>
                                         </div>
                                         <div className="tccc-assets-rights-group">
                                             <span className="tccc-metadata-label">RIGHTS END DATE</span>
-                                            <span className="tccc-metadata-value">{selectedImage?.rightsEndDate as string}</span>
+                                            <span className="tccc-metadata-value">{populatedImage?.rightsEndDate as string}</span>
                                         </div>
                                         <div className="tccc-assets-rights-group">
                                             <span className="tccc-metadata-label">MEDIA</span>
-                                            <span className="tccc-metadata-value">{selectedImage?.media as string}</span>
+                                            <span className="tccc-metadata-value">{populatedImage?.media as string}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -344,7 +358,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                 <div className="asset-details-main-toggle-section"></div>
 
                 <div className="asset-details-main-metadata-section">
-                    <div className="cmp-title" id="showfulldetails">
+                    <div className="cmp-title">
                         <h1>
                             Collapse All
                             <label className="switch">
@@ -355,20 +369,20 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                     </div>
                     <div className="asset-details-main-metadata-grid">
                         <div className="asset-details-main-metadata-left-container">
-                            <AssetDetailsSystem selectedImage={selectedImage} forceCollapse={collapseAll} />
-                            <AssetDetailsDRM selectedImage={selectedImage} forceCollapse={collapseAll} />
-                            <AssetDetailsOverview selectedImage={selectedImage} forceCollapse={collapseAll} />
-                            <AssetDetailsGeneralInfo selectedImage={selectedImage} forceCollapse={collapseAll} />
-                            <AssetDetailsIntendedUse selectedImage={selectedImage} forceCollapse={collapseAll} />
-                            <AssetDetailsScheduledActivation selectedImage={selectedImage} forceCollapse={collapseAll} />
-                            <AssetDetailsTechnicalInfo selectedImage={selectedImage} forceCollapse={collapseAll} />
-                            <AssetDetailsSystemInfoLegacy selectedImage={selectedImage} forceCollapse={collapseAll} />
-                            <AssetDetailsProduction selectedImage={selectedImage} forceCollapse={collapseAll} />
-                            <AssetDetailsLegacyFields selectedImage={selectedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsSystem selectedImage={populatedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsDRM selectedImage={populatedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsOverview selectedImage={populatedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsGeneralInfo selectedImage={populatedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsIntendedUse selectedImage={populatedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsScheduledActivation selectedImage={populatedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsTechnicalInfo selectedImage={populatedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsSystemInfoLegacy selectedImage={populatedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsProduction selectedImage={populatedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsLegacyFields selectedImage={populatedImage} forceCollapse={collapseAll} />
                         </div>
                         <div className="asset-details-main-metadata-right-container">
-                            <AssetDetailsMarketing selectedImage={selectedImage} forceCollapse={collapseAll} />
-                            <AssetDetailsMarketingPackageContainer selectedImage={selectedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsMarketing selectedImage={populatedImage} forceCollapse={collapseAll} />
+                            <AssetDetailsMarketingPackageContainer selectedImage={populatedImage} forceCollapse={collapseAll} />
                         </div>
                     </div>
                 </div>
@@ -377,14 +391,16 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
             {createPortal(
                 <DownloadRenditionsModal
                     isOpen={showDownloadRenditionsModal}
-                    asset={selectedImage}
+                    asset={populatedImage}
                     onCloseDownloadRenditions={handleCloseDownloadRenditionsModal}
                     renditions={renditions}
                     imagePresets={imagePresets}
                 />,
                 document.body
             )}
-        </div>
+        </div>,
+            getModalRoot()
+        )
     );
 };
 

@@ -4,15 +4,8 @@ import { useAppConfig } from '../hooks/useAppConfig';
 import { Asset, DownloadAssetItem, Rendition } from '../types';
 import { formatDimensions, formatFileSize, formatFormatName } from '../utils/formatters';
 import './DownloadRenditionsContent.css';
-import ThumbnailImage from './ThumbnailImage';
-
-// Extend window interface for download badge function
-declare global {
-    interface Window {
-        updateDownloadBadge?: (numItems: number) => void;
-    }
-}
-
+import Picture from './Picture';
+import { EAGER_LOAD_IMAGE_COUNT } from '../constants/images';
 
 interface AssetData {
     asset: Asset;
@@ -433,9 +426,12 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                 {/* Asset Rows */}
                 {assets.map((assetData, index) => (
                     <div key={assetData.asset.assetId || index} className="download-renditions-row">
-                        <div className="download-renditions-thumbnail">
-                            <ThumbnailImage
-                                item={assetData.asset}
+                        <div className="item-thumbnail">
+                            <Picture
+                                key={assetData.asset.assetId}
+                                asset={assetData.asset}
+                                width={350}
+                                eager={index < EAGER_LOAD_IMAGE_COUNT}
                             />
                         </div>
                         <div className="download-renditions-title">

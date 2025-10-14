@@ -13,7 +13,6 @@ console.log('🔒 Generating safe config.js for static deployment...');
 
 // Safe placeholder values (no sensitive data)
 const safeConfig = {
-    ADOBE_CLIENT_ID: '${ADOBE_CLIENT_ID}', // Will be replaced at runtime
     BUCKET: '${BUCKET}', // Will be replaced at runtime
 };
 
@@ -22,7 +21,6 @@ const configContent = `// Runtime configuration for static deployment
 // Generated at: ${new Date().toISOString()}
 // NOTE: This file contains placeholder values that should be replaced during deployment
 window.APP_CONFIG = {
-  ADOBE_CLIENT_ID: '${safeConfig.ADOBE_CLIENT_ID}',
   BUCKET: '${safeConfig.BUCKET}',
   // Add other environment variables as needed
 };
@@ -43,7 +41,6 @@ fs.writeFileSync(toolsConfigPath, configContent);
 
 console.log('✅ Generated safe config at:', toolsConfigPath);
 console.log('📋 Safe configuration:');
-console.log(`   ADOBE_CLIENT_ID: ${safeConfig.ADOBE_CLIENT_ID}`);
 console.log(`   BUCKET: ${safeConfig.BUCKET}`);
 console.log('');
 console.log('⚠️  IMPORTANT: Replace placeholder values before deployment!');

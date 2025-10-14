@@ -1,21 +1,10 @@
 import { ToastQueue } from '@react-spectrum/toast';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DateValue } from 'react-aria-components';
 import '../MainApp.css';
 
 import { DynamicMediaClient } from '../clients/dynamicmedia-client';
 import { DEFAULT_FACETS, type ExcFacets } from '../constants/facets';
-// Extend Window interface to include our custom functions
-declare global {
-    interface Window {
-        openCart?: () => void;
-        closeCart?: () => void;
-        toggleCart?: () => void;
-        openDownloadPanel?: () => void;
-        closeDownloadPanel?: () => void;
-        toggleDownloadPanel?: () => void;
-    }
-}
 
 import type {
     Asset,
@@ -24,6 +13,7 @@ import type {
     Collection,
     CurrentView,
     ExternalParams,
+    FacetCheckedState,
     LoadingState,
     Rendition,
     RightsData,
@@ -32,22 +22,8 @@ import type {
 } from '../types';
 import { CURRENT_VIEW, LOADING, QUERY_TYPES } from '../types';
 import { populateAssetFromHit } from '../utils/assetTransformers';
-import { fetchOptimizedDeliveryBlob, removeBlobFromCache } from '../utils/blobCache';
 import { getBucket, getExternalParams } from '../utils/config';
 import { AppConfigProvider } from './AppConfigProvider';
-
-// Extend window interface for cart functions, download functions and user authentication
-declare global {
-    interface Window {
-        openCart?: () => void;
-        closeCart?: () => void;
-        toggleCart?: () => void;
-        openDownloadPanel?: () => void;
-        closeDownloadPanel?: () => void;
-        toggleDownloadPanel?: () => void;
-        user?: unknown; // Global user object for authentication
-    }
-}
 
 // Components
 import { CalendarDate } from '@internationalized/date';
@@ -57,9 +33,7 @@ import { calendarDateToEpoch } from '../utils/formatters';
 import CartPanel from './CartDownloads/CartPanel';
 import DownloadPanel from './CartDownloads/DownloadPanel';
 import Facets from './Facets';
-import HeaderBar from './HeaderBar';
 import ImageGallery from './ImageGallery';
-import SearchBar from './SearchBar';
 
 const HITS_PER_PAGE = 24;
 
@@ -95,6 +69,8 @@ function isCookieAuth(): boolean {
         || window.location.origin === 'http://localhost:8787';
 }
 
+const EMPTY_FACET_FILTERS: string[][] = [];
+
 function MainApp(): React.JSX.Element {
     // External parameters from plain JavaScript
     const [externalParams] = useState<ExternalParams>(() => {
@@ -104,13 +80,6 @@ function MainApp(): React.JSX.Element {
     });
 
     // Local state
-    const [accessToken, setAccessToken] = useState<string>(() => {
-        try {
-            return localStorage.getItem('accessToken') || '';
-        } catch {
-            return '';
-        }
-    });
     const [bucket] = useState<string>(() => {
         try {
             return getBucket();
@@ -119,10 +88,9 @@ function MainApp(): React.JSX.Element {
         }
     });
 
-    // Authentication state - either IMS or cookie authenticated
-    const [authenticated, setAuthenticated] = useState<boolean>(() => {
-        const hasAccessToken = Boolean(localStorage.getItem('accessToken'));
-        return hasAccessToken || isCookieAuth();
+    // Authentication state - cookie authenticated
+    const [authenticated, _setAuthenticated] = useState<boolean>(() => {
+        return isCookieAuth();
     });
 
     const [dynamicMediaClient, setDynamicMediaClient] = useState<DynamicMediaClient | null>(null);
@@ -135,7 +103,7 @@ function MainApp(): React.JSX.Element {
     const [loading, setLoading] = useState<LoadingState>({ [LOADING.dmImages]: false, [LOADING.collections]: false });
     const [currentView, setCurrentView] = useState<CurrentView>(CURRENT_VIEW.images);
     const [selectedQueryType, setSelectedQueryType] = useState<string>(QUERY_TYPES.ALL);
-    const [selectedFacetFilters, setSelectedFacetFilters] = useState<string[][]>([]);
+    const [facetCheckedState, setFacetCheckedState] = useState<FacetCheckedState>({});
     const [selectedNumericFilters, setSelectedNumericFilters] = useState<string[]>([]);
     const [searchDisabled, setSearchDisabled] = useState<boolean>(false);
     const [isRightsSearch, setIsRightsSearch] = useState<boolean>(false);
@@ -143,8 +111,28 @@ function MainApp(): React.JSX.Element {
     const [rightsEndDate, setRightsEndDate] = useState<DateValue | null>(null);
     const [selectedMarkets, setSelectedMarkets] = useState<Set<RightsData>>(new Set());
     const [selectedMediaChannels, setSelectedMediaChannels] = useState<Set<RightsData>>(new Set());
+    const [clearAllFacetsFunction, setClearAllFacetsFunction] = useState<(() => void) | null>(null);
     const searchDisabledRef = useRef<boolean>(false);
     const isRightsSearchRef = useRef<boolean>(false);
+
+    // Derive selectedFacetFilters (used for search API) from facetCheckedState
+    const selectedFacetFilters = useMemo(() => {
+        const newSelectedFacetFilters: string[][] = [];
+        Object.keys(facetCheckedState).forEach(key => {
+            const facetFilter: string[] = [];
+            Object.entries(facetCheckedState[key]).forEach(([facet, isChecked]) => {
+                if (isChecked) {
+                    facetFilter.push(`${key}:${facet}`);
+                }
+            });
+            if (facetFilter.length > 0) {
+                newSelectedFacetFilters.push(facetFilter);
+            }
+        });
+        
+        // Return the same reference for empty arrays
+        return newSelectedFacetFilters.length === 0 ? EMPTY_FACET_FILTERS : newSelectedFacetFilters;
+    }, [facetCheckedState]);
 
     const handleSetSearchDisabled = useCallback((disabled: boolean) => {
         searchDisabledRef.current = disabled; // Update ref immediately
@@ -154,6 +142,22 @@ function MainApp(): React.JSX.Element {
     const handleSetIsRightsSearch = useCallback((isRights: boolean) => {
         isRightsSearchRef.current = isRights; // Update ref immediately
         setIsRightsSearch(isRights);
+    }, []);
+
+    // Handler for facet checkbox change - lifted from Facets component
+    const handleFacetCheckbox = useCallback((key: string, facet: string) => {
+        setFacetCheckedState(prev => ({
+            ...prev,
+            [key]: {
+                ...prev[key],
+                [facet]: !prev[key]?.[facet]
+            }
+        }));
+    }, []);
+
+    // Callback to receive handleClearAllChecks function from Facets
+    const handleReceiveClearAllFacets = useCallback((clearFunction: () => void) => {
+        setClearAllFacetsFunction(() => clearFunction);
     }, []);
 
     const [presetFilters, setPresetFilters] = useState<string[]>(() =>
@@ -223,71 +227,45 @@ function MainApp(): React.JSX.Element {
         };
     }, []);
 
+    useEffect(() => {
+        const queryElement = document.querySelector("input.query-input") as HTMLInputElement;
+        if (queryElement) {
+            queryElement.value = query;
+        }
+     }, [query]);
+
     // Sort state
     const [selectedSortType, setSelectedSortType] = useState<string>('Date Created');
     const [selectedSortDirection, setSelectedSortDirection] = useState<string>('Ascending');
 
-    const searchBarRef = useRef<HTMLInputElement>(null);
     const settingsLoadedRef = useRef<boolean>(false);
-
-    const handleSetSelectedQueryType = useCallback((newQueryType: string): void => {
-        setSelectedQueryType(prevType => {
-            if (prevType !== newQueryType) {
-                setQuery('');
-            }
-            return newQueryType;
-        });
-        // Focus the query input after changing type
-        setTimeout(() => {
-            if (searchBarRef.current) {
-                searchBarRef.current.focus();
-            }
-        }, 0);
-    }, []);
-
-
 
     // Save cart items to localStorage when they change
     useEffect(() => {
         localStorage.setItem('cartAssetItems', JSON.stringify(cartAssetItems));
+
+        // Update cart badge count if the function exists
+        if (window.updateCartBadge && typeof window.updateCartBadge === 'function') {
+            window.updateCartBadge(cartAssetItems.length);
+        }
     }, [cartAssetItems]);
 
     useEffect(() => {
-        const hasAccessToken = Boolean(accessToken);
-        setAuthenticated(hasAccessToken || isCookieAuth());
-    }, [accessToken]);
-
-    useEffect(() => {
-        // Only create client when authenticated (either mechanism) and bucket is available
+        // Only create client when authenticated and bucket is available
         if (authenticated && bucket) {
-            if (accessToken && isCookieAuth()) {
-                console.debug('🔑 Authenticated via IMS and Cookie. Using IMS route (during transition period)');
-            } else if (accessToken) {
-                console.debug('🔑 Authenticated via IMS only.');
-            } else if (isCookieAuth()) {
-                console.debug('🔑 Authenticated via Cookie only.');
+            if (isCookieAuth()) {
+                console.debug('🔑 Authenticated via Cookie.');
             } else {
-                console.debug('🔑 Not authenticated (not IMS, nor Cookie)');
+                console.debug('🔑 Authenticated via other mechanism.');
             }
             setDynamicMediaClient(new DynamicMediaClient({
                 bucket: bucket,
-                accessToken: accessToken || undefined, // Pass undefined if empty string
             }));
         } else {
             console.debug('🔑 Not authenticated (not IMS, nor cookie)');
             setDynamicMediaClient(null);
         }
-    }, [authenticated, accessToken, bucket]);
-
-    // Keep accessToken in sync with localStorage
-    useEffect(() => {
-        try {
-            localStorage.setItem('accessToken', accessToken || '');
-        } catch (error) {
-            // Silently fail if localStorage is not available
-            console.warn('Failed to save access token to localStorage:', error);
-        }
-    }, [accessToken]);
+    }, [authenticated, bucket]);
 
     // Process and display Adobe Dynamic Media images
     const processDMImages = useCallback(async (content: unknown, isLoadingMore: boolean = false): Promise<void> => {
@@ -309,7 +287,7 @@ function MainApp(): React.JSX.Element {
                     let processedImages: Asset[] = hits.map(populateAssetFromHit);
 
                     // When performing a rights search, we need to check the rights of the assets
-                    if (isRightsSearchRef.current) {
+                    if (isRightsSearchRef.current && rightsStartDate && rightsEndDate && selectedMediaChannels.size > 0 && selectedMarkets.size > 0) {
                         const checkRightsRequest: CheckRightsRequest = {
                             inDate: calendarDateToEpoch(rightsStartDate as CalendarDate),
                             outDate: calendarDateToEpoch(rightsEndDate as CalendarDate),
@@ -416,10 +394,6 @@ function MainApp(): React.JSX.Element {
         performSearchImages(queryToUse, 0);
     }, [performSearchImages, query]);
 
-
-
-
-
     // Read query and selectedQueryType from URL on mount
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -432,7 +406,7 @@ function MainApp(): React.JSX.Element {
         const numericFiltersParam = params.get('numericFilters');
 
         if (urlQuery !== null) setQuery(urlQuery);
-        
+
         // Read search type from URL parameter first
         if (queryType !== null && (Object.values(QUERY_TYPES) as string[]).includes(queryType)) {
             setSelectedQueryType(queryType);
@@ -454,7 +428,7 @@ function MainApp(): React.JSX.Element {
                 if (fulltext) setQuery(fulltext);
                 if (facetFiltersParam) {
                     const facetFilters = JSON.parse(decodeURIComponent(facetFiltersParam));
-                    setSelectedFacetFilters(facetFilters);
+                    setFacetCheckedState(facetFilters);
                 }
                 if (numericFiltersParam) {
                     const numericFilters = JSON.parse(decodeURIComponent(numericFiltersParam));
@@ -469,7 +443,7 @@ function MainApp(): React.JSX.Element {
                 console.warn('Error parsing URL search parameters:', error);
             }
         }
-    }, [dynamicMediaClient, setSelectedFacetFilters, setSelectedNumericFilters, performSearchImages]);
+    }, [dynamicMediaClient, setSelectedNumericFilters, performSearchImages]);
 
     useEffect(() => {
         if (!dynamicMediaClient) return;
@@ -483,7 +457,7 @@ function MainApp(): React.JSX.Element {
 
     // Auto-search with empty query on app load
     useEffect(() => {
-        if (!searchDisabled && authenticated && dynamicMediaClient && excFacets !== undefined) {
+        if (!searchDisabled && authenticated && dynamicMediaClient && excFacets !== undefined && document.querySelector('.koassets-search-wrapper')) {
             search();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -496,9 +470,6 @@ function MainApp(): React.JSX.Element {
             settingsLoadedRef.current = true;
         }
     }, [authenticated, externalParams.excFacets, externalParams.presetFilters]);
-
-    // Rights data fetching moved to individual Markets and MediaChannels components
-
 
 
     // Function to fetch and cache static renditions for a specific asset
@@ -573,36 +544,12 @@ function MainApp(): React.JSX.Element {
     // Cart functions
     const handleAddToCart = async (image: Asset): Promise<void> => {
         if (!cartAssetItems.some(item => item.assetId === image.assetId)) {
-            // Cache the image when adding to cart
-            if (dynamicMediaClient && image.assetId) {
-                try {
-                    const cacheKey = `${image.assetId}-350`;
-                    await fetchOptimizedDeliveryBlob(
-                        dynamicMediaClient,
-                        image,
-                        350,
-                        {
-                            cache: false,
-                            cacheKey: cacheKey,
-                            fallbackUrl: image.url
-                        }
-                    );
-                } catch (error) {
-                    console.warn(`Failed to cache image for cart ${image.assetId}:`, error);
-                }
-            }
-
             setCartAssetItems(prev => [...prev, image]);
         }
     };
 
     const handleRemoveFromCart = (image: Asset): void => {
         setCartAssetItems(prev => prev.filter(item => item.assetId !== image.assetId));
-
-        // Clean up cached blobs for this asset
-        if (image.assetId) {
-            removeBlobFromCache(image.assetId);
-        }
     };
 
     const handleBulkAddToCart = async (selectedCardIds: Set<string>, images: Asset[]): Promise<void> => {
@@ -665,31 +612,6 @@ function MainApp(): React.JSX.Element {
         // TODO: Implement actual sorting logic
     };
 
-
-    const handleIMSAccessToken = (token: string): void => {
-        setAccessToken(token);
-    };
-
-    const handleSignOut = (): void => {
-        console.log('🚪 User signed out, clearing access token');
-        setAccessToken('');
-        try {
-            // Clear all localStorage
-            const localStorageLength = localStorage.length;
-            console.log(`- Clearing ${localStorageLength} localStorage items`);
-            localStorage.clear();
-
-            // Clear all sessionStorage
-            const sessionStorageLength = sessionStorage.length;
-            console.log(`- Clearing ${sessionStorageLength} sessionStorage items`);
-            sessionStorage.clear();
-
-            console.log('✅ All browser storage cleared successfully');
-        } catch (error) {
-            console.error('❌ Error clearing browser storage:', error);
-        }
-    };
-
     // Toggle mobile filter panel
     const handleToggleMobileFilter = (): void => {
         setIsMobileFilterOpen(!isMobileFilterOpen);
@@ -743,6 +665,8 @@ function MainApp(): React.JSX.Element {
                     assetRenditionsCache={assetRenditionsCache}
                     fetchAssetRenditions={fetchAssetRenditions}
                     isRightsSearch={isRightsSearch}
+                    onFacetCheckbox={handleFacetCheckbox}
+                    onClearAllFacets={clearAllFacetsFunction || undefined}
                 />
             ) : (
                 <></>
@@ -758,11 +682,6 @@ function MainApp(): React.JSX.Element {
             imagePresets={imagePresets}
         >
             <div className="container">
-                <HeaderBar
-                    cartAssetItems={cartAssetItems}
-                    handleAuthenticated={handleIMSAccessToken}
-                    handleSignOut={handleSignOut}
-                />
 
                 {/* Cart Container - moved from HeaderBar, now uses Portal */}
                 {createPortal(
@@ -787,16 +706,6 @@ function MainApp(): React.JSX.Element {
                     document.body
                 )}
 
-                {/* TODO: Update this once finalized */}
-                {window.location.pathname.includes('/tools/assets-browser/index.html') && (
-                    <SearchBar
-                        query={query}
-                        setQuery={setQuery}
-                        sendQuery={search}
-                        selectedQueryType={selectedQueryType}
-                        setSelectedQueryType={handleSetSelectedQueryType}
-                        inputRef={searchBarRef}
-                    />)}
                 <div className="main-content">
                     <div className="images-container">
                         <div className="images-content-wrapper">
@@ -808,8 +717,6 @@ function MainApp(): React.JSX.Element {
                                 <div className={`facet-filter-panel ${isMobileFilterOpen ? 'mobile-open' : ''}`}>
                                     <Facets
                                         searchResults={searchResults}
-                                        selectedFacetFilters={selectedFacetFilters}
-                                        setSelectedFacetFilters={setSelectedFacetFilters}
                                         search={search}
                                         excFacets={excFacets}
                                         selectedNumericFilters={selectedNumericFilters}
@@ -827,6 +734,10 @@ function MainApp(): React.JSX.Element {
                                         setSelectedMarkets={setSelectedMarkets}
                                         selectedMediaChannels={selectedMediaChannels}
                                         setSelectedMediaChannels={setSelectedMediaChannels}
+                                        facetCheckedState={facetCheckedState}
+                                        setFacetCheckedState={setFacetCheckedState}
+                                        onFacetCheckbox={handleFacetCheckbox}
+                                        onClearAllFacets={handleReceiveClearAllFacets}
                                     />
                                 </div>
                             </div>

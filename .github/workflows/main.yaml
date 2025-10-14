@@ -22,11 +22,6 @@ jobs:
     - uses: actions/setup-node@v5
       with:
         node-version: 24
-    - name: Set up artifactory credentials
-      env:
-        ARTIFACTORY_USER: ${{ secrets.ARTIFACTORY_USER }}
-        ARTIFACTORY_TOKEN: ${{ secrets.ARTIFACTORY_TOKEN }}
-      run: curl --fail -u"$ARTIFACTORY_USER:$ARTIFACTORY_TOKEN" https://artifactory-uw2.adobeitc.com/artifactory/api/npm/npm-adobe-release/auth/identity > ~/.npmrc
     - run: npm ci
     - run: npm run lint
 

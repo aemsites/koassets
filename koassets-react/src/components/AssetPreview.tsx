@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type { AssetPreviewProps, Rendition } from '../types';
-import { fetchOptimizedDeliveryBlob } from '../utils/blobCache';
-import { formatCategory, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
+import { formatCategory, getFileExtension } from '../utils/formatters';
+import { getAssetFieldDisplayFacetName } from '../utils/displayUtils';
 import ActionButton from './ActionButton';
 import { BUTTON_CONFIGS } from './ActionButtonConfigs';
 import './AssetPreview.css';
+import Picture from './Picture';
 
 const AssetPreview: React.FC<AssetPreviewProps> = ({
     showModal,
@@ -19,8 +20,6 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
 }) => {
     // Get dynamicMediaClient from context
     const { dynamicMediaClient } = useAppConfig();
-    const [blobUrl, setBlobUrl] = useState<string | null>(null);
-    const [imageLoading, setImageLoading] = useState<boolean>(false);
     const [actionButtonEnable, setActionButtonEnable] = useState<boolean>(false);
     const [watermarkRendition, setWatermarkRendition] = useState<Rendition | undefined>(undefined);
 
@@ -51,47 +50,11 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
     };
 
     useEffect(() => {
-        if (showModal && selectedImage && dynamicMediaClient) {
-            setImageLoading(true);
-            setBlobUrl(null);
+        if (showModal && selectedImage) {
             setActionButtonEnable(false);
             setWatermarkRendition(undefined);
-
-            const fetchOptimizedImage = async () => {
-                try {
-                    // Fetch 350px optimized image for preview modal
-                    const blobUrl = await fetchOptimizedDeliveryBlob(
-                        dynamicMediaClient,
-                        selectedImage,
-                        350,
-                        {
-                            cache: false,
-                            cacheKey: `${selectedImage.assetId}-350`,
-                            fallbackUrl: selectedImage.url
-                        }
-                    );
-                    setBlobUrl(blobUrl);
-                } catch (error) {
-                    console.error(`Error getting optimized delivery blob for asset ${selectedImage.assetId}: ${error}`);
-                    // Fallback to original URL
-                    setBlobUrl(selectedImage.url);
-                } finally {
-                    setImageLoading(false);
-                }
-            };
-
-            fetchOptimizedImage();
         }
-    }, [showModal, selectedImage, dynamicMediaClient]);
-
-    // Separate effect for cleanup
-    useEffect(() => {
-        return () => {
-            if (blobUrl && blobUrl.startsWith('blob:')) {
-                URL.revokeObjectURL(blobUrl);
-            }
-        };
-    }, [blobUrl]);
+    }, [showModal, selectedImage]);
 
     // Fetch renditions when modal opens
     useEffect(() => {
@@ -145,7 +108,7 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                     <div className="modal-header">
                         <div className="preview-tags">
                             {(selectedImage?.campaignName as string) && (
-                                <span className="preview-tag tccc-tag">{removeHyphenTitleCase(selectedImage?.campaignName as string)}</span>
+                                <span className="preview-tag tccc-tag">{getAssetFieldDisplayFacetName('campaignName', selectedImage?.campaignName as string)}</span>
                             )}
                         </div>
                         <h3 className="modal-title">
@@ -154,21 +117,14 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                     </div>
 
                     <div className="modal-image-container">
-                        {imageLoading ? (
-                            <div className="modal-image-loading">
-                                <div className="loading-spinner"></div>
-                                <p>Loading optimized image...</p>
-                            </div>
-                        ) : (
-                            <div className="preview-image">
-                                <img
-                                    src={blobUrl || selectedImage.url}
-                                    alt={selectedImage.alt || selectedImage.name}
-                                    className="modal-image"
-                                    onError={(e) => { (e.target as HTMLImageElement)?.parentElement?.classList.add('missing'); }}
-                                />
-                            </div>
-                        )}
+                        <Picture
+                            key={selectedImage.assetId}
+                            asset={selectedImage}
+                            width={350}
+                            className="modal-image"
+                            eager={true}
+                            fetchPriority="high"
+                        />
                     </div>
 
                     <div className="preview-modal-details">

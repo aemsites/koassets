@@ -34,19 +34,6 @@
     border-bottom: 1px solid #e0e0e0;
 }
 
-/* Thumbnail */
-.download-renditions-thumbnail {
-    width: 80px;
-    height: 80px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
-}
-
 /* Loading States */
 .renditions-status {
     display: flex;
@@ -89,16 +76,6 @@
     100% {
         transform: rotate(360deg);
     }
-}
-
-/* Title */
-.download-renditions-title {
-    font-size: 14px;
-    color: #333;
-    font-weight: 500;
-    line-height: 1.4;
-    overflow-wrap: break-word;
-    word-wrap: break-word;
 }
 
 /* Options */
