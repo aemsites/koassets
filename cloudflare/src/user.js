@@ -152,7 +152,7 @@ export async function createSession(request, env) {
   });
 
   if (!access) {
-    console.warn('No /config/access/permissions sheet found');
+    request.error = 'User denied access. No /config/access/permissions sheet found.';
     return false;
   }
 
