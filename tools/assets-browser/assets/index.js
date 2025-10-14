@@ -35719,6 +35719,7 @@ const Facets = ({
   const hierarchyDataByFacet = reactExports.useMemo(() => {
     const hierarchyMap = {};
     Object.keys(excFacets).forEach((facetTechId) => {
+      var _a, _b;
       const isHierarchyFacet = Object.keys(combinedFacets || {}).some(
         (key) => key.startsWith(`${facetTechId}.${HIERARCHY_PREFIX}`)
       );
@@ -35733,6 +35734,23 @@ const Facets = ({
             }
           }
         });
+        const sortDirection = (_b = (_a = excFacets[facetTechId]) == null ? void 0 : _a.sortDirection) == null ? void 0 : _b.toLowerCase();
+        if (sortDirection === "asc" || sortDirection === "desc") {
+          Object.keys(hierarchyData).forEach((level) => {
+            const levelNum = parseInt(level);
+            const sortedEntries = Object.entries(hierarchyData[levelNum]).sort(([facetNameA], [facetNameB]) => {
+              var _a2, _b2;
+              const lastTokenA = ((_a2 = facetNameA.split(" / ").pop()) == null ? void 0 : _a2.trim()) || "";
+              const lastTokenB = ((_b2 = facetNameB.split(" / ").pop()) == null ? void 0 : _b2.trim()) || "";
+              if (sortDirection === "asc") {
+                return lastTokenA.localeCompare(lastTokenB);
+              } else {
+                return lastTokenB.localeCompare(lastTokenA);
+              }
+            });
+            hierarchyData[levelNum] = Object.fromEntries(sortedEntries);
+          });
+        }
         hierarchyMap[facetTechId] = hierarchyData;
       }
     });
@@ -35893,6 +35911,7 @@ const Facets = ({
     return items;
   }, [facetCheckedState, onFacetCheckbox, expandedHierarchyItems, toggleHierarchyItem, facetSearchTerms, shouldShowHierarchyItem, deselectFacetCheckedState]);
   const renderFacetsFromSearchResult = reactExports.useCallback((facetTechId) => {
+    var _a, _b;
     if (!expandedFacets[facetTechId]) {
       return null;
     }
@@ -35965,20 +35984,32 @@ const Facets = ({
     const checkboxKey = `${facetTechId}`;
     const facetTechIdDataMap = combinedFacets && combinedFacets[facetTechId] || {};
     deselectFacetCheckedState(checkboxKey, facetTechIdDataMap);
-    const filteredEntries = Object.entries(facetTechIdDataMap).filter(([facetName]) => {
+    let filteredEntries = Object.entries(facetTechIdDataMap).filter(([facetName]) => {
       if (!searchTerm) return true;
       const displayFacetName = getDisplayFacetName(facetTechId, facetName);
       return displayFacetName.toLowerCase().includes(searchTerm.toLowerCase());
     });
+    const sortDirection = (_b = (_a = excFacets[facetTechId]) == null ? void 0 : _a.sortDirection) == null ? void 0 : _b.toLowerCase();
+    if (sortDirection === "asc" || sortDirection === "desc") {
+      filteredEntries = filteredEntries.sort(([facetNameA], [facetNameB]) => {
+        const displayNameA = getDisplayFacetName(facetTechId, facetNameA);
+        const displayNameB = getDisplayFacetName(facetTechId, facetNameB);
+        if (sortDirection === "asc") {
+          return displayNameA.localeCompare(displayNameB);
+        } else {
+          return displayNameB.localeCompare(displayNameA);
+        }
+      });
+    }
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "facet-filter-checkbox-list", children: filteredEntries.map(([facetName, count]) => {
-      var _a;
+      var _a2;
       const displayName = getDisplayFacetName(facetTechId, facetName);
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "facet-filter-checkbox-label", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",
           {
             type: "checkbox",
-            checked: !!((_a = facetCheckedState[checkboxKey]) == null ? void 0 : _a[facetName]),
+            checked: !!((_a2 = facetCheckedState[checkboxKey]) == null ? void 0 : _a2[facetName]),
             onChange: () => onFacetCheckbox(checkboxKey, facetName)
           }
         ),
