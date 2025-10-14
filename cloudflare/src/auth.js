@@ -158,7 +158,7 @@ export async function withAuthentication(request, env) {
 
   const sessionJWT = request.cookies[COOKIE_SESSION];
   if (!sessionJWT) {
-    console.log('No session cookie found');
+    console.log('No session cookie found', request.url);
     return redirectToLoginPage(request, env);
   }
 
@@ -170,7 +170,7 @@ export async function withAuthentication(request, env) {
     return redirectToLoginPage(request, env, `${AUTH_PREFIX}/login`);
   }
 
-  request.user = getUser(request, session);
+  request.user = await getUser(request, env, session);
   if (!request.user) {
     request.error = request.error || 'User not allowed to access this application';
     return unauthorized(request);
@@ -265,7 +265,7 @@ authRouter
       return unauthorized(request);
     }
 
-    const session = createSession(request, env);
+    const session = await createSession(request, env);
     if (!session) {
       request.error = request.error || 'User not allowed to access this application';
       return unauthorized(request);

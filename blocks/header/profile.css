@@ -55,6 +55,19 @@
   color: #1e1e1e;
 }
 
+.profile-modal .sudo-edit-note {
+  background-color: #e8f4fd;
+  border: 1px solid #b3d9f2;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-top: 16px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #1a5490;
+  text-align: center;
+  line-height: 1.5;
+}
+
 .profile-modal .profile-buttons {
   display: flex;
   gap: 12px;
