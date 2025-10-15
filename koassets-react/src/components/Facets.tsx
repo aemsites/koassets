@@ -8,7 +8,8 @@ import './Facets.css';
 import Markets from './Markets';
 import MediaChannels from './MediaChannels';
 import MyDatePicker from './MyDatePicker';
-import buildSavedSearchUrl from '../../../scripts/saved-search-utils.js';
+import buildSavedSearchUrl from '../../../scripts/saved-searches/saved-search-utils.js';
+import { savedSearchClient } from '../../../scripts/saved-searches/saved-search-client.js';
 import { getDisplayFacetName } from '../utils/displayUtils';
 import { calendarDateToEpoch, epochToCalendarDate } from '../utils/formatters';
 
@@ -18,16 +19,13 @@ interface ExpandedFacetsState {
 
 const HIERARCHY_PREFIX = 'TCCC.#hierarchy.lvl';
 
-// Local storage functions for saved searches
+// React-specific saved search functions with rights filters serialization
 const loadSavedSearches = (): SavedSearch[] => {
     try {
-        const saved = localStorage.getItem('koassets-saved-searches');
-        if (!saved) return [];
-        
-        const parsedSearches = JSON.parse(saved);
+        const searches = savedSearchClient.load();
         
         // Convert Arrays back to Sets and epoch timestamps back to DateValues after JSON deserialization
-        return parsedSearches.map((search: SavedSearch & {
+        return searches.map((search: SavedSearch & {
             rightsFilters: Omit<RightsFilters, 'markets' | 'mediaChannels' | 'rightsStartDate' | 'rightsEndDate'> & {
                 rightsStartDate: number | null;
                 rightsEndDate: number | null;
@@ -81,7 +79,7 @@ const saveSavedSearches = (searches: SavedSearch[]): void => {
             }
         }));
         
-        localStorage.setItem('koassets-saved-searches', JSON.stringify(searchesForSaving));
+        savedSearchClient.save(searchesForSaving);
     } catch (error) {
         console.error('Error saving searches:', error);
     }
