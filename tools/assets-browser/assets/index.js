@@ -31298,6 +31298,10 @@ class DynamicMediaClient {
     const baseName = fileName.substring(0, lastDotIndex);
     return `${baseName}.${extension}`;
   }
+  getPreviewPdfUrl(assetId, repoName, rendition = "original") {
+    const processedRepoName = this.changeToSupportedPreview(repoName);
+    return `/api/adobe/assets/${assetId}/renditions/${rendition}/as/preview-${processedRepoName}`;
+  }
   getOptimizedDeliveryPreviewUrl(assetId, repoName, width = 350) {
     const processedRepoName = this.changeToSupportedPreview(repoName);
     return `/api/adobe/assets/${assetId}/as/preview-${processedRepoName}?width=${width}&preferwebp=true`;
@@ -32422,58 +32426,6 @@ const Picture = ({
   ] });
 };
 const EAGER_LOAD_IMAGE_COUNT = 6;
-const IMAGE_MIME_TYPES = [
-  "application/photoshop",
-  "application/psd",
-  "application/x-photoshop",
-  "application/x-psd",
-  "image/avif",
-  "image/bmp",
-  "image/cgm",
-  "image/g3fax",
-  "image/gif",
-  "image/ief",
-  "image/jpeg",
-  "image/ktx",
-  "image/pjpeg",
-  "image/png",
-  "image/prs.btif",
-  "image/psd",
-  "image/tiff",
-  "image/vnd.adobe.photoshop",
-  "image/vnd.dece.graphic",
-  "image/vnd.djvu",
-  "image/vnd.dvb.subtitle",
-  "image/vnd.dwg",
-  "image/vnd.dxf",
-  "image/vnd.fastbidsheet",
-  "image/vnd.fpx",
-  "image/vnd.fst",
-  "image/vnd.fujixerox.edmics-mmr",
-  "image/vnd.fujixerox.edmics-rlc",
-  "image/vnd.ms-modi",
-  "image/vnd.net-fpx",
-  "image/vnd.wap.wbmp",
-  "image/vnd.xiff",
-  "image/webp",
-  "image/x-citrix-jpeg",
-  "image/x-citrix-png",
-  "image/x-cmu-raster",
-  "image/x-cmx",
-  "image/x-freehand",
-  "image/x-icon",
-  "image/x-pcx",
-  "image/x-pict",
-  "image/x-png",
-  "image/x-portable-anymap",
-  "image/x-portable-bitmap",
-  "image/x-portable-graymap",
-  "image/x-portable-pixmap",
-  "image/x-rgb",
-  "image/x-xbitmap",
-  "image/x-xpixmap",
-  "image/x-xwindowdump"
-];
 const SelectAllRenditionsCheckbox = ({
   assetData,
   selectedRenditions,
@@ -37829,6 +37781,95 @@ const AssetDetailsTechnicalInfo = ({ selectedImage, forceCollapse }) => {
     ] }) })
   ] });
 };
+const IMAGE_MIME_TYPES = [
+  "application/photoshop",
+  "application/psd",
+  "application/x-photoshop",
+  "application/x-psd",
+  "image/avif",
+  "image/bmp",
+  "image/cgm",
+  "image/g3fax",
+  "image/gif",
+  "image/ief",
+  "image/jpeg",
+  "image/ktx",
+  "image/pjpeg",
+  "image/png",
+  "image/prs.btif",
+  "image/psd",
+  "image/tiff",
+  "image/vnd.adobe.photoshop",
+  "image/vnd.dece.graphic",
+  "image/vnd.djvu",
+  "image/vnd.dvb.subtitle",
+  "image/vnd.dwg",
+  "image/vnd.dxf",
+  "image/vnd.fastbidsheet",
+  "image/vnd.fpx",
+  "image/vnd.fst",
+  "image/vnd.fujixerox.edmics-mmr",
+  "image/vnd.fujixerox.edmics-rlc",
+  "image/vnd.ms-modi",
+  "image/vnd.net-fpx",
+  "image/vnd.wap.wbmp",
+  "image/vnd.xiff",
+  "image/webp",
+  "image/x-citrix-jpeg",
+  "image/x-citrix-png",
+  "image/x-cmu-raster",
+  "image/x-cmx",
+  "image/x-freehand",
+  "image/x-icon",
+  "image/x-pcx",
+  "image/x-pict",
+  "image/x-png",
+  "image/x-portable-anymap",
+  "image/x-portable-bitmap",
+  "image/x-portable-graymap",
+  "image/x-portable-pixmap",
+  "image/x-rgb",
+  "image/x-xbitmap",
+  "image/x-xpixmap",
+  "image/x-xwindowdump"
+];
+const DOCUMENT_PREVIEW_AS_PDF_MIME_TYPES = [
+  "application/rtf",
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/msword",
+  "application/vnd.ms-excel",
+  "application/vnd.ms-powerpoint",
+  "text/plain"
+];
+const isImage = (format) => (format == null ? void 0 : format.includes("image/")) || IMAGE_MIME_TYPES.includes(format) || false;
+const isPdfPreview = (format) => DOCUMENT_PREVIEW_AS_PDF_MIME_TYPES.includes(format);
+const PDFViewer = ({ selectedImage, renditions }) => {
+  var _a, _b, _c;
+  const { dynamicMediaClient } = useAppConfig();
+  if (!isPdfPreview(selectedImage.format)) {
+    return null;
+  }
+  const pdfRendition = (_c = (_b = (_a = renditions == null ? void 0 : renditions.items) == null ? void 0 : _a.filter((item) => isPdfPreview(item.format))) == null ? void 0 : _b.sort((a, b) => (a.size ?? 0) - (b.size ?? 0))) == null ? void 0 : _c[0];
+  if (!pdfRendition) {
+    return null;
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "object",
+    {
+      data: dynamicMediaClient == null ? void 0 : dynamicMediaClient.getPreviewPdfUrl(
+        selectedImage.assetId,
+        selectedImage.name,
+        pdfRendition.name
+      ),
+      width: "100%",
+      height: "100%",
+      "aria-label": selectedImage.title
+    }
+  );
+};
 const AssetDetails = ({
   showModal,
   selectedImage,
@@ -37986,7 +38027,7 @@ const AssetDetails = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsx("i", { className: "icon add circle" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Add to Collection" })
                 ] }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                isPdfPreview(selectedImage == null ? void 0 : selectedImage.format) ? /* @__PURE__ */ jsxRuntimeExports.jsx(PDFViewer, { selectedImage, renditions }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
                   Picture,
                   {
                     asset: selectedImage,
@@ -38827,7 +38868,6 @@ const ImageGallery = ({
   ] });
 };
 const HITS_PER_PAGE = 24;
-const isImage = (format) => (format == null ? void 0 : format.includes("image/")) || IMAGE_MIME_TYPES.includes(format) || false;
 function transformExcFacetsToHierarchyArray(excFacets) {
   const facetKeys = [];
   Object.entries(excFacets).forEach(([key, facet]) => {

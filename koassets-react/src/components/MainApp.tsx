@@ -34,11 +34,9 @@ import CartPanel from './CartDownloads/CartPanel';
 import DownloadPanel from './CartDownloads/DownloadPanel';
 import Facets from './Facets';
 import ImageGallery from './ImageGallery';
-import { IMAGE_MIME_TYPES } from '../constants/images';
+import { isImage } from '../constants/filetypes';
 
 const HITS_PER_PAGE = 24;
-
-const isImage = (format : string) : boolean => format?.includes('image/') || IMAGE_MIME_TYPES.includes(format) || false;
 
 /**
  * Transforms excFacets object into a string array for search facets

@@ -22,6 +22,8 @@ import AssetDetailsSystem from './AssetDetailsSystem';
 import AssetDetailsSystemInfoLegacy from './AssetDetailsSystemInfoLegacy';
 import AssetDetailsTechnicalInfo from './AssetDetailsTechnicalInfo';
 import { populateAssetFromMetadata } from '../../utils/assetTransformers';
+import { isPdfPreview } from '../../constants/filetypes';
+import PDFViewer from '../PDFViewer';
 
 /* Displayed on the asset details modal header section
 campaignName 
@@ -227,14 +229,18 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     <span>Add to Collection</span>
                                 </div>
                             </div>
-                            <Picture
-                                key={selectedImage?.assetId}
-                                asset={selectedImage as Asset}
-                                width={1200}
-                                className="asset-details-main-image"
-                                eager={true}
-                                fetchPriority="high"
-                            />
+                            {isPdfPreview(selectedImage?.format as string) ? (
+                                <PDFViewer selectedImage={selectedImage as Asset} renditions={renditions} />
+                            ) : (
+                                <Picture
+                                    key={selectedImage?.assetId}
+                                    asset={selectedImage as Asset}
+                                    width={1200}
+                                    className="asset-details-main-image"
+                                    eager={true}
+                                    fetchPriority="high"
+                                />
+                            )}
                         </div>
                     </div>
 
