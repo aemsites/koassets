@@ -173,9 +173,9 @@ export function createDeleteModal() {
  * Show edit modal
  * @param {Object} search - Search object to edit
  */
-export function showEditModal(search) {
+export async function showEditModal(search) {
   // Update last used when user interacts with search
-  updateSearchLastUsed(search.id);
+  await updateSearchLastUsed(search.id);
 
   editingSearch = { ...search };
   const modal = document.querySelector('.edit-modal');
@@ -189,7 +189,7 @@ export function showEditModal(search) {
   if (nameInput) nameInput.focus();
 
   // Refresh display to show updated sort order
-  if (onModalUpdate) onModalUpdate();
+  if (onModalUpdate) await onModalUpdate();
 }
 
 /**
@@ -208,7 +208,7 @@ function hideEditModal() {
 /**
  * Handle update search
  */
-function handleUpdateSearch() {
+async function handleUpdateSearch() {
   if (!editingSearch) return;
 
   const nameInput = document.getElementById('edit-search-name');
@@ -221,7 +221,7 @@ function handleUpdateSearch() {
   }
 
   // Update the search
-  updateSavedSearch(editingSearch.id, {
+  await updateSavedSearch(editingSearch.id, {
     name,
     dateLastUsed: Date.now(),
   });
@@ -232,7 +232,7 @@ function handleUpdateSearch() {
 
   // Notify main component to refresh
   if (onModalUpdate) {
-    onModalUpdate(true); // true = clear search
+    await onModalUpdate(true); // true = clear search
   }
 }
 
@@ -241,9 +241,9 @@ function handleUpdateSearch() {
  * @param {string} searchId - ID of search to delete
  * @param {string} searchName - Name of search to delete
  */
-export function showDeleteModal(searchId, searchName) {
+export async function showDeleteModal(searchId, searchName) {
   // Update last used when user interacts with search
-  updateSearchLastUsed(searchId);
+  await updateSearchLastUsed(searchId);
 
   deleteSearchId = searchId;
   deleteSearchName = searchName;
@@ -256,7 +256,7 @@ export function showDeleteModal(searchId, searchName) {
   modal.style.display = 'flex';
 
   // Refresh display to show updated sort order
-  if (onModalUpdate) onModalUpdate();
+  if (onModalUpdate) await onModalUpdate();
 }
 
 /**
@@ -272,11 +272,11 @@ function hideDeleteModal() {
 /**
  * Handle confirm delete
  */
-function handleConfirmDelete() {
+async function handleConfirmDelete() {
   if (!deleteSearchId) return;
 
   // Delete the search
-  deleteSavedSearch(deleteSearchId);
+  await deleteSavedSearch(deleteSearchId);
 
   // Hide modal
   hideDeleteModal();
@@ -286,6 +286,6 @@ function handleConfirmDelete() {
 
   // Notify main component to refresh
   if (onModalUpdate) {
-    onModalUpdate(true); // true = clear search
+    await onModalUpdate(true); // true = clear search
   }
 }

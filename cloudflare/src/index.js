@@ -17,23 +17,52 @@ import { originHelix } from './origin/helix';
 import { originFadel } from './origin/fadel';
 import { cors } from './util/itty';
 import { apiUser } from './user';
+import { savedSearchesApi } from './api/savedsearches';
 
+// Shared CORS origins
+const allowedOrigins = [
+  'https://koassets.adobeaem.workers.dev',
+  // development URLs
+  /https:\/\/.*-koassets\.adobeaem\.workers\.dev$/,
+  /https:\/\/.*-koassets--aemsites\.aem\.(live|page)$/,
+  /http:\/\/localhost:(3000|8787)/
+];
+
+// Standard CORS for most routes (GET, POST only)
 const { preflight, corsify } = cors({
-  origin: [
-    'https://koassets.adobeaem.workers.dev',
-    // development URLs
-    /https:\/\/.*-koassets\.adobeaem\.workers\.dev$/,
-    /https:\/\/.*-koassets--aemsites\.aem\.(live|page)$/,
-    /http:\/\/localhost:(3000|8787)/
-  ],
+  origin: allowedOrigins,
   allowMethods: ['GET', 'POST'],
   credentials: true,
   maxAge: 600,
 });
 
+// Extended CORS for Saved Searches API routes (includes DELETE, PUT)
+const { preflight: savedSearchesPreflight, corsify: savedSearchesCorsify } = cors({
+  origin: allowedOrigins,
+  allowMethods: ['GET', 'POST', 'DELETE', 'PUT'],
+  credentials: true,
+  maxAge: 600,
+});
+
+// Middleware to apply extended CORS for saved searches routes
+const savedSearchesCorsMiddleware = (request) => {
+  if (request.url.includes('/api/savedsearches/')) {
+    return savedSearchesPreflight(request);
+  }
+  return preflight(request);
+};
+
+// Finally middleware that applies appropriate CORS
+const finalCorsMiddleware = (response, request) => {
+  if (request.url.includes('/api/savedsearches/')) {
+    return savedSearchesCorsify(response, request);
+  }
+  return corsify(response, request);
+};
+
 const router = Router({
-  before: [preflight],
-  finally: [corsify],
+  before: [savedSearchesCorsMiddleware],
+  finally: [finalCorsMiddleware],
   catch: (err) => {
     // log stack traces for debugging
     console.error('error', err);
@@ -76,6 +105,9 @@ router
 
   // fadel
   .all('/api/fadel/*', originFadel)
+
+  // Saved Searches API (with extended CORS for DELETE/PUT)
+  .all('/api/savedsearches/*', savedSearchesApi)
 
   // future API routes
   .all('/api/*', () => error(404))
