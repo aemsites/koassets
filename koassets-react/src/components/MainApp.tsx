@@ -34,8 +34,11 @@ import CartPanel from './CartDownloads/CartPanel';
 import DownloadPanel from './CartDownloads/DownloadPanel';
 import Facets from './Facets';
 import ImageGallery from './ImageGallery';
+import { IMAGE_MIME_TYPES } from '../constants/images';
 
 const HITS_PER_PAGE = 24;
+
+const isImage = (format : string) : boolean => format?.includes('image/') || IMAGE_MIME_TYPES.includes(format) || false;
 
 /**
  * Transforms excFacets object into a string array for search facets
@@ -510,8 +513,8 @@ function MainApp(): React.JSX.Element {
             return prevCache; // No state change yet
         });
 
-        // Only attach image presets to asset if it's not a video
-        if (asset.formatType?.toLowerCase() !== 'video') {
+        // Only attach image presets to asset of format image
+        if (isImage(asset.format as string)) {
             // Fetch image presets once for all assets (only if not already fetched/fetching)
             if (!imagePresets.items && !fetchingImagePresetsRef.current) {
                 fetchingImagePresetsRef.current = true;
