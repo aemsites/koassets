@@ -23,10 +23,6 @@ export async function originHelix(request, env) {
     });
   }
 
-  if (url.pathname.startsWith('/drafts/')) {
-    return new Response('Not Found', { status: 404 });
-  }
-
   if (isRUMRequest(url)) {
     // only allow GET, POST, OPTIONS
     if (!['GET', 'POST', 'OPTIONS'].includes(request.method)) {
