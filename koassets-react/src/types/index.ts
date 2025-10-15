@@ -100,7 +100,7 @@ export interface Asset {
     expired?: string;
     expirationDate?: string | number;
     fadelId?: string;
-    format?: string;
+    format?: string; // e.g. "application/pdf", "image/jpeg", "video/mp4"
     formatType?: string;
     formatLabel?: string;
     japaneseDescription?: string;

@@ -32422,6 +32422,58 @@ const Picture = ({
   ] });
 };
 const EAGER_LOAD_IMAGE_COUNT = 6;
+const IMAGE_MIME_TYPES = [
+  "application/photoshop",
+  "application/psd",
+  "application/x-photoshop",
+  "application/x-psd",
+  "image/avif",
+  "image/bmp",
+  "image/cgm",
+  "image/g3fax",
+  "image/gif",
+  "image/ief",
+  "image/jpeg",
+  "image/ktx",
+  "image/pjpeg",
+  "image/png",
+  "image/prs.btif",
+  "image/psd",
+  "image/tiff",
+  "image/vnd.adobe.photoshop",
+  "image/vnd.dece.graphic",
+  "image/vnd.djvu",
+  "image/vnd.dvb.subtitle",
+  "image/vnd.dwg",
+  "image/vnd.dxf",
+  "image/vnd.fastbidsheet",
+  "image/vnd.fpx",
+  "image/vnd.fst",
+  "image/vnd.fujixerox.edmics-mmr",
+  "image/vnd.fujixerox.edmics-rlc",
+  "image/vnd.ms-modi",
+  "image/vnd.net-fpx",
+  "image/vnd.wap.wbmp",
+  "image/vnd.xiff",
+  "image/webp",
+  "image/x-citrix-jpeg",
+  "image/x-citrix-png",
+  "image/x-cmu-raster",
+  "image/x-cmx",
+  "image/x-freehand",
+  "image/x-icon",
+  "image/x-pcx",
+  "image/x-pict",
+  "image/x-png",
+  "image/x-portable-anymap",
+  "image/x-portable-bitmap",
+  "image/x-portable-graymap",
+  "image/x-portable-pixmap",
+  "image/x-rgb",
+  "image/x-xbitmap",
+  "image/x-xpixmap",
+  "image/x-xwindowdump"
+];
 const SelectAllRenditionsCheckbox = ({
   assetData,
   selectedRenditions,
@@ -38775,6 +38827,7 @@ const ImageGallery = ({
   ] });
 };
 const HITS_PER_PAGE = 24;
+const isImage = (format) => (format == null ? void 0 : format.includes("image/")) || IMAGE_MIME_TYPES.includes(format) || false;
 function transformExcFacetsToHierarchyArray(excFacets) {
   const facetKeys = [];
   Object.entries(excFacets).forEach(([key, facet]) => {
@@ -39106,7 +39159,6 @@ function MainApp() {
     }
   }, [authenticated, externalParams2.excFacets, externalParams2.presetFilters]);
   const fetchAssetRenditions = reactExports.useCallback(async (asset) => {
-    var _a2;
     if (!dynamicMediaClient || !asset.assetId) return;
     let shouldFetchRenditions = false;
     setAssetRenditionsCache((prevCache) => {
@@ -39121,7 +39173,7 @@ function MainApp() {
       shouldFetchRenditions = true;
       return prevCache;
     });
-    if (((_a2 = asset.formatType) == null ? void 0 : _a2.toLowerCase()) !== "video") {
+    if (isImage(asset.format)) {
       if (!imagePresets.items && !fetchingImagePresetsRef.current) {
         fetchingImagePresetsRef.current = true;
         try {
