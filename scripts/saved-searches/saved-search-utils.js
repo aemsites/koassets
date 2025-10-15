@@ -8,8 +8,10 @@
  * expected by the search application
  * @param {Object} search - The saved search object
  * @param {string} search.searchTerm - The search term
- * @param {Object} search.facetFilters - Object with facet selections (facetTechId -> facetName -> boolean)
- * @param {Object} search.rightsFilters - Rights filter settings (dates, markets, media channels)
+ * @param {Object} search.facetFilters - Object with facet selections
+ *   (facetTechId -> facetName -> boolean)
+ * @param {Object} search.rightsFilters - Rights filter settings
+ *   (dates, markets, media channels)
  * @param {Array<string>} search.numericFilters - Array of numeric filters
  * @param {string} [search.searchType] - The search type path (optional)
  * @returns {string} The complete shareable URL
