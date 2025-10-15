@@ -69,3 +69,7 @@ secret_name = "KOASSETS_FADEL_PASSWORD"
 [[kv_namespaces]]
 binding = "AUTH_TOKENS"
 id = "975809e56a7a425aa006e156671bbecf"
+
+[[kv_namespaces]]
+binding = "SAVED_SEARCHES"
+id = "644c2de1a4744becb55ee2050ab01486"

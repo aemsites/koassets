@@ -31,9 +31,9 @@ let currentSearchTerm = '';
  * Execute a saved search
  * @param {Object} search - Search object
  */
-function handleExecuteSearch(search) {
+async function handleExecuteSearch(search) {
   // Update last used when user executes search
-  updateSearchLastUsed(search.id);
+  await updateSearchLastUsed(search.id);
 
   // Use the shared utility to build the search URL (same as copy link)
   const searchUrl = buildSavedSearchUrl(search);
@@ -44,9 +44,9 @@ function handleExecuteSearch(search) {
  * Copy search link to clipboard
  * @param {Object} search - Search object
  */
-function handleCopySearchLink(search) {
+async function handleCopySearchLink(search) {
   // Update last used when user interacts with search
-  updateSearchLastUsed(search.id);
+  await updateSearchLastUsed(search.id);
 
   // Use shared utility to build the search URL
   const searchUrl = buildSavedSearchUrl(search);
@@ -67,19 +67,19 @@ function handleCopySearchLink(search) {
 
   // Refresh display to show updated sort order
   // eslint-disable-next-line no-use-before-define
-  updateSearchesDisplay();
+  await updateSearchesDisplay();
 }
 
 /**
  * Toggle favorite status
  * @param {Object} search - Search object
  */
-function handleToggleFavorite(search) {
+async function handleToggleFavorite(search) {
   // Update last used when user interacts with search
-  updateSearchLastUsed(search.id);
+  await updateSearchLastUsed(search.id);
 
   // Update the favorite status
-  updateSavedSearch(search.id, {
+  await updateSavedSearch(search.id, {
     favorite: !search.favorite,
   });
 
@@ -88,21 +88,21 @@ function handleToggleFavorite(search) {
 
   // Refresh display to show updated sort order
   // eslint-disable-next-line no-use-before-define
-  updateSearchesDisplay();
+  await updateSearchesDisplay();
 }
 
 /**
  * Update the searches display
  * @param {boolean} shouldClearSearch - Whether to clear the search filter
  */
-function updateSearchesDisplay(shouldClearSearch = false) {
+async function updateSearchesDisplay(shouldClearSearch = false) {
   if (shouldClearSearch) {
     // eslint-disable-next-line no-use-before-define
     clearSearch();
     return;
   }
 
-  const allSearches = loadSavedSearches();
+  const allSearches = await loadSavedSearches();
   // Create copy to avoid mutating original
   const sortedSearches = sortSearchesByLastUsed([...allSearches]);
   const filteredSearches = filterSearches(sortedSearches, currentSearchTerm);
@@ -165,7 +165,7 @@ function handleSearch() {
  * Main decorate function
  * @param {Element} block The block element
  */
-export default function decorate(block) {
+export default async function decorate(block) {
   // Clear existing content
   block.innerHTML = '';
 
@@ -173,11 +173,15 @@ export default function decorate(block) {
   const container = document.createElement('div');
   container.className = 'my-saved-search-container';
 
+  // Show loading state
+  container.innerHTML = '<div style="padding: 2rem; text-align: center;">Loading saved searches...</div>';
+  block.appendChild(container);
+
   // Create header with search
   const header = createHeader(handleSearch);
 
-  // Load saved searches from localStorage
-  const savedSearches = loadSavedSearches();
+  // Load saved searches from KV storage
+  const savedSearches = await loadSavedSearches();
   const sortedSearches = sortSearchesByLastUsed([...savedSearches]);
   const searchesCount = savedSearches.length;
 
@@ -203,12 +207,11 @@ export default function decorate(block) {
   // Initialize modals with update callback
   initModals(updateSearchesDisplay);
 
-  // Assemble the component
+  // Clear loading and assemble the component
+  container.innerHTML = '';
   container.appendChild(header);
   container.appendChild(controlsRow);
   container.appendChild(searchesList);
   container.appendChild(editModal);
   container.appendChild(deleteModal);
-
-  block.appendChild(container);
 }
