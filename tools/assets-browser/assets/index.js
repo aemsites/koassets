@@ -35482,39 +35482,83 @@ function buildSavedSearchUrl(search) {
   const baseUrl = `${currentUrl.protocol}//${currentUrl.host}${searchPath}`;
   return `${baseUrl}?${params.toString()}`;
 }
-const STORAGE_KEY = "koassets-saved-searches";
+const API_BASE = window.location.origin;
+let cachedUserId = null;
+async function getUserId() {
+  if (cachedUserId) return cachedUserId;
+  try {
+    const response = await fetch(`${API_BASE}/api/user`, {
+      credentials: "include"
+    });
+    const userData = await response.json();
+    cachedUserId = userData.userId || userData.email || "anonymous";
+    return cachedUserId;
+  } catch (error) {
+    console.error("Error fetching user ID:", error);
+    cachedUserId = "anonymous";
+    return cachedUserId;
+  }
+}
+async function getSavedSearchesKey() {
+  const userId = await getUserId();
+  return `user:${userId}:saved-searches`;
+}
 const savedSearchClient = {
   /**
-   * Load all saved searches from localStorage
-   * @returns {Array} Array of saved search objects
+   * Load all saved searches from KV storage
+   * @returns {Promise<Array>} Array of saved search objects
    */
-  load() {
+  async load() {
+    var _a;
     try {
-      const data = localStorage.getItem(STORAGE_KEY);
-      return data ? JSON.parse(data) : [];
+      const key = await getSavedSearchesKey();
+      const response = await fetch(`${API_BASE}/api/kv/get?key=${encodeURIComponent(key)}`, {
+        credentials: "include"
+      });
+      const data = await response.json();
+      if (!data.success) {
+        if ((_a = data.error) == null ? void 0 : _a.includes("not found")) {
+          return [];
+        }
+        throw new Error(data.error || "Failed to load searches");
+      }
+      return data.value || [];
     } catch (error) {
       console.error("Error loading saved searches:", error);
       return [];
     }
   },
   /**
-   * Save searches to localStorage
+   * Save searches to KV storage
    * @param {Array} searches - Array of search objects to save
+   * @returns {Promise<boolean>} Success status
    */
-  save(searches) {
+  async save(searches) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(searches));
+      const key = await getSavedSearchesKey();
+      const response = await fetch(`${API_BASE}/api/kv/set`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, value: searches })
+      });
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || "Failed to save searches");
+      }
+      return true;
     } catch (error) {
       console.error("Error saving searches:", error);
+      return false;
     }
   },
   /**
    * Create a new saved search
    * @param {Object} searchData - Search data (name, searchTerm, filters, etc.)
-   * @returns {Object} The created search object
+   * @returns {Promise<Object>} The created search object
    */
-  create(searchData) {
-    const searches = this.load();
+  async create(searchData) {
+    const searches = await this.load();
     const now = Date.now();
     const newSearch = {
       id: now.toString(),
@@ -35525,36 +35569,36 @@ const savedSearchClient = {
       ...searchData
     };
     searches.push(newSearch);
-    this.save(searches);
+    await this.save(searches);
     return newSearch;
   },
   /**
    * Update an existing saved search
    * @param {string} searchId - ID of the search to update
    * @param {Object} updates - Object with properties to update
-   * @returns {Object|null} The updated search object or null if not found
+   * @returns {Promise<Object|null>} The updated search object or null if not found
    */
-  update(searchId, updates) {
-    const searches = this.load();
+  async update(searchId, updates) {
+    const searches = await this.load();
     const updatedSearches = searches.map((s) => {
       if (s.id === searchId) {
         return { ...s, ...updates, dateLastModified: Date.now() };
       }
       return s;
     });
-    this.save(updatedSearches);
+    await this.save(updatedSearches);
     return updatedSearches.find((s) => s.id === searchId) || null;
   },
   /**
    * Delete a saved search
    * @param {string} searchId - ID of the search to delete
-   * @returns {boolean} True if deleted, false if not found
+   * @returns {Promise<boolean>} True if deleted, false if not found
    */
-  delete(searchId) {
-    const searches = this.load();
+  async delete(searchId) {
+    const searches = await this.load();
     const filtered = searches.filter((s) => s.id !== searchId);
     if (filtered.length < searches.length) {
-      this.save(filtered);
+      await this.save(filtered);
       return true;
     }
     return false;
@@ -35562,18 +35606,18 @@ const savedSearchClient = {
   /**
    * Update the last used timestamp for a search
    * @param {string} searchId - ID of the search
-   * @returns {Object|null} The updated search object or null
+   * @returns {Promise<Object|null>} The updated search object or null
    */
-  updateLastUsed(searchId) {
+  async updateLastUsed(searchId) {
     return this.update(searchId, { dateLastUsed: Date.now() });
   },
   /**
    * Toggle favorite status for a search
    * @param {string} searchId - ID of the search
-   * @returns {Object|null} The updated search object or null
+   * @returns {Promise<Object|null>} The updated search object or null
    */
-  toggleFavorite(searchId) {
-    const searches = this.load();
+  async toggleFavorite(searchId) {
+    const searches = await this.load();
     const search = searches.find((s) => s.id === searchId);
     if (search) {
       return this.update(searchId, { favorite: !search.favorite });
@@ -35583,10 +35627,10 @@ const savedSearchClient = {
   /**
    * Get a specific saved search by ID
    * @param {string} searchId - ID of the search
-   * @returns {Object|null} The search object or null if not found
+   * @returns {Promise<Object|null>} The search object or null if not found
    */
-  getById(searchId) {
-    const searches = this.load();
+  async getById(searchId) {
+    const searches = await this.load();
     return searches.find((s) => s.id === searchId) || null;
   },
   /**
@@ -35653,9 +35697,9 @@ const getAssetFieldDisplayFacetName = (fieldType, value) => {
   return getDisplayFacetName(facetTechId, value);
 };
 const HIERARCHY_PREFIX = "TCCC.#hierarchy.lvl";
-const loadSavedSearches = () => {
+const loadSavedSearches = async () => {
   try {
-    const searches = savedSearchClient.load();
+    const searches = await savedSearchClient.load();
     return searches.map((search) => ({
       ...search,
       rightsFilters: {
@@ -35688,7 +35732,7 @@ const rightsFacets = {
     type: "checkbox"
   }
 };
-const saveSavedSearches = (searches) => {
+const saveSavedSearches = async (searches) => {
   try {
     const searchesForSaving = searches.map((search) => ({
       ...search,
@@ -35699,7 +35743,7 @@ const saveSavedSearches = (searches) => {
         mediaChannels: Array.from(search.rightsFilters.mediaChannels)
       }
     }));
-    savedSearchClient.save(searchesForSaving);
+    await savedSearchClient.save(searchesForSaving);
   } catch (error) {
     console.error("Error saving searches:", error);
   }
@@ -35850,9 +35894,12 @@ const Facets = ({
     setRightsEndDate == null ? void 0 : setRightsEndDate(null);
   }, [setRightsEndDate]);
   const [activeView, setActiveView] = reactExports.useState("filters");
-  const [savedSearches, setSavedSearches] = reactExports.useState(loadSavedSearches());
+  const [savedSearches, setSavedSearches] = reactExports.useState([]);
   const [showSaveModal, setShowSaveModal] = reactExports.useState(false);
   const [saveSearchName, setSaveSearchName] = reactExports.useState("");
+  reactExports.useEffect(() => {
+    loadSavedSearches().then(setSavedSearches);
+  }, []);
   const combinedFacets = reactExports.useMemo(() => {
     const combined = {};
     searchResults == null ? void 0 : searchResults.forEach((searchResult) => {
