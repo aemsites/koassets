@@ -1,6 +1,6 @@
 /**
  * Shared client for saved search operations
- * Uses Cloudflare KV storage via API
+ * Uses Cloudflare KV storage via Saved Searches API
  * Works in both vanilla JavaScript and React environments
  * Provides a single source of truth for saved search CRUD operations
  */
@@ -51,7 +51,7 @@ export const savedSearchClient = {
   async load() {
     try {
       const key = await getSavedSearchesKey();
-      const response = await fetch(`${API_BASE}/api/kv/get?key=${encodeURIComponent(key)}`, {
+      const response = await fetch(`${API_BASE}/api/savedsearches/get?key=${encodeURIComponent(key)}`, {
         credentials: 'include',
       });
       const data = await response.json();
@@ -80,7 +80,7 @@ export const savedSearchClient = {
   async save(searches) {
     try {
       const key = await getSavedSearchesKey();
-      const response = await fetch(`${API_BASE}/api/kv/set`, {
+      const response = await fetch(`${API_BASE}/api/savedsearches/set`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

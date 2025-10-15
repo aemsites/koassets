@@ -17,7 +17,7 @@ import { originHelix } from './origin/helix';
 import { originFadel } from './origin/fadel';
 import { cors } from './util/itty';
 import { apiUser } from './user';
-import { kvApi } from './api/kv';
+import { savedSearchesApi } from './api/savedsearches';
 
 // Shared CORS origins
 const allowedOrigins = [
@@ -36,32 +36,32 @@ const { preflight, corsify } = cors({
   maxAge: 600,
 });
 
-// Extended CORS for KV API routes (includes DELETE, PUT)
-const { preflight: kvPreflight, corsify: kvCorsify } = cors({
+// Extended CORS for Saved Searches API routes (includes DELETE, PUT)
+const { preflight: savedSearchesPreflight, corsify: savedSearchesCorsify } = cors({
   origin: allowedOrigins,
   allowMethods: ['GET', 'POST', 'DELETE', 'PUT'],
   credentials: true,
   maxAge: 600,
 });
 
-// Middleware to apply extended CORS for KV routes
-const kvCorsMiddleware = (request) => {
-  if (request.url.includes('/api/kv/')) {
-    return kvPreflight(request);
+// Middleware to apply extended CORS for saved searches routes
+const savedSearchesCorsMiddleware = (request) => {
+  if (request.url.includes('/api/savedsearches/')) {
+    return savedSearchesPreflight(request);
   }
   return preflight(request);
 };
 
 // Finally middleware that applies appropriate CORS
 const finalCorsMiddleware = (response, request) => {
-  if (request.url.includes('/api/kv/')) {
-    return kvCorsify(response, request);
+  if (request.url.includes('/api/savedsearches/')) {
+    return savedSearchesCorsify(response, request);
   }
   return corsify(response, request);
 };
 
 const router = Router({
-  before: [kvCorsMiddleware],
+  before: [savedSearchesCorsMiddleware],
   finally: [finalCorsMiddleware],
   catch: (err) => {
     // log stack traces for debugging
@@ -106,8 +106,8 @@ router
   // fadel
   .all('/api/fadel/*', originFadel)
 
-  // KV store API (with extended CORS for DELETE/PUT)
-  .all('/api/kv/*', kvApi)
+  // Saved Searches API (with extended CORS for DELETE/PUT)
+  .all('/api/savedsearches/*', savedSearchesApi)
 
   // future API routes
   .all('/api/*', () => error(404))
