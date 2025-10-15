@@ -20,9 +20,9 @@ interface ExpandedFacetsState {
 const HIERARCHY_PREFIX = 'TCCC.#hierarchy.lvl';
 
 // React-specific saved search functions with rights filters serialization
-const loadSavedSearches = (): SavedSearch[] => {
+const loadSavedSearches = async (): Promise<SavedSearch[]> => {
     try {
-        const searches = savedSearchClient.load();
+        const searches = await savedSearchClient.load();
         
         // Convert Arrays back to Sets and epoch timestamps back to DateValues after JSON deserialization
         return searches.map((search: SavedSearch & {
@@ -66,7 +66,7 @@ const rightsFacets: Record<string, FacetValue> = {
     }
 }
 
-const saveSavedSearches = (searches: SavedSearch[]): void => {
+const saveSavedSearches = async (searches: SavedSearch[]): Promise<void> => {
     try {
         // Convert Sets to Arrays and DateValues to epoch for JSON serialization
         const searchesForSaving = searches.map(search => ({
@@ -79,7 +79,7 @@ const saveSavedSearches = (searches: SavedSearch[]): void => {
             }
         }));
         
-        savedSearchClient.save(searchesForSaving);
+        await savedSearchClient.save(searchesForSaving);
     } catch (error) {
         console.error('Error saving searches:', error);
     }
@@ -255,9 +255,14 @@ const Facets: React.FC<FacetsProps> = ({
 
     // Saved search functionality state
     const [activeView, setActiveView] = useState<'filters' | 'saved'>('filters');
-    const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(loadSavedSearches());
+    const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [saveSearchName, setSaveSearchName] = useState('');
+
+    // Load saved searches on mount
+    useEffect(() => {
+        loadSavedSearches().then(setSavedSearches);
+    }, []);
 
     // Memoized combined facets computation - merges facets from all search results
     const combinedFacets = useMemo((): SearchResult['facets'] => {
