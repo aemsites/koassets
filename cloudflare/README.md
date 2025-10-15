@@ -12,13 +12,15 @@ A Cloudflare Worker that acts as outermost CDN for the KO Assets project with so
 
 Here are the various URL paths handled by the worker:
 
-| Path | Auth | Origin | Proxied Path |
-|------|------|--------|--------------|
-| `/auth/*` | - | Authentication flows, handled internally. | - |
-| `/api/adobe/assets/*` | yes | AdobeDynamic Media OpenAPI | Everything after `/api` |
-| `/api/fadel/*` | yes | Fadel API | Everything after `/api/fadel` |
-| `/public/*`<br>`/scripts/*`<br>`/styles/*` | no | Public content and code from Adobe Helix. [Full list](src/index.js#L44). | `/*` |
-| `/*` | yes | Adobe Helix content | `/*` |
+| Path                   | Authenticated | Description | Origin | Proxied Path |
+|------------------------|---------------|-------------|--------|--------------|
+| `/auth/*`              | 🟡 | 🔑  Authentication flows | - | - |
+| `/api/user`            | ✅ | 👤  User session API (based on session cookie) | - | - |
+| `/api/savedsearches/*` | ✅ | 🔎  Saved searches API (stored in Cloudflare KV) | - | - |
+| `/api/adobe/assets/*`  | ✅ | 🖼️  Adobe Dynamic Media OpenAPI | `delivery-*.adobeaemcloud.com` | Everything after `/api` |
+| `/api/fadel/*`         | ✅ | 🚥  Fadel API | `*.fadelarc.net` | Everything after `/api/fadel` |
+| `/public/*`<br>`/scripts/*`<br>`/styles/*`<br>&nbsp;[more](src/index.js#L44) | ❌ | 🌎  Public content & code from Adobe Helix. | `*.aem.live` / `*.aem.page` | `/public/*`<br>`/scripts/*`<br>`/styles/*`<br>... |
+| `/*`                   | ✅ | 📑  Adobe Helix content | `*.aem.live` / `*.aem.page` | `/*` |
 
 
 ## Setup
