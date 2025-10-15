@@ -35564,7 +35564,7 @@ const savedSearchClient = {
     var _a;
     try {
       const key = await getSavedSearchesKey();
-      const response = await fetch(`${API_BASE}/api/kv/get?key=${encodeURIComponent(key)}`, {
+      const response = await fetch(`${API_BASE}/api/savedsearches/get?key=${encodeURIComponent(key)}`, {
         credentials: "include"
       });
       const data = await response.json();
@@ -35588,7 +35588,7 @@ const savedSearchClient = {
   async save(searches) {
     try {
       const key = await getSavedSearchesKey();
-      const response = await fetch(`${API_BASE}/api/kv/set`, {
+      const response = await fetch(`${API_BASE}/api/savedsearches/set`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
