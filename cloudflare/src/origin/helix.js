@@ -75,7 +75,7 @@ export async function originHelix(request, env) {
   req.headers.set('x-forwarded-host', req.headers.get('host'));
   req.headers.set('x-byo-cdn-type', 'cloudflare');
   if (env.HELIX_ORIGIN_AUTHENTICATION) {
-    req.headers.set('authorization', `token ${env.HELIX_ORIGIN_AUTHENTICATION}`);
+    req.headers.set('authorization', `token ${await env.HELIX_ORIGIN_AUTHENTICATION.get()}`);
   }
   const pushInvalidation = env.HELIX_PUSH_INVALIDATION !== 'disabled';
   if (pushInvalidation) {
