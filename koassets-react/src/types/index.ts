@@ -12,8 +12,8 @@ export interface RightsData {
 }
 
 export interface RightsFilters {
-    rightsStartDate: DateValue;
-    rightsEndDate: DateValue;
+    rightsStartDate: DateValue | null;
+    rightsEndDate: DateValue | null;
     markets: Set<RightsData>;
     mediaChannels: Set<RightsData>;
 }
