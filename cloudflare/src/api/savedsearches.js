@@ -1,14 +1,14 @@
 /**
- * KV Store API endpoints
+ * Saved Searches API endpoints
  * Provides CRUD operations for the SAVED_SEARCHES KV namespace
  */
 
 import { json, error } from 'itty-router';
 
 /**
- * Main KV API handler - routes requests to appropriate endpoint
+ * Main Saved Searches API handler - routes requests to appropriate endpoint
  */
-export async function kvApi(request, env) {
+export async function savedSearchesApi(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
   
@@ -17,12 +17,12 @@ export async function kvApi(request, env) {
   if (path.endsWith('/set')) return setValue(request, env);
   if (path.endsWith('/delete')) return deleteKey(request, env);
   
-  return error(404, { success: false, error: 'KV endpoint not found' });
+  return error(404, { success: false, error: 'Saved searches endpoint not found' });
 }
 
 /**
  * List all keys in the KV store
- * GET /api/kv/list?prefix=xxx&limit=100
+ * GET /api/savedsearches/list?prefix=xxx&limit=100
  */
 export async function listKeys(request, env) {
   try {
@@ -53,7 +53,7 @@ export async function listKeys(request, env) {
 
 /**
  * Get a value from KV store
- * GET /api/kv/get?key=xxx
+ * GET /api/savedsearches/get?key=xxx
  */
 export async function getValue(request, env) {
   try {
@@ -91,7 +91,7 @@ export async function getValue(request, env) {
 
 /**
  * Set a value in KV store
- * POST /api/kv/set
+ * POST /api/savedsearches/set
  * Body: { key: string, value: any, metadata?: any, expirationTtl?: number }
  */
 export async function setValue(request, env) {
@@ -133,7 +133,7 @@ export async function setValue(request, env) {
 
 /**
  * Delete a key from KV store
- * POST /api/kv/delete
+ * POST /api/savedsearches/delete
  * Body: { key: string }
  */
 export async function deleteKey(request, env) {
@@ -156,4 +156,3 @@ export async function deleteKey(request, env) {
     return error(500, { success: false, error: err.message });
   }
 }
-
