@@ -3,6 +3,20 @@
  */
 
 /**
+ * Escape text for safe HTML insertion.
+ * @param {string} str
+ * @returns {string}
+ */
+function escapeHTML(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+/**
  * Create a row for a saved search
  * @param {Object} search - Search object
  * @param {Object} handlers - Event handlers object
@@ -126,7 +140,7 @@ export function createSavedSearchesList(searches, currentSearchTerm, handlers) {
 
     if (currentSearchTerm) {
       emptyState.innerHTML = `
-        <p>No saved searches found matching "${currentSearchTerm}".</p>
+        <p>No saved searches found matching "${escapeHTML(currentSearchTerm)}".</p>
         <p style="font-size: 0.9rem; color: #999; margin-top: 0.5rem;">Try different search terms or <button onclick="clearSearch()" style="background: none; border: none; color: #e60012; text-decoration: underline; cursor: pointer;">clear search</button> to see all saved searches.</p>
       `;
     } else {
