@@ -185,7 +185,8 @@ export async function createSession(request, env) {
     country: idToken.ctry,
     employeeType: idToken.EmployeeType,
 
-    // company - informational
+    // informational
+    koid: idToken['User ID'],
     company: idToken.Company,
 
     permissions,
