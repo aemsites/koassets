@@ -102,7 +102,7 @@ export const savedSearchClient = {
 
   /**
    * Create a new saved search
-   * @param {Object} searchData - Search data (name, searchTerm, filters, etc.)
+   * @param {Object} searchData - Search data (name, searchTerm, filters, thumbnailImageId, etc.)
    * @returns {Promise<Object>} The created search object
    */
   async create(searchData) {
