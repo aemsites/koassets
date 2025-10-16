@@ -3,6 +3,7 @@ import type { Asset, Rendition } from '../types';
 import { useAppConfig } from '../hooks/useAppConfig';
 import { isPdfPreview } from '../constants/filetypes';
 import { AuthorizationStatus } from '../clients/fadel-client';
+import './PDFViewer.css';
 
 interface PDFViewerProps {
     selectedImage: Asset;
@@ -17,6 +18,7 @@ interface PDFViewerProps {
 const PDFViewer: React.FC<PDFViewerProps> = ({ selectedImage, renditions, fallbackComponent }) => {
     const { dynamicMediaClient } = useAppConfig();
     const [pdfFailed, setPdfFailed] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     // Calculate all values before any early returns with useMemo
     const isPdf = useMemo(() => isPdfPreview(selectedImage.format as string), [selectedImage.format]);
@@ -98,12 +100,22 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ selectedImage, renditions, fallba
     }
 
     return (
-        <object
-            data={pdfUrl}
-            width="100%"
-            height="100%"
-            aria-label={selectedImage.title}
-        />
+        <div className="pdf-viewer-container">
+            {isLoading && (
+                <div className="pdf-spinner-overlay">
+                    <div className="pdf-spinner" />
+                </div>
+            )}
+            <object
+                data={pdfUrl}
+                width="100%"
+                height="100%"
+                aria-label={selectedImage.title}
+                onLoad={() => {
+                    setIsLoading(false);
+                }}
+            />
+        </div>
     );
 };
 
