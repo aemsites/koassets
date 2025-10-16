@@ -37847,23 +37847,59 @@ const DOCUMENT_PREVIEW_AS_PDF_MIME_TYPES = [
 const isImage = (format) => (format == null ? void 0 : format.includes("image/")) || IMAGE_MIME_TYPES.includes(format) || false;
 const isPdfPreview = (format) => DOCUMENT_PREVIEW_AS_PDF_MIME_TYPES.includes(format);
 const PDFViewer = ({ selectedImage, renditions }) => {
-  var _a, _b, _c;
   const { dynamicMediaClient } = useAppConfig();
-  if (!isPdfPreview(selectedImage.format)) {
+  const [pdfFailed, setPdfFailed] = reactExports.useState(false);
+  const isPdf = reactExports.useMemo(() => isPdfPreview(selectedImage.format), [selectedImage.format]);
+  const pdfRendition = reactExports.useMemo(() => {
+    var _a, _b, _c;
+    if (!isPdf) return null;
+    return ((_c = (_b = (_a = renditions == null ? void 0 : renditions.items) == null ? void 0 : _a.filter((item) => isPdfPreview(item.format))) == null ? void 0 : _b.sort((a, b) => (a.size ?? 0) - (b.size ?? 0))) == null ? void 0 : _c[0]) ?? null;
+  }, [isPdf, renditions == null ? void 0 : renditions.items]);
+  const pdfUrl = reactExports.useMemo(() => {
+    if (!pdfRendition) return null;
+    return (dynamicMediaClient == null ? void 0 : dynamicMediaClient.getPreviewPdfUrl(
+      selectedImage.assetId,
+      selectedImage.name,
+      pdfRendition.name
+    )) ?? null;
+  }, [pdfRendition, dynamicMediaClient, selectedImage.assetId, selectedImage.name]);
+  reactExports.useEffect(() => {
+    if (!pdfUrl) {
+      return;
+    }
+    setPdfFailed(false);
+    const validatePdfUrl = async () => {
+      try {
+        const response = await fetch(pdfUrl, { method: "HEAD" });
+        if (!response.ok) {
+          setPdfFailed(true);
+        }
+      } catch (error) {
+        setPdfFailed(true);
+      }
+    };
+    validatePdfUrl();
+  }, [pdfUrl]);
+  if (!isPdf || !pdfRendition) {
     return null;
   }
-  const pdfRendition = (_c = (_b = (_a = renditions == null ? void 0 : renditions.items) == null ? void 0 : _a.filter((item) => isPdfPreview(item.format))) == null ? void 0 : _b.sort((a, b) => (a.size ?? 0) - (b.size ?? 0))) == null ? void 0 : _c[0];
-  if (!pdfRendition) {
-    return null;
+  if (!pdfUrl || pdfFailed) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Picture,
+      {
+        asset: selectedImage,
+        width: 1200,
+        className: "asset-details-main-image",
+        eager: true,
+        fetchPriority: "high"
+      },
+      selectedImage == null ? void 0 : selectedImage.assetId
+    );
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
     "object",
     {
-      data: dynamicMediaClient == null ? void 0 : dynamicMediaClient.getPreviewPdfUrl(
-        selectedImage.assetId,
-        selectedImage.name,
-        pdfRendition.name
-      ),
+      data: pdfUrl,
       width: "100%",
       height: "100%",
       "aria-label": selectedImage.title
