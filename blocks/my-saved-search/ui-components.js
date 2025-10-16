@@ -17,6 +17,19 @@ function escapeHTML(str) {
 }
 
 /**
+ * Build asset preview URL for Dynamic Media
+ * @param {string} assetId - Asset ID
+ * @param {string} format - Image format (webp, jpg, etc.)
+ * @param {number} width - Image width
+ * @returns {string} Formatted preview URL
+ */
+function buildAssetPreviewUrl(assetId, format = 'jpg', width = 80) {
+  if (!assetId) return '';
+  const fileName = 'thumbnail';
+  return `/api/adobe/assets/${assetId}/as/${fileName}.${format}?width=${width}`;
+}
+
+/**
  * Create a row for a saved search
  * @param {Object} search - Search object
  * @param {Object} handlers - Event handlers object
@@ -25,6 +38,43 @@ function escapeHTML(str) {
 export function createSavedSearchRow(search, handlers) {
   const row = document.createElement('div');
   row.className = 'saved-search-row';
+
+  // Preview cell
+  const previewCell = document.createElement('div');
+  previewCell.className = 'row-cell cell-preview';
+
+  if (search.thumbnailImageId) {
+    const previewUrl = buildAssetPreviewUrl(search.thumbnailImageId, 'jpg', 80);
+    const img = document.createElement('img');
+    img.alt = `${search.name} preview`;
+    img.src = previewUrl;
+    img.loading = 'lazy';
+    img.className = 'saved-search-preview-image';
+    img.onerror = () => {
+      // Show placeholder on error
+      const placeholder = document.createElement('div');
+      placeholder.className = 'preview-placeholder';
+      placeholder.innerHTML = `
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+          <rect x="6" y="8" width="28" height="24" rx="2" fill="#f0f0f0" stroke="#ddd"/>
+          <text x="20" y="22" text-anchor="middle" font-family="Arial" font-size="16" fill="#999">?</text>
+        </svg>
+      `;
+      if (previewCell.isConnected) previewCell.replaceChildren(placeholder);
+    };
+    previewCell.appendChild(img);
+  } else {
+    // No thumbnail available
+    const placeholder = document.createElement('div');
+    placeholder.className = 'preview-placeholder';
+    placeholder.innerHTML = `
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+        <rect x="6" y="8" width="28" height="24" rx="2" fill="#f0f0f0" stroke="#ddd"/>
+        <text x="20" y="22" text-anchor="middle" font-family="Arial" font-size="16" fill="#999">?</text>
+      </svg>
+    `;
+    previewCell.appendChild(placeholder);
+  }
 
   // Name and date cell
   const nameCell = document.createElement('div');
@@ -116,6 +166,7 @@ export function createSavedSearchRow(search, handlers) {
   actionCell.appendChild(deleteBtn);
   actionCell.appendChild(copyBtn);
 
+  row.appendChild(previewCell);
   row.appendChild(nameCell);
   row.appendChild(searchTermCell);
   row.appendChild(actionCell);
@@ -155,6 +206,10 @@ export function createSavedSearchesList(searches, currentSearchTerm, handlers) {
   const header = document.createElement('div');
   header.className = 'saved-searches-header';
 
+  const previewHeader = document.createElement('div');
+  previewHeader.className = 'header-cell header-preview';
+  previewHeader.textContent = 'PREVIEW';
+
   const nameHeader = document.createElement('div');
   nameHeader.className = 'header-cell header-name';
   nameHeader.textContent = 'NAME';
@@ -167,6 +222,7 @@ export function createSavedSearchesList(searches, currentSearchTerm, handlers) {
   actionHeader.className = 'header-cell header-action';
   actionHeader.textContent = 'ACTION';
 
+  header.appendChild(previewHeader);
   header.appendChild(nameHeader);
   header.appendChild(searchTermHeader);
   header.appendChild(actionHeader);

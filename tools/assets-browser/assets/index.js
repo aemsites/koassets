@@ -35606,7 +35606,7 @@ const savedSearchClient = {
   },
   /**
    * Create a new saved search
-   * @param {Object} searchData - Search data (name, searchTerm, filters, etc.)
+   * @param {Object} searchData - Search data (name, searchTerm, filters, thumbnailImageId, etc.)
    * @returns {Promise<Object>} The created search object
    */
   async create(searchData) {
@@ -36353,6 +36353,7 @@ const Facets = ({
     setShowSaveModal(true);
   };
   const handleSaveSearchConfirm = reactExports.useCallback(() => {
+    var _a;
     if (saveSearchName.trim()) {
       const currentPath = window.location.pathname;
       let searchType = "/search/all";
@@ -36369,6 +36370,11 @@ const Facets = ({
         markets: new Set(selectedMarkets),
         mediaChannels: new Set(selectedMediaChannels)
       };
+      let thumbnailImageId;
+      if (searchResults && ((_a = searchResults[0]) == null ? void 0 : _a.hits) && searchResults[0].hits.length > 0) {
+        const firstHit = searchResults[0].hits[0];
+        thumbnailImageId = firstHit.assetId;
+      }
       const now = Date.now();
       const newSearch = {
         id: now.toString(),
@@ -36381,7 +36387,8 @@ const Facets = ({
         dateLastModified: now,
         dateLastUsed: now,
         favorite: false,
-        searchType
+        searchType,
+        thumbnailImageId
       };
       const updatedSearches = [...savedSearches, newSearch];
       setSavedSearches(updatedSearches);
@@ -36390,7 +36397,7 @@ const Facets = ({
       setSaveSearchName("");
       setShowSaveModal(false);
     }
-  }, [saveSearchName, selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate, query, facetCheckedState, selectedNumericFilters, savedSearches]);
+  }, [saveSearchName, selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate, query, facetCheckedState, selectedNumericFilters, savedSearches, searchResults]);
   const handleSaveSearchCancel = () => {
     setSaveSearchName("");
     setShowSaveModal(false);
@@ -36527,6 +36534,7 @@ const Facets = ({
     setEditingSearchId(null);
   };
   const handleConfirmEditLink = reactExports.useCallback(() => {
+    var _a;
     if (!editingSearchId) {
       setShowEditLinkModal(false);
       return;
@@ -36537,6 +36545,11 @@ const Facets = ({
       markets: new Set(selectedMarkets),
       mediaChannels: new Set(selectedMediaChannels)
     };
+    let thumbnailImageId;
+    if (searchResults && ((_a = searchResults[0]) == null ? void 0 : _a.hits) && searchResults[0].hits.length > 0) {
+      const firstHit = searchResults[0].hits[0];
+      thumbnailImageId = firstHit.assetId;
+    }
     const now = Date.now();
     const updated = savedSearches.map((s) => s.id === editingSearchId ? {
       ...s,
@@ -36546,7 +36559,8 @@ const Facets = ({
       facetFilters: facetCheckedState,
       numericFilters: [...selectedNumericFilters],
       rightsFilters,
-      dateLastModified: now
+      dateLastModified: now,
+      thumbnailImageId
     } : s);
     setSavedSearches(updated);
     saveSavedSearches(updated);
@@ -36555,7 +36569,7 @@ const Facets = ({
     setEditLinkText("");
     setEditingSearchName("");
     setEditingSearchId(null);
-  }, [editingSearchId, selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate, query, facetCheckedState, selectedNumericFilters, savedSearches, editingSearchName]);
+  }, [editingSearchId, selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate, query, facetCheckedState, selectedNumericFilters, savedSearches, editingSearchName, searchResults]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "facet-filter-container", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "facet-filter", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "facet-filter-header", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "facet-filter-tabs", children: [
