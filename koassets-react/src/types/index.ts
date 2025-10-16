@@ -320,6 +320,7 @@ export interface SavedSearch {
     dateLastUsed?: number;
     favorite: boolean;
     searchType?: string; // The search type path (e.g., '/search/all', '/search/assets', '/search/products')
+    thumbnailImageId?: string; // Asset ID of the first image in search results for preview
 }
 
 export interface FacetValue {

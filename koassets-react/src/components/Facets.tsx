@@ -814,6 +814,13 @@ const Facets: React.FC<FacetsProps> = ({
                 mediaChannels: new Set(selectedMediaChannels)
             };
 
+            // Get the first image ID from search results for thumbnail preview
+            let thumbnailImageId: string | undefined;
+            if (searchResults && searchResults[0]?.hits && searchResults[0].hits.length > 0) {
+                const firstHit = searchResults[0].hits[0];
+                thumbnailImageId = firstHit.assetId as string;
+            }
+
             const now = Date.now();
             const newSearch: SavedSearch = {
                 id: now.toString(),
@@ -826,7 +833,8 @@ const Facets: React.FC<FacetsProps> = ({
                 dateLastModified: now,
                 dateLastUsed: now,
                 favorite: false,
-                searchType: searchType
+                searchType: searchType,
+                thumbnailImageId: thumbnailImageId
             };
 
             const updatedSearches = [...savedSearches, newSearch];
@@ -839,7 +847,7 @@ const Facets: React.FC<FacetsProps> = ({
             setSaveSearchName('');
             setShowSaveModal(false);
         }
-    }, [saveSearchName, selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate, query, facetCheckedState, selectedNumericFilters, savedSearches]);
+    }, [saveSearchName, selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate, query, facetCheckedState, selectedNumericFilters, savedSearches, searchResults]);
 
     const handleSaveSearchCancel = () => {
         setSaveSearchName('');
@@ -1038,6 +1046,13 @@ const Facets: React.FC<FacetsProps> = ({
             markets: new Set(selectedMarkets),
             mediaChannels: new Set(selectedMediaChannels)
         };
+
+        // Get the first image ID from search results for thumbnail preview
+        let thumbnailImageId: string | undefined;
+        if (searchResults && searchResults[0]?.hits && searchResults[0].hits.length > 0) {
+            const firstHit = searchResults[0].hits[0];
+            thumbnailImageId = firstHit.assetId as string;
+        }
         
         const now = Date.now();
         const updated = savedSearches.map(s => (
@@ -1049,7 +1064,8 @@ const Facets: React.FC<FacetsProps> = ({
                     facetFilters: facetCheckedState,
                     numericFilters: [...selectedNumericFilters],
                     rightsFilters: rightsFilters,
-                    dateLastModified: now
+                    dateLastModified: now,
+                    thumbnailImageId: thumbnailImageId
                 }
                 : s
         ));
@@ -1064,7 +1080,7 @@ const Facets: React.FC<FacetsProps> = ({
         setEditLinkText('');
         setEditingSearchName('');
         setEditingSearchId(null);
-    }, [editingSearchId, selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate, query, facetCheckedState, selectedNumericFilters, savedSearches, editingSearchName]);
+    }, [editingSearchId, selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate, query, facetCheckedState, selectedNumericFilters, savedSearches, editingSearchName, searchResults]);
 
     return (
         <>
