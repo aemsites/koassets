@@ -81,6 +81,14 @@ async function searchAuthorization(request) {
   const user = request.user;
   const search = await request.json();
 
+  // Algolia search request. Enforce a filter that ensures only authorized assets are returned
+  // https://www.algolia.com/doc/api-reference/api-parameters/filters
+
+  // if user roles is empty, make the search return nothing
+  if (user.roles.length === 0) {
+    return JSON.stringify({ requests: [] });
+  }
+
   // RESTRICTED BRAND CHECK
   // TODO: DISABLED until we have the right search index support
   const restrictedBrand = '';
@@ -96,7 +104,7 @@ async function searchAuthorization(request) {
     if (countries.length > 0) {
       intendedBottlerCountry = `(${countries.map(c => `tccc-intendedBottlerCountry:'${c}'`).join(' OR ')})`;
     } else {
-      // should normally not happen, but safety net: ensure no hits
+      // should normally not happen, but safety net to ensure no hits
       intendedBottlerCountry = `tccc-intendedBottlerCountry:'___does_not_exist___'`;
     }
   }
