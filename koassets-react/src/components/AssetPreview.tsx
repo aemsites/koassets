@@ -119,18 +119,27 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                     </div>
 
                     <div className="modal-image-container">
-                        {isPdfPreview(selectedImage?.format as string) ? (
-                            <PDFViewer selectedImage={selectedImage as Asset} renditions={renditions} />
-                        ) : (
-                            <Picture
-                                key={selectedImage?.assetId}
-                                asset={selectedImage as Asset}
-                                width={350}
-                                className="modal-image"
-                                eager={true}
-                                fetchPriority="high"
-                            />
-                        )}
+                        {(() => {
+                            const pictureComponent = (
+                                <Picture
+                                    key={selectedImage?.assetId}
+                                    asset={selectedImage as Asset}
+                                    width={350}
+                                    className="modal-image"
+                                    eager={true}
+                                    fetchPriority="high"
+                                />
+                            );
+                            return isPdfPreview(selectedImage?.format as string) ? (
+                                <PDFViewer 
+                                    selectedImage={selectedImage as Asset} 
+                                    renditions={renditions}
+                                    fallbackComponent={pictureComponent}
+                                />
+                            ) : (
+                                pictureComponent
+                            );
+                        })()}
                     </div>
 
                     <div className="preview-modal-details">

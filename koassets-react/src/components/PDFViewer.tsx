@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import type { Asset, Rendition } from '../types';
 import { useAppConfig } from '../hooks/useAppConfig';
 import { isPdfPreview } from '../constants/filetypes';
-import Picture from './Picture';
+import { AuthorizationStatus } from '../clients/fadel-client';
 
 interface PDFViewerProps {
     selectedImage: Asset;
@@ -11,9 +11,10 @@ interface PDFViewerProps {
         items?: Rendition[];
         'repo:name'?: string;
     };
+    fallbackComponent?: React.ReactNode;
 }
 
-const PDFViewer: React.FC<PDFViewerProps> = ({ selectedImage, renditions }) => {
+const PDFViewer: React.FC<PDFViewerProps> = ({ selectedImage, renditions, fallbackComponent }) => {
     const { dynamicMediaClient } = useAppConfig();
     const [pdfFailed, setPdfFailed] = useState(false);
 
@@ -45,14 +46,41 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ selectedImage, renditions }) => {
         setPdfFailed(false);
 
         const validatePdfUrl = async () => {
-            try {
-                const response = await fetch(pdfUrl, { method: 'HEAD' });
-                if (!response.ok) {
+            const maxRetries = 3;
+            const baseDelay = 500; // ms
+            
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    const response = await fetch(pdfUrl, { method: 'OPTIONS' });
+                    
+                    if (response.ok) {
+                        return; // Success!
+                    }
+                    
+                    
+                    // Retry on 404 or 503 (not on other errors)
+                    if (attempt < maxRetries && (response.status === 404 || response.status === 503)) {
+                        const delay = baseDelay * Math.pow(2, attempt - 1);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue;
+                    }
+                    
                     setPdfFailed(true);
+                    return;
+                } catch (error) {
+                    
+                    if (attempt < maxRetries) {
+                        const delay = baseDelay * Math.pow(2, attempt - 1);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue;
+                    }
+                    
+                    setPdfFailed(true);
+                    return;
                 }
-            } catch (error) {
-                setPdfFailed(true);
             }
+            
+            setPdfFailed(true);
         };
 
         validatePdfUrl();
@@ -63,17 +91,10 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ selectedImage, renditions }) => {
     }
 
     // If PDF URL fetch failed or returned null/undefined, fall back to Picture
-    if (!pdfUrl || pdfFailed) {
-        return (
-            <Picture
-                key={selectedImage?.assetId}
-                asset={selectedImage as Asset}
-                width={1200}
-                className="asset-details-main-image"
-                eager={true}
-                fetchPriority="high"
-            />
-        );
+    if (!pdfUrl || pdfFailed 
+        || (selectedImage.readyToUse?.toLowerCase() !== 'yes' 
+            && (selectedImage.authorized === undefined || selectedImage.authorized !== AuthorizationStatus.AVAILABLE))) {
+        return fallbackComponent || null;
     }
 
     return (

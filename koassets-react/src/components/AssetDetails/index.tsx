@@ -229,18 +229,27 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     <span>Add to Collection</span>
                                 </div>
                             </div>
-                            {isPdfPreview(selectedImage?.format as string) ? (
-                                <PDFViewer selectedImage={selectedImage as Asset} renditions={renditions} />
-                            ) : (
-                                <Picture
-                                    key={selectedImage?.assetId}
-                                    asset={selectedImage as Asset}
-                                    width={1200}
-                                    className="asset-details-main-image"
-                                    eager={true}
-                                    fetchPriority="high"
-                                />
-                            )}
+                            {(() => {
+                                const pictureComponent = (
+                                    <Picture
+                                        key={selectedImage?.assetId}
+                                        asset={selectedImage as Asset}
+                                        width={1200}
+                                        className="asset-details-main-image"
+                                        eager={true}
+                                        fetchPriority="high"
+                                    />
+                                );
+                                return isPdfPreview(selectedImage?.format as string) ? (
+                                    <PDFViewer 
+                                        selectedImage={selectedImage as Asset} 
+                                        renditions={renditions}
+                                        fallbackComponent={pictureComponent}
+                                    />
+                                ) : (
+                                    pictureComponent
+                                );
+                            })()}
                         </div>
                     </div>
 
