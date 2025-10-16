@@ -532,6 +532,9 @@ async function handleShareSubmit() {
     // Clear email input
     if (emailInput) emailInput.value = '';
 
+    // Hide the share modal
+    hideShareModal();
+
     // Refresh main display to update share counts
     await refreshCollectionsDisplay();
   } catch (error) {
