@@ -57,7 +57,7 @@ async function getIMSToken(request, env) {
   }
 }
 
-function forceSearchFilter(request, search, constraint) {
+function forceSearchFilter(search, constraint) {
   // skip if constraint is empty or not set
   if (!constraint || constraint.length === 0) {
     return;
@@ -74,8 +74,6 @@ function forceSearchFilter(request, search, constraint) {
     } else {
       searchReq.params.filters = `(${filter}) AND ${constraint}`;
     }
-
-    console.log(`Search filter [${i}] for ${request.user.email}: ${searchReq.params.filters}`);
   }
 }
 
@@ -108,8 +106,9 @@ async function searchAuthorization(request) {
 
   // all checks are required (AND)
   const constraint = [restrictedBrand, intendedBottlerCountry, intendedCustomer].filter(c => c).join(' AND ');
+  console.log(`[${request.user.email}] authz filter: ${constraint}`);
 
-  forceSearchFilter(request, search, constraint);
+  forceSearchFilter(search, constraint);
 
   return JSON.stringify(search);
 }
