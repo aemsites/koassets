@@ -47,17 +47,22 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       sourcemap: true, // Enable source maps for production builds too
-      minify: false, // Disable minification for better debugging
+      minify: 'terser', // Enable minification for production
+      terserOptions: {
+        compress: {
+          drop_console: true // Remove console.log in production
+        }
+      },
       rollupOptions: {
         external: [],
         output: {
           entryFileNames: 'assets/index.js',
-          chunkFileNames: 'assets/[name].js',
+          chunkFileNames: 'assets/[name].[hash:8].js',
           assetFileNames: (assetInfo) => {
             if (assetInfo.name && assetInfo.name.endsWith('.css')) {
               return 'assets/index.css';
             }
-            return 'assets/[name][extname]';
+            return 'assets/[name].[hash:8][extname]';
           },
           // Better source map paths for debugging
           sourcemapPathTransform: (relativeSourcePath, sourcemapPath) => {
@@ -71,7 +76,10 @@ export default defineConfig(({ mode }) => {
             return relativeSourcePath;
           }
         }
-      }
+      },
+      chunkSizeWarningLimit: 1000,
+      // Optimize images in the output
+      assetsInlineLimit: 4096
     },
     define: {
       // Expose environment info to the app

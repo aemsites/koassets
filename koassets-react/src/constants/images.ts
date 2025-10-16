@@ -10,10 +10,15 @@
  * 
  * Research shows that lazy loading above-the-fold images can delay LCP by 600-1200ms.
  * Adjust this number based on your typical viewport size and grid layout:
- * - Desktop (3 columns): 9 images = 3 rows
- * - Mobile (1-2 columns): 9 images = 5-9 rows
+ * - Desktop (3 columns): 3 images = 1 row (viewport typical height)
+ * - Mobile (1-2 columns): 3 images = 2-3 rows (viewport typical height)
+ * 
+ * Optimization: Reduced from 6 to 3 for faster LCP
+ * - Fewer eager-loaded images = smaller initial JS/CSS payload
+ * - Remaining images lazy load below the fold
+ * - First 3 images get high fetchPriority for maximum performance
  */
-export const EAGER_LOAD_IMAGE_COUNT = 6;
+export const EAGER_LOAD_IMAGE_COUNT = 3;
 
 /**
  * Comprehensive list of image MIME types supported by the application.
