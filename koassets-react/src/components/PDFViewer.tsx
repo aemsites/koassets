@@ -88,6 +88,20 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ selectedImage, renditions, fallba
         validatePdfUrl();
     }, [pdfUrl]);
 
+    // Fallback timeout for Safari - onLoad may not fire for object elements
+    // This ensures spinner is hidden even if the browser doesn't fire onLoad
+    useEffect(() => {
+        if (!isLoading) {
+            return;
+        }
+
+        const timeoutId = setTimeout(() => {
+            setIsLoading(false);
+        }, 2000);
+
+        return () => clearTimeout(timeoutId);
+    }, [isLoading]);
+
     if (!isPdf || !pdfRendition) {
         return null;
     }
