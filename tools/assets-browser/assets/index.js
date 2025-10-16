@@ -32425,7 +32425,7 @@ const Picture = ({
     )
   ] });
 };
-const EAGER_LOAD_IMAGE_COUNT = 6;
+const EAGER_LOAD_IMAGE_COUNT = 4;
 const SelectAllRenditionsCheckbox = ({
   assetData,
   selectedRenditions,
@@ -37073,7 +37073,7 @@ const AssetCard = ({
               width: 350,
               className: "image-container",
               eager: index < EAGER_LOAD_IMAGE_COUNT,
-              fetchPriority: index < 2 ? "high" : "auto"
+              fetchPriority: index < EAGER_LOAD_IMAGE_COUNT ? "high" : "auto"
             },
             image.assetId
           )
@@ -38300,7 +38300,7 @@ const AssetPreview = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "preview-tags", children: (selectedImage == null ? void 0 : selectedImage.campaignName) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "preview-tag tccc-tag", children: getAssetFieldDisplayFacetName("campaignName", selectedImage == null ? void 0 : selectedImage.campaignName) }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "modal-title", children: selectedImage == null ? void 0 : selectedImage.title })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-image-container", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "modal-image-container", children: isPdfPreview(selectedImage == null ? void 0 : selectedImage.format) ? /* @__PURE__ */ jsxRuntimeExports.jsx(PDFViewer, { selectedImage, renditions }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
         Picture,
         {
           asset: selectedImage,
@@ -38309,7 +38309,7 @@ const AssetPreview = ({
           eager: true,
           fetchPriority: "high"
         },
-        selectedImage.assetId
+        selectedImage == null ? void 0 : selectedImage.assetId
       ) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "preview-modal-details", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "preview-modal-grid", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "preview-modal-group", children: [
