@@ -43,6 +43,7 @@ export default [
         ecmaFeatures: { jsx: true },
         sourceType: 'module',
         project: './tsconfig.json',
+        warnOnUnsupportedTypeScriptVersion: false,
       },
     },
     plugins: {
