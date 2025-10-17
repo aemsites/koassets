@@ -1,7 +1,8 @@
+/* eslint-disable max-classes-per-file, class-methods-use-this, no-console */
 /**
  * KO Chat Assistant - LLM Abstraction Layer
  * Supports both WebLLM (local browser-based AI) and Server-based AI
- * 
+ *
  * Architecture:
  * - LLMManager: Orchestrates which provider to use
  * - WebLLMProvider: Runs AI model in browser using WebGPU
@@ -14,7 +15,7 @@
 
 /**
  * Toggle between WebLLM (local) and Server (cloud) mode
- * 
+ *
  * Set to true for local development (AI runs in browser)
  * Set to false for production (AI runs on server)
  */
@@ -32,10 +33,12 @@ class LLMProvider {
     throw new Error('initialize() must be implemented');
   }
 
+  // eslint-disable-next-line no-unused-vars
   async generateResponse(message, conversationHistory) {
     throw new Error('generateResponse() must be implemented');
   }
 
+  // eslint-disable-next-line no-unused-vars
   async streamResponse(message, conversationHistory, onChunk, onComplete) {
     throw new Error('streamResponse() must be implemented');
   }
@@ -94,7 +97,7 @@ class WebLLMProvider extends LLMProvider {
           initProgressCallback: (progress) => {
             this.handleInitProgress(progress);
           },
-        }
+        },
       );
 
       this.status = 'ready';
@@ -102,7 +105,7 @@ class WebLLMProvider extends LLMProvider {
       this.notifyStatusChange();
 
       // Resolve any waiting callbacks
-      this.initCallbacks.forEach(cb => cb({ success: true }));
+      this.initCallbacks.forEach((cb) => cb({ success: true }));
       this.initCallbacks = [];
 
       return { success: true };
@@ -111,14 +114,14 @@ class WebLLMProvider extends LLMProvider {
       this.status = 'error';
       this.notifyStatusChange();
 
-      const result = { 
-        success: false, 
+      const result = {
+        success: false,
         error: error.message,
-        details: this.getErrorGuidance(error)
+        details: this.getErrorGuidance(error),
       };
 
       // Resolve waiting callbacks with error
-      this.initCallbacks.forEach(cb => cb(result));
+      this.initCallbacks.forEach((cb) => cb(result));
       this.initCallbacks = [];
 
       return result;
@@ -152,7 +155,7 @@ class WebLLMProvider extends LLMProvider {
    */
   handleInitProgress(progress) {
     const text = progress.text || '';
-    
+
     if (text.includes('Loading model')) {
       this.status = 'loading';
     } else if (text.includes('Downloading')) {
@@ -200,7 +203,7 @@ class WebLLMProvider extends LLMProvider {
         usage: {
           promptTokens: response.usage?.prompt_tokens || 0,
           completionTokens: response.usage?.completion_tokens || 0,
-        }
+        },
       };
     } catch (error) {
       console.error('[WebLLM] Generation failed:', error);
@@ -240,16 +243,17 @@ When users ask to find or search for assets:
 Keep responses concise and helpful. Focus on asset search and discovery.`;
 
     const messages = [
-      { role: 'system', content: systemPrompt }
+      { role: 'system', content: systemPrompt },
     ];
 
     // Add recent conversation history (last 10 messages)
     const recentHistory = conversationHistory.slice(-10);
+    // eslint-disable-next-line no-restricted-syntax
     for (const msg of recentHistory) {
       if (msg.role === 'user' || msg.role === 'assistant') {
         messages.push({
           role: msg.role,
-          content: msg.content
+          content: msg.content,
         });
       }
     }
@@ -269,30 +273,28 @@ Keep responses concise and helpful. Focus on asset search and discovery.`;
 
     // Detect search intent
     if (
-      lower.includes('find') ||
-      lower.includes('search') ||
-      lower.includes('show') ||
-      lower.includes('look for') ||
-      lower.includes('get') ||
-      lower.includes('assets for')
+      lower.includes('find')
+      || lower.includes('search')
+      || lower.includes('show')
+      || lower.includes('look for')
+      || lower.includes('get')
+      || lower.includes('assets for')
     ) {
       // Extract brand names
       const brands = ['coca-cola', 'sprite', 'fanta', 'powerade', 'dasani', 'smartwater', 'vitaminwater'];
-      const mentionedBrands = brands.filter(brand => lower.includes(brand));
+      const mentionedBrands = brands.filter((brand) => lower.includes(brand));
 
       // Extract categories
       const categories = ['image', 'video', 'document'];
-      const mentionedCategories = categories.filter(cat => lower.includes(cat));
+      const mentionedCategories = categories.filter((cat) => lower.includes(cat));
 
       const facetFilters = {};
       if (mentionedBrands.length > 0) {
-        facetFilters.brand = mentionedBrands.map(b => 
-          b.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-')
-        );
+        facetFilters.brand = mentionedBrands.map((b) => b.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('-'));
       }
       if (mentionedCategories.length > 0) {
-        facetFilters.category = mentionedCategories.map(c => 
-          c.charAt(0).toUpperCase() + c.slice(1)
+        facetFilters.category = mentionedCategories.map(
+          (c) => c.charAt(0).toUpperCase() + c.slice(1),
         );
       }
 
@@ -368,7 +370,7 @@ Keep responses concise and helpful. Focus on asset search and discovery.`;
   notifyStatusChange() {
     // Dispatch custom event for UI to listen to
     window.dispatchEvent(new CustomEvent('llm-status-change', {
-      detail: this.getStatus()
+      detail: this.getStatus(),
     }));
   }
 
@@ -432,9 +434,8 @@ class ServerLLMProvider extends LLMProvider {
           rightsReport: data.rightsReport,
           suggestedPrompts: data.suggestedPrompts,
         };
-      } else {
-        throw new Error(data.error || 'Server request failed');
       }
+      throw new Error(data.error || 'Server request failed');
     } catch (error) {
       console.error('[Server LLM] Request failed:', error);
       return {
@@ -499,21 +500,21 @@ class LLMManager {
    * Initialize the provider (async for WebLLM, instant for Server)
    */
   async initialize() {
-    return await this.provider.initialize();
+    return this.provider.initialize();
   }
 
   /**
    * Generate response
    */
   async generateResponse(message, conversationHistory) {
-    return await this.provider.generateResponse(message, conversationHistory);
+    return this.provider.generateResponse(message, conversationHistory);
   }
 
   /**
    * Stream response
    */
   async streamResponse(message, conversationHistory, onChunk, onComplete) {
-    return await this.provider.streamResponse(message, conversationHistory, onChunk, onComplete);
+    return this.provider.streamResponse(message, conversationHistory, onChunk, onComplete);
   }
 
   /**
@@ -557,18 +558,18 @@ class MCPClient {
    * Detect appropriate MCP server URL based on environment
    */
   detectMCPServerUrl() {
-    const hostname = window.location.hostname;
-    
+    const { hostname } = window.location;
+
     // Local development
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
       return '/mcp'; // MCP is part of main worker in dev
     }
-    
+
     // Staging
     if (hostname.includes('staging') || hostname.includes('aem.page')) {
       return 'https://koassets-mcp-server-staging.workers.dev/mcp';
     }
-    
+
     // Production
     return 'https://koassets-mcp-server.workers.dev/mcp';
   }
@@ -629,7 +630,9 @@ class MCPClient {
   async executeToolCalls(toolCalls) {
     const results = [];
 
+    // eslint-disable-next-line no-restricted-syntax
     for (const call of toolCalls) {
+      // eslint-disable-next-line no-await-in-loop
       const result = await this.callTool(call.name, call.arguments);
       results.push({
         id: call.id,
@@ -649,4 +652,3 @@ class MCPClient {
 // Export for use in main chat file
 window.LLMManager = LLMManager;
 window.MCPClient = MCPClient;
-
