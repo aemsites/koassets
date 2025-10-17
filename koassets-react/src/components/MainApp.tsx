@@ -22,7 +22,7 @@ import type {
 } from '../types';
 import { CURRENT_VIEW, LOADING, QUERY_TYPES } from '../types';
 import { populateAssetFromHit } from '../utils/assetTransformers';
-import { getBucket, getExternalParams } from '../utils/config';
+import { getBucket, getExternalParams, saveSearchFiltersToSession, loadSearchFiltersFromSession, clearSearchFiltersFromSession } from '../utils/config';
 import { AppConfigProvider } from './AppConfigProvider';
 
 // Components
@@ -209,6 +209,31 @@ function MainApp(): React.JSX.Element {
 
     // Mobile filter panel state
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false);
+
+    // Save search filters to session storage whenever they change
+    useEffect(() => {
+        // Only save if at least one filter has a value
+        const hasFacets = Object.keys(facetCheckedState).some(key => 
+            Object.values(facetCheckedState[key]).some(v => v)
+        );
+        const hasNumericFilters = selectedNumericFilters.length > 0;
+        const hasRightsDates = rightsStartDate !== null || rightsEndDate !== null;
+        const hasMarkets = selectedMarkets.size > 0;
+        const hasMediaChannels = selectedMediaChannels.size > 0;
+
+        if (!hasFacets && !hasNumericFilters && !hasRightsDates && !hasMarkets && !hasMediaChannels) {
+            return; // Skip save if all filters are empty
+        }
+
+        saveSearchFiltersToSession(
+            facetCheckedState,
+            selectedNumericFilters,
+            rightsStartDate,
+            rightsEndDate,
+            selectedMarkets,
+            selectedMediaChannels
+        );
+    }, [facetCheckedState, selectedNumericFilters, rightsStartDate, rightsEndDate, selectedMarkets, selectedMediaChannels]);
 
     // Expose cart and download panel functions to window for EDS header integration
     useEffect(() => {
@@ -470,6 +495,47 @@ function MainApp(): React.JSX.Element {
 
     // Track if we're loading from URL parameters to prevent auto-search interference
     const loadingFromUrlRef = useRef<boolean>(false);
+
+    // Load search filters from session storage on mount
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const curPath = params.get('curPath');
+        const nextPath = params.get('nextPath');
+        
+        // Remove navigation params from URL
+        params.delete('curPath');
+        params.delete('nextPath');
+        const newUrl = window.location.pathname + (params.toString() ? `?${params.toString()}` : '');
+        window.history.replaceState({}, '', newUrl);
+        
+        // Only restore session filters if NOT navigating between different search paths
+        // When navigating between paths (e.g., /search/all to /search/assets), start fresh
+        if (curPath && nextPath && curPath === nextPath) {
+            const sessionFilters = loadSearchFiltersFromSession();
+            if (sessionFilters) {
+                if (sessionFilters.facetCheckedState && Object.keys(sessionFilters.facetCheckedState).length > 0) {
+                    setFacetCheckedState(sessionFilters.facetCheckedState);
+                }
+                if (sessionFilters.selectedNumericFilters && sessionFilters.selectedNumericFilters.length > 0) {
+                    setSelectedNumericFilters(sessionFilters.selectedNumericFilters);
+                }
+                if (sessionFilters.rightsStartDate) {
+                    setRightsStartDate(sessionFilters.rightsStartDate);
+                }
+                if (sessionFilters.rightsEndDate) {
+                    setRightsEndDate(sessionFilters.rightsEndDate);
+                }
+                if (sessionFilters.selectedMarkets && sessionFilters.selectedMarkets.size > 0) {
+                    setSelectedMarkets(sessionFilters.selectedMarkets);
+                }
+                if (sessionFilters.selectedMediaChannels && sessionFilters.selectedMediaChannels.size > 0) {
+                    setSelectedMediaChannels(sessionFilters.selectedMediaChannels);
+                }
+            }
+        } else {
+            clearSearchFiltersFromSession();
+        }
+    }, []); // Run only once on mount
 
     // Auto-search with empty query on app load
     useEffect(() => {

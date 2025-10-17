@@ -157,7 +157,7 @@ export default async function decorate(block) {
     const selectedSearchPath = searchTypeSelect?.dataset.value || window.location.pathname;
 
     // Redirect to search page with search parameters
-    window.location.href = `${selectedSearchPath}?query=${encodeURIComponent(query)}`;
+    window.location.href = `${selectedSearchPath}?query=${encodeURIComponent(query)}&curPath=${encodeURIComponent(window.location.pathname)}&nextPath=${encodeURIComponent(selectedSearchPath)}`;
   };
 
   // Search button
