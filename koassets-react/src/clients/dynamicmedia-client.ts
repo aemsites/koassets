@@ -35,11 +35,6 @@ export interface ArchiveStatus {
     data: ArchiveData;
 }
 
-interface DynamicMediaClientConfig {
-    bucket: string;
-    baseURL?: string;
-}
-
 export interface SearchAssetsOptions {
     collectionId?: string | null;
     facets?: string[];
@@ -138,18 +133,7 @@ interface CollectionSearchResults {
     }>;
 }
 
-const apiKey: { [key: string]: string; } = {
-    PROD: 'aem-assets-content-hub-1',
-    STAGE: 'polaris-asset-search-api-key',
-};
-
 export class DynamicMediaClient {
-    private readonly bucket: string;
-
-    constructor(config: DynamicMediaClientConfig) {
-        this.bucket = config.bucket;
-    }
-
 
     /**
      * Generic request method using fetch API
@@ -175,8 +159,6 @@ export class DynamicMediaClient {
         /* if (window.user) */ {
             try {
                 const fetchHeaders: HeadersInit = {
-                    'x-api-key': this.bucket.includes('-cmstg') ? apiKey.STAGE : apiKey.PROD,
-                    'x-adobe-accept-experimental': '1',
                     ...headers
                 };
 
@@ -261,16 +243,6 @@ export class DynamicMediaClient {
         }
     }
 
-
-    // Extract index name from bucket (e.g., delivery-p92206-e211033-cmstg -> 92206-211033)
-    private getIndexName(): string {
-        const match = this.bucket?.match(/p(\d+)-e(\d+)/);
-        if (!match) {
-            throw new Error(`Invalid bucket format: ${this.bucket}`);
-        }
-        return match.slice(1).join('-');
-    }
-
     /**
      * Transform search parameters into Algolia search query for assets
      */
@@ -289,7 +261,6 @@ export class DynamicMediaClient {
         } = options;
 
         const combinedSelectedFacetFilters = [...facetFilters, ...(collectionId ? [[`collectionIds:${collectionId.split(':')[3]}`]] : [])];
-        const indexName = this.getIndexName();
         const nonExpiredAssetsFilter = this.getNonExpiredAssetsFilter();
         const filtersList = [`${nonExpiredAssetsFilter}`, ...filters]
             .filter(Boolean)                         // remove null/undefined/empty strings
@@ -300,7 +271,6 @@ export class DynamicMediaClient {
         return {
             "requests": [
                 {
-                    "indexName": indexName,
                     "params": {
                         "facets": facets,
                         "facetFilters": combinedSelectedFacetFilters,
@@ -336,12 +306,9 @@ export class DynamicMediaClient {
             throw new Error('hitsPerPage is required');
         }
 
-        const indexName = this.getIndexName();
-
         return {
             "requests": [
                 {
-                    "indexName": `${indexName}_collections`,
                     "params": {
                         "facets": [],
                         "highlightPostTag": "__/ais-highlight__",
@@ -388,7 +355,6 @@ export class DynamicMediaClient {
      * @returns Array of sub-request objects
      */
     generateSubRequest(query: string, facetFilters: string[][], numericFilters: string[]): Array<AlgoliaSearchRequest> {
-        const indexName = this.getIndexName();
         const nonExpiredAssetsFilter = this.getNonExpiredAssetsFilter();
         const requests = [];
 
@@ -403,7 +369,6 @@ export class DynamicMediaClient {
             const facetName = subFacetFilters[0]?.split(':')[0] || '';
 
             const request = {
-                indexName: indexName,
                 params: {
                     analytics: false,
                     clickAnalytics: false,
@@ -425,7 +390,6 @@ export class DynamicMediaClient {
             if (numericFilters && numericFilters.length > 0) {
                 const facetName = numericFilters[0]?.split(/[><=]+/)[0]?.trim() || '';
                 const request = {
-                    indexName: indexName,
                     params: {
                         analytics: false,
                         clickAnalytics: false,
@@ -472,9 +436,6 @@ export class DynamicMediaClient {
             url: '/adobe/assets/search',
             method: 'POST',
             data: algoliaQuery,
-            headers: {
-                'x-ch-request': 'search'
-            }
         });
     }
 
@@ -493,9 +454,6 @@ export class DynamicMediaClient {
                 url: '/adobe/assets/search',
                 method: 'POST',
                 data: algoliaQuery,
-                headers: {
-                    'x-ch-request': 'search'
-                }
             });
         } catch (error) {
             if (error instanceof Error) {

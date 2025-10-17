@@ -3,7 +3,6 @@ import { AuthorizationStatus } from '../clients/fadel-client';
 import { EAGER_LOAD_IMAGE_COUNT } from '../constants/images';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type { AssetCardProps } from '../types';
-import { getBucket } from '../utils/config';
 import { formatCategory, getFileExtension } from '../utils/formatters';
 import { getAssetFieldDisplayFacetName } from '../utils/displayUtils';
 import ActionButton from './ActionButton';
@@ -79,11 +78,10 @@ const AssetCard: React.FC<AssetCardBaseProps> = ({
         const previewUrl = dynamicMediaClient && image.assetId && image.name
             ? dynamicMediaClient.getOptimizedDeliveryPreviewUrl(image.assetId, image.name, 350)
             : undefined;
-        const dmBucket = dynamicMediaClient ? getBucket() : undefined;
         // Trigger global collection modal with asset data (including previewUrl)
         const event = new CustomEvent('openCollectionModal', {
             detail: {
-                asset: { ...image, previewUrl, dmBucket },
+                asset: { ...image, previewUrl },
                 assetPath: image.repositoryPath || image.assetId
             }
         });
