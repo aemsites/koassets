@@ -523,6 +523,10 @@ export class DynamicMediaClient {
         return `${baseName}.${extension}`;
     }
 
+    getPreviewPdfUrl(assetId: string, repoName: string, rendition: string = 'original') {
+        const processedRepoName = this.changeToSupportedPreview(repoName);
+        return `/api/adobe/assets/${assetId}/renditions/${rendition}/as/preview-${processedRepoName}`;
+    }
 
     getOptimizedDeliveryPreviewUrl(assetId: string, repoName: string, width: number = 350) {
         // Convert video extensions to avif for optimal delivery
