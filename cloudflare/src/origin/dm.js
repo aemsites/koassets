@@ -1,4 +1,5 @@
 import { ROLE } from '../user';
+import { decodeJwt } from 'jose';
 
 // create IMS token using Oauth server-to-server credentials
 async function createIMSToken(request, clientId, clientSecret, scope) {
@@ -29,31 +30,36 @@ async function createIMSToken(request, clientId, clientSecret, scope) {
 }
 
 async function getIMSToken(request, env) {
-  // get cached token
-  const { value: token, metadata } = await env.AUTH_TOKENS.getWithMetadata("dm-ims-token");
+  try {
+    // get cached token
+    const { value: token, metadata } = await env.AUTH_TOKENS.getWithMetadata("dm-ims-token");
 
-  // use token until 5 minutes before expiry
-  if (token && metadata?.expiration > (Math.floor(Date.now() / 1000) + 5*60)) {
-    return token;
-  } else {
-    const clientId = await env.DM_CLIENT_ID.get();
-    const clientSecret = await env.DM_CLIENT_SECRET.get();
-    const scope = 'AdobeID,openid';
+    // use token until 5 minutes before expiry
+    if (token && metadata?.expiration > (Math.floor(Date.now() / 1000) + 5*60)) {
+      return token;
+    } else {
+      const clientId = await env.DM_CLIENT_ID.get();
+      const clientSecret = await env.DM_CLIENT_SECRET.get();
+      const scope = 'AdobeID,openid';
 
-    const tokenData = await createIMSToken(request, clientId, clientSecret, scope);
+      const tokenData = await createIMSToken(request, clientId, clientSecret, scope);
 
-    // seconds since epoch
-    const expiration = Math.floor(Date.now() / 1000) + tokenData.expires_in;
+      // seconds since epoch
+      const expiration = Math.floor(Date.now() / 1000) + tokenData.expires_in;
 
-    // cache token in KV store
-    await env.AUTH_TOKENS.put("dm-ims-token", tokenData.access_token, {
-      expiration,
-      metadata: {
-        expiration
-      }
-    });
+      // cache token in KV store
+      await env.AUTH_TOKENS.put("dm-ims-token", tokenData.access_token, {
+        expiration,
+        metadata: {
+          expiration
+        }
+      });
 
-    return tokenData.access_token;
+      return tokenData.access_token;
+    }
+  } catch (error) {
+    console.error(error);
+    return;
   }
 }
 
@@ -151,11 +157,30 @@ export async function originDynamicMedia(request, env) {
   const headers = new Headers(request.headers);
   let body = request.body;
 
+  // set DM authorization
+  const imsToken = await getIMSToken(request, env);
+  if (!imsToken) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+
+  if (url.pathname.startsWith('/adobe/assets/collections')) {
+    headers.set('x-api-key', 'aem-assets-content-hub-1');
+  } else {
+    headers.set('x-api-key', await env.DM_CLIENT_ID.get());
+  }
+  headers.set('Authorization', `Bearer ${imsToken}`);
+  headers.delete('cookie');
+
   // rewrite search requests
   if (url.pathname.startsWith('/adobe/assets/search')) {
     headers.set('x-ch-request', 'search');
 
-    const search = await request.json();
+    // support referencing the technical account user id in queries
+    const imsUserId = decodeJwt(imsToken).user_id;
+    body = await request.text();
+    body = body.replaceAll('{{SYSTEM_USER_ID}}', imsUserId);
+
+    const search = JSON.parse(body);
 
     await searchAuthorization(request, search);
 
@@ -171,20 +196,6 @@ export async function originDynamicMedia(request, env) {
 
   // access to experimental APIs
   headers.set('x-adobe-accept-experimental', '1');
-
-  // set DM authorization
-  headers.delete('cookie');
-  try {
-    if (url.pathname.startsWith('/adobe/assets/collections')) {
-      headers.set('x-api-key', 'aem-assets-content-hub-1');
-    } else {
-      headers.set('x-api-key', await env.DM_CLIENT_ID.get());
-    }
-    headers.set('Authorization', `Bearer ${await getIMSToken(request, env)}`);
-  } catch (error) {
-    console.error(error);
-    return new Response('Unauthorized', { status: 401 });
-  }
 
   // general proxying best practices
   headers.set('user-agent', headers.get('user-agent'));
