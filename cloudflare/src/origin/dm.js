@@ -57,6 +57,13 @@ async function getIMSToken(request, env) {
   }
 }
 
+function setIndexName(search, indexName) {
+  // for each request in search.requests
+  search.requests?.forEach(request => {
+    request.indexName = indexName;
+  });
+}
+
 function forceSearchFilter(search, constraint) {
   // skip if constraint is empty or not set
   if (!constraint || constraint.length === 0) {
@@ -77,9 +84,8 @@ function forceSearchFilter(search, constraint) {
   }
 }
 
-async function searchAuthorization(request) {
+async function searchAuthorization(request, search) {
   const user = request.user;
-  const search = await request.json();
 
   // Algolia search request. Enforce a filter that ensures only authorized assets are returned
   // https://www.algolia.com/doc/api-reference/api-parameters/filters
@@ -117,8 +123,6 @@ async function searchAuthorization(request) {
   console.log(`[${request.user.email}] authz filter: ${constraint}`);
 
   forceSearchFilter(search, constraint);
-
-  return JSON.stringify(search);
 }
 
 export async function originDynamicMedia(request, env) {
@@ -127,52 +131,70 @@ export async function originDynamicMedia(request, env) {
   // origin url:
   //   delivery-pXX-eYY.adobeaemcloud.com/adobe/assets/...
 
-  const url = new URL(request.url);
-
   const dmOrigin = env.DM_ORIGIN;
-  if (!dmOrigin.match(/^https:\/\/delivery-p.*-e.*\.adobeaemcloud\.com$/)) {
+  const match = dmOrigin.match(/^https:\/\/(delivery-p(.*)-e(.*)\.adobeaemcloud\.com)$/);
+  if (!match) {
     return new Response('Invalid DM_ORIGIN', { status: 500 });
   }
-  const protocolAndHost = dmOrigin.split('://');
+
+  const envId = `${match[2]}-${match[3]}`;
+
+  const url = new URL(request.url);
+  url.protocol = 'https';
+  url.host = match[1];
   url.port = '';
-  url.protocol = protocolAndHost[0];
-  url.host = protocolAndHost[1];
 
   // remove /api from path
   url.pathname = url.pathname.replace(/^\/api/, '');
 
+  const headers = new Headers(request.headers);
   let body = request.body;
-  if (url.pathname === '/adobe/assets/search') {
-    body = await searchAuthorization(request);
+
+  // rewrite search requests
+  if (url.pathname.startsWith('/adobe/assets/search')) {
+    headers.set('x-ch-request', 'search');
+
+    const search = await request.json();
+
+    await searchAuthorization(request, search);
+
+    if (url.pathname === '/adobe/assets/search-collections') {
+      url.pathname = '/adobe/assets/search';
+      setIndexName(search, `${envId}_collections`);
+    } else {
+      setIndexName(search, envId);
+    }
+
+    body = JSON.stringify(search);
   }
 
-  const req = new Request(url, {
-    method: request.method,
-    headers: request.headers,
-    body: body,
-  });
+  // access to experimental APIs
+  headers.set('x-adobe-accept-experimental', '1');
 
-  req.headers.delete('cookie');
-
+  // set DM authorization
+  headers.delete('cookie');
   try {
     if (url.pathname.startsWith('/adobe/assets/collections')) {
-      req.headers.set('x-api-key', 'aem-assets-content-hub-1'); // for DM Collection calls
+      headers.set('x-api-key', 'aem-assets-content-hub-1');
     } else {
-      req.headers.set('x-api-key', await env.DM_CLIENT_ID.get());
+      headers.set('x-api-key', await env.DM_CLIENT_ID.get());
     }
-    req.headers.set('Authorization', `Bearer ${await getIMSToken(request, env)}`);
+    headers.set('Authorization', `Bearer ${await getIMSToken(request, env)}`);
   } catch (error) {
     console.error(error);
     return new Response('Unauthorized', { status: 401 });
   }
 
-  req.headers.set('user-agent', req.headers.get('user-agent'));
-  req.headers.set('x-forwarded-host', req.headers.get('host'));
+  // general proxying best practices
+  headers.set('user-agent', headers.get('user-agent'));
+  headers.set('x-forwarded-host', headers.get('host'));
 
-  // console.log('>>>', req.method, req.url, req.headers);
+  // console.log('>>>', request.method, url, headers);
 
-  const resp = await fetch(req, {
-    method: req.method,
+  const response = await fetch(url, {
+    method: request.method,
+    headers: headers,
+    body: body,
     cf: {
       // cf doesn't cache all file types by default: need to override the default behavior
       // https://developers.cloudflare.com/cache/concepts/default-cache-behavior/#default-cached-file-extensions
@@ -180,7 +202,7 @@ export async function originDynamicMedia(request, env) {
     },
   });
 
-  // console.log('<<<', resp.status, resp.headers);
+  // console.log('<<<', response.status, response.headers);
 
-  return resp;
+  return response;
 }
