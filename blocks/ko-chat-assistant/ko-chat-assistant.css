@@ -16,7 +16,7 @@
   background: #fff;
   border: 1px solid #e0e0e0;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 10%);
   overflow: hidden;
 }
 
@@ -25,11 +25,11 @@
   padding: 20px;
   background: linear-gradient(135deg, #f40009 0%, #c40007 100%);
   color: #fff;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 1px solid rgb(255 255 255 / 20%);
 }
 
 .chat-header h3 {
-  margin: 0 0 8px 0;
+  margin: 0 0 8px;
   font-size: 20px;
   font-weight: 600;
 }
@@ -55,14 +55,15 @@
 .chat-message {
   display: flex;
   max-width: 85%;
-  animation: messageSlideIn 0.3s ease-out;
+  animation: message-slide-in 0.3s ease-out;
 }
 
-@keyframes messageSlideIn {
+@keyframes message-slide-in {
   from {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -97,7 +98,7 @@
   color: #333;
   border: 1px solid #e0e0e0;
   border-bottom-left-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 5%);
 }
 
 .message-content p {
@@ -108,7 +109,7 @@
 
 .error-message .message-content {
   background: #fff3f3;
-  border-color: #ffcccc;
+  border-color: #fcc;
   color: #d32f2f;
 }
 
@@ -148,6 +149,7 @@
     transform: translateY(0);
     opacity: 0.5;
   }
+
   30% {
     transform: translateY(-10px);
     opacity: 1;
@@ -182,7 +184,7 @@
 
 .asset-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px rgb(0 0 0 / 10%);
 }
 
 .asset-thumbnail {
@@ -206,7 +208,7 @@
 }
 
 .asset-title {
-  margin: 0 0 4px 0;
+  margin: 0 0 4px;
   font-size: 14px;
   font-weight: 600;
   color: #333;
@@ -266,7 +268,7 @@
 }
 
 .rights-summary h4 {
-  margin: 0 0 8px 0;
+  margin: 0 0 8px;
   font-size: 16px;
 }
 
@@ -314,7 +316,7 @@
 }
 
 .suggested-prompts-label {
-  margin: 0 0 8px 0;
+  margin: 0 0 8px;
   font-size: 13px;
   color: #666;
   font-weight: 500;
@@ -401,7 +403,7 @@
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .ko-chat-assistant {
     padding: 10px;
   }
@@ -468,7 +470,7 @@
 .mode-badge {
   display: inline-block;
   padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgb(255 255 255 / 20%);
   border-radius: 12px;
   font-size: 12px;
   font-weight: 500;
@@ -478,36 +480,35 @@
 /* Initialization Overlay */
 .llm-init-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  inset: 0;
+  background: rgb(0 0 0 / 70%);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  animation: overlayFadeIn 0.3s ease-out;
+  animation: overlay-fade-in 0.3s ease-out;
 }
 
-@keyframes overlayFadeIn {
+@keyframes overlay-fade-in {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
 }
 
 .llm-init-overlay.fade-out {
-  animation: overlayFadeOut 0.3s ease-out;
+  animation: overlay-fade-out 0.3s ease-out;
 }
 
-@keyframes overlayFadeOut {
+@keyframes overlay-fade-out {
   from {
     opacity: 1;
   }
+
   to {
     opacity: 0;
   }
@@ -520,15 +521,16 @@
   padding: 40px;
   max-width: 480px;
   text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  animation: cardSlideUp 0.4s ease-out;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 30%);
+  animation: card-slide-up 0.4s ease-out;
 }
 
-@keyframes cardSlideUp {
+@keyframes card-slide-up {
   from {
     transform: translateY(20px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -542,33 +544,36 @@
 }
 
 .llm-init-icon svg {
-  animation: iconSpin 2s linear infinite;
+  animation: icon-spin 2s linear infinite;
 }
 
-@keyframes iconSpin {
+@keyframes icon-spin {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
 }
 
 .spinner-path {
-  animation: spinnerDash 1.5s ease-in-out infinite;
+  animation: spinner-dash 1.5s ease-in-out infinite;
   stroke-dasharray: 90, 150;
   stroke-dashoffset: 0;
 }
 
-@keyframes spinnerDash {
+@keyframes spinner-dash {
   0% {
     stroke-dasharray: 1, 150;
     stroke-dashoffset: 0;
   }
+
   50% {
     stroke-dasharray: 90, 150;
     stroke-dashoffset: -35;
   }
+
   100% {
     stroke-dasharray: 90, 150;
     stroke-dashoffset: -124;
@@ -577,14 +582,14 @@
 
 /* Text */
 .llm-init-card h4 {
-  margin: 0 0 8px 0;
+  margin: 0 0 8px;
   font-size: 20px;
   font-weight: 600;
   color: #333;
 }
 
 .llm-init-card p {
-  margin: 0 0 24px 0;
+  margin: 0 0 24px;
   font-size: 14px;
   color: #666;
 }
@@ -592,13 +597,13 @@
 .llm-init-note {
   font-size: 12px !important;
   color: #999 !important;
-  margin: 16px 0 0 0 !important;
+  margin: 16px 0 0 !important;
   line-height: 1.5;
 }
 
 /* Progress Bar */
 .llm-init-progress {
-  margin: 24px 0 0 0;
+  margin: 24px 0 0;
 }
 
 .llm-init-progress-bar {
@@ -612,16 +617,17 @@
 
 .llm-init-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #f40009 0%, #ff4444 100%);
+  background: linear-gradient(90deg, #f40009 0%, #f44 100%);
   border-radius: 4px;
   transition: width 0.3s ease;
-  animation: progressPulse 2s ease-in-out infinite;
+  animation: progress-pulse 2s ease-in-out infinite;
 }
 
-@keyframes progressPulse {
+@keyframes progress-pulse {
   0%, 100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.8;
   }
@@ -634,14 +640,9 @@
 }
 
 /* Error Styles */
-.error-message .message-content {
-  background: #fff8f8 !important;
-  border-color: #ffdddd !important;
-}
-
 .error-message h4 {
   color: #d32f2f;
-  margin: 0 0 12px 0;
+  margin: 0 0 12px;
   font-size: 16px;
 }
 
@@ -653,7 +654,7 @@
 .error-action {
   margin-top: 16px !important;
   padding-top: 16px;
-  border-top: 1px solid #ffdddd;
+  border-top: 1px solid #fdd;
   color: #333 !important;
 }
 

@@ -1,7 +1,8 @@
+/* eslint-disable no-use-before-define, no-console */
 /**
  * KO Chat Assistant Block
  * Conversational interface for KO Assets search and discovery
- * 
+ *
  * Now supports dual-mode: WebLLM (local AI) and Server (cloud AI)
  * See ko-chat-assistant-llm.js for mode configuration
  */
@@ -43,7 +44,7 @@ function createChatUI(block) {
   // Welcome message
   const welcomeMessage = createAssistantMessage(
     "Hello! I'm your KO Assets assistant. I can help you find assets, check usage rights, and answer questions about your digital assets. What would you like to find today?",
-    { showSuggestedPrompts: true }
+    { showSuggestedPrompts: true },
   );
   messagesContainer.appendChild(welcomeMessage);
 
@@ -93,7 +94,7 @@ function createChatUI(block) {
             createAssistantMessage(msg.content, {
               assets: msg.assets,
               rightsReport: msg.rightsReport,
-            })
+            }),
           );
         }
       });
@@ -104,7 +105,7 @@ function createChatUI(block) {
 
   // Initialize LLM
   initializeLLM(block);
-  
+
   // Setup event listeners
   setupEventListeners();
 }
@@ -112,7 +113,7 @@ function createChatUI(block) {
 /**
  * Initialize LLM Manager
  */
-async function initializeLLM(block) {
+async function initializeLLM() {
   try {
     // Create LLM Manager (will auto-detect mode)
     llmManager = new window.LLMManager();
@@ -169,7 +170,7 @@ function updateModeIndicator(mode) {
  */
 function handleLLMStatusChange(event) {
   const status = event.detail;
-  
+
   if (status.status === 'downloading') {
     updateInitializationUI('Downloading AI model...', status.progress);
   } else if (status.status === 'loading') {
@@ -227,7 +228,6 @@ function showInitializationUI() {
  */
 function updateInitializationUI(message, progress) {
   const titleEl = document.getElementById('llm-init-title');
-  const messageEl = document.getElementById('llm-init-message');
   const fillEl = document.getElementById('llm-init-progress-fill');
   const textEl = document.getElementById('llm-init-progress-text');
 
@@ -373,8 +373,8 @@ async function sendMessage() {
 
     if (result.success) {
       // Handle tool calls if present (WebLLM mode)
-      let assets = result.assets;
-      let rightsReport = result.rightsReport;
+      let { assets } = result;
+      let { rightsReport } = result;
       let responseText = result.text;
 
       if (result.toolCalls && result.toolCalls.length > 0 && mcpClient) {
@@ -382,6 +382,7 @@ async function sendMessage() {
         const toolResults = await mcpClient.executeToolCalls(result.toolCalls);
 
         // Process tool results
+        // eslint-disable-next-line no-restricted-syntax
         for (const toolResult of toolResults) {
           if (toolResult.name === 'search_assets' && toolResult.success) {
             assets = formatAssetResponse(toolResult.data);
@@ -424,7 +425,7 @@ async function sendMessage() {
 
     const errorMsg = createAssistantMessage(
       "I'm sorry, I encountered an error processing your request. Please try again or contact support if the issue persists.",
-      { isError: true }
+      { isError: true },
     );
     messagesContainer.appendChild(errorMsg);
     scrollToBottom();
@@ -442,7 +443,7 @@ function formatAssetResponse(data) {
     return {
       total: nbHits,
       count: hits.length,
-      assets: hits.slice(0, 12).map(hit => ({
+      assets: hits.slice(0, 12).map((hit) => ({
         id: hit.assetId || hit.objectID || hit.id,
         title: hit.title || hit['dc:title'] || 'Untitled Asset',
         thumbnail: hit.thumbnail || hit.thumbnailUrl || hit.url || '',
@@ -470,7 +471,7 @@ function formatRightsResponse(data) {
       totalAssets: rightsData.totalAssets || 0,
       authorizedAssets: rightsData.authorizedAssets || 0,
       restrictedAssets: rightsData.restrictedAssets || 0,
-      assets: (rightsData.assets || []).map(asset => ({
+      assets: (rightsData.assets || []).map((asset) => ({
         id: asset.assetId,
         title: asset.title || asset.assetId,
         authorized: asset.authorized || false,
@@ -497,19 +498,19 @@ function generateSearchResponseText(assets) {
     return "I couldn't find any assets matching your search. Try different keywords or check your filters.";
   }
 
-  const total = assets.total;
-  const count = assets.count;
+  const { total } = assets;
+  const { count } = assets;
 
   if (total === count) {
     return `I found ${total} asset${total !== 1 ? 's' : ''} matching your search.`;
-  } else {
-    return `I found ${total} asset${total !== 1 ? 's' : ''} matching your search. Here are the first ${count}.`;
   }
+  return `I found ${total} asset${total !== 1 ? 's' : ''} matching your search. Here are the first ${count}.`;
 }
 
 /**
  * Generate suggested prompts based on context
  */
+// eslint-disable-next-line no-unused-vars
 function generateSuggestedPrompts(userMessage, assets, rightsReport) {
   const prompts = [];
   const lower = userMessage.toLowerCase();
@@ -554,7 +555,9 @@ function createUserMessage(text) {
  * Create an assistant message element
  */
 function createAssistantMessage(text, options = {}) {
-  const { assets, rightsReport, suggestedPrompts, isError, showSuggestedPrompts } = options;
+  const {
+    assets, rightsReport, suggestedPrompts, isError, showSuggestedPrompts,
+  } = options;
 
   const messageDiv = document.createElement('div');
   messageDiv.className = `chat-message assistant-message${isError ? ' error-message' : ''}`;
@@ -660,9 +663,9 @@ function createRightsReport(report) {
     html += '<div class="rights-details">';
     report.assets.forEach((asset) => {
       const status = asset.authorized ? '✓' : '✗';
-      const statusClass = asset.authorized ? 'authorized' : 'restricted';
+      const assetStatusClass = asset.authorized ? 'authorized' : 'restricted';
       html += `
-        <div class="rights-asset ${statusClass}">
+        <div class="rights-asset ${assetStatusClass}">
           <span class="rights-status">${status}</span>
           <span class="rights-asset-title">${escapeHtml(asset.title)}</span>
         </div>
@@ -741,7 +744,7 @@ export default async function decorate(block) {
   try {
     // Load LLM library first
     await loadLLMLibrary();
-    
+
     // Create chat UI
     createChatUI(block);
   } catch (error) {
@@ -755,6 +758,3 @@ export default async function decorate(block) {
     `;
   }
 }
-
-
-
