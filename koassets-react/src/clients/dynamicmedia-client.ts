@@ -45,94 +45,6 @@ export interface SearchAssetsOptions {
     page?: number;
 }
 
-export interface SearchCollectionsOptions {
-    hitsPerPage?: number;
-    page?: number;
-}
-
-interface CollectionMetadata {
-    title: string;
-    description: string;
-}
-
-interface RepositoryMetadata {
-    'repo-repositoryId': string;
-    'repo-createDate': string;
-    'repo-createdDate': string;
-    'repo-createdBy': string;
-    'repo-modifyDate': string;
-    'repo-modifiedBy': string;
-}
-
-interface CollectionHit {
-    collectionId: string;
-    collectionMetadata: CollectionMetadata;
-    repositoryMetadata: RepositoryMetadata;
-    objectID: string;
-    _highlightResult: {
-        collectionId: {
-            value: string;
-            matchLevel: string;
-            matchedWords: string[];
-        };
-        collectionMetadata: {
-            title: {
-                value: string;
-                matchLevel: string;
-                fullyHighlighted: boolean;
-                matchedWords: string[];
-            };
-            description: {
-                value: string;
-                matchLevel: string;
-                matchedWords: string[];
-            };
-        };
-        repositoryMetadata: {
-            [key: string]: {
-                value: string;
-                matchLevel: string;
-                matchedWords: string[];
-            };
-        };
-    };
-}
-
-interface CollectionSearchResults {
-    results: Array<{
-        page: number;
-        nbHits: number;
-        nbPages: number;
-        hitsPerPage: number;
-        processingTimeMS: number;
-        facets: null;
-        facets_stats: null;
-        exhaustiveFacetsCount: null;
-        query: string;
-        params: string;
-        hits: CollectionHit[];
-        index: null;
-        processed: null;
-        queryID: null;
-        explain: null;
-        userData: null;
-        appliedRules: null;
-        exhaustiveNbHits: boolean;
-        appliedRelevancyStrictness: null;
-        nbSortedHits: null;
-        renderingContent: Record<string, unknown>;
-        offset: null;
-        length: null;
-        parsedQuery: null;
-        abTestVariantID: null;
-        indexUsed: null;
-        serverUsed: null;
-        automaticRadius: null;
-        aroundLatLng: null;
-        queryAfterRemoval: null;
-    }>;
-}
-
 export class DynamicMediaClient {
 
     /**
@@ -290,40 +202,6 @@ export class DynamicMediaClient {
         };
     }
 
-    /**
-     * Transform search parameters into Algolia search query for collections
-     */
-    private transformToAlgoliaSearchCollections(
-        query: string,
-        options: SearchCollectionsOptions = {}
-    ): AlgoliaSearchQuery {
-        const {
-            hitsPerPage,
-            page = 0
-        } = options;
-
-        if (!hitsPerPage) {
-            throw new Error('hitsPerPage is required');
-        }
-
-        return {
-            "requests": [
-                {
-                    "params": {
-                        "facets": [],
-                        "highlightPostTag": "__/ais-highlight__",
-                        "highlightPreTag": "__ais-highlight__",
-                        "hitsPerPage": hitsPerPage,
-                        "page": page,
-                        "query": query || "",
-                        "tagFilters": "",
-                        "filters": `(${this.getNonExpiredAssetsFilter()})`,
-                    }
-                }
-            ]
-        };
-    }
-
     async getMetadata(assetId: string, ifNoneMatch?: string): Promise<Asset> {
         const headers: Record<string, string> = {};
         if (ifNoneMatch) {
@@ -437,30 +315,6 @@ export class DynamicMediaClient {
             method: 'POST',
             data: algoliaQuery,
         });
-    }
-
-    /**
-     * Search for collections with a cleaner API
-     * @param query - The search query string
-     * @param options - Search options (pagination)
-     * @returns Promise with collection search results
-     */
-    async searchCollections(query: string, options: SearchCollectionsOptions = {}): Promise<CollectionSearchResults> {
-        const algoliaQuery = this.transformToAlgoliaSearchCollections(query, options);
-
-        try {
-            console.trace('DynamicMediaClient.searchCollections() REQUEST');
-            return await this.makeRequest<CollectionSearchResults>({
-                url: '/adobe/assets/search',
-                method: 'POST',
-                data: algoliaQuery,
-            });
-        } catch (error) {
-            if (error instanceof Error) {
-                throw new Error(`Failed to search collections: ${error.message}`);
-            }
-            throw error;
-        }
     }
 
     /**
