@@ -133,19 +133,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 
             const fetchMetadata = async () => {
                 // Populate image with metadata
-                const metadataCache = JSON.parse(sessionStorage.getItem('assetMetadataCache') || '{}');
-                let metadata = metadataCache[selectedImage.assetId];
-
-                if (!metadata) {
-                    // Fetch metadata if not in cache
-                    metadata = await dynamicMediaClient?.getMetadata(selectedImage.assetId);
-
-                    // Store in sessionStorage
-                    if (metadata) {
-                        metadataCache[selectedImage.assetId] = metadata;
-                        sessionStorage.setItem('assetMetadataCache', JSON.stringify(metadataCache));
-                    }
-                }
+                const metadata = await dynamicMediaClient?.getMetadata(selectedImage.assetId);
 
                 console.debug('Metadata:', metadata);
                 setPopulatedImage(
