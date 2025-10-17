@@ -16,6 +16,7 @@ import { originDynamicMedia } from './origin/dm';
 import { originHelix } from './origin/helix';
 import { originFadel } from './origin/fadel';
 import { cors } from './util/itty';
+import { handleChatRequest } from './agent/chat-handler';
 
 const { preflight, corsify } = cors({
   origin: [
@@ -66,6 +67,9 @@ router
 
   // fadel
   .all('/api/fadel/*', originFadel)
+
+  // chat assistant
+  .post('/api/chat', handleChatRequest)
 
   // future API routes
   .all('/api/*', () => error(404))

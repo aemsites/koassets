@@ -25,6 +25,23 @@ List of projects, each with their own `package.json`:
 - [koassets-react](koassets-react): React app/components
   - build goes to `tools/assets-browser/index.(js|css)`
 - [cloudflare](cloudflare): Cloudflare worker for the assets share portal
+- [mcp-server](mcp-server): Model Context Protocol server for AI integrations
+
+### Chat Assistant (NEW! 🤖)
+
+An AI-powered conversational interface for KO Assets. Ask questions in natural language to find assets, check usage rights, and explore your digital library.
+
+**Documentation:**
+- [User Guide & API Docs](CHAT_ASSISTANT.md)
+- [Setup Instructions](blocks/ko-chat-assistant/SETUP.md)
+- [Technical README](blocks/ko-chat-assistant/README.md)
+
+**Quick Start:**
+```markdown
+| KO Chat Assistant |
+|-------------------|
+|                   |
+```
 
 ### AEM EDS
 
