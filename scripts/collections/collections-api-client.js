@@ -17,8 +17,6 @@ export class DynamicMediaCollectionsClient {
     this.accessToken = config.accessToken?.replace(/^Bearer /, '');
     this.baseURL = `${window.location.origin}/api`;
     this.user = config.user; // Store user for auth filtering
-    // API key will be set by the Cloudflare worker proxy
-    this.apiKey = null;
   }
 
   isIMSAuthenticated() {
@@ -65,8 +63,6 @@ export class DynamicMediaCollectionsClient {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${this.accessToken}`,
-            'x-api-key': this.apiKey,
-            'x-adobe-accept-experimental': '1',
             ...headers,
           },
         };
@@ -154,7 +150,6 @@ export class DynamicMediaCollectionsClient {
       console.log('🍪 [Collections Client] Using cookie authentication');
       try {
         const fetchHeaders = {
-          'x-adobe-accept-experimental': '1',
           ...headers,
         };
 
