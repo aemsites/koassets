@@ -3,6 +3,10 @@ main = "src/index.js"
 compatibility_date = "2024-12-01"
 node_compat = true
 
+[[kv_namespaces]]
+binding = "CHAT_SESSIONS"
+id = "24ba7d13a5994fdeb9c14ea5b641aecc"
+
 [env.staging]
 name = "koassets-mcp-server-staging"
 route = { pattern = "mcp.koassets-staging.adobeaem.workers.dev", zone_name = "adobeaem.workers.dev" }
