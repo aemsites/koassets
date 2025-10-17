@@ -92,7 +92,8 @@ async function searchAuthorization(request, search) {
 
   // if user roles is empty, make the search return nothing
   if (user.roles.length === 0) {
-    return JSON.stringify({ requests: [] });
+    search.requests = [];
+    return;
   }
 
   // RESTRICTED BRAND CHECK
