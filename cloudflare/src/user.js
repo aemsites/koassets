@@ -76,7 +76,7 @@ async function getUserAttributes(env, user) {
     pushUnique(attributes.customers, userOverride.customers);
   }
 
-  // use bottler country from IDP if not configured in EDS sheets
+  // use country from IDP if not configured in EDS sheets
   if (attributes.roles.includes(ROLE.BOTTLER) && attributes.bottlerCountries.length === 0 && user.country) {
     attributes.bottlerCountries.push(user.country);
   }
@@ -124,6 +124,8 @@ async function handleSudo(request, env, user) {
       ...user,
       ...attributes,
     };
+
+    // console.log('User session after sudo:', JSON.stringify(user, null, 2));
   }
 
   return user;
@@ -156,15 +158,24 @@ export async function createSession(request, env) {
     return false;
   }
 
-  if (!access[domain] && !access[email]) {
+  if (!access['*'] && !access[domain] && !access[email]) {
     console.warn('User email or domain not listed in /config/access/permissions sheet:', email);
     return false;
   }
 
   const permissions = [
+    ...(access['*']?.permissions || []),
     ...(access[domain]?.permissions || []),
     ...(access[email]?.permissions || []),
   ];
+
+  // check preview access
+  if (!['koassets.adobeaem.workers.dev', 'localhost:8787'].includes(request.headers.get('host'))) {
+    if (!permissions.includes('preview')) {
+      console.warn('User has no permission to access preview environments:', email);
+      return false;
+    }
+  }
 
   // build user attributes used for authorization
   const attributes = await getUserAttributes(env, {

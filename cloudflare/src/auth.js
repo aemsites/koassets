@@ -296,7 +296,7 @@ authRouter
   })
 
   .get('/logout', withAuthentication, (request, env) => {
-    console.log('User logout:', request.user);
+    console.log('User logout:', request.user.email);
 
     // redirect to MS logout page
     const logoutUrl = `https://login.microsoftonline.com/${env.MICROSOFT_ENTRA_TENANT_ID}/oauth2/logout?` +
