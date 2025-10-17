@@ -57,7 +57,7 @@ async function getIMSToken(request, env) {
   }
 }
 
-function forceSearchFilter(request, search, constraint) {
+function forceSearchFilter(search, constraint) {
   // skip if constraint is empty or not set
   if (!constraint || constraint.length === 0) {
     return;
@@ -74,14 +74,20 @@ function forceSearchFilter(request, search, constraint) {
     } else {
       searchReq.params.filters = `(${filter}) AND ${constraint}`;
     }
-
-    console.log(`Search filter [${i}] for ${request.user.email}: ${searchReq.params.filters}`);
   }
 }
 
 async function searchAuthorization(request) {
   const user = request.user;
   const search = await request.json();
+
+  // Algolia search request. Enforce a filter that ensures only authorized assets are returned
+  // https://www.algolia.com/doc/api-reference/api-parameters/filters
+
+  // if user roles is empty, make the search return nothing
+  if (user.roles.length === 0) {
+    return JSON.stringify({ requests: [] });
+  }
 
   // RESTRICTED BRAND CHECK
   // TODO: DISABLED until we have the right search index support
@@ -98,7 +104,7 @@ async function searchAuthorization(request) {
     if (countries.length > 0) {
       intendedBottlerCountry = `(${countries.map(c => `tccc-intendedBottlerCountry:'${c}'`).join(' OR ')})`;
     } else {
-      // should normally not happen, but safety net: ensure no hits
+      // should normally not happen, but safety net to ensure no hits
       intendedBottlerCountry = `tccc-intendedBottlerCountry:'___does_not_exist___'`;
     }
   }
@@ -108,8 +114,9 @@ async function searchAuthorization(request) {
 
   // all checks are required (AND)
   const constraint = [restrictedBrand, intendedBottlerCountry, intendedCustomer].filter(c => c).join(' AND ');
+  console.log(`[${request.user.email}] authz filter: ${constraint}`);
 
-  forceSearchFilter(request, search, constraint);
+  forceSearchFilter(search, constraint);
 
   return JSON.stringify(search);
 }
