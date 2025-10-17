@@ -8,17 +8,8 @@ import type { DateValue } from 'react-aria-components';
 import type { CalendarDate } from '@internationalized/date';
 
 export const getConfig = () => {
-    // Runtime config from window.APP_CONFIG (loaded from config.js)
-    const runtimeConfig = window.APP_CONFIG || {};
-
-    return {
-        BUCKET: runtimeConfig.BUCKET || import.meta.env.VITE_BUCKET || '',
-    };
+    return {};
 };
-
-// Convenience functions for specific config values
-export const getBucket = (): string => getConfig().BUCKET;
-
 
 // Utility to get external parameters from KOAssetsConfig
 export const getExternalParams = (): ExternalParams => {

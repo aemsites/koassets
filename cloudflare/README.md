@@ -18,6 +18,7 @@ Here are the various URL paths handled by the worker:
 | `/api/user`            | ✅ | 👤  User session API (based on session cookie) | - | - |
 | `/api/savedsearches/*` | ✅ | 🔎  Saved searches API (stored in Cloudflare KV) | - | - |
 | `/api/adobe/assets/*`  | ✅ | 🖼️  Adobe Dynamic Media OpenAPI | `delivery-*.adobeaemcloud.com` | Everything after `/api` |
+| `/api/adobe/assets/search-collections`  | ✅ | 🖼️  Adobe Dynamic Media OpenAPI.<br><br>Search index `*_collections` | `delivery-*.adobeaemcloud.com` | `/adobe/assets/search` |
 | `/api/fadel/*`         | ✅ | 🚥  Fadel API | `*.fadelarc.net` | Everything after `/api/fadel` |
 | `/public/*`<br>`/scripts/*`<br>`/styles/*`<br>&nbsp;[more](src/index.js#L44) | ❌ | 🌎  Public content & code from Adobe Helix. | `*.aem.live` / `*.aem.page` | `/public/*`<br>`/scripts/*`<br>`/styles/*`<br>... |
 | `/*`                   | ✅ | 📑  Adobe Helix content | `*.aem.live` / `*.aem.page` | `/*` |
