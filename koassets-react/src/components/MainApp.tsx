@@ -1,5 +1,5 @@
 import { ToastQueue } from '@react-spectrum/toast';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
 import { DateValue } from 'react-aria-components';
 import '../MainApp.css';
 
@@ -32,13 +32,12 @@ import { AuthorizationStatus, CheckRightsRequest, FadelClient } from '../clients
 import { calendarDateToEpoch, epochToCalendarDate } from '../utils/formatters';
 import CartPanel from './CartDownloads/CartPanel';
 import DownloadPanel from './CartDownloads/DownloadPanel';
-import Facets from './Facets';
-import ImageGallery from './ImageGallery';
-import { IMAGE_MIME_TYPES } from '../constants/images';
+// Lazy load non-critical components for better performance
+const Facets = lazy(() => import('./Facets'));
+const ImageGallery = lazy(() => import('./ImageGallery'));
+import { isImage } from '../constants/filetypes';
 
 const HITS_PER_PAGE = 24;
-
-const isImage = (format : string) : boolean => format?.includes('image/') || IMAGE_MIME_TYPES.includes(format) || false;
 
 /**
  * Transforms excFacets object into a string array for search facets
@@ -655,36 +654,38 @@ function MainApp(): React.JSX.Element {
     const enhancedGallery = (
         <>
             {currentView === CURRENT_VIEW.images ? (
-                <ImageGallery
-                    images={dmImages}
-                    loading={loading[LOADING.dmImages]}
-                    onAddToCart={handleAddToCart}
-                    onRemoveFromCart={handleRemoveFromCart}
-                    cartAssetItems={cartAssetItems}
-                    searchResult={searchResults?.[0] || null}
-                    onToggleMobileFilter={handleToggleMobileFilter}
-                    isMobileFilterOpen={isMobileFilterOpen}
-                    onBulkAddToCart={handleBulkAddToCart}
-                    onSortByTopResults={handleSortByTopResults}
-                    onSortByDateCreated={handleSortByDateCreated}
-                    onSortByLastModified={handleSortByLastModified}
-                    onSortBySize={handleSortBySize}
-                    onSortDirectionAscending={handleSortDirectionAscending}
-                    onSortDirectionDescending={handleSortDirectionDescending}
-                    selectedSortType={selectedSortType}
-                    selectedSortDirection={selectedSortDirection}
-                    onSortTypeChange={setSelectedSortType}
-                    onSortDirectionChange={setSelectedSortDirection}
-                    onLoadMoreResults={handleLoadMoreResults}
-                    hasMorePages={currentPage + 1 < totalPages}
-                    isLoadingMore={isLoadingMore}
-                    imagePresets={imagePresets}
-                    assetRenditionsCache={assetRenditionsCache}
-                    fetchAssetRenditions={fetchAssetRenditions}
-                    isRightsSearch={isRightsSearch}
-                    onFacetCheckbox={handleFacetCheckbox}
-                    onClearAllFacets={clearAllFacetsFunction || undefined}
-                />
+                <Suspense fallback={<></>}>
+                    <ImageGallery
+                        images={dmImages}
+                        loading={loading[LOADING.dmImages]}
+                        onAddToCart={handleAddToCart}
+                        onRemoveFromCart={handleRemoveFromCart}
+                        cartAssetItems={cartAssetItems}
+                        searchResult={searchResults?.[0] || null}
+                        onToggleMobileFilter={handleToggleMobileFilter}
+                        isMobileFilterOpen={isMobileFilterOpen}
+                        onBulkAddToCart={handleBulkAddToCart}
+                        onSortByTopResults={handleSortByTopResults}
+                        onSortByDateCreated={handleSortByDateCreated}
+                        onSortByLastModified={handleSortByLastModified}
+                        onSortBySize={handleSortBySize}
+                        onSortDirectionAscending={handleSortDirectionAscending}
+                        onSortDirectionDescending={handleSortDirectionDescending}
+                        selectedSortType={selectedSortType}
+                        selectedSortDirection={selectedSortDirection}
+                        onSortTypeChange={setSelectedSortType}
+                        onSortDirectionChange={setSelectedSortDirection}
+                        onLoadMoreResults={handleLoadMoreResults}
+                        hasMorePages={currentPage + 1 < totalPages}
+                        isLoadingMore={isLoadingMore}
+                        imagePresets={imagePresets}
+                        assetRenditionsCache={assetRenditionsCache}
+                        fetchAssetRenditions={fetchAssetRenditions}
+                        isRightsSearch={isRightsSearch}
+                        onFacetCheckbox={handleFacetCheckbox}
+                        onClearAllFacets={clearAllFacetsFunction || undefined}
+                    />
+                </Suspense>
             ) : (
                 <></>
             )}
@@ -732,30 +733,32 @@ function MainApp(): React.JSX.Element {
                                     {enhancedGallery}
                                 </div>
                                 <div className={`facet-filter-panel ${isMobileFilterOpen ? 'mobile-open' : ''}`}>
-                                    <Facets
-                                        searchResults={searchResults}
-                                        search={search}
-                                        excFacets={excFacets}
-                                        selectedNumericFilters={selectedNumericFilters}
-                                        setSelectedNumericFilters={setSelectedNumericFilters}
-                                        query={query}
-                                        setQuery={setQuery}
-                                        searchDisabled={searchDisabled}
-                                        setSearchDisabled={handleSetSearchDisabled}
-                                        setIsRightsSearch={handleSetIsRightsSearch}
-                                        rightsStartDate={rightsStartDate}
-                                        setRightsStartDate={setRightsStartDate}
-                                        rightsEndDate={rightsEndDate}
-                                        setRightsEndDate={setRightsEndDate}
-                                        selectedMarkets={selectedMarkets}
-                                        setSelectedMarkets={setSelectedMarkets}
-                                        selectedMediaChannels={selectedMediaChannels}
-                                        setSelectedMediaChannels={setSelectedMediaChannels}
-                                        facetCheckedState={facetCheckedState}
-                                        setFacetCheckedState={setFacetCheckedState}
-                                        onFacetCheckbox={handleFacetCheckbox}
-                                        onClearAllFacets={handleReceiveClearAllFacets}
-                                    />
+                                    <Suspense fallback={<></>}>
+                                        <Facets
+                                            searchResults={searchResults}
+                                            search={search}
+                                            excFacets={excFacets}
+                                            selectedNumericFilters={selectedNumericFilters}
+                                            setSelectedNumericFilters={setSelectedNumericFilters}
+                                            query={query}
+                                            setQuery={setQuery}
+                                            searchDisabled={searchDisabled}
+                                            setSearchDisabled={handleSetSearchDisabled}
+                                            setIsRightsSearch={handleSetIsRightsSearch}
+                                            rightsStartDate={rightsStartDate}
+                                            setRightsStartDate={setRightsStartDate}
+                                            rightsEndDate={rightsEndDate}
+                                            setRightsEndDate={setRightsEndDate}
+                                            selectedMarkets={selectedMarkets}
+                                            setSelectedMarkets={setSelectedMarkets}
+                                            selectedMediaChannels={selectedMediaChannels}
+                                            setSelectedMediaChannels={setSelectedMediaChannels}
+                                            facetCheckedState={facetCheckedState}
+                                            setFacetCheckedState={setFacetCheckedState}
+                                            onFacetCheckbox={handleFacetCheckbox}
+                                            onClearAllFacets={handleReceiveClearAllFacets}
+                                        />
+                                    </Suspense>
                                 </div>
                             </div>
                             {/* <Footer /> */}

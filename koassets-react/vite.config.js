@@ -47,7 +47,7 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       sourcemap: true, // Enable source maps for production builds too
-      minify: false, // Disable minification for better debugging
+      minify: 'terser', // Use terser for aggressive minification
       rollupOptions: {
         external: [],
         output: {
@@ -60,6 +60,7 @@ export default defineConfig(({ mode }) => {
             return 'assets/[name][extname]';
           },
           // Better source map paths for debugging
+          // eslint-disable-next-line no-unused-vars
           sourcemapPathTransform: (relativeSourcePath, sourcemapPath) => {
             // Build creates: koassets-react/dist/assets/index.js with paths like ../../src/
             // Gets copied to: tools/assets-browser/assets/index.js
