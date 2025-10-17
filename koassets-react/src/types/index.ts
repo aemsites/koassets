@@ -540,7 +540,7 @@ export interface AlgoliaSearchParams {
 }
 
 export interface AlgoliaSearchRequest {
-    indexName: string;
+    indexName?: string;
     params: AlgoliaSearchParams;
 }
 
@@ -747,9 +747,7 @@ export interface Metadata {
 declare global {
     interface Window {
         // Configuration objects
-        APP_CONFIG?: {
-            BUCKET?: string;
-        };
+        APP_CONFIG?: object;
         KOAssetsConfig?: {
             externalParams?: ExternalParams;
         };

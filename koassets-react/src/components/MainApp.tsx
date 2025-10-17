@@ -22,7 +22,7 @@ import type {
 } from '../types';
 import { CURRENT_VIEW, LOADING, QUERY_TYPES } from '../types';
 import { populateAssetFromHit } from '../utils/assetTransformers';
-import { getBucket, getExternalParams } from '../utils/config';
+import { getExternalParams } from '../utils/config';
 import { AppConfigProvider } from './AppConfigProvider';
 
 // Components
@@ -79,15 +79,6 @@ function MainApp(): React.JSX.Element {
         const params = getExternalParams();
         // console.log('External parameters received:', JSON.stringify(params));
         return params;
-    });
-
-    // Local state
-    const [bucket] = useState<string>(() => {
-        try {
-            return getBucket();
-        } catch {
-            return '';
-        }
     });
 
     // Authentication state - cookie authenticated
@@ -253,21 +244,19 @@ function MainApp(): React.JSX.Element {
     }, [cartAssetItems]);
 
     useEffect(() => {
-        // Only create client when authenticated and bucket is available
-        if (authenticated && bucket) {
+        // Only create client when authenticated
+        if (authenticated) {
             if (isCookieAuth()) {
                 console.debug('🔑 Authenticated via Cookie.');
             } else {
                 console.debug('🔑 Authenticated via other mechanism.');
             }
-            setDynamicMediaClient(new DynamicMediaClient({
-                bucket: bucket,
-            }));
+            setDynamicMediaClient(new DynamicMediaClient());
         } else {
             console.debug('🔑 Not authenticated (not IMS, nor cookie)');
             setDynamicMediaClient(null);
         }
-    }, [authenticated, bucket]);
+    }, [authenticated]);
 
     // Process and display Adobe Dynamic Media images
     const processDMImages = useCallback(async (content: unknown, isLoadingMore: boolean = false): Promise<void> => {
