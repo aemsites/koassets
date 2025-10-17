@@ -32,6 +32,9 @@ FADEL_ORIGIN = "https://test.fadelarc.net"
 # keep disabled as long as we are using workers.dev directly without a domain/zone
 HELIX_PUSH_INVALIDATION = "disabled"
 
+# MCP Server URL for chat agent
+MCP_SERVER_URL = "http://localhost:8787/mcp"
+
 # Microsoft Entra IDP (config)
 MICROSOFT_ENTRA_TENANT_ID = "548d26ab-8caa-49e1-97c2-a1b1a06cc39c"
 MICROSOFT_ENTRA_CLIENT_ID = "f649d1fc-39aa-4c03-be83-685d3e935a4d"
@@ -69,3 +72,11 @@ secret_name = "KOASSETS_FADEL_PASSWORD"
 [[kv_namespaces]]
 binding = "AUTH_TOKENS"
 id = "975809e56a7a425aa006e156671bbecf"
+
+[[kv_namespaces]]
+binding = "CHAT_SESSIONS"
+id = "chat_sessions_placeholder"
+# Note: Create this KV namespace with: wrangler kv namespace create "CHAT_SESSIONS"
+
+[ai]
+binding = "AI"
