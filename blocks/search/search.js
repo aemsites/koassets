@@ -122,7 +122,12 @@ export default async function decorate(block) {
   input.placeholder = 'What are you looking for?';
   input.autofocus = true;
 
-  queryInputWrapper.append(querySearchIcon, input);
+  // Clear icon
+  const clearIcon = document.createElement('span');
+  clearIcon.className = 'query-clear-icon';
+  clearIcon.style.display = 'none'; // Hidden by default
+
+  queryInputWrapper.append(querySearchIcon, input, clearIcon);
 
   // Initialize values from URL parameters
   const urlParams = new URLSearchParams(window.location.search);
@@ -173,6 +178,24 @@ export default async function decorate(block) {
       performSearch();
     }
   });
+
+  // Show/hide clear icon based on input value
+  const toggleClearIcon = () => {
+    clearIcon.style.display = input.value ? 'block' : 'none';
+  };
+
+  // Clear input on clear icon click
+  clearIcon.addEventListener('click', () => {
+    input.value = '';
+    toggleClearIcon();
+    input.focus();
+  });
+
+  // Toggle clear icon on input changes
+  input.addEventListener('input', toggleClearIcon);
+
+  // Initialize clear icon visibility
+  toggleClearIcon();
 
   // Assemble everything
   if (pathObjects.length > 0) {
