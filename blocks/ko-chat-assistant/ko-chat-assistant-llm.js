@@ -207,6 +207,36 @@ class WebLLMProvider extends LLMProvider {
   }
 
   /**
+   * Install global fetch proxy to intercept HuggingFace requests
+   */
+  installGlobalFetchProxy() {
+    if (window._webllmFetchProxyInstalled) {
+      return; // Already installed
+    }
+
+    console.log('[WebLLM] Installing global fetch proxy for HuggingFace CORS');
+
+    const originalFetch = window.fetch.bind(window);
+    const proxyBaseUrl = `${window.location.origin}/api/hf-proxy`;
+
+    window.fetch = function proxiedFetch(url, options) {
+      const urlString = typeof url === 'string' ? url : url.toString();
+      
+      // Intercept HuggingFace requests and route through our proxy
+      if (urlString.includes('huggingface.co')) {
+        const proxiedUrl = urlString.replace('https://huggingface.co/', `${proxyBaseUrl}/`);
+        console.log('[WebLLM Proxy] HF → Proxy:', proxiedUrl);
+        return originalFetch(proxiedUrl, options);
+      }
+      
+      return originalFetch(url, options);
+    };
+
+    window._webllmFetchProxyInstalled = true;
+    console.log('[WebLLM] Fetch proxy installed successfully');
+  }
+
+  /**
    * Load WebLLM library dynamically
    */
   async loadWebLLMLibrary() {
@@ -215,6 +245,9 @@ class WebLLMProvider extends LLMProvider {
       if (window.mlc?.CreateMLCEngine) {
         return;
       }
+
+      // Install fetch proxy BEFORE loading WebLLM
+      this.installGlobalFetchProxy();
 
       // Try multiple CDN sources in order of preference
       // Using newer versions which have better CORS support
