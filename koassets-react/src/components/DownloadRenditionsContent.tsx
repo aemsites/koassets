@@ -5,6 +5,7 @@ import { Asset, DownloadAssetItem, Rendition } from '../types';
 import { formatDimensions, formatFileSize, formatFormatName } from '../utils/formatters';
 import './DownloadRenditionsContent.css';
 import Picture from './Picture';
+import { EAGER_LOAD_IMAGE_COUNT } from '../constants/images';
 
 interface AssetData {
     asset: Asset;
@@ -430,6 +431,7 @@ const DownloadRenditionsContent: React.FC<DownloadRenditionsContentProps> = ({
                                 key={assetData.asset.assetId}
                                 asset={assetData.asset}
                                 width={350}
+                                eager={index < EAGER_LOAD_IMAGE_COUNT}
                             />
                         </div>
                         <div className="download-renditions-title">

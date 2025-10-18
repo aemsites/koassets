@@ -13,7 +13,6 @@ console.log('🔒 Generating safe config.js for static deployment...');
 
 // Safe placeholder values (no sensitive data)
 const safeConfig = {
-    BUCKET: '${BUCKET}', // Will be replaced at runtime
 };
 
 // Generate the safe config.js content
@@ -21,7 +20,6 @@ const configContent = `// Runtime configuration for static deployment
 // Generated at: ${new Date().toISOString()}
 // NOTE: This file contains placeholder values that should be replaced during deployment
 window.APP_CONFIG = {
-  BUCKET: '${safeConfig.BUCKET}',
   // Add other environment variables as needed
 };
 
@@ -41,7 +39,6 @@ fs.writeFileSync(toolsConfigPath, configContent);
 
 console.log('✅ Generated safe config at:', toolsConfigPath);
 console.log('📋 Safe configuration:');
-console.log(`   BUCKET: ${safeConfig.BUCKET}`);
 console.log('');
 console.log('⚠️  IMPORTANT: Replace placeholder values before deployment!');
 console.log('💡 Placeholders can be replaced by:');

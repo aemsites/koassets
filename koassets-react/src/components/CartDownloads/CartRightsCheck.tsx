@@ -6,6 +6,7 @@ import { calendarDateToEpoch } from '../../utils/formatters';
 import DownloadRenditionsContent from '../DownloadRenditionsContent';
 import Picture from '../Picture';
 import './CartRightsCheck.css';
+import { EAGER_LOAD_IMAGE_COUNT } from '../../constants/images';
 
 interface CartRightsCheckProps {
     cartAssetItems: Asset[];
@@ -314,13 +315,13 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
                                         <div className="col-media">INTENDED MEDIA</div>
                                     </div>
 
-                                    {restrictedAssets.map((asset) => {
+                                    {restrictedAssets.map((asset, index: number) => {
 
                                         return (
                                             <div key={asset.assetId} className="table-row">
                                                 <div className="col-thumbnail">
                                                     <div className="item-thumbnail">
-                                                        <Picture key={asset.assetId} asset={asset} width={350} />
+                                                        <Picture key={asset.assetId} asset={asset} width={350} eager={index < EAGER_LOAD_IMAGE_COUNT} />
                                                     </div>
                                                 </div>
                                                 <div className="col-title">

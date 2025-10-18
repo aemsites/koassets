@@ -65,12 +65,11 @@ function getEnvVar(key) {
 
 // Get configuration values
 const config = {
-    BUCKET: getEnvVar('VITE_BUCKET'),
     // Add other environment variables as needed
 };
 
 // Validate required configuration
-const requiredVars = ['BUCKET'];
+const requiredVars = [];
 const missingVars = requiredVars.filter(key => !config[key]);
 
 if (missingVars.length > 0) {
@@ -87,7 +86,6 @@ const configContent = `// Runtime configuration generated from environment varia
 // Generated at: ${new Date().toISOString()}
 // Environment: ${nodeEnv}
 window.APP_CONFIG = {
-  BUCKET: '${config.BUCKET}',
   // Add other environment variables as needed
 };
 `;
@@ -111,7 +109,6 @@ console.log('✅ Generated runtime config at:', configPath);
 console.log('✅ Generated deployment config at:', toolsConfigPath);
 console.log('📋 Configuration:');
 console.log(`   Environment: ${nodeEnv}`);
-console.log(`   BUCKET: ${config.BUCKET || '(not set)'}`);
 
 // Show sources that were checked
 console.log('\n🔍 Environment sources checked (in order of precedence):');

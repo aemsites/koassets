@@ -5,6 +5,7 @@
   "description": "KO Assets Portal",
   "scripts": {
     "install-all": "npm install && cd koassets-react && npm install && cd ../cloudflare && npm install",
+    "clean": "rm -rf node_modules && cd koassets-react && rm -rf node_modules dist && cd ../cloudflare && rm -rf node_modules .wrangler",
     "dev": "./local.sh",
     "lint:js": "eslint .",
     "lint:css": "stylelint \"blocks/**/*.css\" \"styles/*.css\"",

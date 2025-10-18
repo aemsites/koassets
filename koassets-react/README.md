@@ -20,7 +20,7 @@ npm run dev
 
 ```bash
 # Option 1: Static embedded config (recommended)
-VITE_BUCKET=your-bucket npm run build:embed
+VITE_FOO=value npm run build:embed
 
 # Option 2: Use .env files
 npm run build:prod
@@ -142,7 +142,7 @@ src/
    npm install
    ```
 
-3. **Configure Adobe Client ID and Bucket**
+3. **Configuration**
 
    **Option 1: Using Environment Variables (Recommended)**
 
@@ -150,9 +150,7 @@ src/
    # Copy the example file to environment-specific file
    cp env.example .env.development
 
-   # Edit .env.development with your Bucket
-   
-   VITE_BUCKET=your-adobe-dynamic-media-bucket-id
+   # Edit .env.development
    ```
 
 4. **Start the development server**
@@ -299,7 +297,6 @@ cp .env.production.template .env.production
 
 - Use environment variables for different environments (dev, staging, production)
 - Keep environment-specific files (`.env.development`, `.env.production`) out of version control (already in `.gitignore`)
-- Configure different Client IDs and Bucket IDs for different environments
 - Ensure redirect URIs are properly configured in Adobe Developer Console
 
 **Environment Variable Setup:**
@@ -307,11 +304,8 @@ cp .env.production.template .env.production
 ```bash
 # .env.development (for development)
 
-VITE_BUCKET=your-dev-bucket-id
-
 # .env.production (for production builds)
 
-VITE_BUCKET=your-prod-bucket-id
 ```
 
 ### Building for Different Environments
@@ -336,10 +330,10 @@ Build with values embedded directly at build time:
 
 ```bash
 # PowerShell
-$env:$env:VITE_BUCKET="your-bucket-name"; npm run build:embed
+$env:$env:VITE_FOO="value"; npm run build:embed
 
 # Bash/Zsh
-VITE_BUCKET=your-bucket-name npm run build:embed
+VITE_FOO=value npm run build:embed
 ```
 
 **Result:** Creates `tools/assets-browser/index.html` with values embedded directly in the JavaScript.

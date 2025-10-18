@@ -1,13 +1,17 @@
 import { ToastQueue } from '@react-spectrum/toast';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DateValue } from 'react-aria-components';
-import type { FacetCheckedState, FacetsProps, FacetValue, SavedSearch, SearchResult } from '../types';
+import { CalendarDate } from '@internationalized/date';
+import type { FacetsProps, FacetValue, RightsFilters, SavedSearch, SearchResult, RightsData } from '../types';
 import DateRange, { DateRangeRef } from './DateRange';
 import './Facets.css';
 import Markets from './Markets';
 import MediaChannels from './MediaChannels';
 import MyDatePicker from './MyDatePicker';
-import buildSavedSearchUrl from '../../../scripts/saved-search-utils.js';
+import buildSavedSearchUrl from '../../../scripts/saved-searches/saved-search-utils.js';
+import { savedSearchClient } from '../../../scripts/saved-searches/saved-search-client.js';
+import { getDisplayFacetName } from '../utils/displayUtils';
+import { calendarDateToEpoch, epochToCalendarDate } from '../utils/formatters';
 
 interface ExpandedFacetsState {
     [key: string]: boolean;
@@ -15,11 +19,28 @@ interface ExpandedFacetsState {
 
 const HIERARCHY_PREFIX = 'TCCC.#hierarchy.lvl';
 
-// Local storage functions for saved searches
-const loadSavedSearches = (): SavedSearch[] => {
+// React-specific saved search functions with rights filters serialization
+const loadSavedSearches = async (): Promise<SavedSearch[]> => {
     try {
-        const saved = localStorage.getItem('koassets-saved-searches');
-        return saved ? JSON.parse(saved) : [];
+        const searches = await savedSearchClient.load();
+        
+        // Convert Arrays back to Sets and epoch timestamps back to DateValues after JSON deserialization
+        return searches.map((search: SavedSearch & {
+            rightsFilters: Omit<RightsFilters, 'markets' | 'mediaChannels' | 'rightsStartDate' | 'rightsEndDate'> & {
+                rightsStartDate: number | null;
+                rightsEndDate: number | null;
+                markets: RightsData[];
+                mediaChannels: RightsData[];
+            }
+        }) => ({
+            ...search,
+            rightsFilters: {
+                rightsStartDate: search.rightsFilters.rightsStartDate ? epochToCalendarDate(search.rightsFilters.rightsStartDate / 1000) : null,
+                rightsEndDate: search.rightsFilters.rightsEndDate ? epochToCalendarDate(search.rightsFilters.rightsEndDate / 1000) : null,
+                markets: new Set(search.rightsFilters.markets || []),
+                mediaChannels: new Set(search.rightsFilters.mediaChannels || [])
+            }
+        }));
     } catch (error) {
         console.error('Error loading saved searches:', error);
         return [];
@@ -45,18 +66,146 @@ const rightsFacets: Record<string, FacetValue> = {
     }
 }
 
-const saveSavedSearches = (searches: SavedSearch[]): void => {
+const saveSavedSearches = async (searches: SavedSearch[]): Promise<void> => {
     try {
-        localStorage.setItem('koassets-saved-searches', JSON.stringify(searches));
+        // Convert Sets to Arrays and DateValues to epoch for JSON serialization
+        const searchesForSaving = searches.map(search => ({
+            ...search,
+            rightsFilters: {
+                rightsStartDate: search.rightsFilters.rightsStartDate ? calendarDateToEpoch(search.rightsFilters.rightsStartDate as CalendarDate) : null,
+                rightsEndDate: search.rightsFilters.rightsEndDate ? calendarDateToEpoch(search.rightsFilters.rightsEndDate as CalendarDate) : null,
+                markets: Array.from(search.rightsFilters.markets),
+                mediaChannels: Array.from(search.rightsFilters.mediaChannels)
+            }
+        }));
+        
+        await savedSearchClient.save(searchesForSaving);
     } catch (error) {
         console.error('Error saving searches:', error);
     }
 };
 
+// Interface for FacetItem props
+interface FacetItemProps {
+    facetTechId: string;
+    facet: FacetValue;
+    label: string;
+    isExpanded: boolean;
+    isSearchMode: boolean;
+    searchTerm: string;
+    checkedCount: number;
+    onToggle: (facetTechId: string) => void;
+    onToggleSearch: (facetTechId: string, e: React.MouseEvent) => void;
+    onSearchChange: (facetTechId: string, value: string) => void;
+    onSearchEscape: (facetTechId: string) => void;
+    renderContent: (facetTechId: string) => React.ReactNode;
+}
+
+// Memoized FacetItem component to prevent unnecessary rerenders
+const FacetItem = React.memo<FacetItemProps>(({
+    facetTechId,
+    facet,
+    label,
+    isExpanded,
+    isSearchMode,
+    searchTerm,
+    checkedCount,
+    onToggle,
+    onToggleSearch,
+    onSearchChange,
+    onSearchEscape,
+    renderContent
+}) => {
+    return (
+        <>
+            {facetTechId === 'tccc-rightsStartDate' && (
+                <div className="facet-rights-section">
+                    <label className="facet-rights-label">Check Rights Filters</label>
+                </div>
+            )}
+            <div className="facet-filter-section">
+                {/* Render each facetTechId's search button */}
+                {isSearchMode ? (
+                    <div className="facet-filter-button facet-filter-button-search">
+                        <div className="facet-search-container">
+                            <div className="facet-search-input-wrapper">
+                                <img
+                                    src="/icons/search.svg"
+                                    alt="Search"
+                                    className="facet-search-icon-inside"
+                                />
+                                <input
+                                    type="text"
+                                    className="facet-search-input"
+                                    placeholder={`Search ${label}...`}
+                                    value={searchTerm}
+                                    autoFocus
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => onSearchChange(facetTechId, e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Escape') {
+                                            onSearchEscape(facetTechId);
+                                        }
+                                    }}
+                                />
+                                <img
+                                    src="/icons/close-menu.svg"
+                                    alt="Close"
+                                    className="facet-search-close-icon"
+                                    onClick={(e) => onToggleSearch(facetTechId, e)}
+                                />
+                            </div>
+                        </div>
+                        <div className="facet-filter-right-section">
+                            {checkedCount > 0 && (
+                                <div className="assets-details-tag tccc-tag facet-filter-count-tag">{checkedCount}</div>
+                            )}
+                            <span
+                                className={`facet-filter-arrow-top-level ${isExpanded ? 'expanded' : ''}`}
+                                onClick={() => onToggle(facetTechId)}
+                            >
+                            </span>
+                        </div>
+                    </div>
+                ) : (
+                    // Render each facetTechId's button
+                    <div
+                        className="facet-filter-button"
+                        tabIndex={0}
+                        aria-expanded={isExpanded}
+                        onClick={() => onToggle(facetTechId)}
+                    >
+                        <span className="facet-filter-label">{label}</span>
+                        <div className="facet-filter-right-section">
+                            {checkedCount > 0 && (
+                                <div className="assets-details-tag tccc-tag facet-filter-count-tag">{checkedCount}</div>
+                            )}
+                            {isExpanded && facet.type !== 'date' && (
+                                <img
+                                    src="/icons/search.svg"
+                                    alt="Search"
+                                    className="facet-search-trigger"
+                                    onClick={(e) => onToggleSearch(facetTechId, e)}
+                                />
+                            )}
+                            <span
+                                className={`facet-filter-arrow ${isExpanded ? 'expanded' : ''}`}
+                            ></span>
+                        </div>
+                    </div>
+                )}
+
+                {/* For each facet, render the appropriate checkboxes and hierarchy if needed */}
+                {renderContent(facetTechId)}
+            </div>
+        </>
+    );
+});
+
+FacetItem.displayName = 'FacetItem';
+
 const Facets: React.FC<FacetsProps> = ({
     searchResults,
-    selectedFacetFilters,
-    setSelectedFacetFilters,
     search,
     excFacets = {},
     selectedNumericFilters = [],
@@ -73,39 +222,19 @@ const Facets: React.FC<FacetsProps> = ({
     selectedMarkets,
     setSelectedMarkets,
     selectedMediaChannels,
-    setSelectedMediaChannels
+    setSelectedMediaChannels,
+    facetCheckedState,
+    setFacetCheckedState,
+    onFacetCheckbox,
+    onClearAllFacets
 }) => {
     const [expandedFacets, setExpandedFacets] = useState<ExpandedFacetsState>({}); // Keep track of expanded facets (from EXC)
     const [expandedHierarchyItems, setExpandedHierarchyItems] = useState<ExpandedFacetsState>({}); // Keep track of expanded hierarchy items
     const [facetSearchMode, setFacetSearchMode] = useState<ExpandedFacetsState>({}); // Keep track of search mode for each facet
     const [facetSearchTerms, setFacetSearchTerms] = useState<{ [key: string]: string }>({}); // Keep track of search terms for each facet
-    const [checked, setChecked] = useState<FacetCheckedState>({}); // Keep track of checked state of facets and nested facets if any
     const [dateRanges, setDateRanges] = useState<{ [key: string]: [number | undefined, number | undefined] }>({});
     const dateRangeRef = useRef<DateRangeRef>(null);
     const isUpdatingFromExternalRef = useRef(false);
-
-    // Function to load selected facet filters into checked state
-    const loadSelectedFacetFilters = useCallback((selectedFacetFilters: string[][] | undefined): FacetCheckedState => {
-        const newChecked: FacetCheckedState = {};
-
-        if (selectedFacetFilters && selectedFacetFilters.length > 0) {
-            selectedFacetFilters.forEach((filterGroup: string[]) => {
-                filterGroup.forEach((filter: string) => {
-                    const colonIndex = filter.indexOf(':');
-                    const key = colonIndex > -1 ? filter.substring(0, colonIndex) : filter;
-                    const value = colonIndex > -1 ? filter.substring(colonIndex + 1) : '';
-                    if (key && value) {
-                        if (!newChecked[key]) {
-                            newChecked[key] = {};
-                        }
-                        newChecked[key][value] = true;
-                    }
-                });
-            });
-        }
-
-        return newChecked;
-    }, []);
 
     // Rights date picker handlers
     const handleRightsStartDateChange = useCallback((date: DateValue | null) => {
@@ -126,9 +255,14 @@ const Facets: React.FC<FacetsProps> = ({
 
     // Saved search functionality state
     const [activeView, setActiveView] = useState<'filters' | 'saved'>('filters');
-    const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(loadSavedSearches());
+    const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [saveSearchName, setSaveSearchName] = useState('');
+
+    // Load saved searches on mount
+    useEffect(() => {
+        loadSavedSearches().then(setSavedSearches);
+    }, []);
 
     // Memoized combined facets computation - merges facets from all search results
     const combinedFacets = useMemo((): SearchResult['facets'] => {
@@ -151,51 +285,7 @@ const Facets: React.FC<FacetsProps> = ({
         return combined;
     }, [searchResults]);
 
-    // Clean up checked state when facets are no longer available or have zero counts
-    // BUT preserve facets that are currently applied as filters (user-selected)
-    useEffect(() => {
-        setChecked(prevChecked => {
-            const updatedChecked = { ...prevChecked };
-            let hasChanges = false;
-
-            // Get currently applied facet filters to preserve them
-            const appliedFacets = new Set<string>();
-            selectedFacetFilters?.forEach(filterGroup => {
-                filterGroup.forEach(filter => {
-                    appliedFacets.add(filter);
-                });
-            });
-
-            // For each entry of checked of (facetTechId, value)
-            Object.entries(prevChecked).forEach(([facetTechId, value]) => {
-                // For each entry of value of (facetName, isChecked)
-                Object.entries(value).forEach(([facetName, isChecked]) => {
-                    const facetFilter = `${facetTechId}:${facetName}`;
-
-                    // Don't clean up facets that are currently applied as filters
-                    const isCurrentlyApplied = appliedFacets.has(facetFilter);
-
-                    // If facetTechId not in combinedFacets.keys or facetName not in combinedFacets[facetTechId] or combinedFacets[facetTechId][facetName] === 0
-                    if (!isCurrentlyApplied &&
-                        (!combinedFacets ||
-                            !(facetTechId in combinedFacets) ||
-                            !(facetName in (combinedFacets[facetTechId] || {})) ||
-                            (combinedFacets[facetTechId] && combinedFacets[facetTechId][facetName] === 0))) {
-                        // Set checked[facetTechId][facetName] to false
-                        if (isChecked) {
-                            updatedChecked[facetTechId] = {
-                                ...updatedChecked[facetTechId],
-                                [facetName]: false
-                            };
-                            hasChanges = true;
-                        }
-                    }
-                });
-            });
-
-            return hasChanges ? updatedChecked : prevChecked;
-        });
-    }, [combinedFacets, selectedFacetFilters]);
+    // Note: Cleanup logic for checked state is now handled in the parent component (MainApp)
 
     // Memoized hierarchy data computation for all facets
     const hierarchyDataByFacet = useMemo(() => {
@@ -221,6 +311,26 @@ const Facets: React.FC<FacetsProps> = ({
                         }
                     }
                 });
+
+                // Sort each level based on facet's sortDirection setting
+                const sortDirection = excFacets[facetTechId]?.sortDirection?.toLowerCase();
+                if (sortDirection === 'asc' || sortDirection === 'desc') {
+                    Object.keys(hierarchyData).forEach(level => {
+                        const levelNum = parseInt(level);
+                        const sortedEntries = Object.entries(hierarchyData[levelNum])
+                            .sort(([facetNameA], [facetNameB]) => {
+                                // Extract the last part of the hierarchy path for sorting
+                                const lastTokenA = facetNameA.split(' / ').pop()?.trim() || '';
+                                const lastTokenB = facetNameB.split(' / ').pop()?.trim() || '';
+                                if (sortDirection === 'asc') {
+                                    return lastTokenA.localeCompare(lastTokenB);
+                                } else {
+                                    return lastTokenB.localeCompare(lastTokenA);
+                                }
+                            });
+                        hierarchyData[levelNum] = Object.fromEntries(sortedEntries);
+                    });
+                }
 
                 hierarchyMap[facetTechId] = hierarchyData;
             }
@@ -300,16 +410,11 @@ const Facets: React.FC<FacetsProps> = ({
         setFacetSearchTerms(prev => ({ ...prev, [facetTechId]: searchTerm }));
     }, []);
 
-    // Handler for checkbox change
-    const handleCheckbox = useCallback((key: string, facet: string) => {
-        setChecked(prev => ({
-            ...prev,
-            [key]: {
-                ...prev[key],
-                [facet]: !prev[key]?.[facet]
-            }
-        }));
+    const handleFacetSearchEscape = useCallback((facetTechId: string) => {
+        setFacetSearchMode(prev => ({ ...prev, [facetTechId]: false }));
+        setFacetSearchTerms(prev => ({ ...prev, [facetTechId]: '' }));
     }, []);
+
 
     // Handler for date range change
     const handleDateRangeChange = useCallback((key: string, startDate: Date | undefined, endDate: Date | undefined) => {
@@ -322,6 +427,7 @@ const Facets: React.FC<FacetsProps> = ({
     // Helper function to check if hierarchy item should be shown based on search
     const shouldShowHierarchyItem = useCallback((
         hierarchyData: { [level: number]: { [key: string]: number } },
+        facetTechId: string,
         facetName: string,
         searchTerm: string,
         level: number
@@ -331,7 +437,8 @@ const Facets: React.FC<FacetsProps> = ({
         const lowerSearchTerm = searchTerm.toLowerCase();
 
         // Check if the full hierarchy path contains the search term
-        if (facetName.toLowerCase().includes(lowerSearchTerm)) {
+        const displayedFacetName = getDisplayFacetName(facetTechId, facetName);
+        if (displayedFacetName.toLowerCase().includes(lowerSearchTerm)) {
             return true;
         }
 
@@ -344,7 +451,8 @@ const Facets: React.FC<FacetsProps> = ({
                 // Check if this deeper item is a descendant of the current item
                 if (deeperFacetName.startsWith(facetName + ' / ')) {
                     // Check if the descendant matches the search term
-                    if (deeperFacetName.toLowerCase().includes(lowerSearchTerm)) {
+                    const displayedDeeperFacetName = getDisplayFacetName(facetTechId, deeperFacetName);
+                    if (displayedDeeperFacetName.toLowerCase().includes(lowerSearchTerm)) {
                         return true;
                     }
                 }
@@ -354,26 +462,45 @@ const Facets: React.FC<FacetsProps> = ({
         return false;
     }, []);
 
+    /**
+     * Helper function to deselect facet items that no longer exist in search results
+     */
+    const deselectFacetCheckedState = useCallback((checkboxKey: string, facetDataMap: Record<string, number>) => {
+        if (facetCheckedState[checkboxKey]) {
+            Object.entries(facetCheckedState[checkboxKey]).forEach(([key, value]) => {
+                if (value === true) {
+                    if (!(key in facetDataMap) || facetDataMap[key] === 0) {
+                        onFacetCheckbox(checkboxKey, key);
+                    }
+                }
+            });
+        }
+    }, [facetCheckedState, onFacetCheckbox]);
+    
+
     // Memoized function to render hierarchy levels
     const renderHierarchyLevel = useCallback((
-        hierarchyData: { [level: number]: { [key: string]: number } },
+        facetTechIdHierarchyData: { [level: number]: { [key: string]: number } },
         facetTechId: string,
         level: number,
         parentPath: string = ''
     ): React.ReactNode[] => {
-        const levelData = hierarchyData[level];
+        const levelData = facetTechIdHierarchyData[level];
         if (!levelData) return [];
 
         const searchTerm = facetSearchTerms[facetTechId] || '';
         const items: React.ReactNode[] = [];
+        const checkboxKey = `${facetTechId}.${HIERARCHY_PREFIX}${level}`;
+        deselectFacetCheckedState(checkboxKey, levelData);
 
         Object.entries(levelData).forEach(([facetName, count]) => {
             // Extract the last part of the hierarchy path for display
             const pathParts = facetName.split(' / ');
-            const displayName = pathParts[pathParts.length - 1].trim();
+            const baseFacetName = pathParts[pathParts.length - 1].trim();
+            const displayName = getDisplayFacetName(facetTechId, baseFacetName);
 
             // Filter based on search term - check full hierarchy path and descendants
-            if (searchTerm && !shouldShowHierarchyItem(hierarchyData, facetName, searchTerm, level)) {
+            if (searchTerm && !shouldShowHierarchyItem(facetTechIdHierarchyData, facetTechId, facetName, searchTerm, level)) {
                 return; // Skip this item if it doesn't match search
             }
 
@@ -384,8 +511,8 @@ const Facets: React.FC<FacetsProps> = ({
                 const itemKey = `${facetTechId}-${facetName}`;
 
                 // Check if this item has sub-levels
-                const hasSubLevels = hierarchyData[level + 1] &&
-                    Object.keys(hierarchyData[level + 1]).some(subFacetName =>
+                const hasSubLevels = facetTechIdHierarchyData[level + 1] &&
+                    Object.keys(facetTechIdHierarchyData[level + 1]).some(subFacetName =>
                         subFacetName.startsWith(fullPath + ' / ')
                     );
 
@@ -396,7 +523,6 @@ const Facets: React.FC<FacetsProps> = ({
                     hasSubLevels ? 'facet-hierarchy-container-with-sublevel' : ''
                 ].filter(Boolean).join(' ');
 
-                const checkboxKey = `${facetTechId}.${HIERARCHY_PREFIX}${level}`;
                 const hierarchyItemKey = `${facetTechId}-${fullPath}`;
                 const isHierarchyItemExpanded = expandedHierarchyItems[hierarchyItemKey];
 
@@ -407,28 +533,27 @@ const Facets: React.FC<FacetsProps> = ({
                                 <input
                                     className="facet-filter-checkbox-input"
                                     type="checkbox"
-                                    checked={!!checked[checkboxKey]?.[facetName]}
-                                    onChange={() => handleCheckbox(checkboxKey, facetName)}
+                                    checked={!!facetCheckedState[checkboxKey]?.[facetName]}
+                                    onChange={() => onFacetCheckbox(checkboxKey, facetName)}
                                 /> {displayName}{count > 0 ? ` (${count})` : ''}
                             </label>
                             {hasSubLevels && (
                                 <span
-                                    className="facet-filter-arrow-sub-level"
-                                    onClick={() => toggleHierarchyItem(hierarchyItemKey, facetTechId, fullPath, hierarchyData)}
+                                    className={`facet-filter-arrow-sub-level caret-icon ${isHierarchyItemExpanded ? 'expanded' : ''}`}
+                                    onClick={() => toggleHierarchyItem(hierarchyItemKey, facetTechId, fullPath, facetTechIdHierarchyData)}
                                 >
-                                    {isHierarchyItemExpanded ? '▼' : '▶'}
                                 </span>
                             )}
                         </div>
                         {/* Render child levels only if expanded */}
-                        {hasSubLevels && isHierarchyItemExpanded && renderHierarchyLevel(hierarchyData, facetTechId, level + 1, fullPath)}
+                        {hasSubLevels && isHierarchyItemExpanded && renderHierarchyLevel(facetTechIdHierarchyData, facetTechId, level + 1, fullPath)}
                     </div>
                 );
             }
         });
 
         return items;
-    }, [checked, handleCheckbox, expandedHierarchyItems, toggleHierarchyItem, facetSearchTerms, shouldShowHierarchyItem]);
+    }, [facetCheckedState, onFacetCheckbox, expandedHierarchyItems, toggleHierarchyItem, facetSearchTerms, shouldShowHierarchyItem, deselectFacetCheckedState]);
 
     /**
      * Renders the facet checkboxes from search results
@@ -493,68 +618,70 @@ const Facets: React.FC<FacetsProps> = ({
         }
 
         // Get hierarchy data for this facet if it exists
-        const hierarchyData = hierarchyDataByFacet[facetTechId];
-        const isHierarchyFacet = !!hierarchyData;
+        const facetTechIdHierarchyData = hierarchyDataByFacet[facetTechId];
+        const isHierarchyFacet = !!facetTechIdHierarchyData;
 
-        // Render hierarchy facets
+        // Render each facetTechId's hierarchy items, e.g. 'Brand', 'Asset Category & Asset Type Execution'
         if (isHierarchyFacet) {
             return (
                 <div className="facet-filter-checkbox-list">
-                    {renderHierarchyLevel(hierarchyData, facetTechId, 1)}
+                    {renderHierarchyLevel(facetTechIdHierarchyData, facetTechId, 1)}
                 </div>
             );
         }
 
-        // Render non-hierarchy facets
+        // Render each facetTechId's non-hierarchy items, e.g. 'Campaign', 'Rights Free'
         if (!expandedFacets[facetTechId] || !combinedFacets || !combinedFacets[facetTechId] || Object.keys(combinedFacets[facetTechId] || {}).length === 0) {
             return null;
         }
 
         const searchTerm = facetSearchTerms[facetTechId] || '';
         const checkboxKey = `${facetTechId}`;
+        const facetTechIdDataMap = combinedFacets && combinedFacets[facetTechId] || {};
+        
+        deselectFacetCheckedState(checkboxKey, facetTechIdDataMap);
 
         // Filter facet entries based on search term
-        const filteredEntries = Object.entries((combinedFacets && combinedFacets[facetTechId]) || {})
+        let filteredEntries = Object.entries(facetTechIdDataMap)
             .filter(([facetName]) => {
                 if (!searchTerm) return true;
-                return facetName.toLowerCase().includes(searchTerm.toLowerCase());
+                const displayFacetName = getDisplayFacetName(facetTechId, facetName);
+                return displayFacetName.toLowerCase().includes(searchTerm.toLowerCase());
             });
+
+        // Sort based on facet's sortDirection setting
+        const sortDirection = excFacets[facetTechId]?.sortDirection?.toLowerCase();
+        if (sortDirection === 'asc' || sortDirection === 'desc') {
+            filteredEntries = filteredEntries.sort(([facetNameA], [facetNameB]) => {
+                // Sort alphabetically by display name
+                const displayNameA = getDisplayFacetName(facetTechId, facetNameA);
+                const displayNameB = getDisplayFacetName(facetTechId, facetNameB);
+                if (sortDirection === 'asc') {
+                    return displayNameA.localeCompare(displayNameB);
+                } else {
+                    return displayNameB.localeCompare(displayNameA);
+                }
+            });
+        }
 
         return (
             <div className="facet-filter-checkbox-list">
-                {filteredEntries.map(([facetName, count]) => (
-                    <label key={facetName} className="facet-filter-checkbox-label">
-                        <input
-                            type="checkbox"
-                            checked={!!checked[checkboxKey]?.[facetName]}
-                            onChange={() => handleCheckbox(checkboxKey, facetName)}
-                        /> {facetName}{count > 0 ? ` (${count})` : ''}
-                    </label>
-                ))}
+                {filteredEntries.map(([facetName, count]) => {
+                    const displayName = getDisplayFacetName(facetTechId, facetName);
+                    
+                    return (
+                        <label key={facetName} className="facet-filter-checkbox-label">
+                            <input
+                                type="checkbox"
+                                checked={!!facetCheckedState[checkboxKey]?.[facetName]}
+                                onChange={() => onFacetCheckbox(checkboxKey, facetName)}
+                            /> {displayName}{count > 0 ? ` (${count})` : ''}
+                        </label>
+                    );
+                })}
             </div>
         );
-    }, [expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, checked, handleCheckbox, facetSearchTerms, handleClearRightsStartDate, handleRightsStartDateChange, rightsStartDate, handleClearRightsEndDate, handleRightsEndDateChange, rightsEndDate, selectedMarkets, selectedMediaChannels, setSelectedMarkets, setSelectedMediaChannels]);
-
-    // Transform the checked object into an array of facet filters
-    useEffect(() => {
-        // Skip if we're currently updating from external source (like URL params)
-        if (isUpdatingFromExternalRef.current) {
-            isUpdatingFromExternalRef.current = false;
-            return;
-        }
-
-        const newSelectedFacetFilters: string[][] = [];
-        Object.keys(checked).forEach(key => {
-            const facetFilter: string[] = [];
-            Object.entries(checked[key]).forEach(([facet, isChecked]) => {
-                if (isChecked) {
-                    facetFilter.push(`${key}:${facet}`);
-                }
-            });
-            facetFilter.length > 0 && newSelectedFacetFilters.push(facetFilter);
-        });
-        setSelectedFacetFilters(newSelectedFacetFilters);
-    }, [checked, setSelectedFacetFilters]);
+    }, [excFacets, expandedFacets, selectedNumericFilters, handleDateRangeChange, hierarchyDataByFacet, renderHierarchyLevel, combinedFacets, facetCheckedState, onFacetCheckbox, facetSearchTerms, handleClearRightsStartDate, handleRightsStartDateChange, rightsStartDate, handleClearRightsEndDate, handleRightsEndDateChange, rightsEndDate, selectedMarkets, selectedMediaChannels, setSelectedMarkets, setSelectedMediaChannels, deselectFacetCheckedState]);
 
     // Convert date ranges to numeric filters for search
     useEffect(() => {
@@ -577,22 +704,10 @@ const Facets: React.FC<FacetsProps> = ({
         // because handleClearAllChecks handles this directly to avoid double searches
     }, [dateRanges, setSelectedNumericFilters]);
 
-    // Sync internal checked state when selectedFacetFilters changes (e.g., from URL parameters)
-    useEffect(() => {
-        if (selectedFacetFilters !== undefined) {
-            const newChecked = loadSelectedFacetFilters(selectedFacetFilters);
-
-            // Set flag to indicate we're updating from external source
-            isUpdatingFromExternalRef.current = true;
-            setChecked(newChecked);
-        }
-    }, [selectedFacetFilters, loadSelectedFacetFilters]);
-
-
     // Count checked facets for a specific facetTechId
     const getCheckedCount = useCallback((facetTechId: string): number => {
         let count = 0;
-        Object.entries(checked).forEach(([key, facetChecked]) => {
+        Object.entries(facetCheckedState).forEach(([key, facetChecked]) => {
             if (key === facetTechId || key.startsWith(`${facetTechId}.`)) {
                 Object.values(facetChecked).forEach(isChecked => {
                     if (isChecked) count++;
@@ -600,35 +715,41 @@ const Facets: React.FC<FacetsProps> = ({
             }
         });
         return count;
-    }, [checked]);
+    }, [facetCheckedState]);
 
     // Count all checked facets across all categories
     const getTotalCheckedCount = useCallback((): number => {
         let totalCount = 0;
-        Object.values(checked).forEach(facetChecked => {
+        Object.values(facetCheckedState).forEach(facetChecked => {
             Object.values(facetChecked).forEach(isChecked => {
                 if (isChecked) totalCount++;
             });
         });
         return totalCount;
-    }, [checked]);
+    }, [facetCheckedState]);
 
     const handleClearAllChecks = useCallback(() => {
         isUpdatingFromExternalRef.current = true;
-        setChecked({});
-        setSelectedFacetFilters([]);
+        setFacetCheckedState({});
+        setSelectedNumericFilters([]);
+        setRightsStartDate?.(null);
+        setRightsEndDate?.(null);
+        setSelectedMarkets(new Set());
+        setSelectedMediaChannels(new Set());
+        
+        // Clear Facets-specific UI state
         setDateRanges({});
         setExpandedFacets({}); // Collapse all facets
         setExpandedHierarchyItems({}); // Collapse all hierarchy items
         setFacetSearchMode({}); // Exit all search modes
         setFacetSearchTerms({}); // Clear all search terms
-        setSelectedNumericFilters([]);
-        setRightsStartDate?.(null); // Clear rights start date
-        setRightsEndDate?.(null); // Clear rights end date
         dateRangeRef.current?.reset();
-        setSelectedMarkets(new Set());
-        setSelectedMediaChannels(new Set());
-    }, [setSelectedFacetFilters, setSelectedNumericFilters, setRightsStartDate, setRightsEndDate, setSelectedMarkets, setSelectedMediaChannels]);
+    }, [setFacetCheckedState, setSelectedNumericFilters, setRightsStartDate, setRightsEndDate, setSelectedMarkets, setSelectedMediaChannels]);
+
+    // Pass handleClearAllChecks function to parent
+    useEffect(() => {
+        onClearAllFacets?.(handleClearAllChecks);
+    }, [handleClearAllChecks, onClearAllFacets]);
 
     const handleApplyFilters = useCallback(() => {
         search();
@@ -673,18 +794,8 @@ const Facets: React.FC<FacetsProps> = ({
         setShowSaveModal(true);
     };
 
-    const handleSaveSearchConfirm = () => {
+    const handleSaveSearchConfirm = useCallback(() => {
         if (saveSearchName.trim()) {
-            const facetFilterGroups = Object.keys(checked).map(key => {
-                const facetFilter: string[] = [];
-                Object.entries(checked[key]).forEach(([facet, isChecked]) => {
-                    if (isChecked) {
-                        facetFilter.push(`${key}:${facet}`);
-                    }
-                });
-                return facetFilter;
-            }).filter(filter => filter.length > 0);
-
             // Capture current search type from URL path
             const currentPath = window.location.pathname;
             let searchType = '/search/all'; // default fallback
@@ -696,18 +807,34 @@ const Facets: React.FC<FacetsProps> = ({
                 searchType = '/search/all';
             }
 
+            const rightsFilters: RightsFilters = {
+                rightsStartDate: rightsStartDate as DateValue,
+                rightsEndDate: rightsEndDate as DateValue,
+                markets: new Set(selectedMarkets),
+                mediaChannels: new Set(selectedMediaChannels)
+            };
+
+            // Get the first image ID from search results for thumbnail preview
+            let thumbnailImageId: string | undefined;
+            if (searchResults && searchResults[0]?.hits && searchResults[0].hits.length > 0) {
+                const firstHit = searchResults[0].hits[0];
+                thumbnailImageId = firstHit.assetId as string;
+            }
+
             const now = Date.now();
             const newSearch: SavedSearch = {
                 id: now.toString(),
                 name: saveSearchName.trim(),
                 searchTerm: query,
-                facetFilters: [...facetFilterGroups],
+                facetFilters: facetCheckedState,
                 numericFilters: [...selectedNumericFilters],
+                rightsFilters: rightsFilters,
                 dateCreated: now,
                 dateLastModified: now,
                 dateLastUsed: now,
                 favorite: false,
-                searchType: searchType
+                searchType: searchType,
+                thumbnailImageId: thumbnailImageId
             };
 
             const updatedSearches = [...savedSearches, newSearch];
@@ -720,7 +847,7 @@ const Facets: React.FC<FacetsProps> = ({
             setSaveSearchName('');
             setShowSaveModal(false);
         }
-    };
+    }, [saveSearchName, selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate, query, facetCheckedState, selectedNumericFilters, savedSearches, searchResults]);
 
     const handleSaveSearchCancel = () => {
         setSaveSearchName('');
@@ -744,15 +871,7 @@ const Facets: React.FC<FacetsProps> = ({
         handleHideTooltip();
 
         // Reset current filters
-        setChecked({});
-        setDateRanges({});
-        setExpandedFacets({});
-        setExpandedHierarchyItems({});
-        setFacetSearchMode({});
-        setFacetSearchTerms({});
-
-        // Load saved facet filters
-        const newChecked = loadSelectedFacetFilters(savedSearch.facetFilters);
+        handleClearAllChecks();
 
         // Load saved search term FIRST and ensure it's set before other updates
         const searchTerm = savedSearch.searchTerm || '';
@@ -763,12 +882,17 @@ const Facets: React.FC<FacetsProps> = ({
         setTimeout(() => {
             // Set flag to indicate we're updating from saved search loading
             isUpdatingFromExternalRef.current = true;
-            setChecked(newChecked);
 
-            // Then update filters - this will trigger the auto-search useEffect in MainApp
-            // which will use the updated query state
-            setSelectedFacetFilters(savedSearch.facetFilters);
-            setSelectedNumericFilters(savedSearch.numericFilters);
+            setFacetCheckedState(savedSearch.facetFilters); // populate the selected facets
+            setSelectedNumericFilters(savedSearch.numericFilters); // populate the selected numeric filters (createDate)
+
+            // populate the rights filters (start date, end date, markets and media channels)
+            if (savedSearch.rightsFilters) {
+                setRightsStartDate?.(savedSearch.rightsFilters.rightsStartDate);
+                setRightsEndDate?.(savedSearch.rightsFilters.rightsEndDate);
+                setSelectedMarkets(new Set(savedSearch.rightsFilters.markets));
+                setSelectedMediaChannels(new Set(savedSearch.rightsFilters.mediaChannels));
+            }
 
             // Switch back to filters view
             setActiveView('filters');
@@ -845,7 +969,12 @@ const Facets: React.FC<FacetsProps> = ({
 
     // Count total filters in saved search
     const countFilters = (savedSearch: SavedSearch): number => {
-        const facetFilterCount = savedSearch.facetFilters.reduce((total, filterGroup) => total + filterGroup.length, 0);
+        let facetFilterCount = 0;
+        Object.values(savedSearch.facetFilters).forEach(facetChecked => {
+            Object.values(facetChecked).forEach(isChecked => {
+                if (isChecked) facetFilterCount++;
+            });
+        });
         const numericFilterCount = savedSearch.numericFilters.length;
         return facetFilterCount + numericFilterCount;
     };
@@ -905,22 +1034,26 @@ const Facets: React.FC<FacetsProps> = ({
         setEditingSearchId(null);
     };
 
-    const handleConfirmEditLink = () => {
+    const handleConfirmEditLink = useCallback(() => {
         if (!editingSearchId) {
             setShowEditLinkModal(false);
             return;
         }
-        // Build current search details from state
-        const facetFilterGroups = Object.keys(checked).map(key => {
-            const facetFilter: string[] = [];
-            Object.entries(checked[key]).forEach(([facet, isChecked]) => {
-                if (isChecked) {
-                    facetFilter.push(`${key}:${facet}`);
-                }
-            });
-            return facetFilter;
-        }).filter(group => group.length > 0);
 
+        const rightsFilters: RightsFilters = {
+            rightsStartDate: rightsStartDate as DateValue,
+            rightsEndDate: rightsEndDate as DateValue,
+            markets: new Set(selectedMarkets),
+            mediaChannels: new Set(selectedMediaChannels)
+        };
+
+        // Get the first image ID from search results for thumbnail preview
+        let thumbnailImageId: string | undefined;
+        if (searchResults && searchResults[0]?.hits && searchResults[0].hits.length > 0) {
+            const firstHit = searchResults[0].hits[0];
+            thumbnailImageId = firstHit.assetId as string;
+        }
+        
         const now = Date.now();
         const updated = savedSearches.map(s => (
             s.id === editingSearchId
@@ -928,9 +1061,11 @@ const Facets: React.FC<FacetsProps> = ({
                     ...s,
                     name: editingSearchName.trim() || s.name, // Use new name or keep existing if empty
                     searchTerm: query,
-                    facetFilters: [...facetFilterGroups],
+                    facetFilters: facetCheckedState,
                     numericFilters: [...selectedNumericFilters],
-                    dateLastModified: now
+                    rightsFilters: rightsFilters,
+                    dateLastModified: now,
+                    thumbnailImageId: thumbnailImageId
                 }
                 : s
         ));
@@ -945,7 +1080,7 @@ const Facets: React.FC<FacetsProps> = ({
         setEditLinkText('');
         setEditingSearchName('');
         setEditingSearchId(null);
-    };
+    }, [editingSearchId, selectedMarkets, selectedMediaChannels, rightsStartDate, rightsEndDate, query, facetCheckedState, selectedNumericFilters, savedSearches, editingSearchName, searchResults]);
 
     return (
         <>
@@ -1013,91 +1148,21 @@ const Facets: React.FC<FacetsProps> = ({
                                 const checkedCount = getCheckedCount(facetTechId);
 
                                 return (
-                                    <>
-                                        {facetTechId === 'tccc-rightsStartDate' && (
-                                            <div className="facet-rights-section">
-                                                <label className="facet-rights-label">Check Rights Filters</label>
-                                            </div>
-                                        )}
-                                        <div key={facetTechId} className="facet-filter-section">
-                                            {/* Render each facet search button */}
-                                            {facetSearchMode[facetTechId] ? (
-                                                <div className="facet-filter-button facet-filter-button-search">
-                                                    <div className="facet-search-container">
-                                                        <div className="facet-search-input-wrapper">
-                                                            <img
-                                                                src="/icons/search.svg"
-                                                                alt="Search"
-                                                                className="facet-search-icon-inside"
-                                                            />
-                                                            <input
-                                                                type="text"
-                                                                className="facet-search-input"
-                                                                placeholder={`Search ${label}...`}
-                                                                value={facetSearchTerms[facetTechId] || ''}
-                                                                autoFocus
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                onChange={(e) => handleFacetSearchChange(facetTechId, e.target.value)}
-                                                                onKeyDown={(e) => {
-                                                                    if (e.key === 'Escape') {
-                                                                        setFacetSearchMode(prev => ({ ...prev, [facetTechId]: false }));
-                                                                        setFacetSearchTerms(prev => ({ ...prev, [facetTechId]: '' }));
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <img
-                                                                src="/icons/close-menu.svg"
-                                                                alt="Close"
-                                                                className="facet-search-close-icon"
-                                                                onClick={(e) => toggleFacetSearch(facetTechId, e)}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div className="facet-filter-right-section">
-                                                        {checkedCount > 0 && (
-                                                            <div className="assets-details-tag tccc-tag facet-filter-count-tag">{checkedCount}</div>
-                                                        )}
-                                                        <span
-                                                            className={`facet-filter-arrow-top-level ${expandedFacets[facetTechId] ? 'expanded' : ''}`}
-                                                            onClick={() => toggle(facetTechId)}
-                                                        >
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                // Render each facet button
-                                                <div
-                                                    className="facet-filter-button"
-                                                    tabIndex={0}
-                                                    aria-expanded={!!expandedFacets[facetTechId]}
-                                                    onClick={() => toggle(facetTechId)}
-                                                >
-                                                    <span
-                                                        className="facet-filter-label"
-                                                    >{label}</span>
-                                                    <div className="facet-filter-right-section">
-                                                        {checkedCount > 0 && (
-                                                            <div className="assets-details-tag tccc-tag facet-filter-count-tag">{checkedCount}</div>
-                                                        )}
-                                                        {expandedFacets[facetTechId] && facet.type !== 'date' && (
-                                                            <img
-                                                                src="/icons/search.svg"
-                                                                alt="Search"
-                                                                className="facet-search-trigger"
-                                                                onClick={(e) => toggleFacetSearch(facetTechId, e)}
-                                                            />
-                                                        )}
-                                                        <span
-                                                            className={`facet-filter-arrow ${expandedFacets[facetTechId] ? 'expanded' : ''}`}
-                                                        ></span>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* For each facet, render the appropriate checkboxes and hierarchy if needed */}
-                                            {renderFacetsFromSearchResult(facetTechId)}
-                                        </div >
-                                    </>
+                                    <FacetItem
+                                        key={facetTechId}
+                                        facetTechId={facetTechId}
+                                        facet={facet}
+                                        label={label}
+                                        isExpanded={!!expandedFacets[facetTechId]}
+                                        isSearchMode={!!facetSearchMode[facetTechId]}
+                                        searchTerm={facetSearchTerms[facetTechId] || ''}
+                                        checkedCount={checkedCount}
+                                        onToggle={toggle}
+                                        onToggleSearch={toggleFacetSearch}
+                                        onSearchChange={handleFacetSearchChange}
+                                        onSearchEscape={handleFacetSearchEscape}
+                                        renderContent={renderFacetsFromSearchResult}
+                                    />
                                 );
                             })}
                         </div >

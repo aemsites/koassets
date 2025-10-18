@@ -25,7 +25,6 @@ cd koassets-react && npm run build:template
 ```html
 <script>
   window.APP_CONFIG = {
-    BUCKET: "${BUCKET}",
   };
 </script>
 ```
@@ -35,9 +34,6 @@ cd koassets-react && npm run build:template
 ```bash
 # Using envsubst (Linux/Unix)
 envsubst < index.html > index.html.tmp && mv index.html.tmp index.html
-
-# Using sed (Linux/Unix)
-sed -i "s/\${BUCKET}/$BUCKET/g" index.html
 
 # Using Node.js/PHP/Python server-side templating
 # Process the template with your preferred templating engine
@@ -50,13 +46,13 @@ sed -i "s/\${BUCKET}/$BUCKET/g" index.html
 **Zsh/Bash:**
 
 ```bash
-cd koassets-react && VITE_BUCKET=your-bucket-name npm run build:embed
+cd koassets-react && npm run build:embed
 ```
 
 **PowerShell:**
 
 ```powershell
-cd koassets-react; $env:$env:VITE_BUCKET="your-bucket-name"; npm run build:embed
+cd koassets-react; npm run build:embed
 ```
 
 **Result:** Config embedded in `index.html`:
@@ -64,7 +60,6 @@ cd koassets-react; $env:$env:VITE_BUCKET="your-bucket-name"; npm run build:embed
 ```html
 <script>
   window.APP_CONFIG = {
-    BUCKET: "your-bucket-name",
   };
 </script>
 ```

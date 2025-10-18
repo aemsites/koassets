@@ -23,10 +23,6 @@ export async function originHelix(request, env) {
     });
   }
 
-  if (url.pathname.startsWith('/drafts/')) {
-    return new Response('Not Found', { status: 404 });
-  }
-
   if (isRUMRequest(url)) {
     // only allow GET, POST, OPTIONS
     if (!['GET', 'POST', 'OPTIONS'].includes(request.method)) {
@@ -79,7 +75,7 @@ export async function originHelix(request, env) {
   req.headers.set('x-forwarded-host', req.headers.get('host'));
   req.headers.set('x-byo-cdn-type', 'cloudflare');
   if (env.HELIX_ORIGIN_AUTHENTICATION) {
-    req.headers.set('authorization', `token ${env.HELIX_ORIGIN_AUTHENTICATION}`);
+    req.headers.set('authorization', `token ${await env.HELIX_ORIGIN_AUTHENTICATION.get()}`);
   }
   const pushInvalidation = env.HELIX_PUSH_INVALIDATION !== 'disabled';
   if (pushInvalidation) {

@@ -11,6 +11,13 @@ export interface RightsData {
     children?: RightsData[];
 }
 
+export interface RightsFilters {
+    rightsStartDate: DateValue | null;
+    rightsEndDate: DateValue | null;
+    markets: Set<RightsData>;
+    mediaChannels: Set<RightsData>;
+}
+
 // Step form data interfaces for persistence
 export interface RequestDownloadStepData {
     airDate?: import('@internationalized/date').CalendarDate | null;
@@ -93,7 +100,7 @@ export interface Asset {
     expired?: string;
     expirationDate?: string | number;
     fadelId?: string;
-    format?: string;
+    format?: string; // e.g. "application/pdf", "image/jpeg", "video/mp4"
     formatType?: string;
     formatLabel?: string;
     japaneseDescription?: string;
@@ -207,6 +214,8 @@ export interface AssetCardProps {
     onCheckboxChange?: (id: string, checked: boolean) => void;
     expandAllDetails?: boolean;
     index?: number; // Index in the list - used for LCP optimization
+    onFacetCheckbox?: (key: string, facet: string) => void;
+    onClearAllFacets?: () => void;
 }
 
 // Query and filter types
@@ -303,24 +312,25 @@ export interface SavedSearch {
     id: string;
     name: string;
     searchTerm: string;
-    facetFilters: string[][];
+    facetFilters: FacetCheckedState;
     numericFilters: string[];
+    rightsFilters: RightsFilters;
     dateCreated: number;
     dateLastModified: number;
     dateLastUsed?: number;
     favorite: boolean;
     searchType?: string; // The search type path (e.g., '/search/all', '/search/assets', '/search/products')
+    thumbnailImageId?: string; // Asset ID of the first image in search results for preview
 }
 
 export interface FacetValue {
     label: string;
     type: string;
+    sortDirection?: string; // 'asc' or 'desc'
 }
 
 export interface FacetsProps {
     searchResults?: SearchResults['results'] | null;
-    selectedFacetFilters?: string[][];
-    setSelectedFacetFilters: React.Dispatch<React.SetStateAction<string[][]>>;
     search: (searchQuery?: string) => void;
     excFacets?: Record<string, FacetValue>;
     selectedNumericFilters?: string[];
@@ -338,6 +348,10 @@ export interface FacetsProps {
     setSelectedMarkets: React.Dispatch<React.SetStateAction<Set<RightsData>>>;
     selectedMediaChannels: Set<RightsData>;
     setSelectedMediaChannels: React.Dispatch<React.SetStateAction<Set<RightsData>>>;
+    facetCheckedState: FacetCheckedState;
+    setFacetCheckedState: React.Dispatch<React.SetStateAction<FacetCheckedState>>;
+    onFacetCheckbox: (key: string, facet: string) => void;
+    onClearAllFacets?: (clearFunction: () => void) => void;
 }
 
 // Phase 3 Component Types
@@ -370,6 +384,10 @@ export interface ExternalParams {
         username?: string;
         password?: string;
     }];
+    campaignNameValueMapping?: Record<string, string>;
+    intendedBottlerCountryValueMapping?: Record<string, string>;
+    packageContainerSizeValueMapping?: Record<string, string>;
+    agencyNameValueMapping?: Record<string, string>;
 }
 
 // Image Gallery types
@@ -410,6 +428,8 @@ export interface ImageGalleryProps {
     };
     fetchAssetRenditions?: (asset: Asset) => Promise<void>;
     isRightsSearch?: boolean;
+    onFacetCheckbox?: (key: string, facet: string) => void;
+    onClearAllFacets?: () => void;
 }
 
 // Main App types (for the most complex component)
@@ -520,7 +540,7 @@ export interface AlgoliaSearchParams {
 }
 
 export interface AlgoliaSearchRequest {
-    indexName: string;
+    indexName?: string;
     params: AlgoliaSearchParams;
 }
 
@@ -727,9 +747,7 @@ export interface Metadata {
 declare global {
     interface Window {
         // Configuration objects
-        APP_CONFIG?: {
-            BUCKET?: string;
-        };
+        APP_CONFIG?: object;
         KOAssetsConfig?: {
             externalParams?: ExternalParams;
         };

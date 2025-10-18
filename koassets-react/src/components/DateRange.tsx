@@ -1,7 +1,8 @@
-import { forwardRef, useImperativeHandle, useState } from 'react';
+import { forwardRef, useImperativeHandle, useState, useEffect } from 'react';
 import { DateValue } from 'react-aria-components';
 import './DateRange.css';
 import MyDatePicker from './MyDatePicker';
+import { parseNumericFiltersForDates, calendarDatesAreEqual } from '../utils/formatters';
 
 interface DateRangeProps {
     onDateRangeChange?: (startDate: Date | undefined, endDate: Date | undefined) => void;
@@ -15,6 +16,22 @@ export interface DateRangeRef {
 const DateRange = forwardRef<DateRangeRef, DateRangeProps>(({ onDateRangeChange, selectedNumericFilters }, ref) => {
     const [startDate, setStartDate] = useState<DateValue | null>(null);
     const [endDate, setEndDate] = useState<DateValue | null>(null);
+
+    // Parse selectedNumericFilters to set start and end dates
+    useEffect(() => {
+        if (selectedNumericFilters.length > 0) {
+            const { startDate: parsedStartDate, endDate: parsedEndDate } = parseNumericFiltersForDates(selectedNumericFilters);
+
+            // Only update if we found valid dates and they're different from current state
+            if (parsedStartDate && !calendarDatesAreEqual(parsedStartDate, startDate)) {
+                setStartDate(parsedStartDate);
+            }
+
+            if (parsedEndDate && !calendarDatesAreEqual(parsedEndDate, endDate)) {
+                setEndDate(parsedEndDate);
+            }
+        }
+    }, [selectedNumericFilters, startDate, endDate, onDateRangeChange]);
 
     const handleChangeStartDate = (date: DateValue | null) => {
         setStartDate(date);
