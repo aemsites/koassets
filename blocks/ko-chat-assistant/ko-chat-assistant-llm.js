@@ -182,26 +182,33 @@ class WebLLMProvider extends LLMProvider {
       }
 
       const modelConfig = await configResponse.json();
-      console.log('[WebLLM] Model config fetched successfully');
+      console.log('[WebLLM] Model config fetched successfully:', modelConfig);
 
-      // Create appConfig with proxied URLs
-      // Note: model_url should be the base URL WITHOUT trailing slash
-      const modelBaseUrl = `${proxyBaseUrl}/${modelRepoPath}/resolve/main`;
+      // WebLLM expects specific fields in a specific structure
+      // Let's try to match the exact structure WebLLM's default models use
+      const modelBaseUrl = `${proxyBaseUrl}/${modelRepoPath}/resolve/main/`;
+      
+      const customModelRecord = {
+        model: `${modelBaseUrl}`,
+        model_id: this.modelId,
+        model_lib: `${modelBaseUrl}${this.modelId.replace(/-MLC$/, '')}-ctx2k_cs1k-webgpu.wasm`,
+        vram_required_MB: modelConfig.vram_required_MB || 2048,
+        low_resource_required: modelConfig.low_resource_required || false,
+        required_features: modelConfig.required_features || ['shader-f16'],
+        overrides: {
+          context_window_size: modelConfig.context_window_size || 2048,
+          prefill_chunk_size: modelConfig.prefill_chunk_size || 2048,
+        },
+      };
+      
+      console.log('[WebLLM] Custom model record:', customModelRecord);
+      
       const appConfig = {
-        model_list: [
-          {
-            ...modelConfig,
-            model_id: this.modelId,
-            model_url: modelBaseUrl,
-            // Keep tokenizer_files as relative paths - WebLLM will resolve them
-            // Keep model_lib as relative - WebLLM will resolve it
-          },
-        ],
+        model_list: [customModelRecord],
         useIndexedDBCache: true,
       };
       
       console.log('[WebLLM] Creating engine with custom proxy config');
-      console.log('[WebLLM] Model base URL:', modelBaseUrl);
 
       this.engine = await window.mlc.CreateMLCEngine(
         this.modelId,
