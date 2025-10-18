@@ -665,3 +665,20 @@
 
 
 
+
+.llm-init-cancel {
+  margin-top: 1.5rem;
+  padding: 0.5rem 1.5rem;
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #333;
+  transition: all 0.2s;
+}
+
+.llm-init-cancel:hover {
+  background: #e0e0e0;
+  border-color: #999;
+}

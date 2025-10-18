@@ -176,13 +176,18 @@ class WebLLMProvider extends LLMProvider {
         '/blocks/ko-chat-assistant/llm-worker.js',
         { type: 'module' }
       );
+      console.log('[WebLLM] Worker created successfully');
 
       // Create WebWorkerMLCEngine client (communicates with the worker)
+      console.log('[WebLLM] Calling CreateWebWorkerMLCEngine with model:', this.modelId);
+      console.log('[WebLLM] This may take a moment to initialize...');
+      
       this.engine = await window.mlc.CreateWebWorkerMLCEngine(
         worker,
         this.modelId,
         {
           initProgressCallback: (progress) => {
+            console.log('[WebLLM] Progress callback:', progress);
             this.handleInitProgress(progress);
           },
         }
