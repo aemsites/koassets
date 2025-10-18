@@ -14,12 +14,12 @@ function getEmailDomain(email) {
 
 function pushUnique(array, items) {
   items = Array.isArray(items) ? items : [items];
-  array.push(...items.filter(item => !array.includes(item)));
+  array.push(...items.filter((item) => !array.includes(item)));
 }
 
 async function getUserAttributes(env, user) {
-  const email = user.email;
-  const domain = user.domain;
+  const { email } = user;
+  const { domain } = user;
 
   const attributes = {
     roles: [],
@@ -42,9 +42,9 @@ async function getUserAttributes(env, user) {
   const companies = await fetchHelixSheet(env, '/config/access/companies', {
     sheets: {
       customers: { key: 'domain' },
-      bottlers:  { key: 'domain', arrays: ['countries'] },
-      agencies:  { key: 'domain' },
-    }
+      bottlers: { key: 'domain', arrays: ['countries'] },
+      agencies: { key: 'domain' },
+    },
   });
 
   if (companies) {
@@ -65,8 +65,8 @@ async function getUserAttributes(env, user) {
   const users = await fetchHelixSheet(env, '/config/access/users', {
     sheet: {
       key: 'email',
-      arrays: ['roles', 'bottlerCountries', 'customers']
-    }
+      arrays: ['roles', 'bottlerCountries', 'customers'],
+    },
   });
 
   const userOverride = users?.[email];
@@ -82,7 +82,7 @@ async function getUserAttributes(env, user) {
   }
 
   // make all attributes.bottlerCountries lowercase
-  attributes.bottlerCountries = attributes.bottlerCountries.map(c => c.toLowerCase());
+  attributes.bottlerCountries = attributes.bottlerCountries.map((c) => c.toLowerCase());
 
   return attributes;
 }
@@ -90,11 +90,10 @@ async function getUserAttributes(env, user) {
 async function handleSudo(request, env, user) {
   // check for any sudo request
   if (['SUDO_NAME',
-       'SUDO_EMAIL',
-       'SUDO_COUNTRY',
-       'SUDO_EMPLOYEE_TYPE',
-       ].some(c => request.cookies[c])) {
-
+    'SUDO_EMAIL',
+    'SUDO_COUNTRY',
+    'SUDO_EMPLOYEE_TYPE',
+  ].some((c) => request.cookies[c])) {
     // only certain super users are allowed to sudo
     if (!user.permissions.includes('sudo')) {
       console.warn('Sudo denied for user:', user.email);
@@ -140,7 +139,7 @@ async function handleSudo(request, env, user) {
  * @returns {Object} session or null/undefined if user is not allowed to access this application
  */
 export async function createSession(request, env) {
-  const idToken = request.idToken;
+  const { idToken } = request;
   if (!idToken && !idToken.email) {
     return null;
   }

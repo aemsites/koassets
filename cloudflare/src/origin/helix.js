@@ -117,4 +117,4 @@ export async function originHelix(request, env) {
   resp.headers.delete('age');
   resp.headers.delete('x-robots-tag');
   return resp;
-};
+}

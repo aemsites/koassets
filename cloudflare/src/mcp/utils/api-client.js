@@ -37,13 +37,41 @@ export async function makeApiRequest(endpoint, options = {}, env, request) {
   };
 
   console.log('[MCP API Client] Making request...');
-  const response = await fetch(url, fetchOptions);
+  
+  let response;
+  try {
+    response = await fetch(url, fetchOptions);
+  } catch (fetchError) {
+    console.error('[MCP API Client] ❌ Fetch error:', fetchError);
+    throw new Error(`Network error calling ${url}: ${fetchError.message}`);
+  }
+  
   console.log('[MCP API Client] Response status:', response.status, response.statusText);
 
   if (!response.ok) {
     const errorText = await response.text();
     console.error('[MCP API Client] ❌ Error response:', errorText);
-    throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
+    
+    // Create detailed error message
+    const errorDetails = {
+      url,
+      method: options.method || 'GET',
+      status: response.status,
+      statusText: response.statusText,
+      body: errorText,
+      baseUrl,
+      endpoint,
+    };
+    
+    throw new Error(
+      `API request failed:\n` +
+      `URL: ${url}\n` +
+      `Method: ${options.method || 'GET'}\n` +
+      `Status: ${response.status} ${response.statusText}\n` +
+      `Response: ${errorText}\n` +
+      `Base URL: ${baseUrl}\n` +
+      `Endpoint: ${endpoint}`
+    );
   }
 
   console.log('[MCP API Client] ✅ Request successful');
