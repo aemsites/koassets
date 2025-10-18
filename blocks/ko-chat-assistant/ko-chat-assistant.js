@@ -189,8 +189,21 @@ async function initializeLLM() {
 
     // Ensure Service Worker is ready
     console.log('[Chat] Waiting for Service Worker to be ready...');
-    await navigator.serviceWorker.ready;
-    console.log('[Chat] Service Worker is ready');
+    
+    // Add timeout to detect if Service Worker hangs
+    const readyPromise = navigator.serviceWorker.ready;
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Service Worker ready timeout after 10s')), 10000)
+    );
+    
+    try {
+      await Promise.race([readyPromise, timeoutPromise]);
+      console.log('[Chat] Service Worker is ready');
+    } catch (timeoutError) {
+      console.error('[Chat] Service Worker ready timeout:', timeoutError);
+      // Continue anyway - SW might be functional
+      console.warn('[Chat] Continuing with initialization despite timeout...');
+    }
 
     // Create LLM Manager and MCP Client
     llmManager = new window.LLMManager();
