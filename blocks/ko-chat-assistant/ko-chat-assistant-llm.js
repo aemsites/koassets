@@ -50,10 +50,11 @@ class WebLLMProvider extends LLMProvider {
     this.engine = null;
     this.status = 'uninitialized'; // uninitialized, downloading, loading, ready, error
     this.downloadProgress = 0;
-    // Use a valid pre-built WebLLM model that's hosted on WebLLM's CDN
+    // Use a valid pre-built WebLLM model that's in version 0.2.63
     // List: https://github.com/mlc-ai/web-llm/blob/main/src/config.ts
-    // Using Phi-2 which is small (~1.7GB) and has all required files
-    this.modelId = 'Phi-2-q4f16_1-MLC';
+    // TinyLlama is small (~600MB) and definitely in 0.2.63
+    // WASM files are hosted on WebLLM's binary CDN, not on HuggingFace
+    this.modelId = 'TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC';
     this.initCallbacks = [];
     this.originalFetch = null; // Store original fetch for cleanup
   }
