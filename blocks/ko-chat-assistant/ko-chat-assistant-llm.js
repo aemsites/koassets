@@ -82,14 +82,35 @@ class WebLLMProvider extends LLMProvider {
 
       console.log('[WebLLM] Creating engine with model ID:', this.modelId);
 
-      // Create engine with progress callback
+      // Create custom model config that uses our Cloudflare proxy
+      // This bypasses CORS issues with Hugging Face
+      const proxyBaseUrl = `${window.location.origin}/api/hf-proxy`;
+      const modelUrl = `${proxyBaseUrl}/mlc-ai/${this.modelId}`;
+
+      console.log('[WebLLM] Using proxy URL:', modelUrl);
+
+      // Create custom appConfig with proxied URLs
+      const appConfig = {
+        model_list: [
+          {
+            model_url: modelUrl,
+            model_id: this.modelId,
+            model_lib_url: `${proxyBaseUrl}/mlc-ai/${this.modelId}/resolve/main/${this.modelId.replace(/-MLC$/, '')}-ctx2k_cs1k-webgpu.wasm`,
+          },
+        ],
+      };
+
+      // Create engine with custom config
+      const config = {
+        appConfig,
+        initProgressCallback: (progress) => {
+          this.handleInitProgress(progress);
+        },
+      };
+
       this.engine = await window.mlc.CreateMLCEngine(
         this.modelId,
-        {
-          initProgressCallback: (progress) => {
-            this.handleInitProgress(progress);
-          },
-        },
+        config,
       );
 
       console.log('[WebLLM] Engine created successfully');
@@ -133,10 +154,11 @@ class WebLLMProvider extends LLMProvider {
       }
 
       // Try multiple CDN sources in order of preference
+      // Using newer versions which have better CORS support
       const cdnUrls = [
-        'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.46/+esm',
-        'https://esm.run/@mlc-ai/web-llm@0.2.46',
-        'https://esm.run/@mlc-ai/web-llm',
+        'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.63/+esm',
+        'https://esm.run/@mlc-ai/web-llm@0.2.63',
+        'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@latest/+esm',
       ];
 
       let lastError;

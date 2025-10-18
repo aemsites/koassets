@@ -11,14 +11,15 @@
  */
 
 import { error, Router, withCookies } from 'itty-router';
-import { authRouter, withAuthentication } from './auth';
-import { originDynamicMedia } from './origin/dm';
-import { originHelix } from './origin/helix';
-import { originFadel } from './origin/fadel';
-import { cors } from './util/itty';
-import { apiMcp } from './mcp/mcp.js';
-import { apiUser } from './user';
 import { savedSearchesApi } from './api/savedsearches';
+import { authRouter, withAuthentication } from './auth';
+import { apiMcp } from './mcp/mcp.js';
+import { originDynamicMedia } from './origin/dm';
+import { originFadel } from './origin/fadel';
+import { originHelix } from './origin/helix';
+import { proxyHuggingFace } from './proxy/huggingface.js';
+import { apiUser } from './user';
+import { cors } from './util/itty';
 
 // Shared CORS origins
 const allowedOrigins = [
@@ -72,6 +73,9 @@ const router = Router({
 });
 
 router
+  // Hugging Face proxy for WebLLM models (no auth required)
+  .get('/api/hf-proxy/*', proxyHuggingFace)
+
   // public content
   .get('/public/*', originHelix)
   .get('/tools/*', originHelix)
@@ -117,4 +121,4 @@ router
 
   .all('*', originHelix);
 
-export default { ...router }
+export default { ...router };
