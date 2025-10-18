@@ -161,55 +161,24 @@ class WebLLMProvider extends LLMProvider {
       this.installGlobalFetchProxy();
 
       // Check if WebLLM library is loaded
-      if (typeof window.mlc === 'undefined' || typeof window.mlc.CreateWebWorkerMLCEngine === 'undefined') {
+      if (typeof window.mlc === 'undefined' || typeof window.mlc.CreateMLCEngine === 'undefined') {
         await this.loadWebLLMLibrary();
       }
 
       this.status = 'downloading';
       this.notifyStatusChange();
 
-      console.log('[WebLLM] Creating Web Worker for MLCEngine');
-      console.log('[WebLLM] This runs the model in a separate thread for better performance');
+      console.log('[WebLLM] Creating MLCEngine in main thread (like the Medium article)');
+      console.log('[WebLLM] Using model:', this.modelId);
 
-      // Create a Web Worker to run the MLCEngine
-      const worker = new Worker(
-        '/blocks/ko-chat-assistant/llm-worker.js',
-        { type: 'module' }
-      );
-      console.log('[WebLLM] Worker created successfully');
-
-      // Unregister any old Service Workers that might interfere
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        // eslint-disable-next-line no-restricted-syntax
-        for (const registration of registrations) {
-          console.log('[WebLLM] Unregistering old Service Worker:', registration.scope);
-          // eslint-disable-next-line no-await-in-loop
-          await registration.unregister();
-        }
-      }
-
-      // Create WebWorkerMLCEngine client (communicates with the worker)
-      console.log('[WebLLM] Calling CreateWebWorkerMLCEngine with model:', this.modelId);
-      console.log('[WebLLM] This may take a moment to initialize...');
-      
-      // Add timeout to detect if it hangs
-      const enginePromise = window.mlc.CreateWebWorkerMLCEngine(
-        worker,
-        this.modelId,
-        {
-          initProgressCallback: (progress) => {
-            console.log('[WebLLM] Progress callback:', progress);
-            this.handleInitProgress(progress);
-          },
-        }
-      );
-      
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('CreateWebWorkerMLCEngine timeout after 30 seconds')), 30000);
+      // Simple approach: CreateMLCEngine directly (no Web Worker)
+      this.engine = await window.mlc.CreateMLCEngine(this.modelId, {
+        initProgressCallback: (progress) => {
+          console.log('[WebLLM] Progress:', progress);
+          this.handleInitProgress(progress);
+        },
+        logLevel: 'INFO',
       });
-      
-      this.engine = await Promise.race([enginePromise, timeoutPromise]);
 
       console.log('[WebLLM] Model loaded successfully');
 
@@ -277,7 +246,7 @@ class WebLLMProvider extends LLMProvider {
   async loadWebLLMLibrary() {
     try {
       // Check if already loaded
-      if (window.mlc?.CreateWebWorkerMLCEngine) {
+      if (window.mlc?.CreateMLCEngine) {
         return;
       }
 
