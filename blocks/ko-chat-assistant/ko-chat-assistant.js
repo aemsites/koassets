@@ -252,10 +252,17 @@ function showInitializationUI() {
         <span id="llm-init-progress-text" class="llm-init-progress-text">0%</span>
       </div>
       <p class="llm-init-note">This may take a few minutes on first use. The model will be cached for future visits.</p>
+      <button id="llm-init-cancel" class="llm-init-cancel">Cancel and Close</button>
     </div>
   `;
 
   messagesContainer.parentElement.appendChild(overlay);
+  
+  // Add cancel button handler
+  document.getElementById('llm-init-cancel')?.addEventListener('click', () => {
+    console.warn('[Chat] User cancelled LLM initialization');
+    hideInitializationUI();
+  });
 
   // Disable input
   const input = document.getElementById('chat-input');
