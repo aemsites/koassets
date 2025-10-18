@@ -127,10 +127,7 @@ async function registerServiceWorker() {
 
     const registration = await navigator.serviceWorker.register(
       '/blocks/ko-chat-assistant/sw.js',
-      { 
-        scope: '/blocks/ko-chat-assistant/',
-        type: 'module' // ES module support
-      },
+      { scope: '/blocks/ko-chat-assistant/' },
     );
 
     console.log('[Chat] Service Worker registered:', registration.scope);
@@ -181,29 +178,7 @@ async function registerServiceWorker() {
 
 async function initializeLLM() {
   try {
-    // Register Service Worker first (required for WebLLM)
-    const swRegistered = await registerServiceWorker();
-    if (!swRegistered) {
-      throw new Error('Service Worker registration failed. WebLLM requires Service Worker support.');
-    }
-
-    // Ensure Service Worker is ready
-    console.log('[Chat] Waiting for Service Worker to be ready...');
-    
-    // Add timeout to detect if Service Worker hangs
-    const readyPromise = navigator.serviceWorker.ready;
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Service Worker ready timeout after 10s')), 10000)
-    );
-    
-    try {
-      await Promise.race([readyPromise, timeoutPromise]);
-      console.log('[Chat] Service Worker is ready');
-    } catch (timeoutError) {
-      console.error('[Chat] Service Worker ready timeout:', timeoutError);
-      // Continue anyway - SW might be functional
-      console.warn('[Chat] Continuing with initialization despite timeout...');
-    }
+    console.log('[Chat] Initializing LLM...');
 
     // Create LLM Manager and MCP Client
     llmManager = new window.LLMManager();

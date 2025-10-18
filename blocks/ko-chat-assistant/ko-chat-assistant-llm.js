@@ -158,23 +158,17 @@ class WebLLMProvider extends LLMProvider {
 
     try {
       // Check if WebLLM library is loaded
-      if (typeof window.mlc === 'undefined' || typeof window.mlc.ServiceWorkerMLCEngine === 'undefined') {
+      if (typeof window.mlc === 'undefined' || typeof window.mlc.CreateMLCEngine === 'undefined') {
         await this.loadWebLLMLibrary();
       }
 
       this.status = 'downloading';
       this.notifyStatusChange();
 
-      console.log('[WebLLM] Creating ServiceWorkerMLCEngine');
-      console.log('[WebLLM] Service Worker will handle all model loading and execution');
+      console.log('[WebLLM] Creating MLCEngine (WebGPU-based, runs in main thread)');
 
-      // Create ServiceWorkerMLCEngine instance
-      this.engine = new window.mlc.ServiceWorkerMLCEngine();
-
-      console.log('[WebLLM] Loading model:', this.modelId);
-
-      // Load the model (this communicates with the Service Worker)
-      await this.engine.reload(this.modelId, {
+      // Create regular MLCEngine instance (runs in main thread with WebGPU)
+      this.engine = await window.mlc.CreateMLCEngine(this.modelId, {
         initProgressCallback: (progress) => {
           this.handleInitProgress(progress);
         },
