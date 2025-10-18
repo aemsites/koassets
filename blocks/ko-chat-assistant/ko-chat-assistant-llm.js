@@ -68,8 +68,8 @@ class WebLLMProvider extends LLMProvider {
 
     console.log('[WebLLM] Installing fetch interceptor for HuggingFace proxy');
 
-    // Store original fetch
-    this.originalFetch = window.fetch;
+    // Store original fetch with proper binding to window
+    this.originalFetch = window.fetch.bind(window);
     const proxyBaseUrl = `${window.location.origin}/api/hf-proxy`;
     const { originalFetch } = this;
 
