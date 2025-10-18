@@ -141,7 +141,8 @@ class WebLLMProvider extends LLMProvider {
   }
 
   /**
-   * Initialize WebLLM engine and download/load model
+   * Initialize WebLLM engine using Service Worker
+   * Uses WebLLM's built-in ServiceWorkerMLCEngine
    */
   async initialize() {
     if (this.status === 'ready') {
@@ -156,33 +157,30 @@ class WebLLMProvider extends LLMProvider {
     }
 
     try {
-      // CRITICAL: Install fetch interceptor BEFORE loading WebLLM library
-      // This ensures WebLLM uses our patched fetch from the start
-      this.installFetchInterceptor();
-
       // Check if WebLLM library is loaded
-      if (typeof window.mlc === 'undefined' || typeof window.mlc.CreateMLCEngine === 'undefined') {
+      if (typeof window.mlc === 'undefined' || typeof window.mlc.ServiceWorkerMLCEngine === 'undefined') {
         await this.loadWebLLMLibrary();
       }
 
       this.status = 'downloading';
       this.notifyStatusChange();
 
-      console.log('[WebLLM] Creating engine with model ID:', this.modelId);
-      console.log('[WebLLM] Using WebLLM default config (models hosted on their CDN)');
+      console.log('[WebLLM] Creating ServiceWorkerMLCEngine');
+      console.log('[WebLLM] Service Worker will handle all model loading and execution');
 
-      // Use WebLLM's default configuration
-      // This will download from WebLLM's CDN which has all required files
-      this.engine = await window.mlc.CreateMLCEngine(
-        this.modelId,
-        {
-          initProgressCallback: (progress) => {
-            this.handleInitProgress(progress);
-          },
+      // Create ServiceWorkerMLCEngine instance
+      this.engine = new window.mlc.ServiceWorkerMLCEngine();
+
+      console.log('[WebLLM] Loading model:', this.modelId);
+
+      // Load the model (this communicates with the Service Worker)
+      await this.engine.reload(this.modelId, {
+        initProgressCallback: (progress) => {
+          this.handleInitProgress(progress);
         },
-      );
+      });
 
-      console.log('[WebLLM] Engine created successfully');
+      console.log('[WebLLM] Model loaded successfully');
 
       this.status = 'ready';
       this.downloadProgress = 100;
