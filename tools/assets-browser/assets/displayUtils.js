@@ -1,0 +1,2 @@
+import{l as a}from"./index.js";const n=(n,e)=>{var c,t,i,l;const o=a();return"tccc-campaignName"===n?(null==(c=o.campaignNameValueMapping)?void 0:c[e])||e:"tccc-intendedBottlerCountry"===n?(null==(t=o.intendedBottlerCountryValueMapping)?void 0:t[e])||e:"tccc-packageContainerSize"===n?(null==(i=o.packageContainerSizeValueMapping)?void 0:i[e])||e:"tccc-agencyName"===n&&(null==(l=o.agencyNameValueMapping)?void 0:l[e])||e},e=(a,e)=>n(`tccc-${a}`,e);export{e as a,n as g};
+//# sourceMappingURL=displayUtils.js.map

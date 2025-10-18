@@ -209,6 +209,19 @@ header .header-bar .my-account .avatar {
   margin-right: 4px;
   padding: 4px;
   text-align: center;
+  position: relative;
+}
+
+header .header-bar .my-account .avatar .impersonation-indicator {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  background-color: #ed0000;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgb(0 0 0 / 20%);
 }
 
 header .header-bar .my-account-button:hover {

@@ -1,4 +1,5 @@
-import type { CalendarDate } from '@internationalized/date';
+import { CalendarDate } from '@internationalized/date';
+import { DateValue } from 'react-aria-components';
 
 // Helper to convert markdown to HTML
 export const markdownToHtml = (markdown: string): string => {
@@ -172,4 +173,47 @@ export const calendarDateToEpoch = (calendarDate: CalendarDate | null | undefine
     if (!calendarDate) return 0;
     const date = new Date(calendarDate.year, calendarDate.month - 1, calendarDate.day);
     return date.getTime();
+};
+
+// Helper function to convert epoch timestamp to CalendarDate
+export const epochToCalendarDate = (epochSeconds: number): CalendarDate => {
+    const date = new Date(epochSeconds * 1000); // Convert seconds to milliseconds
+    return new CalendarDate(
+        date.getFullYear(),
+        date.getMonth() + 1, // CalendarDate uses 1-based months
+        date.getDate()
+    );
+};
+
+// Helper function to compare CalendarDate objects
+export const calendarDatesAreEqual = (date1: CalendarDate | null, date2: DateValue | null): boolean => {
+    if (!date1 || !date2) return false;
+    const cal2 = date2 as CalendarDate;
+    return date1.year === cal2.year && date1.month === cal2.month && date1.day === cal2.day;
+};
+
+// Helper function to parse numeric filters and extract date values
+export const parseNumericFiltersForDates = (selectedNumericFilters: string[]): { 
+    startDate: CalendarDate | null; 
+    endDate: CalendarDate | null 
+} => {
+    let parsedStartDate: CalendarDate | null = null;
+    let parsedEndDate: CalendarDate | null = null;
+
+    selectedNumericFilters.forEach(filter => {
+        // Parse filters like 'repo-createDate >= 1672560000' or 'repo-createDate <= 1735718400'
+        const match = filter.match(/repo-createDate\s*([><=]+)\s*(\d+)/);
+        if (match) {
+            const operator = match[1].trim();
+            const epochValue = parseInt(match[2], 10);
+            
+            if (operator === '>=' && !parsedStartDate) {
+                parsedStartDate = epochToCalendarDate(epochValue);
+            } else if (operator === '<=' && !parsedEndDate) {
+                parsedEndDate = epochToCalendarDate(epochValue);
+            }
+        }
+    });
+
+    return { startDate: parsedStartDate, endDate: parsedEndDate };
 }; 

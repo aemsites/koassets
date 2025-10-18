@@ -363,8 +363,12 @@ async function createHeaderBar() {
     myAccount.className = 'my-account';
     const myAccountButton = document.createElement('div');
     myAccountButton.className = 'my-account-button';
+    const impersonationIndicator = window.user.su ? '<span class="impersonation-indicator"></span>' : '';
     myAccountButton.innerHTML = `
-      <div class="avatar">${getUserInitials()}</div>
+      <div class="avatar">
+        ${getUserInitials()}
+        ${impersonationIndicator}
+      </div>
       My Account
       <span class="down-arrow-icon"></span>
     `;

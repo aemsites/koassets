@@ -145,12 +145,6 @@
     word-wrap: break-word;
 }
 
-.asset-type {
-    font-size: 12px;
-    color: #666;
-    font-weight: 600;
-}
-
 /* Request Rights Extension Form Column */
 .cart-request-rights-extension-form {
     display: flex;

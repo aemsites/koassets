@@ -17,23 +17,53 @@ import { originHelix } from './origin/helix';
 import { originFadel } from './origin/fadel';
 import { cors } from './util/itty';
 import { apiMcp } from './mcp/mcp.js';
+import { apiUser } from './user';
+import { savedSearchesApi } from './api/savedsearches';
 
+// Shared CORS origins
+const allowedOrigins = [
+  'https://koassets.adobeaem.workers.dev',
+  // development URLs
+  /https:\/\/.*-koassets\.adobeaem\.workers\.dev$/,
+  /https:\/\/.*-koassets--aemsites\.aem\.(live|page)$/,
+  /http:\/\/localhost:(3000|8787)/
+];
+
+// Standard CORS for most routes (GET, POST only)
 const { preflight, corsify } = cors({
-  origin: [
-    'https://koassets.adobeaem.workers.dev',
-    // development URLs
-    /https:\/\/.*-koassets\.adobeaem\.workers\.dev$/,
-    /https:\/\/.*-koassets--aemsites\.aem\.(live|page)$/,
-    /http:\/\/localhost:(3000|8787)/
-  ],
+  origin: allowedOrigins,
   allowMethods: ['GET', 'POST'],
   credentials: true,
   maxAge: 600,
 });
 
+// Extended CORS for Saved Searches API routes (includes DELETE, PUT)
+const { preflight: savedSearchesPreflight, corsify: savedSearchesCorsify } = cors({
+  origin: allowedOrigins,
+  allowMethods: ['GET', 'POST', 'DELETE', 'PUT'],
+  credentials: true,
+  maxAge: 600,
+});
+
+// Middleware to apply extended CORS for saved searches routes
+const savedSearchesCorsMiddleware = (request) => {
+  if (request.url.includes('/api/savedsearches/')) {
+    return savedSearchesPreflight(request);
+  }
+  return preflight(request);
+};
+
+// Finally middleware that applies appropriate CORS
+const finalCorsMiddleware = (response, request) => {
+  if (request.url.includes('/api/savedsearches/')) {
+    return savedSearchesCorsify(response, request);
+  }
+  return corsify(response, request);
+};
+
 const router = Router({
-  before: [preflight],
-  finally: [corsify],
+  before: [savedSearchesCorsMiddleware],
+  finally: [finalCorsMiddleware],
   catch: (err) => {
     // log stack traces for debugging
     console.error('error', err);
@@ -55,12 +85,21 @@ router
 
   // parse cookies (middleware)
   .all('*', withCookies)
+  // decode cookie values (not done by itty-router withCookies)
+  .all('*', (request) => {
+    for (const key in request.cookies) {
+      request.cookies[key] = decodeURIComponent(request.cookies[key]);
+    }
+  })
 
   // authentication flows (/auth/* by default)
   .all(authRouter.route, authRouter.fetch)
 
   // from here on authentication required (middleware)
   .all('*', withAuthentication)
+
+  // user info
+  .get('/api/user', apiUser)
 
   // dynamic media
   .all('/api/adobe/assets/*', originDynamicMedia)
@@ -70,6 +109,8 @@ router
 
   // MCP (Model Context Protocol) - AI assistant tools
   .all('/api/mcp*', apiMcp)
+  // Saved Searches API (with extended CORS for DELETE/PUT)
+  .all('/api/savedsearches/*', savedSearchesApi)
 
   // future API routes
   .all('/api/*', () => error(404))

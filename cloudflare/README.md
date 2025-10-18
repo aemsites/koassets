@@ -12,13 +12,16 @@ A Cloudflare Worker that acts as outermost CDN for the KO Assets project with so
 
 Here are the various URL paths handled by the worker:
 
-| Path | Auth | Origin | Proxied Path |
-|------|------|--------|--------------|
-| `/auth/*` | - | Authentication flows, handled internally. | - |
-| `/api/adobe/assets/*` | yes | AdobeDynamic Media OpenAPI | Everything after `/api` |
-| `/api/fadel/*` | yes | Fadel API | Everything after `/api/fadel` |
-| `/public/*`<br>`/scripts/*`<br>`/styles/*` | no | Public content and code from Adobe Helix. [Full list](src/index.js#L44). | `/*` |
-| `/*` | yes | Adobe Helix content | `/*` |
+| Path                   | Authenticated | Description | Origin | Proxied Path |
+|------------------------|---------------|-------------|--------|--------------|
+| `/auth/*`              | 🟡 | 🔑  Authentication flows | - | - |
+| `/api/user`            | ✅ | 👤  User session API (based on session cookie) | - | - |
+| `/api/savedsearches/*` | ✅ | 🔎  Saved searches API (stored in Cloudflare KV) | - | - |
+| `/api/adobe/assets/*`  | ✅ | 🖼️  Adobe Dynamic Media OpenAPI | `delivery-*.adobeaemcloud.com` | Everything after `/api` |
+| `/api/adobe/assets/search-collections`  | ✅ | 🖼️  Adobe Dynamic Media OpenAPI.<br><br>Search index `*_collections` | `delivery-*.adobeaemcloud.com` | `/adobe/assets/search` |
+| `/api/fadel/*`         | ✅ | 🚥  Fadel API | `*.fadelarc.net` | Everything after `/api/fadel` |
+| `/public/*`<br>`/scripts/*`<br>`/styles/*`<br>&nbsp;[more](src/index.js#L44) | ❌ | 🌎  Public content & code from Adobe Helix. | `*.aem.live` / `*.aem.page` | `/public/*`<br>`/scripts/*`<br>`/styles/*`<br>... |
+| `/*`                   | ✅ | 📑  Adobe Helix content | `*.aem.live` / `*.aem.page` | `/*` |
 
 
 ## Setup
@@ -200,3 +203,81 @@ This worker uses the following [Cloudflare KV](https://developers.cloudflare.com
 | Namespace Name | Namespace ID | Binding | Description |
 |----------------|--------------|---------|-------------|
 | `koassets-auth-tokens` | `975809e56a7a425aa006e156671bbecf` | `env.AUTH_TOKENS` | Stores authentication tokens for various origins. |
+
+## Permission Configuration
+
+Permissions for access the application and controlling access to assets is configured via AEM EDS sheets authored in [Document Authoring](https://docs.da.live/authors/guides/editing-sheets).
+
+The following sheets are used:
+
+| Sheet | Description |
+|-------|-------------|
+| `/config/access/permissions` | Application permissions. |
+| `/config/access/companies` | Company content permissions (by email domain) |
+| `/config/access/users` | User content permissions (by email address) |
+
+### Application Permissions
+
+Authored at `/config/access/permissions`.
+
+General notes:
+* Users or companies/domains MUST be listed here to be allowed to access the application. To give access to all users that the IDP allows for this application, add a row with `*` for the email address.
+* Permissions from domain, email and `*` are all considered if they match for a given user.
+
+| Column | Values| Description |
+|--------|-------|-------------|
+| `email` |  | Email address (to address a user) or domain (to address a company) or `*` for any user allowed by the IDP. |
+| | `example.com` | Domain to address a company. Matches all users with an email address ending in `@example.com`. |
+| | `user@example.com` | Email address to address an individual user. |
+| | `*` | Any user allowed by the IDP. |
+| `permissions` | | Comma separated list of permissions |
+| | `preview`  | User has access to preview environments (eg. https://preview-koassets.adobeaem.workers.dev), including branch deployments for development. |
+| | `sudo` | User can use the impersonation/user simulation feature. |
+
+### Content Permissions
+
+General notes:
+* Both company and user permissions will apply for a given user if they match their email address or domain.
+* If a user has no country configured in either companies or users sheets, the country field from the IDP will be used.
+
+#### Company permissions
+
+Authored at `/config/access/companies`.
+
+This has 3 sheets, one for each role: `customers`, `bottlers` and `agencies`.
+
+`customers` sheet:
+
+| Column | Values | Description |
+|--------|--------|-------------|
+| `domain` | `customer.com` | Domain of the customer company. Matches all users with an email address ending in `@customer.com`. |
+| `name` | `customerX` | Exact value used in the `tccc:intendedCustomers` asset metadata field. |
+
+`bottlers` sheet:
+
+| Column | Values | Description |
+|--------|--------|-------------|
+| `domain` | `bottler.com` | Domain of the bottler company. Matches all users with an email address ending in `@bottler.com`. |
+| `countries` | `us, ca, es` | Comma separated list of bottler countries the company has access to. 2 letter ISO code. Examples: `us`, `ca`, `es`. |
+
+`agencies` sheet:
+
+| Column | Values | Description |
+|--------|--------|-------------|
+| `domain` | `agency.com` | Domain of the agency company. Matches all users with an email address ending in `@agency.com`. |
+
+#### User permissions
+
+Authored at `/config/access/users`.
+
+| Column | Values| Description |
+|--------|-------|-------------|
+| `email` | `user@example.com` | Email address of the user. |
+| `roles` | | Comma separated list of roles. Optional. Can be empty if it is set via the `companies` sheet already. |
+| | `employee`  | TCCC employee. |
+| | `contingent-worker`  | TCCC contingent worker. |
+| | `agency`  | Agency. |
+| | `bottler`  | Bottler |
+| | `customer`  | Customer |
+| `bottlerCountries` | `us`, `ca`, `es` | Comma separated list of bottler countries the user has access to. 2 letter ISO code.Optional. |
+| `customers` | `customer1, customer2` | Comma separated list of customers the user has access to. Must use the exact value used in the `tccc:intendedCustomers` asset metadata field. |
