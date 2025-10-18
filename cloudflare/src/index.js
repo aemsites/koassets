@@ -27,7 +27,7 @@ const allowedOrigins = [
   // development URLs
   /https:\/\/.*-koassets\.adobeaem\.workers\.dev$/,
   /https:\/\/.*-koassets--aemsites\.aem\.(live|page)$/,
-  /http:\/\/localhost:(3000|8787)/
+  /http:\/\/localhost:(3000|8787)/,
 ];
 
 // Standard CORS for most routes (GET, POST only)
@@ -74,7 +74,7 @@ const router = Router({
 
 router
   // Hugging Face proxy for WebLLM models (no auth required)
-  .get('/api/hf-proxy/*', proxyHuggingFace)
+  .all('/api/hf-proxy/*', proxyHuggingFace)
 
   // public content
   .get('/public/*', originHelix)
