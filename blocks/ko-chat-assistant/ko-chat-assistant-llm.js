@@ -85,20 +85,26 @@ class WebLLMProvider extends LLMProvider {
       // Create custom model config that uses our Cloudflare proxy
       // This bypasses CORS issues with Hugging Face
       const proxyBaseUrl = `${window.location.origin}/api/hf-proxy`;
-      const modelUrl = `${proxyBaseUrl}/mlc-ai/${this.modelId}`;
+      const modelRepoPath = `mlc-ai/${this.modelId}`;
+      const modelUrl = `${proxyBaseUrl}/${modelRepoPath}/resolve/main/`;
 
       console.log('[WebLLM] Using proxy URL:', modelUrl);
 
-      // Create custom appConfig with proxied URLs
+      // Create custom appConfig with complete model configuration
       const appConfig = {
         model_list: [
           {
-            model_url: modelUrl,
             model_id: this.modelId,
-            model_lib_url: `${proxyBaseUrl}/mlc-ai/${this.modelId}/resolve/main/${this.modelId.replace(/-MLC$/, '')}-ctx2k_cs1k-webgpu.wasm`,
+            model_url: modelUrl,
+            model_lib_url: `${modelUrl}${this.modelId.replace(/-MLC$/, '')}-ctx2k_cs1k-webgpu.wasm`,
+            vram_required_MB: 2048,
+            low_resource_required: false,
+            required_features: ['shader-f16'],
           },
         ],
       };
+
+      console.log('[WebLLM] Model config:', JSON.stringify(appConfig, null, 2));
 
       // Create engine with custom config
       const config = {
