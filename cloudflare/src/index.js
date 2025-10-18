@@ -78,7 +78,7 @@ router
 
   // WebLLM model files - rewrite HuggingFace URL structure to direct file access
   // Converts: /models/{model}/resolve/main/{file} -> /models/{model}/{file}
-  .get('/models/*/resolve/main/*', (request, env) => {
+  .get('/models/:model/resolve/main/:file+', (request, env) => {
     const url = new URL(request.url);
     // Remove /resolve/main/ from the path
     const newPath = url.pathname.replace('/resolve/main', '');
