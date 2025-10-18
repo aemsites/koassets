@@ -72,6 +72,12 @@ const router = Router({
   },
 });
 
+// Global request logging middleware
+router.all('*', (request) => {
+  const url = new URL(request.url);
+  console.log(`[Router] ${request.method} ${url.pathname}`);
+});
+
 router
   // Hugging Face proxy for WebLLM models (no auth required)
   .all('/api/hf-proxy/*', proxyHuggingFace)

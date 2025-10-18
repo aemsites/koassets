@@ -158,7 +158,9 @@ After getting the results, provide a summary that includes:
  * Build prompt for checking usage rights
  */
 function buildCheckUsageRightsPrompt(args) {
-  const { assetIds, market, media, startDate, endDate } = args;
+  const {
+    assetIds, market, media, startDate, endDate,
+  } = args;
 
   if (!assetIds || !market || !media || !startDate || !endDate) {
     throw new Error('assetIds, market, media, startDate, and endDate arguments are required');
