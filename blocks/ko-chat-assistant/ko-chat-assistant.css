@@ -458,24 +458,8 @@
 }
 
 /* ============================================================================
-   WebLLM Mode UI
+   WebLLM Initialization UI
    ============================================================================ */
-
-/* Mode Indicator Badge */
-.llm-mode-indicator {
-  margin-top: 8px;
-  display: none;
-}
-
-.mode-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  background: rgb(255 255 255 / 20%);
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #fff;
-}
 
 /* Initialization Overlay */
 .llm-init-overlay {

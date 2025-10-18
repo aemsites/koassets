@@ -33,7 +33,6 @@ function createChatUI(block) {
   header.innerHTML = `
     <h3>KO Assets Assistant</h3>
     <p>Ask me to find assets, check usage rights, and more</p>
-    <div id="llm-mode-indicator" class="llm-mode-indicator"></div>
   `;
 
   // Messages container
@@ -115,53 +114,29 @@ function createChatUI(block) {
  */
 async function initializeLLM() {
   try {
-    // Create LLM Manager (will auto-detect mode)
+    // Create LLM Manager and MCP Client
     llmManager = new window.LLMManager();
     mcpClient = new window.MCPClient();
 
-    // Get status to show mode indicator
-    const status = llmManager.getStatus();
-    updateModeIndicator(status.mode);
-
-    // Listen for status changes (important for WebLLM)
+    // Listen for status changes (WebLLM progress updates)
     window.addEventListener('llm-status-change', handleLLMStatusChange);
 
-    // If WebLLM mode, show initialization UI
-    if (status.mode === 'webllm') {
-      isInitializing = true;
-      showInitializationUI();
+    // Show initialization UI
+    isInitializing = true;
+    showInitializationUI();
 
-      // Start initialization
-      const result = await llmManager.initialize();
+    // Start WebLLM initialization
+    const result = await llmManager.initialize();
 
-      isInitializing = false;
-      hideInitializationUI();
+    isInitializing = false;
+    hideInitializationUI();
 
-      if (!result.success) {
-        showInitializationError(result);
-      }
-    } else {
-      // Server mode - initialize (no-op but consistent API)
-      await llmManager.initialize();
+    if (!result.success) {
+      showInitializationError(result);
     }
   } catch (error) {
     console.error('[Chat] LLM initialization failed:', error);
     showInitializationError({ error: error.message });
-  }
-}
-
-/**
- * Update mode indicator in header
- */
-function updateModeIndicator(mode) {
-  const indicator = document.getElementById('llm-mode-indicator');
-  if (!indicator) return;
-
-  if (mode === 'webllm') {
-    indicator.innerHTML = '<span class="mode-badge">🔧 Dev Mode (Local AI)</span>';
-    indicator.style.display = 'block';
-  } else {
-    indicator.style.display = 'none';
   }
 }
 
