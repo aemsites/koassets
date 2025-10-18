@@ -7,18 +7,19 @@ import { getAssetMetadata } from '../utils/api-client.js';
 
 export const definition = {
   name: 'get_asset_metadata',
-  description: 'Retrieve comprehensive metadata for a specific asset including technical details, rights information, marketing data, and usage guidelines.',
+  description:
+    'Retrieve comprehensive metadata for a specific asset including technical details, rights information, marketing data, and usage guidelines.',
   inputSchema: {
     type: 'object',
     properties: {
       assetId: {
         type: 'string',
         description: 'The unique identifier of the asset (e.g., "urn:aaid:aem:12345678-1234-1234-1234-123456789abc")',
-        pattern: '^urn:aaid:aem:'
-      }
+        pattern: '^urn:aaid:aem:',
+      },
     },
-    required: ['assetId']
-  }
+    required: ['assetId'],
+  },
 };
 
 export async function handler(args, env, request) {
@@ -29,13 +30,17 @@ export async function handler(args, env, request) {
       content: [
         {
           type: 'text',
-          text: JSON.stringify({
-            success: false,
-            error: 'assetId is required'
-          }, null, 2)
-        }
+          text: JSON.stringify(
+            {
+              success: false,
+              error: 'assetId is required',
+            },
+            null,
+            2,
+          ),
+        },
       ],
-      isError: true
+      isError: true,
     };
   }
 
@@ -47,13 +52,17 @@ export async function handler(args, env, request) {
         content: [
           {
             type: 'text',
-            text: JSON.stringify({
-              success: false,
-              error: 'Asset not found'
-            }, null, 2)
-          }
+            text: JSON.stringify(
+              {
+                success: false,
+                error: 'Asset not found',
+              },
+              null,
+              2,
+            ),
+          },
         ],
-        isError: true
+        isError: true,
       };
     }
 
@@ -62,14 +71,14 @@ export async function handler(args, env, request) {
       success: true,
       data: {
         assetId: metadata.assetId,
-        
+
         // Basic Information
         basic: {
           name: metadata['repo:name'],
           title: metadata['tccc-title'],
           description: metadata['dc:description'],
           keywords: metadata['tccc-keywords'],
-          tags: metadata['tccc-tags']
+          tags: metadata['tccc-tags'],
         },
 
         // Technical Details
@@ -80,7 +89,7 @@ export async function handler(args, env, request) {
           width: metadata['tiff:ImageWidth'],
           height: metadata['tiff:ImageLength'],
           duration: metadata['xmpDM:duration'],
-          resolution: metadata['tccc-resolution']
+          resolution: metadata['tccc-resolution'],
         },
 
         // Brand & Marketing
@@ -88,7 +97,7 @@ export async function handler(args, env, request) {
           brand: metadata['tccc-brand'],
           subBrand: metadata['tccc-subBrand'],
           campaign: metadata['tccc-campaignName'],
-          category: metadata['tccc-category']
+          category: metadata['tccc-category'],
         },
 
         // Rights & Usage
@@ -100,7 +109,7 @@ export async function handler(args, env, request) {
           rightsEndDate: metadata['tccc-rightsEndDate'],
           marketCovered: metadata['tccc-marketCovered'],
           mediaCovered: metadata['tccc-mediaCovered'],
-          expirationDate: metadata['pur-expirationDate']
+          expirationDate: metadata['pur-expirationDate'],
         },
 
         // System Information
@@ -109,21 +118,21 @@ export async function handler(args, env, request) {
           createdBy: metadata['repo-createdBy'],
           modifyDate: metadata['repo-modifyDate'],
           modifiedBy: metadata['repo-modifiedBy'],
-          publishDate: metadata['repo-publishDate']
+          publishDate: metadata['repo-publishDate'],
         },
 
         // Raw metadata (all fields)
-        raw: metadata
-      }
+        raw: metadata,
+      },
     };
 
     return {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(structuredMetadata, null, 2)
-        }
-      ]
+          text: JSON.stringify(structuredMetadata, null, 2),
+        },
+      ],
     };
   } catch (error) {
     console.error('Get asset metadata error:', error);
@@ -131,14 +140,17 @@ export async function handler(args, env, request) {
       content: [
         {
           type: 'text',
-          text: JSON.stringify({
-            success: false,
-            error: error.message
-          }, null, 2)
-        }
+          text: JSON.stringify(
+            {
+              success: false,
+              error: error.message,
+            },
+            null,
+            2,
+          ),
+        },
       ],
-      isError: true
+      isError: true,
     };
   }
 }
-

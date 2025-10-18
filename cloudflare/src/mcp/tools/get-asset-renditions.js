@@ -7,23 +7,24 @@ import { getAssetRenditions, getImagePresets } from '../utils/api-client.js';
 
 export const definition = {
   name: 'get_asset_renditions',
-  description: 'Get all available renditions (different sizes, formats, or versions) of a specific asset. Useful for finding download options or preview versions.',
+  description:
+    'Get all available renditions (different sizes, formats, or versions) of a specific asset. Useful for finding download options or preview versions.',
   inputSchema: {
     type: 'object',
     properties: {
       assetId: {
         type: 'string',
         description: 'The unique identifier of the asset',
-        pattern: '^urn:aaid:aem:'
+        pattern: '^urn:aaid:aem:',
       },
       includeImagePresets: {
         type: 'boolean',
         description: 'Whether to include available image presets. Default: false',
-        default: false
-      }
+        default: false,
+      },
     },
-    required: ['assetId']
-  }
+    required: ['assetId'],
+  },
 };
 
 export async function handler(args, env, request) {
@@ -34,13 +35,17 @@ export async function handler(args, env, request) {
       content: [
         {
           type: 'text',
-          text: JSON.stringify({
-            success: false,
-            error: 'assetId is required'
-          }, null, 2)
-        }
+          text: JSON.stringify(
+            {
+              success: false,
+              error: 'assetId is required',
+            },
+            null,
+            2,
+          ),
+        },
       ],
-      isError: true
+      isError: true,
     };
   }
 
@@ -63,28 +68,32 @@ export async function handler(args, env, request) {
       success: true,
       data: {
         assetId,
-        renditions: renditions.map(r => ({
+        renditions: renditions.map((r) => ({
           name: r.name,
           format: r.format,
           size: r.size,
-          dimensions: r.dimensions ? {
-            width: r.dimensions.width,
-            height: r.dimensions.height
-          } : null,
-          type: r.name === 'original' ? 'original' : 'derivative'
+          dimensions: r.dimensions
+            ? {
+                width: r.dimensions.width,
+                height: r.dimensions.height,
+              }
+            : null,
+          type: r.name === 'original' ? 'original' : 'derivative',
         })),
-        renditionsCount: renditions.length
-      }
+        renditionsCount: renditions.length,
+      },
     };
 
     if (includeImagePresets && imagePresets.length > 0) {
-      result.data.imagePresets = imagePresets.map(p => ({
+      result.data.imagePresets = imagePresets.map((p) => ({
         name: p.name,
         format: p.format,
-        dimensions: p.dimensions ? {
-          width: p.dimensions.width,
-          height: p.dimensions.height
-        } : null
+        dimensions: p.dimensions
+          ? {
+              width: p.dimensions.width,
+              height: p.dimensions.height,
+            }
+          : null,
       }));
       result.data.imagePresetsCount = imagePresets.length;
     }
@@ -93,9 +102,9 @@ export async function handler(args, env, request) {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(result, null, 2)
-        }
-      ]
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
     };
   } catch (error) {
     console.error('Get asset renditions error:', error);
@@ -103,14 +112,17 @@ export async function handler(args, env, request) {
       content: [
         {
           type: 'text',
-          text: JSON.stringify({
-            success: false,
-            error: error.message
-          }, null, 2)
-        }
+          text: JSON.stringify(
+            {
+              success: false,
+              error: error.message,
+            },
+            null,
+            2,
+          ),
+        },
       ],
-      isError: true
+      isError: true,
     };
   }
 }
-

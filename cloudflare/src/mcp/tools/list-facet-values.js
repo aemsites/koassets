@@ -7,13 +7,15 @@ import { searchAssets } from '../utils/api-client.js';
 
 export const definition = {
   name: 'list_facet_values',
-  description: 'Get available filter values for a specific facet/field (e.g., brands, categories, formats). Useful for discovering what filters are available before searching.',
+  description:
+    'Get available filter values for a specific facet/field (e.g., brands, categories, formats). Useful for discovering what filters are available before searching.',
   inputSchema: {
     type: 'object',
     properties: {
       facetName: {
         type: 'string',
-        description: 'The facet to retrieve values for. Examples: "tccc-brand" (brands), "dc-format" (categories), "tccc-assetStatus" (asset status)',
+        description:
+          'The facet to retrieve values for. Examples: "tccc-brand" (brands), "dc-format" (categories), "tccc-assetStatus" (asset status)',
         enum: [
           'tccc-brand',
           'tccc-subBrand',
@@ -24,21 +26,21 @@ export const definition = {
           'tccc-tags',
           'tccc-campaignName',
           'tccc-marketCovered',
-          'tccc-mediaCovered'
-        ]
+          'tccc-mediaCovered',
+        ],
       },
       searchTerm: {
         type: 'string',
-        description: 'Optional search term to filter facet values'
+        description: 'Optional search term to filter facet values',
       },
       maxValues: {
         type: 'number',
         description: 'Maximum number of values to return. Default: 100',
-        default: 100
-      }
+        default: 100,
+      },
     },
-    required: ['facetName']
-  }
+    required: ['facetName'],
+  },
 };
 
 export async function handler(args, env, request) {
@@ -49,23 +51,32 @@ export async function handler(args, env, request) {
       content: [
         {
           type: 'text',
-          text: JSON.stringify({
-            success: false,
-            error: 'facetName is required'
-          }, null, 2)
-        }
+          text: JSON.stringify(
+            {
+              success: false,
+              error: 'facetName is required',
+            },
+            null,
+            2,
+          ),
+        },
       ],
-      isError: true
+      isError: true,
     };
   }
 
   try {
     // Perform a search with zero results but requesting facet data
-    const response = await searchAssets(searchTerm, {
-      facets: [facetName],
-      hitsPerPage: 0,
-      page: 0
-    }, env, request);
+    const response = await searchAssets(
+      searchTerm,
+      {
+        facets: [facetName],
+        hitsPerPage: 0,
+        page: 0,
+      },
+      env,
+      request,
+    );
 
     const results = response?.results?.[0];
     if (!results || !results.facets) {
@@ -73,16 +84,20 @@ export async function handler(args, env, request) {
         content: [
           {
             type: 'text',
-            text: JSON.stringify({
-              success: true,
-              data: {
-                facetName,
-                values: [],
-                count: 0
-              }
-            }, null, 2)
-          }
-        ]
+            text: JSON.stringify(
+              {
+                success: true,
+                data: {
+                  facetName,
+                  values: [],
+                  count: 0,
+                },
+              },
+              null,
+              2,
+            ),
+          },
+        ],
       };
     }
 
@@ -99,17 +114,17 @@ export async function handler(args, env, request) {
         facetName,
         values: facetEntries,
         count: facetEntries.length,
-        totalCount: Object.keys(facetData).length
-      }
+        totalCount: Object.keys(facetData).length,
+      },
     };
 
     return {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(result, null, 2)
-        }
-      ]
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
     };
   } catch (error) {
     console.error('List facet values error:', error);
@@ -117,14 +132,17 @@ export async function handler(args, env, request) {
       content: [
         {
           type: 'text',
-          text: JSON.stringify({
-            success: false,
-            error: error.message
-          }, null, 2)
-        }
+          text: JSON.stringify(
+            {
+              success: false,
+              error: error.message,
+            },
+            null,
+            2,
+          ),
+        },
       ],
-      isError: true
+      isError: true,
     };
   }
 }
-

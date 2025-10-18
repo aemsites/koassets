@@ -13,18 +13,18 @@ export async function makeApiRequest(endpoint, options = {}, env, request) {
   const headers = {
     'Content-Type': 'application/json',
     'User-Agent': 'KOAssets-MCP-Server/1.0',
-    ...options.headers
+    ...options.headers,
   };
 
   // Forward authentication cookie if present
   const cookie = request?.headers?.get('cookie');
   if (cookie) {
-    headers['Cookie'] = cookie;
+    headers.Cookie = cookie;
   }
 
   const fetchOptions = {
     ...options,
-    headers
+    headers,
   };
 
   console.log(`[API Client] ${options.method || 'GET'} ${url}`);
@@ -42,7 +42,7 @@ export async function makeApiRequest(endpoint, options = {}, env, request) {
   }
 
   const contentType = response.headers.get('content-type');
-  if (contentType && contentType.includes('application/json')) {
+  if (contentType?.includes('application/json')) {
     return await response.json();
   }
 
@@ -59,7 +59,7 @@ export async function searchAssets(query, options = {}, env, request) {
     filters = [],
     hitsPerPage = 24,
     page = 0,
-    collectionId = null
+    collectionId = null,
   } = options;
 
   // Get bucket/index name from environment or use default
@@ -75,65 +75,82 @@ export async function searchAssets(query, options = {}, env, request) {
           facets: options.facets || [],
           facetFilters: facetFilters,
           numericFilters: numericFilters,
-          filters: filters.length > 0 ? filters.map(f => `(${f})`).join(' AND ') : undefined,
+          filters: filters.length > 0 ? filters.map((f) => `(${f})`).join(' AND ') : undefined,
           hitsPerPage: hitsPerPage,
           page: page,
           maxValuesPerFacet: 1000,
           highlightPreTag: '__ais-highlight__',
-          highlightPostTag: '__/ais-highlight__'
-        }
-      }
-    ]
+          highlightPostTag: '__/ais-highlight__',
+        },
+      },
+    ],
   };
 
   if (collectionId) {
     algoliaRequest.requests[0].params.facetFilters.push([`collectionIds:${collectionId}`]);
   }
 
-  return await makeApiRequest('/api/adobe/assets/search', {
-    method: 'POST',
-    body: JSON.stringify(algoliaRequest),
-    headers: {
-      'x-ch-request': 'search'
-    }
-  }, env, request);
+  return await makeApiRequest(
+    '/api/adobe/assets/search',
+    {
+      method: 'POST',
+      body: JSON.stringify(algoliaRequest),
+      headers: {
+        'x-ch-request': 'search',
+      },
+    },
+    env,
+    request,
+  );
 }
 
 /**
  * Get asset metadata
  */
 export async function getAssetMetadata(assetId, env, request) {
-  return await makeApiRequest(`/api/adobe/assets/${assetId}/metadata`, {
-    method: 'GET'
-  }, env, request);
+  return await makeApiRequest(
+    `/api/adobe/assets/${assetId}/metadata`,
+    {
+      method: 'GET',
+    },
+    env,
+    request,
+  );
 }
 
 /**
  * Get asset renditions
  */
 export async function getAssetRenditions(assetId, env, request) {
-  return await makeApiRequest(`/api/adobe/assets/${assetId}/renditions`, {
-    method: 'GET'
-  }, env, request);
+  return await makeApiRequest(
+    `/api/adobe/assets/${assetId}/renditions`,
+    {
+      method: 'GET',
+    },
+    env,
+    request,
+  );
 }
 
 /**
  * Get image presets
  */
 export async function getImagePresets(env, request) {
-  return await makeApiRequest('/api/adobe/assets/imagePresets', {
-    method: 'GET'
-  }, env, request);
+  return await makeApiRequest(
+    '/api/adobe/assets/imagePresets',
+    {
+      method: 'GET',
+    },
+    env,
+    request,
+  );
 }
 
 /**
  * Search collections
  */
 export async function searchCollections(query, options = {}, env, request) {
-  const {
-    hitsPerPage = 20,
-    page = 0
-  } = options;
+  const { hitsPerPage = 20, page = 0 } = options;
 
   const indexName = env.ALGOLIA_INDEX || '92206-211033';
 
@@ -147,48 +164,67 @@ export async function searchCollections(query, options = {}, env, request) {
           hitsPerPage: hitsPerPage,
           page: page,
           highlightPreTag: '__ais-highlight__',
-          highlightPostTag: '__/ais-highlight__'
-        }
-      }
-    ]
+          highlightPostTag: '__/ais-highlight__',
+        },
+      },
+    ],
   };
 
-  return await makeApiRequest('/api/adobe/assets/search', {
-    method: 'POST',
-    body: JSON.stringify(algoliaRequest),
-    headers: {
-      'x-ch-request': 'search'
-    }
-  }, env, request);
+  return await makeApiRequest(
+    '/api/adobe/assets/search',
+    {
+      method: 'POST',
+      body: JSON.stringify(algoliaRequest),
+      headers: {
+        'x-ch-request': 'search',
+      },
+    },
+    env,
+    request,
+  );
 }
 
 /**
  * Get media rights (FADEL)
  */
 export async function getMediaRights(env, request) {
-  return await makeApiRequest('/api/fadel/rc-api/rights/search/20', {
-    method: 'POST',
-    body: JSON.stringify({ description: '' })
-  }, env, request);
+  return await makeApiRequest(
+    '/api/fadel/rc-api/rights/search/20',
+    {
+      method: 'POST',
+      body: JSON.stringify({ description: '' }),
+    },
+    env,
+    request,
+  );
 }
 
 /**
  * Get market rights (FADEL)
  */
 export async function getMarketRights(env, request) {
-  return await makeApiRequest('/api/fadel/rc-api/rights/search/30', {
-    method: 'POST',
-    body: JSON.stringify({ description: '' })
-  }, env, request);
+  return await makeApiRequest(
+    '/api/fadel/rc-api/rights/search/30',
+    {
+      method: 'POST',
+      body: JSON.stringify({ description: '' }),
+    },
+    env,
+    request,
+  );
 }
 
 /**
  * Check asset rights clearance
  */
 export async function checkAssetRights(checkRightsRequest, env, request) {
-  return await makeApiRequest('/api/fadel/rc-api/clearance/assetclearance', {
-    method: 'POST',
-    body: JSON.stringify(checkRightsRequest)
-  }, env, request);
+  return await makeApiRequest(
+    '/api/fadel/rc-api/clearance/assetclearance',
+    {
+      method: 'POST',
+      body: JSON.stringify(checkRightsRequest),
+    },
+    env,
+    request,
+  );
 }
-

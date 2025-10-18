@@ -15,12 +15,9 @@ export async function apiMcp(request, env) {
 
   // Health check endpoint
   if (url.pathname === '/api/mcp/health') {
-    return new Response(
-      JSON.stringify({ status: 'ok', service: 'koassets-mcp' }),
-      {
-        headers: { 'Content-Type': 'application/json' },
-      },
-    );
+    return new Response(JSON.stringify({ status: 'ok', service: 'koassets-mcp' }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   // MCP endpoint - handles JSON-RPC 2.0 requests
@@ -55,4 +52,3 @@ export async function apiMcp(request, env) {
   // Method not allowed
   return new Response('Method Not Allowed', { status: 405 });
 }
-
