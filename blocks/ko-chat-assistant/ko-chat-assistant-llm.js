@@ -73,27 +73,33 @@ class WebLLMProvider extends LLMProvider {
     const proxyBaseUrl = `${window.location.origin}/api/hf-proxy`;
     const { originalFetch } = this;
 
-    // Override global fetch
-    window.fetch = async (input, init) => {
+    // Create interceptor function
+    const interceptorFn = async (input, init) => {
       let url;
       try {
-        url = typeof input === 'string' ? input : input.url;
+        if (typeof input === 'string') {
+          url = input;
+        } else if (input instanceof Request) {
+          url = input.url;
+        } else {
+          url = input.url;
+        }
       } catch (e) {
         // If we can't get URL, just pass through
         console.warn('[WebLLM Proxy] Could not extract URL from fetch input:', input);
         return originalFetch(input, init);
       }
 
-      // Log all fetch requests for debugging
-      if (url.includes('huggingface') || url.includes('mlc-ai')) {
-        console.log('[WebLLM Proxy] Intercepted fetch:', url);
-      }
+      // Log ALL fetch requests for debugging
+      console.log('[WebLLM Proxy] 🔍 Checking fetch:', url.substring(0, 100));
 
       // Check if this is a HuggingFace request
       if (url.startsWith('https://huggingface.co/')) {
         // Redirect through our proxy
         const proxiedUrl = url.replace('https://huggingface.co/', `${proxyBaseUrl}/`);
-        console.log(`[WebLLM Proxy] ✓ Redirecting: ${url.substring(0, 80)}... → ${proxiedUrl.substring(0, 80)}...`);
+        console.log('[WebLLM Proxy] ✓ Redirecting HF request to proxy');
+        console.log(`  FROM: ${url.substring(0, 80)}...`);
+        console.log(`  TO:   ${proxiedUrl.substring(0, 80)}...`);
 
         // Call original fetch with proxied URL
         return originalFetch(proxiedUrl, init);
@@ -103,8 +109,22 @@ class WebLLMProvider extends LLMProvider {
       return originalFetch(input, init);
     };
 
+    // Override both window.fetch and global fetch
+    window.fetch = interceptorFn;
+    // eslint-disable-next-line no-undef
+    if (typeof globalThis !== 'undefined') {
+      // eslint-disable-next-line no-undef
+      globalThis.fetch = interceptorFn;
+    }
+
     console.log('[WebLLM] Fetch interceptor installed');
     console.log('[WebLLM] Verifying interceptor - window.fetch is:', window.fetch === originalFetch ? '❌ NOT patched!' : '✓ patched');
+
+    // Test the interceptor with a dummy call
+    console.log('[WebLLM] Testing interceptor with dummy HuggingFace call...');
+    fetch('https://huggingface.co/test').catch(() => {
+      console.log('[WebLLM] ✓ Interceptor test completed (error expected)');
+    });
   }
 
   /**
