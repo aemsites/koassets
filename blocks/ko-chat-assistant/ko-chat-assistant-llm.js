@@ -183,25 +183,40 @@ class WebLLMProvider extends LLMProvider {
 
       const modelConfig = await configResponse.json();
       console.log('[WebLLM] Model config fetched successfully:', modelConfig);
-
-      // WebLLM expects specific fields in a specific structure
-      // Let's try to match the exact structure WebLLM's default models use
+      
+      // Build WASM filename based on model config
+      // The WASM filename pattern is usually: {base_model_name}-{context}_{chunk}-webgpu.wasm
+      const modelBase = this.modelId.replace(/-MLC$/, '');
+      const contextSize = modelConfig.context_window_size || 2048;
+      const chunkSize = modelConfig.prefill_chunk_size || contextSize;
+      const contextShort = `ctx${Math.floor(contextSize / 1024)}k`;
+      const chunkShort = `cs${Math.floor(chunkSize / 1024)}k`;
+      
+      const possibleWasmNames = [
+        `${modelBase}-${contextShort}_${chunkShort}-webgpu.wasm`,
+        `${modelBase}-webgpu.wasm`,
+        `${this.modelId}-webgpu.wasm`,
+      ];
+      
+      console.log('[WebLLM] Trying possible WASM filenames:', possibleWasmNames);
+      
       const modelBaseUrl = `${proxyBaseUrl}/${modelRepoPath}/resolve/main/`;
       
       const customModelRecord = {
         model: `${modelBaseUrl}`,
         model_id: this.modelId,
-        model_lib: `${modelBaseUrl}${this.modelId.replace(/-MLC$/, '')}-ctx2k_cs1k-webgpu.wasm`,
+        model_lib: `${modelBaseUrl}${possibleWasmNames[0]}`,
         vram_required_MB: modelConfig.vram_required_MB || 2048,
         low_resource_required: modelConfig.low_resource_required || false,
         required_features: modelConfig.required_features || ['shader-f16'],
         overrides: {
-          context_window_size: modelConfig.context_window_size || 2048,
-          prefill_chunk_size: modelConfig.prefill_chunk_size || 2048,
+          context_window_size: contextSize,
+          prefill_chunk_size: chunkSize,
         },
       };
       
       console.log('[WebLLM] Custom model record:', customModelRecord);
+      console.log('[WebLLM] WASM URL to try:', customModelRecord.model_lib);
       
       const appConfig = {
         model_list: [customModelRecord],
