@@ -1,6 +1,6 @@
-# WebLLM Mode - Quick Start Guide
+# WebLLM Chat Assistant - Quick Start Guide
 
-🎉 **Phase 1 Complete!** Here's how to test your new dual-mode chat assistant.
+🎉 **WebLLM-Only Mode!** Here's how to test your privacy-first, browser-based chat assistant.
 
 ---
 
@@ -27,21 +27,7 @@ curl https://koassets-mcp-server-staging.workers.dev/health
 
 ## 🚀 Quick Test (5 Minutes)
 
-### Step 1: Configure Mode
-
-Open `blocks/ko-chat-assistant/ko-chat-assistant-llm.js`:
-
-```javascript
-const USE_WEBLLM_MODE = true;  // ← For WebLLM (local AI)
-// or
-const USE_WEBLLM_MODE = false; // ← For Server mode (cloud AI)
-```
-
-**For first test:** Set to `true` (WebLLM mode)
-
----
-
-### Step 2: Verify MCP CORS
+### Step 1: Verify MCP CORS
 
 MCP CORS is already configured! ✅
 
@@ -156,17 +142,6 @@ Type: **"Show me videos instead"**
 
 ---
 
-### Test 5: Switch to Server Mode
-
-1. Change `USE_WEBLLM_MODE = false`
-2. Refresh page
-3. No dev mode badge
-4. No model download
-5. Direct to `/api/chat` (check Network tab)
-6. Everything still works!
-
----
-
 ## 🐛 Troubleshooting
 
 ### Problem: "Failed to load WebLLM library"
@@ -257,10 +232,8 @@ Should work without CORS error.
 - First query: 1-2 seconds
 - **Total time to chat: 5-12 seconds**
 
-### Server Mode:
-- Page load: 1-2 seconds
-- First query: 1-2 seconds
-- **Total time to chat: 2-4 seconds**
+### Note:
+WebLLM runs entirely in your browser for privacy and offline capability.
 
 ---
 
@@ -278,34 +251,27 @@ Should work without CORS error.
 - [x] Helpful guidance
 - [x] Retry button
 
-### Mode Indicator:
-- [x] Badge shows in WebLLM mode
-- [x] Hidden in Server mode
-- [x] Styled nicely in header
+### Initialization UI:
+- [x] Shows loading overlay during model download
+- [x] Displays progress bar with percentage
+- [x] Smooth animations
 
 ---
 
-## 🔄 Switching Modes
+## 🔄 Return Visits
 
-### To Test Both Modes:
+After the first initialization:
 
-1. **WebLLM Mode:**
-   - Set `USE_WEBLLM_MODE = true`
-   - Refresh page
-   - Wait for model download (first time)
-   - Test queries
+1. **Subsequent Loads:**
+   - Refresh the page
+   - Model loads from IndexedDB cache
+   - Much faster (5-10 seconds vs 20-30 seconds)
+   - No re-download needed
 
-2. **Server Mode:**
-   - Set `USE_WEBLLM_MODE = false`
-   - Refresh page
-   - No download, instant ready
-   - Test same queries
-   - Should get same results!
-
-3. **Compare:**
-   - WebLLM: Runs in browser, no server calls
-   - Server: Runs on Cloudflare, existing behavior
-   - Both should work identically from user perspective
+2. **Clear Cache (For Testing):**
+   - Open DevTools → Application → IndexedDB
+   - Delete the WebLLM databases
+   - Refresh to trigger fresh download
 
 ---
 
@@ -319,8 +285,7 @@ Phase 1 is successful if:
 - [ ] Can send queries and get responses
 - [ ] MCP server responds to browser calls
 - [ ] Asset cards display correctly
-- [ ] Server mode still works (no regression)
-- [ ] Can switch between modes by changing constant
+- [ ] Initialization UI is polished
 - [ ] No console errors
 - [ ] Mode indicator shows/hides correctly
 
@@ -328,17 +293,16 @@ Phase 1 is successful if:
 
 ## 🎯 What's Working
 
-After Phase 1, you have:
+You now have:
 
-✅ Dual-mode architecture (WebLLM + Server)
+✅ Privacy-first WebLLM architecture
+✅ Browser-based AI (offline capable)
 ✅ WebLLM model downloading and caching  
 ✅ Polished loading UI with progress
 ✅ Browser → MCP direct calls
 ✅ Intent detection in browser
 ✅ Asset search working
-✅ Mode detection (constant-based)
 ✅ Graceful error handling
-✅ No regression in server mode
 
 ---
 

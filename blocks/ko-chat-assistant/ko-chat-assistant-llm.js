@@ -1,25 +1,13 @@
 /* eslint-disable max-classes-per-file, class-methods-use-this, no-console */
 /**
- * KO Chat Assistant - LLM Abstraction Layer
- * Supports both WebLLM (local browser-based AI) and Server-based AI
+ * KO Chat Assistant - WebLLM Integration
+ * Privacy-first, browser-based AI using WebGPU
  *
  * Architecture:
- * - LLMManager: Orchestrates which provider to use
- * - WebLLMProvider: Runs AI model in browser using WebGPU
- * - ServerLLMProvider: Uses existing server endpoint
+ * - LLMManager: Manages WebLLM lifecycle
+ * - WebLLMProvider: Runs AI model locally in browser using WebGPU
+ * - MCPClient: Communicates with MCP server for tool execution
  */
-
-// ============================================================================
-// CONFIGURATION
-// ============================================================================
-
-/**
- * Toggle between WebLLM (local) and Server (cloud) mode
- *
- * Set to true for local development (AI runs in browser)
- * Set to false for production (AI runs on server)
- */
-const USE_WEBLLM_MODE = true; // <-- DEVELOPERS: Change this to switch modes
 
 // ============================================================================
 // LLM PROVIDER INTERFACE
@@ -387,117 +375,17 @@ Keep responses concise and helpful. Focus on asset search and discovery.`;
 }
 
 // ============================================================================
-// SERVER LLM PROVIDER (Existing Cloud-Based AI)
-// ============================================================================
-
-class ServerLLMProvider extends LLMProvider {
-  constructor() {
-    super();
-    this.status = 'ready'; // Server is always ready (no initialization needed)
-  }
-
-  /**
-   * Initialize (no-op for server, always ready)
-   */
-  async initialize() {
-    return { success: true };
-  }
-
-  /**
-   * Generate response using existing server endpoint
-   */
-  async generateResponse(message, conversationHistory = []) {
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message,
-          sessionId: window.koassetsSessionId || null,
-          conversationHistory: conversationHistory.slice(-10),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Server returned ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        return {
-          success: true,
-          text: data.message,
-          assets: data.assets,
-          rightsReport: data.rightsReport,
-          suggestedPrompts: data.suggestedPrompts,
-        };
-      }
-      throw new Error(data.error || 'Server request failed');
-    } catch (error) {
-      console.error('[Server LLM] Request failed:', error);
-      return {
-        success: false,
-        error: error.message,
-        text: "I'm sorry, I encountered an error processing your request. Please try again.",
-      };
-    }
-  }
-
-  /**
-   * Stream response (not implemented yet)
-   */
-  async streamResponse(message, conversationHistory, onChunk, onComplete) {
-    const result = await this.generateResponse(message, conversationHistory);
-    if (result.success) {
-      onChunk(result.text);
-    }
-    onComplete(result);
-  }
-
-  /**
-   * Get status (always ready)
-   */
-  getStatus() {
-    return {
-      status: 'ready',
-      progress: 100,
-      ready: true,
-      error: false,
-    };
-  }
-}
-
-// ============================================================================
-// LLM MANAGER (Orchestrator)
+// LLM MANAGER
 // ============================================================================
 
 class LLMManager {
   constructor() {
-    this.provider = null;
-    this.mode = null;
-    this.initializeProvider();
+    console.log('[LLM Manager] Using WebLLM (privacy-first, browser-based AI)');
+    this.provider = new WebLLMProvider();
   }
 
   /**
-   * Initialize the appropriate provider based on configuration
-   */
-  initializeProvider() {
-    if (USE_WEBLLM_MODE) {
-      console.log('[LLM Manager] Using WebLLM mode (local browser-based AI)');
-      this.mode = 'webllm';
-      this.provider = new WebLLMProvider();
-    } else {
-      console.log('[LLM Manager] Using Server mode (cloud-based AI)');
-      this.mode = 'server';
-      this.provider = new ServerLLMProvider();
-    }
-  }
-
-  /**
-   * Initialize the provider (async for WebLLM, instant for Server)
+   * Initialize the WebLLM provider (downloads and loads model)
    */
   async initialize() {
     return this.provider.initialize();
@@ -521,17 +409,7 @@ class LLMManager {
    * Get current status
    */
   getStatus() {
-    return {
-      ...this.provider.getStatus(),
-      mode: this.mode,
-    };
-  }
-
-  /**
-   * Get current mode
-   */
-  getMode() {
-    return this.mode;
+    return this.provider.getStatus();
   }
 
   /**
