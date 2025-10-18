@@ -55,12 +55,14 @@ class WebLLMProvider extends LLMProvider {
     this.initCallbacks = [];
 
     // Custom app config pointing to locally hosted model
+    // WebLLM requires absolute URLs, so we construct them dynamically
+    const baseUrl = window.location.origin;
     this.appConfig = {
       model_list: [
         {
           model_id: this.modelId,
-          model: '/models/TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC/',
-          model_lib: '/models/TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC/TinyLlama-1.1B-Chat-v1.0-q4f16_1-ctx2k_cs1k-webgpu.wasm',
+          model: `${baseUrl}/models/tinyllama-1-1b-chat-v1-0-q4f16_1-mlc/`,
+          model_lib: `${baseUrl}/models/tinyllama-1-1b-chat-v1-0-q4f16_1-mlc/tinyllama-1-1b-chat-v1-0-q4f16_1-ctx2k_cs1k-webgpu.wasm`,
         },
       ],
     };
