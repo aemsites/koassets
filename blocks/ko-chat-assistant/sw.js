@@ -5,8 +5,8 @@
  * This is an ES module Service Worker - uses static imports
  */
 
-// Static import of WebLLM - this is allowed in ES module Service Workers
-import { ServiceWorkerMLCEngineHandler } from 'https://esm.run/@mlc-ai/web-llm@0.2.63';
+// Try unpkg which has better ES module support and no redirects
+import { ServiceWorkerMLCEngineHandler } from 'https://unpkg.com/@mlc-ai/web-llm@0.2.63/lib/index.js';
 
 console.log('[SW WebLLM] Initializing WebLLM Service Worker');
 
