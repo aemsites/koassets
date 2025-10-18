@@ -112,8 +112,64 @@ function createChatUI(block) {
 /**
  * Initialize LLM Manager
  */
+/**
+ * Register Service Worker for WebLLM proxy
+ * This intercepts HuggingFace requests and proxies them through Cloudflare
+ */
+async function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) {
+    console.warn('[Chat] Service Workers not supported');
+    return false;
+  }
+
+  try {
+    console.log('[Chat] Registering Service Worker for WebLLM proxy...');
+
+    const registration = await navigator.serviceWorker.register(
+      '/blocks/ko-chat-assistant/sw.js',
+      { scope: '/' },
+    );
+
+    console.log('[Chat] Service Worker registered:', registration.scope);
+
+    // Wait for service worker to be active
+    if (registration.active) {
+      console.log('[Chat] Service Worker already active');
+      return true;
+    }
+
+    // Wait for activation
+    return new Promise((resolve) => {
+      if (registration.installing) {
+        registration.installing.addEventListener('statechange', function checkState() {
+          if (this.state === 'activated') {
+            console.log('[Chat] Service Worker activated');
+            resolve(true);
+          }
+        });
+      } else if (registration.waiting) {
+        // Force waiting service worker to activate
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          console.log('[Chat] Service Worker activated (was waiting)');
+          resolve(true);
+        });
+      }
+    });
+  } catch (error) {
+    console.error('[Chat] Service Worker registration failed:', error);
+    return false;
+  }
+}
+
 async function initializeLLM() {
   try {
+    // Register Service Worker first (for HuggingFace proxy)
+    const swRegistered = await registerServiceWorker();
+    if (!swRegistered) {
+      console.warn('[Chat] Service Worker not registered, WebLLM may face CORS issues');
+    }
+
     // Create LLM Manager and MCP Client
     llmManager = new window.LLMManager();
     mcpClient = new window.MCPClient();
