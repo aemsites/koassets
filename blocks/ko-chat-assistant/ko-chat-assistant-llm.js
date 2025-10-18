@@ -157,6 +157,9 @@ class WebLLMProvider extends LLMProvider {
     }
 
     try {
+      // Install fetch proxy FIRST, before WebLLM loads
+      this.installGlobalFetchProxy();
+
       // Check if WebLLM library is loaded
       if (typeof window.mlc === 'undefined' || typeof window.mlc.CreateMLCEngine === 'undefined') {
         await this.loadWebLLMLibrary();
@@ -246,9 +249,7 @@ class WebLLMProvider extends LLMProvider {
         return;
       }
 
-      // Install fetch proxy BEFORE loading WebLLM
-      this.installGlobalFetchProxy();
-
+      // Fetch proxy should already be installed by initialize()
       // Try multiple CDN sources in order of preference
       // Using newer versions which have better CORS support
       const cdnUrls = [
