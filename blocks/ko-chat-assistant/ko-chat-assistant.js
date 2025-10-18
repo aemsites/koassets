@@ -127,7 +127,10 @@ async function registerServiceWorker() {
 
     const registration = await navigator.serviceWorker.register(
       '/blocks/ko-chat-assistant/sw.js',
-      { scope: '/blocks/ko-chat-assistant/' },
+      { 
+        scope: '/blocks/ko-chat-assistant/',
+        type: 'module' // ES module support
+      },
     );
 
     console.log('[Chat] Service Worker registered:', registration.scope);
