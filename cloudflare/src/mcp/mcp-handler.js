@@ -23,7 +23,9 @@ const SERVER_INFO = {
  * Dispatches JSON-RPC 2.0 requests to appropriate handlers
  */
 export async function handleMCPRequest(body, env, request) {
-  const { jsonrpc, method, params, id } = body;
+  const {
+    jsonrpc, method, params, id,
+  } = body;
 
   // Validate JSON-RPC 2.0 format
   if (jsonrpc !== '2.0') {
@@ -49,6 +51,11 @@ export async function handleMCPRequest(body, env, request) {
   }
 
   try {
+    console.log('[MCP Handler] ================');
+    console.log('[MCP Handler] Method:', method);
+    console.log('[MCP Handler] Params:', JSON.stringify(params, null, 2));
+    console.log('[MCP Handler] Request ID:', id);
+
     let result;
 
     switch (method) {

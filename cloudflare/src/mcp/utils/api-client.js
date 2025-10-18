@@ -10,6 +10,12 @@ export async function makeApiRequest(endpoint, options = {}, env, request) {
   const baseUrl = env.KOASSETS_API_URL || 'http://localhost:8787';
   const url = `${baseUrl}${endpoint}`;
 
+  console.log('[MCP API Client] ======================');
+  console.log('[MCP API Client] Base URL:', baseUrl);
+  console.log('[MCP API Client] Endpoint:', endpoint);
+  console.log('[MCP API Client] Full URL:', url);
+  console.log('[MCP API Client] Method:', options.method || 'GET');
+
   const headers = {
     'Content-Type': 'application/json',
     'User-Agent': 'KOAssets-MCP-Server/1.0',
@@ -20,6 +26,9 @@ export async function makeApiRequest(endpoint, options = {}, env, request) {
   const cookie = request?.headers?.get('cookie');
   if (cookie) {
     headers.Cookie = cookie;
+    console.log('[MCP API Client] Forwarding auth cookie');
+  } else {
+    console.log('[MCP API Client] ⚠️ No auth cookie to forward');
   }
 
   const fetchOptions = {
@@ -27,14 +36,17 @@ export async function makeApiRequest(endpoint, options = {}, env, request) {
     headers,
   };
 
-  console.log(`[API Client] ${options.method || 'GET'} ${url}`);
-
+  console.log('[MCP API Client] Making request...');
   const response = await fetch(url, fetchOptions);
+  console.log('[MCP API Client] Response status:', response.status, response.statusText);
 
   if (!response.ok) {
     const errorText = await response.text();
+    console.error('[MCP API Client] ❌ Error response:', errorText);
     throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
   }
+
+  console.log('[MCP API Client] ✅ Request successful');
 
   // Handle empty responses
   if (response.status === 204 || response.headers.get('content-length') === '0') {
@@ -69,15 +81,15 @@ export async function searchAssets(query, options = {}, env, request) {
   const algoliaRequest = {
     requests: [
       {
-        indexName: indexName,
+        indexName,
         params: {
           query: query || '',
           facets: options.facets || [],
-          facetFilters: facetFilters,
-          numericFilters: numericFilters,
+          facetFilters,
+          numericFilters,
           filters: filters.length > 0 ? filters.map((f) => `(${f})`).join(' AND ') : undefined,
-          hitsPerPage: hitsPerPage,
-          page: page,
+          hitsPerPage,
+          page,
           maxValuesPerFacet: 1000,
           highlightPreTag: '__ais-highlight__',
           highlightPostTag: '__/ais-highlight__',
@@ -161,8 +173,8 @@ export async function searchCollections(query, options = {}, env, request) {
         params: {
           query: query || '',
           facets: [],
-          hitsPerPage: hitsPerPage,
-          page: page,
+          hitsPerPage,
+          page,
           highlightPreTag: '__ais-highlight__',
           highlightPostTag: '__/ais-highlight__',
         },

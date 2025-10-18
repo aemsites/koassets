@@ -49,7 +49,7 @@ export async function readResource(uri, env, request) {
 
       return [
         {
-          uri: uri,
+          uri,
           mimeType: 'application/json',
           text: JSON.stringify(metadata, null, 2),
         },
@@ -146,7 +146,7 @@ Base URL configured via KOASSETS_API_URL environment variable.
 
     return [
       {
-        uri: uri,
+        uri,
         mimeType: 'text/markdown',
         text: helpText,
       },
