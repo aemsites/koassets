@@ -54,6 +54,55 @@ class WebLLMProvider extends LLMProvider {
     // List: https://github.com/mlc-ai/web-llm/blob/main/src/config.ts
     this.modelId = 'TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC';
     this.initCallbacks = [];
+    this.originalFetch = null; // Store original fetch for cleanup
+  }
+
+  /**
+   * Install fetch interceptor to redirect HuggingFace requests through proxy
+   */
+  installFetchInterceptor() {
+    // Only install once
+    if (this.originalFetch) {
+      return;
+    }
+
+    console.log('[WebLLM] Installing fetch interceptor for HuggingFace proxy');
+
+    // Store original fetch
+    this.originalFetch = window.fetch;
+    const proxyBaseUrl = `${window.location.origin}/api/hf-proxy`;
+    const { originalFetch } = this;
+
+    // Override global fetch
+    window.fetch = async (input, init) => {
+      const url = typeof input === 'string' ? input : input.url;
+
+      // Check if this is a HuggingFace request
+      if (url.startsWith('https://huggingface.co/')) {
+        // Redirect through our proxy
+        const proxiedUrl = url.replace('https://huggingface.co/', `${proxyBaseUrl}/`);
+        console.log(`[WebLLM Proxy] ${url} → ${proxiedUrl}`);
+
+        // Call original fetch with proxied URL
+        return originalFetch(proxiedUrl, init);
+      }
+
+      // For all other requests, use original fetch
+      return originalFetch(input, init);
+    };
+
+    console.log('[WebLLM] Fetch interceptor installed');
+  }
+
+  /**
+   * Remove fetch interceptor (cleanup)
+   */
+  removeFetchInterceptor() {
+    if (this.originalFetch) {
+      console.log('[WebLLM] Removing fetch interceptor');
+      window.fetch = this.originalFetch;
+      this.originalFetch = null;
+    }
   }
 
   /**
@@ -82,68 +131,19 @@ class WebLLMProvider extends LLMProvider {
 
       console.log('[WebLLM] Creating engine with model ID:', this.modelId);
 
-      // First, try using the default configuration without proxy
-      // If CORS fails, we'll catch it and try the proxy approach
-      try {
-        console.log('[WebLLM] Attempting default configuration first...');
+      // Install fetch interceptor to redirect HuggingFace requests through our proxy
+      this.installFetchInterceptor();
 
-        this.engine = await window.mlc.CreateMLCEngine(
-          this.modelId,
-          {
-            initProgressCallback: (progress) => {
-              this.handleInitProgress(progress);
-            },
+      // Now use WebLLM's default configuration
+      // All HuggingFace requests will automatically be proxied
+      this.engine = await window.mlc.CreateMLCEngine(
+        this.modelId,
+        {
+          initProgressCallback: (progress) => {
+            this.handleInitProgress(progress);
           },
-        );
-
-        console.log('[WebLLM] Engine created successfully with default config');
-      } catch (defaultError) {
-        console.warn('[WebLLM] Default config failed, trying proxy approach:', defaultError.message);
-
-        // Fallback: Create custom model config using our Cloudflare proxy
-        const proxyBaseUrl = `${window.location.origin}/api/hf-proxy`;
-        const modelRepoPath = `mlc-ai/${this.modelId}`;
-
-        // Fetch the original model config from HuggingFace through our proxy
-        const configUrl = `${proxyBaseUrl}/${modelRepoPath}/resolve/main/mlc-chat-config.json`;
-        console.log('[WebLLM] Fetching model config from:', configUrl);
-
-        const configResponse = await fetch(configUrl);
-        if (!configResponse.ok) {
-          throw new Error(`Failed to fetch model config: ${configResponse.status}`);
-        }
-
-        const originalConfig = await configResponse.json();
-        console.log('[WebLLM] Original config:', originalConfig);
-
-        // Create appConfig with proxy URLs
-        const modelUrl = `${proxyBaseUrl}/${modelRepoPath}/resolve/main/`;
-        const appConfig = {
-          model_list: [
-            {
-              ...originalConfig,
-              model_id: this.modelId,
-              model_url: modelUrl,
-              model_lib_url: `${modelUrl}${this.modelId.replace(/-MLC$/, '')}-ctx2k_cs1k-webgpu.wasm`,
-            },
-          ],
-        };
-
-        console.log('[WebLLM] Custom appConfig:', JSON.stringify(appConfig, null, 2));
-
-        // Create engine with custom proxied config
-        this.engine = await window.mlc.CreateMLCEngine(
-          this.modelId,
-          {
-            appConfig,
-            initProgressCallback: (progress) => {
-              this.handleInitProgress(progress);
-            },
-          },
-        );
-
-        console.log('[WebLLM] Engine created successfully with proxy config');
-      }
+        },
+      );
 
       console.log('[WebLLM] Engine created successfully');
 
