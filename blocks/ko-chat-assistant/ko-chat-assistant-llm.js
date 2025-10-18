@@ -50,9 +50,10 @@ class WebLLMProvider extends LLMProvider {
     this.engine = null;
     this.status = 'uninitialized'; // uninitialized, downloading, loading, ready, error
     this.downloadProgress = 0;
-    // Use a valid pre-built WebLLM model
+    // Use a valid pre-built WebLLM model that's hosted on WebLLM's CDN
     // List: https://github.com/mlc-ai/web-llm/blob/main/src/config.ts
-    this.modelId = 'TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC';
+    // Using Phi-2 which is small (~1.7GB) and has all required files
+    this.modelId = 'Phi-2-q4f16_1-MLC';
     this.initCallbacks = [];
     this.originalFetch = null; // Store original fetch for cleanup
   }
@@ -167,68 +168,13 @@ class WebLLMProvider extends LLMProvider {
       this.notifyStatusChange();
 
       console.log('[WebLLM] Creating engine with model ID:', this.modelId);
+      console.log('[WebLLM] Using WebLLM default config (models hosted on their CDN)');
 
-      // WebLLM has its own bundled fetch that we can't intercept
-      // Solution: Pre-fetch the model config through our proxy and provide custom appConfig
-      const proxyBaseUrl = `${window.location.origin}/api/hf-proxy`;
-      const modelRepoPath = `mlc-ai/${this.modelId}`;
-
-      console.log('[WebLLM] Pre-fetching model config through proxy...');
-      const configUrl = `${proxyBaseUrl}/${modelRepoPath}/resolve/main/mlc-chat-config.json`;
-      const configResponse = await this.originalFetch(configUrl);
-
-      if (!configResponse.ok) {
-        throw new Error(`Failed to fetch model config: ${configResponse.status} ${configResponse.statusText}`);
-      }
-
-      const modelConfig = await configResponse.json();
-      console.log('[WebLLM] Model config fetched successfully:', modelConfig);
-      
-      // Build WASM filename based on model config
-      // The WASM filename pattern is usually: {base_model_name}-{context}_{chunk}-webgpu.wasm
-      const modelBase = this.modelId.replace(/-MLC$/, '');
-      const contextSize = modelConfig.context_window_size || 2048;
-      const chunkSize = modelConfig.prefill_chunk_size || contextSize;
-      const contextShort = `ctx${Math.floor(contextSize / 1024)}k`;
-      const chunkShort = `cs${Math.floor(chunkSize / 1024)}k`;
-      
-      const possibleWasmNames = [
-        `${modelBase}-${contextShort}_${chunkShort}-webgpu.wasm`,
-        `${modelBase}-webgpu.wasm`,
-        `${this.modelId}-webgpu.wasm`,
-      ];
-      
-      console.log('[WebLLM] Trying possible WASM filenames:', possibleWasmNames);
-      
-      const modelBaseUrl = `${proxyBaseUrl}/${modelRepoPath}/resolve/main/`;
-      
-      const customModelRecord = {
-        model: `${modelBaseUrl}`,
-        model_id: this.modelId,
-        model_lib: `${modelBaseUrl}${possibleWasmNames[0]}`,
-        vram_required_MB: modelConfig.vram_required_MB || 2048,
-        low_resource_required: modelConfig.low_resource_required || false,
-        required_features: modelConfig.required_features || ['shader-f16'],
-        overrides: {
-          context_window_size: contextSize,
-          prefill_chunk_size: chunkSize,
-        },
-      };
-      
-      console.log('[WebLLM] Custom model record:', customModelRecord);
-      console.log('[WebLLM] WASM URL to try:', customModelRecord.model_lib);
-      
-      const appConfig = {
-        model_list: [customModelRecord],
-        useIndexedDBCache: true,
-      };
-      
-      console.log('[WebLLM] Creating engine with custom proxy config');
-
+      // Use WebLLM's default configuration
+      // This will download from WebLLM's CDN which has all required files
       this.engine = await window.mlc.CreateMLCEngine(
         this.modelId,
         {
-          appConfig,
           initProgressCallback: (progress) => {
             this.handleInitProgress(progress);
           },
