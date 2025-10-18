@@ -29,18 +29,22 @@ self.fetch = function proxiedFetch(url, options) {
 
 console.log('[LLM Worker] Fetch proxy installed');
 
-// Now import WebLLM (which will use our proxied fetch)
-import { WebWorkerMLCEngineHandler } from 'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.63/+esm';
+// Use dynamic import to load WebLLM AFTER proxy is installed
+// (static imports are hoisted and run before our proxy code)
+import('https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.63/+esm').then((webllm) => {
+  console.log('[LLM Worker] WebLLM loaded with proxy in place');
+  console.log('[LLM Worker] Initializing WebWorkerMLCEngineHandler');
 
-console.log('[LLM Worker] Initializing WebWorkerMLCEngineHandler');
+  // Create the handler that will process messages from the main thread
+  const handler = new webllm.WebWorkerMLCEngineHandler();
 
-// Create the handler that will process messages from the main thread
-const handler = new WebWorkerMLCEngineHandler();
+  // Set up message handling
+  self.onmessage = (event) => {
+    handler.onmessage(event);
+  };
 
-// Set up message handling
-self.onmessage = (event) => {
-  handler.onmessage(event);
-};
-
-console.log('[LLM Worker] Ready to receive messages');
+  console.log('[LLM Worker] Ready to receive messages');
+}).catch((error) => {
+  console.error('[LLM Worker] Failed to load WebLLM:', error);
+});
 
