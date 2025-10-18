@@ -120,22 +120,24 @@ class WebLLMProvider extends LLMProvider {
    * Load WebLLM library dynamically
    */
   async loadWebLLMLibrary() {
-    return new Promise((resolve, reject) => {
-      if (document.querySelector('script[src*="mlc-ai"]')) {
-        resolve();
+    try {
+      // Check if already loaded
+      if (window.mlc?.CreateMLCEngine) {
         return;
       }
 
-      const script = document.createElement('script');
-      script.src = 'https://esm.run/@mlc-ai/web-llm';
-      script.type = 'module';
-      script.onload = () => {
-        // Give it a moment to initialize
-        setTimeout(resolve, 100);
-      };
-      script.onerror = () => reject(new Error('Failed to load WebLLM library'));
-      document.head.appendChild(script);
-    });
+      // Import WebLLM as ES module
+      // eslint-disable-next-line import/no-unresolved
+      const webllmModule = await import('https://esm.run/@mlc-ai/web-llm');
+
+      // Expose to window for consistent access
+      window.mlc = webllmModule;
+
+      console.log('[WebLLM] Library loaded successfully');
+    } catch (error) {
+      console.error('[WebLLM] Failed to load library:', error);
+      throw new Error('Failed to load WebLLM library');
+    }
   }
 
   /**
