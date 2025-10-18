@@ -75,13 +75,25 @@ class WebLLMProvider extends LLMProvider {
 
     // Override global fetch
     window.fetch = async (input, init) => {
-      const url = typeof input === 'string' ? input : input.url;
+      let url;
+      try {
+        url = typeof input === 'string' ? input : input.url;
+      } catch (e) {
+        // If we can't get URL, just pass through
+        console.warn('[WebLLM Proxy] Could not extract URL from fetch input:', input);
+        return originalFetch(input, init);
+      }
+
+      // Log all fetch requests for debugging
+      if (url.includes('huggingface') || url.includes('mlc-ai')) {
+        console.log('[WebLLM Proxy] Intercepted fetch:', url);
+      }
 
       // Check if this is a HuggingFace request
       if (url.startsWith('https://huggingface.co/')) {
         // Redirect through our proxy
         const proxiedUrl = url.replace('https://huggingface.co/', `${proxyBaseUrl}/`);
-        console.log(`[WebLLM Proxy] ${url} → ${proxiedUrl}`);
+        console.log(`[WebLLM Proxy] ✓ Redirecting: ${url.substring(0, 80)}... → ${proxiedUrl.substring(0, 80)}...`);
 
         // Call original fetch with proxied URL
         return originalFetch(proxiedUrl, init);
@@ -92,6 +104,7 @@ class WebLLMProvider extends LLMProvider {
     };
 
     console.log('[WebLLM] Fetch interceptor installed');
+    console.log('[WebLLM] Verifying interceptor - window.fetch is:', window.fetch === originalFetch ? '❌ NOT patched!' : '✓ patched');
   }
 
   /**
@@ -121,6 +134,10 @@ class WebLLMProvider extends LLMProvider {
     }
 
     try {
+      // CRITICAL: Install fetch interceptor BEFORE loading WebLLM library
+      // This ensures WebLLM uses our patched fetch from the start
+      this.installFetchInterceptor();
+
       // Check if WebLLM library is loaded
       if (typeof window.mlc === 'undefined' || typeof window.mlc.CreateMLCEngine === 'undefined') {
         await this.loadWebLLMLibrary();
@@ -130,9 +147,6 @@ class WebLLMProvider extends LLMProvider {
       this.notifyStatusChange();
 
       console.log('[WebLLM] Creating engine with model ID:', this.modelId);
-
-      // Install fetch interceptor to redirect HuggingFace requests through our proxy
-      this.installFetchInterceptor();
 
       // Now use WebLLM's default configuration
       // All HuggingFace requests will automatically be proxied
