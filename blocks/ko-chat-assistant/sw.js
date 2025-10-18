@@ -1,47 +1,28 @@
 /**
  * Service Worker for WebLLM
  * Uses WebLLM's built-in ServiceWorkerMLCEngineHandler
+ * 
+ * This is an ES module Service Worker - uses static imports
  */
 
-// Import WebLLM from ES module CDN
-// Using dynamic import since Service Workers support ES modules
-console.log('[SW WebLLM] Loading WebLLM library...');
+// Static import of WebLLM - this is allowed in ES module Service Workers
+import { ServiceWorkerMLCEngineHandler } from 'https://esm.run/@mlc-ai/web-llm@0.2.63';
 
-let webllm;
+console.log('[SW WebLLM] Initializing WebLLM Service Worker');
 
-async function initializeWebLLM() {
-  try {
-    // Import WebLLM as ES module
-    webllm = await import('https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.63/+esm');
-    console.log('[SW WebLLM] WebLLM loaded:', webllm);
-    
-    // Create the handler
-    const handler = new webllm.ServiceWorkerMLCEngineHandler();
-    console.log('[SW WebLLM] Handler created, ready to serve WebLLM requests');
-    
-    return handler;
-  } catch (error) {
-    console.error('[SW WebLLM] Failed to load WebLLM:', error);
-    throw error;
-  }
-}
+// Create the handler - WebLLM handles all fetch interception internally
+const handler = new ServiceWorkerMLCEngineHandler();
+
+console.log('[SW WebLLM] Handler created successfully');
 
 self.addEventListener('install', (event) => {
   console.log('[SW WebLLM] Installing...');
-  event.waitUntil(
-    initializeWebLLM().then(() => {
-      console.log('[SW WebLLM] WebLLM initialized during install');
-      return self.skipWaiting();
-    })
-  );
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   console.log('[SW WebLLM] Activating...');
-  event.waitUntil(
-    clients.claim().then(() => {
-      console.log('[SW WebLLM] Clients claimed');
-    })
-  );
+  event.waitUntil(clients.claim());
+  console.log('[SW WebLLM] Ready to serve WebLLM requests');
 });
 
