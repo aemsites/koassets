@@ -76,6 +76,20 @@ router
   // Hugging Face proxy for WebLLM models (no auth required)
   .all('/api/hf-proxy/*', proxyHuggingFace)
 
+  // WebLLM model files - rewrite HuggingFace URL structure to direct file access
+  // Converts: /models/{model}/resolve/main/{file} -> /models/{model}/{file}
+  .get('/models/*/resolve/main/*', (request) => {
+    const url = new URL(request.url);
+    // Remove /resolve/main/ from the path
+    url.pathname = url.pathname.replace('/resolve/main', '');
+    console.log('[Models] Rewriting URL:', request.url, '->', url.toString());
+    // Create new request with rewritten URL
+    return originHelix(new Request(url.toString(), request));
+  })
+
+  // Direct model file access (for files that don't go through /resolve/main/)
+  .get('/models/*', originHelix)
+
   // public content
   .get('/public/*', originHelix)
   .get('/tools/*', originHelix)
