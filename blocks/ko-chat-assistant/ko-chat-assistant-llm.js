@@ -161,23 +161,32 @@ class WebLLMProvider extends LLMProvider {
       this.installGlobalFetchProxy();
 
       // Check if WebLLM library is loaded
-      if (typeof window.mlc === 'undefined' || typeof window.mlc.CreateMLCEngine === 'undefined') {
+      if (typeof window.mlc === 'undefined' || typeof window.mlc.CreateWebWorkerMLCEngine === 'undefined') {
         await this.loadWebLLMLibrary();
       }
 
       this.status = 'downloading';
       this.notifyStatusChange();
 
-      console.log('[WebLLM] Creating MLCEngine (WebGPU-based, runs in main thread)');
-      console.log('[WebLLM] Using default WebLLM configuration (files hosted on WebLLM CDN)');
+      console.log('[WebLLM] Creating Web Worker for MLCEngine');
+      console.log('[WebLLM] This runs the model in a separate thread for better performance');
 
-      // Use WebLLM's default configuration - they host all files on their own CDN
-      // which has proper CORS headers configured
-      this.engine = await window.mlc.CreateMLCEngine(this.modelId, {
-        initProgressCallback: (progress) => {
-          this.handleInitProgress(progress);
-        },
-      });
+      // Create a Web Worker to run the MLCEngine
+      const worker = new Worker(
+        new URL('./llm-worker.js', import.meta.url),
+        { type: 'module' }
+      );
+
+      // Create WebWorkerMLCEngine client (communicates with the worker)
+      this.engine = await window.mlc.CreateWebWorkerMLCEngine(
+        worker,
+        this.modelId,
+        {
+          initProgressCallback: (progress) => {
+            this.handleInitProgress(progress);
+          },
+        }
+      );
 
       console.log('[WebLLM] Model loaded successfully');
 
@@ -245,7 +254,7 @@ class WebLLMProvider extends LLMProvider {
   async loadWebLLMLibrary() {
     try {
       // Check if already loaded
-      if (window.mlc?.CreateMLCEngine) {
+      if (window.mlc?.CreateWebWorkerMLCEngine) {
         return;
       }
 
