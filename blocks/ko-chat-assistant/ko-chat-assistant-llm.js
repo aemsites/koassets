@@ -166,40 +166,11 @@ class WebLLMProvider extends LLMProvider {
       this.notifyStatusChange();
 
       console.log('[WebLLM] Creating MLCEngine (WebGPU-based, runs in main thread)');
-      console.log('[WebLLM] Using HuggingFace proxy to avoid CORS issues');
+      console.log('[WebLLM] Using default WebLLM configuration (files hosted on WebLLM CDN)');
 
-      // Get the proxy base URL
-      const proxyBaseUrl = `${window.location.origin}/api/hf-proxy`;
-
-      // Fetch the full model config from HuggingFace through our proxy
-      console.log('[WebLLM] Fetching model config through proxy...');
-      const configUrl = `${proxyBaseUrl}/mlc-ai/${this.modelId}/resolve/main/mlc-chat-config.json`;
-      const configResponse = await fetch(configUrl);
-      
-      if (!configResponse.ok) {
-        throw new Error(`Failed to fetch model config: ${configResponse.status}`);
-      }
-      
-      const modelConfig = await configResponse.json();
-      console.log('[WebLLM] Model config fetched successfully');
-
-      // Create custom app config with the full model config and proxied URLs
-      const appConfig = {
-        model_list: [
-          {
-            ...modelConfig,
-            model_id: this.modelId,
-            model: `${proxyBaseUrl}/mlc-ai/${this.modelId}/resolve/main/`,
-            model_lib: `${proxyBaseUrl}/mlc-ai/${this.modelId}/resolve/main/TinyLlama-1.1B-Chat-v1.0-q4f16_1-ctx2k_cs1k-webgpu.wasm`,
-          },
-        ],
-      };
-
-      console.log('[WebLLM] Using proxy URL:', appConfig.model_list[0].model);
-
-      // Create regular MLCEngine instance (runs in main thread with WebGPU)
+      // Use WebLLM's default configuration - they host all files on their own CDN
+      // which has proper CORS headers configured
       this.engine = await window.mlc.CreateMLCEngine(this.modelId, {
-        appConfig,
         initProgressCallback: (progress) => {
           this.handleInitProgress(progress);
         },
