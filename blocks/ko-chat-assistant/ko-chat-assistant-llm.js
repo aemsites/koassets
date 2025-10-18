@@ -425,31 +425,9 @@ class LLMManager {
 // ============================================================================
 
 class MCPClient {
-  constructor(mcpServerUrl) {
-    // Default MCP server URL based on environment
-    // For local dev: assumes MCP server is part of main worker
-    // For WebLLM mode in production: use deployed MCP server
-    this.mcpServerUrl = mcpServerUrl || this.detectMCPServerUrl();
-  }
-
-  /**
-   * Detect appropriate MCP server URL based on environment
-   */
-  detectMCPServerUrl() {
-    const { hostname } = window.location;
-
-    // Local development
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return '/mcp'; // MCP is part of main worker in dev
-    }
-
-    // Staging
-    if (hostname.includes('staging') || hostname.includes('aem.page')) {
-      return 'https://koassets-mcp-server-staging.workers.dev/mcp';
-    }
-
-    // Production
-    return 'https://koassets-mcp-server.workers.dev/mcp';
+  constructor() {
+    // MCP is now integrated into the main worker at /api/mcp
+    this.mcpServerUrl = '/api/mcp';
   }
 
   /**

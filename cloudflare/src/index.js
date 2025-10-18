@@ -16,6 +16,7 @@ import { originDynamicMedia } from './origin/dm';
 import { originHelix } from './origin/helix';
 import { originFadel } from './origin/fadel';
 import { cors } from './util/itty';
+import { apiMcp } from './mcp/mcp.js';
 
 const { preflight, corsify } = cors({
   origin: [
@@ -66,6 +67,9 @@ router
 
   // fadel
   .all('/api/fadel/*', originFadel)
+
+  // MCP (Model Context Protocol) - AI assistant tools
+  .all('/api/mcp*', apiMcp)
 
   // future API routes
   .all('/api/*', () => error(404))
