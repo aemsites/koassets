@@ -185,22 +185,23 @@ class WebLLMProvider extends LLMProvider {
       console.log('[WebLLM] Model config fetched successfully');
 
       // Create appConfig with proxied URLs
-      const modelBaseUrl = `${proxyBaseUrl}/${modelRepoPath}/resolve/main/`;
+      // Note: model_url should be the base URL WITHOUT trailing slash
+      const modelBaseUrl = `${proxyBaseUrl}/${modelRepoPath}/resolve/main`;
       const appConfig = {
         model_list: [
           {
             ...modelConfig,
             model_id: this.modelId,
             model_url: modelBaseUrl,
-            model_lib_url: `${modelBaseUrl}${this.modelId.replace(/-MLC$/, '')}-ctx2k_cs1k-webgpu.wasm`,
-            // Convert tokenizer files to absolute URLs
-            tokenizer_files: modelConfig.tokenizer_files?.map((file) => `${modelBaseUrl}${file}`),
+            // Keep tokenizer_files as relative paths - WebLLM will resolve them
+            // Keep model_lib as relative - WebLLM will resolve it
           },
         ],
         useIndexedDBCache: true,
       };
-
+      
       console.log('[WebLLM] Creating engine with custom proxy config');
+      console.log('[WebLLM] Model base URL:', modelBaseUrl);
 
       this.engine = await window.mlc.CreateMLCEngine(
         this.modelId,
