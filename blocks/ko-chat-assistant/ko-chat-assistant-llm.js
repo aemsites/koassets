@@ -50,6 +50,8 @@ class WebLLMProvider extends LLMProvider {
     this.engine = null;
     this.status = 'uninitialized'; // uninitialized, downloading, loading, ready, error
     this.downloadProgress = 0;
+    // Use a valid pre-built WebLLM model
+    // List: https://github.com/mlc-ai/web-llm/blob/main/src/config.ts
     this.modelId = 'TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC';
     this.initCallbacks = [];
   }
@@ -78,6 +80,8 @@ class WebLLMProvider extends LLMProvider {
       this.status = 'downloading';
       this.notifyStatusChange();
 
+      console.log('[WebLLM] Creating engine with model ID:', this.modelId);
+
       // Create engine with progress callback
       this.engine = await window.mlc.CreateMLCEngine(
         this.modelId,
@@ -87,6 +91,8 @@ class WebLLMProvider extends LLMProvider {
           },
         },
       );
+
+      console.log('[WebLLM] Engine created successfully');
 
       this.status = 'ready';
       this.downloadProgress = 100;
@@ -126,14 +132,33 @@ class WebLLMProvider extends LLMProvider {
         return;
       }
 
-      // Import WebLLM as ES module
-      // eslint-disable-next-line import/no-unresolved
-      const webllmModule = await import('https://esm.run/@mlc-ai/web-llm');
+      // Try multiple CDN sources in order of preference
+      const cdnUrls = [
+        'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.46/+esm',
+        'https://esm.run/@mlc-ai/web-llm@0.2.46',
+        'https://esm.run/@mlc-ai/web-llm',
+      ];
 
-      // Expose to window for consistent access
-      window.mlc = webllmModule;
+      let lastError;
+      // eslint-disable-next-line no-restricted-syntax
+      for (const url of cdnUrls) {
+        try {
+          console.log(`[WebLLM] Trying to load from: ${url}`);
+          // eslint-disable-next-line import/no-unresolved, no-await-in-loop
+          const webllmModule = await import(url);
 
-      console.log('[WebLLM] Library loaded successfully');
+          // Expose to window for consistent access
+          window.mlc = webllmModule;
+
+          console.log('[WebLLM] Library loaded successfully from:', url);
+          return;
+        } catch (error) {
+          console.warn(`[WebLLM] Failed to load from ${url}:`, error.message);
+          lastError = error;
+        }
+      }
+
+      throw lastError || new Error('Failed to load WebLLM library from all sources');
     } catch (error) {
       console.error('[WebLLM] Failed to load library:', error);
       throw new Error('Failed to load WebLLM library');
