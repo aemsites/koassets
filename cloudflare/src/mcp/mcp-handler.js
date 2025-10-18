@@ -3,9 +3,9 @@
  * Implements Model Context Protocol JSON-RPC 2.0 methods
  */
 
-import { listTools, callTool } from './tools/index.js';
+import { getPrompt, listPrompts } from './prompts/index.js';
 import { listResources, readResource } from './resources/index.js';
-import { listPrompts, getPrompt } from './prompts/index.js';
+import { callTool, listTools } from './tools/index.js';
 
 const SERVER_INFO = {
   name: 'koassets-search',
@@ -14,8 +14,8 @@ const SERVER_INFO = {
   capabilities: {
     tools: {},
     resources: {},
-    prompts: {}
-  }
+    prompts: {},
+  },
 };
 
 /**
@@ -31,9 +31,9 @@ export async function handleMCPRequest(body, env, request) {
       jsonrpc: '2.0',
       error: {
         code: -32600,
-        message: 'Invalid Request - jsonrpc must be "2.0"'
+        message: 'Invalid Request - jsonrpc must be "2.0"',
       },
-      id: id || null
+      id: id || null,
     };
   }
 
@@ -42,9 +42,9 @@ export async function handleMCPRequest(body, env, request) {
       jsonrpc: '2.0',
       error: {
         code: -32600,
-        message: 'Invalid Request - method is required'
+        message: 'Invalid Request - method is required',
       },
-      id: id || null
+      id: id || null,
     };
   }
 
@@ -89,16 +89,16 @@ export async function handleMCPRequest(body, env, request) {
           jsonrpc: '2.0',
           error: {
             code: -32601,
-            message: `Method not found: ${method}`
+            message: `Method not found: ${method}`,
           },
-          id: id || null
+          id: id || null,
         };
     }
 
     return {
       jsonrpc: '2.0',
       result,
-      id: id || null
+      id: id || null,
     };
   } catch (error) {
     console.error(`Error handling method ${method}:`, error);
@@ -107,9 +107,9 @@ export async function handleMCPRequest(body, env, request) {
       error: {
         code: -32603,
         message: 'Internal error',
-        data: error.message
+        data: error.message,
       },
-      id: id || null
+      id: id || null,
     };
   }
 }
@@ -117,21 +117,21 @@ export async function handleMCPRequest(body, env, request) {
 /**
  * Handle initialize request
  */
-async function handleInitialize(params, env) {
+async function handleInitialize(_params, _env) {
   return {
     protocolVersion: SERVER_INFO.protocolVersion,
     capabilities: SERVER_INFO.capabilities,
     serverInfo: {
       name: SERVER_INFO.name,
-      version: SERVER_INFO.version
-    }
+      version: SERVER_INFO.version,
+    },
   };
 }
 
 /**
  * Handle tools/list request
  */
-async function handleToolsList(params, env) {
+async function handleToolsList(_params, env) {
   const tools = await listTools(env);
   return { tools };
 }
@@ -153,7 +153,7 @@ async function handleToolsCall(params, env, request) {
 /**
  * Handle resources/list request
  */
-async function handleResourcesList(params, env) {
+async function handleResourcesList(_params, env) {
   const resources = await listResources(env);
   return { resources };
 }
@@ -175,7 +175,7 @@ async function handleResourcesRead(params, env, request) {
 /**
  * Handle prompts/list request
  */
-async function handlePromptsList(params, env) {
+async function handlePromptsList(_params, env) {
   const prompts = await listPrompts(env);
   return { prompts };
 }
@@ -193,4 +193,3 @@ async function handlePromptsGet(params, env) {
   const result = await getPrompt(name, args || {}, env);
   return result;
 }
-

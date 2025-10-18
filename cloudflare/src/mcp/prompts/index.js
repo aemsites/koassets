@@ -6,7 +6,7 @@
 /**
  * List available prompts
  */
-export async function listPrompts(env) {
+export async function listPrompts(_env) {
   return [
     {
       name: 'find-brand-assets',
@@ -15,19 +15,19 @@ export async function listPrompts(env) {
         {
           name: 'brand',
           description: 'Brand name (e.g., Coca-Cola, Sprite, Fanta)',
-          required: true
+          required: true,
         },
         {
           name: 'category',
           description: 'Asset category (e.g., Image, Video, Document)',
-          required: false
+          required: false,
         },
         {
           name: 'limit',
           description: 'Maximum number of results to return',
-          required: false
-        }
-      ]
+          required: false,
+        },
+      ],
     },
     {
       name: 'check-usage-rights',
@@ -36,29 +36,29 @@ export async function listPrompts(env) {
         {
           name: 'assetIds',
           description: 'Comma-separated list of asset IDs',
-          required: true
+          required: true,
         },
         {
           name: 'market',
           description: 'Target market name (e.g., United States, Mexico)',
-          required: true
+          required: true,
         },
         {
           name: 'media',
           description: 'Media channel (e.g., Digital, TV, Print)',
-          required: true
+          required: true,
         },
         {
           name: 'startDate',
           description: 'Usage start date (YYYY-MM-DD)',
-          required: true
+          required: true,
         },
         {
           name: 'endDate',
           description: 'Usage end date (YYYY-MM-DD)',
-          required: true
-        }
-      ]
+          required: true,
+        },
+      ],
     },
     {
       name: 'explore-brand',
@@ -67,9 +67,9 @@ export async function listPrompts(env) {
         {
           name: 'brand',
           description: 'Brand name to explore',
-          required: true
-        }
-      ]
+          required: true,
+        },
+      ],
     },
     {
       name: 'find-campaign-assets',
@@ -78,35 +78,35 @@ export async function listPrompts(env) {
         {
           name: 'campaign',
           description: 'Campaign name',
-          required: true
+          required: true,
         },
         {
           name: 'includeCollections',
           description: 'Whether to also search in collections',
-          required: false
-        }
-      ]
-    }
+          required: false,
+        },
+      ],
+    },
   ];
 }
 
 /**
  * Get a specific prompt with arguments filled in
  */
-export async function getPrompt(name, args, env) {
+export async function getPrompt(name, args, _env) {
   switch (name) {
     case 'find-brand-assets':
       return buildFindBrandAssetsPrompt(args);
-    
+
     case 'check-usage-rights':
       return buildCheckUsageRightsPrompt(args);
-    
+
     case 'explore-brand':
       return buildExploreBrandPrompt(args);
-    
+
     case 'find-campaign-assets':
       return buildFindCampaignAssetsPrompt(args);
-    
+
     default:
       throw new Error(`Unknown prompt: ${name}`);
   }
@@ -123,7 +123,7 @@ function buildFindBrandAssetsPrompt(args) {
   }
 
   let prompt = `Find assets for the brand "${brand}"`;
-  
+
   if (category) {
     prompt += ` in the category "${category}"`;
   }
@@ -147,10 +147,10 @@ After getting the results, provide a summary that includes:
         role: 'user',
         content: {
           type: 'text',
-          text: prompt
-        }
-      }
-    ]
+          text: prompt,
+        },
+      },
+    ],
   };
 }
 
@@ -164,7 +164,7 @@ function buildCheckUsageRightsPrompt(args) {
     throw new Error('assetIds, market, media, startDate, and endDate arguments are required');
   }
 
-  const assetIdArray = assetIds.split(',').map(id => id.trim());
+  const assetIdArray = assetIds.split(',').map((id) => id.trim());
 
   const prompt = `Check usage rights for ${assetIdArray.length} asset(s) in market "${market}" for media channel "${media}" from ${startDate} to ${endDate}.
 
@@ -193,10 +193,10 @@ After getting the results, provide a clear summary:
         role: 'user',
         content: {
           type: 'text',
-          text: prompt
-        }
-      }
-    ]
+          text: prompt,
+        },
+      },
+    ],
   };
 }
 
@@ -232,10 +232,10 @@ Provide a summary that includes:
         role: 'user',
         content: {
           type: 'text',
-          text: prompt
-        }
-      }
-    ]
+          text: prompt,
+        },
+      },
+    ],
   };
 }
 
@@ -277,10 +277,9 @@ Provide a summary that includes:
         role: 'user',
         content: {
           type: 'text',
-          text: prompt
-        }
-      }
-    ]
+          text: prompt,
+        },
+      },
+    ],
   };
 }
-

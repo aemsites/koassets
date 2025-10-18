@@ -8,20 +8,20 @@ import { getAssetMetadata } from '../utils/api-client.js';
 /**
  * List available resource URI templates
  */
-export async function listResources(env) {
+export async function listResources(_env) {
   return [
     {
       uri: 'asset://{assetId}',
       name: 'Asset Resource',
       description: 'Access detailed metadata for a specific asset by its ID',
-      mimeType: 'application/json'
+      mimeType: 'application/json',
     },
     {
       uri: 'koassets://help',
       name: 'Help Documentation',
       description: 'Get help and documentation about using the KO Assets MCP server',
-      mimeType: 'text/markdown'
-    }
+      mimeType: 'text/markdown',
+    },
   ];
 }
 
@@ -31,18 +31,18 @@ export async function listResources(env) {
 export async function readResource(uri, env, request) {
   // Parse the URI
   const url = new URL(uri);
-  
+
   if (url.protocol === 'asset:') {
     // Asset resource: asset://urn:aaid:aem:12345678...
     const assetId = url.hostname + url.pathname;
-    
+
     if (!assetId || !assetId.startsWith('urn:aaid:aem:')) {
       throw new Error('Invalid asset URI format. Expected: asset://urn:aaid:aem:{uuid}');
     }
 
     try {
       const metadata = await getAssetMetadata(assetId, env, request);
-      
+
       if (!metadata) {
         throw new Error(`Asset not found: ${assetId}`);
       }
@@ -51,8 +51,8 @@ export async function readResource(uri, env, request) {
         {
           uri: uri,
           mimeType: 'application/json',
-          text: JSON.stringify(metadata, null, 2)
-        }
+          text: JSON.stringify(metadata, null, 2),
+        },
       ];
     } catch (error) {
       throw new Error(`Failed to read asset resource: ${error.message}`);
@@ -148,11 +148,10 @@ Base URL configured via KOASSETS_API_URL environment variable.
       {
         uri: uri,
         mimeType: 'text/markdown',
-        text: helpText
-      }
+        text: helpText,
+      },
     ];
   }
 
   throw new Error(`Unknown resource URI scheme: ${url.protocol}`);
 }
-

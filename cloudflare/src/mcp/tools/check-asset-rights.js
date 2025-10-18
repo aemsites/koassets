@@ -7,42 +7,43 @@ import { checkAssetRights } from '../utils/api-client.js';
 
 export const definition = {
   name: 'check_asset_rights',
-  description: 'Check if specific assets have usage rights cleared for given markets, media channels, and date range. Returns authorization status for each asset.',
+  description:
+    'Check if specific assets have usage rights cleared for given markets, media channels, and date range. Returns authorization status for each asset.',
   inputSchema: {
     type: 'object',
     properties: {
       assetIds: {
         type: 'array',
         items: {
-          type: 'string'
+          type: 'string',
         },
-        description: 'Array of asset IDs to check (e.g., ["urn:aaid:aem:12345..."])'
+        description: 'Array of asset IDs to check (e.g., ["urn:aaid:aem:12345..."])',
       },
       markets: {
         type: 'array',
         items: {
-          type: 'number'
+          type: 'number',
         },
-        description: 'Array of market rights IDs (type 30) to check against'
+        description: 'Array of market rights IDs (type 30) to check against',
       },
       mediaChannels: {
         type: 'array',
         items: {
-          type: 'number'
+          type: 'number',
         },
-        description: 'Array of media channel rights IDs (type 20) to check against'
+        description: 'Array of media channel rights IDs (type 20) to check against',
       },
       airDate: {
         type: 'number',
-        description: 'Start date for usage (Unix epoch timestamp in seconds)'
+        description: 'Start date for usage (Unix epoch timestamp in seconds)',
       },
       pullDate: {
         type: 'number',
-        description: 'End date for usage (Unix epoch timestamp in seconds)'
-      }
+        description: 'End date for usage (Unix epoch timestamp in seconds)',
+      },
     },
-    required: ['assetIds', 'markets', 'mediaChannels', 'airDate', 'pullDate']
-  }
+    required: ['assetIds', 'markets', 'mediaChannels', 'airDate', 'pullDate'],
+  },
 };
 
 export async function handler(args, env, request) {
@@ -54,13 +55,17 @@ export async function handler(args, env, request) {
       content: [
         {
           type: 'text',
-          text: JSON.stringify({
-            success: false,
-            error: 'assetIds array is required and must not be empty'
-          }, null, 2)
-        }
+          text: JSON.stringify(
+            {
+              success: false,
+              error: 'assetIds array is required and must not be empty',
+            },
+            null,
+            2,
+          ),
+        },
       ],
-      isError: true
+      isError: true,
     };
   }
 
@@ -69,13 +74,17 @@ export async function handler(args, env, request) {
       content: [
         {
           type: 'text',
-          text: JSON.stringify({
-            success: false,
-            error: 'markets array is required and must not be empty'
-          }, null, 2)
-        }
+          text: JSON.stringify(
+            {
+              success: false,
+              error: 'markets array is required and must not be empty',
+            },
+            null,
+            2,
+          ),
+        },
       ],
-      isError: true
+      isError: true,
     };
   }
 
@@ -84,13 +93,17 @@ export async function handler(args, env, request) {
       content: [
         {
           type: 'text',
-          text: JSON.stringify({
-            success: false,
-            error: 'mediaChannels array is required and must not be empty'
-          }, null, 2)
-        }
+          text: JSON.stringify(
+            {
+              success: false,
+              error: 'mediaChannels array is required and must not be empty',
+            },
+            null,
+            2,
+          ),
+        },
       ],
-      isError: true
+      isError: true,
     };
   }
 
@@ -99,20 +112,24 @@ export async function handler(args, env, request) {
       content: [
         {
           type: 'text',
-          text: JSON.stringify({
-            success: false,
-            error: 'airDate and pullDate are required'
-          }, null, 2)
-        }
+          text: JSON.stringify(
+            {
+              success: false,
+              error: 'airDate and pullDate are required',
+            },
+            null,
+            2,
+          ),
+        },
       ],
-      isError: true
+      isError: true,
     };
   }
 
   try {
     // Convert asset IDs from full URN format to short format (remove urn:aaid:aem: prefix)
-    const selectedExternalAssets = assetIds.map(id => 
-      id.startsWith('urn:aaid:aem:') ? id.replace('urn:aaid:aem:', '') : id
+    const selectedExternalAssets = assetIds.map((id) =>
+      id.startsWith('urn:aaid:aem:') ? id.replace('urn:aaid:aem:', '') : id,
     );
 
     // Build the rights check request
@@ -121,9 +138,9 @@ export async function handler(args, env, request) {
       outDate: pullDate,
       selectedExternalAssets,
       selectedRights: {
-        "20": mediaChannels, // Media rights
-        "30": markets        // Market rights
-      }
+        20: mediaChannels, // Media rights
+        30: markets, // Market rights
+      },
     };
 
     const response = await checkAssetRights(checkRequest, env, request);
@@ -134,30 +151,32 @@ export async function handler(args, env, request) {
         content: [
           {
             type: 'text',
-            text: JSON.stringify({
-              success: true,
-              data: {
-                allAuthorized: true,
-                totalAssets: assetIds.length,
-                authorizedAssets: assetIds.length,
-                restrictedAssets: 0,
-                assets: assetIds.map(id => ({
-                  assetId: id,
-                  status: 'available',
-                  authorized: true
-                }))
-              }
-            }, null, 2)
-          }
-        ]
+            text: JSON.stringify(
+              {
+                success: true,
+                data: {
+                  allAuthorized: true,
+                  totalAssets: assetIds.length,
+                  authorizedAssets: assetIds.length,
+                  restrictedAssets: 0,
+                  assets: assetIds.map((id) => ({
+                    assetId: id,
+                    status: 'available',
+                    authorized: true,
+                  })),
+                },
+              },
+              null,
+              2,
+            ),
+          },
+        ],
       };
     }
 
     // Process the response
     const restOfAssets = response.restOfAssets || [];
-    const restrictedAssetIds = new Set(
-      restOfAssets.map(item => `urn:aaid:aem:${item.asset.assetExtId}`)
-    );
+    const _restrictedAssetIds = new Set(restOfAssets.map((item) => `urn:aaid:aem:${item.asset.assetExtId}`));
 
     const result = {
       success: true,
@@ -166,28 +185,29 @@ export async function handler(args, env, request) {
         totalAssets: assetIds.length,
         authorizedAssets: assetIds.length - restOfAssets.length,
         restrictedAssets: restOfAssets.length,
-        assets: assetIds.map(id => {
-          const restrictedItem = restOfAssets.find(
-            item => `urn:aaid:aem:${item.asset.assetExtId}` === id
-          );
+        assets: assetIds.map((id) => {
+          const restrictedItem = restOfAssets.find((item) => `urn:aaid:aem:${item.asset.assetExtId}` === id);
 
           if (restrictedItem) {
             return {
               assetId: id,
               assetName: restrictedItem.asset.name,
-              status: restrictedItem.notAvailable ? 'not_available' : 
-                      restrictedItem.availableExcept ? 'available_except' : 'available',
+              status: restrictedItem.notAvailable
+                ? 'not_available'
+                : restrictedItem.availableExcept
+                  ? 'available_except'
+                  : 'available',
               authorized: !restrictedItem.notAvailable,
               availableCount: restrictedItem.availableCount,
               notAvailableCount: restrictedItem.notAvailableCount,
-              allSelectionCount: restrictedItem.allSelectionCount
+              allSelectionCount: restrictedItem.allSelectionCount,
             };
           }
 
           return {
             assetId: id,
             status: 'available',
-            authorized: true
+            authorized: true,
           };
         }),
         requestedRights: {
@@ -195,19 +215,19 @@ export async function handler(args, env, request) {
           mediaChannels,
           dateRange: {
             from: airDate,
-            to: pullDate
-          }
-        }
-      }
+            to: pullDate,
+          },
+        },
+      },
     };
 
     return {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(result, null, 2)
-        }
-      ]
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
     };
   } catch (error) {
     console.error('Check asset rights error:', error);
@@ -215,14 +235,17 @@ export async function handler(args, env, request) {
       content: [
         {
           type: 'text',
-          text: JSON.stringify({
-            success: false,
-            error: error.message
-          }, null, 2)
-        }
+          text: JSON.stringify(
+            {
+              success: false,
+              error: error.message,
+            },
+            null,
+            2,
+          ),
+        },
       ],
-      isError: true
+      isError: true,
     };
   }
 }
-
