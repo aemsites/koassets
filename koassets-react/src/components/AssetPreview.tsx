@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useAppConfig } from '../hooks/useAppConfig';
-import type { AssetPreviewProps, Rendition } from '../types';
-import { formatCategory, getFileExtension, removeHyphenTitleCase } from '../utils/formatters';
+import type { Asset, AssetPreviewProps, Rendition } from '../types';
+import { formatCategory, getFileExtension } from '../utils/formatters';
+import { getAssetFieldDisplayFacetName } from '../utils/displayUtils';
 import ActionButton from './ActionButton';
 import { BUTTON_CONFIGS } from './ActionButtonConfigs';
 import './AssetPreview.css';
 import Picture from './Picture';
+import PDFViewer from './PDFViewer';
+import { isPdfPreview } from '../constants/filetypes';
 
 const AssetPreview: React.FC<AssetPreviewProps> = ({
     showModal,
@@ -107,7 +110,7 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                     <div className="modal-header">
                         <div className="preview-tags">
                             {(selectedImage?.campaignName as string) && (
-                                <span className="preview-tag tccc-tag">{removeHyphenTitleCase(selectedImage?.campaignName as string)}</span>
+                                <span className="preview-tag tccc-tag">{getAssetFieldDisplayFacetName('campaignName', selectedImage?.campaignName as string)}</span>
                             )}
                         </div>
                         <h3 className="modal-title">
@@ -116,13 +119,27 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                     </div>
 
                     <div className="modal-image-container">
-                        <Picture
-                            key={selectedImage.assetId}
-                            asset={selectedImage}
-                            width={350}
-                            className="modal-image"
-                            eager={true}
-                        />
+                        {(() => {
+                            const pictureComponent = (
+                                <Picture
+                                    key={selectedImage?.assetId}
+                                    asset={selectedImage as Asset}
+                                    width={350}
+                                    className="modal-image"
+                                    eager={true}
+                                    fetchPriority="high"
+                                />
+                            );
+                            return isPdfPreview(selectedImage?.format as string) ? (
+                                <PDFViewer 
+                                    selectedImage={selectedImage as Asset} 
+                                    renditions={renditions}
+                                    fallbackComponent={pictureComponent}
+                                />
+                            ) : (
+                                pictureComponent
+                            );
+                        })()}
                     </div>
 
                     <div className="preview-modal-details">

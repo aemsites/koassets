@@ -536,82 +536,26 @@ a.terms-link:hover {
   text-decoration: underline;
 }
 
-/* Preview image base styles */
-.preview-image {
+picture.missing {
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  background-color: #ffccc7;
   position: relative;
   display: block;
 }
 
-.preview-image picture {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-/* Skeleton loading state - subtle animated background */
-.preview-image.skeleton {
-  position: relative;
-  background: linear-gradient(
-    90deg,
-    #f0f0f0 0%,
-    #f8f8f8 50%,
-    #f0f0f0 100%
-  );
-  background-size: 200% 100%;
-  animation: skeleton-pulse 1.5s ease-in-out infinite;
-}
-
-/* Skeleton animation - subtle shimmer effect */
-
-@keyframes skeleton-pulse {
-  0% {
-    background-position: 200% 0;
-  }
-
-  100% {
-    background-position: -200% 0;
-  }
-}
-
-/* Fade-in animation for loaded images */
-.preview-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  opacity: 0;
-  transition: opacity 0.3s ease-in;
-}
-
-.preview-image img.fade-in {
-  opacity: 1;
-}
-
-/* Error/missing preview state */
-.preview-image.missing {
-  width: 100%;
-  height: 100%;
-  background: #fef2f2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  container-type: inline-size;
-}
-
-.preview-image.missing::after {
+picture.missing::before {
   content: "Preview not available";
   color: #f5222d;
   font-family: "TCCC UnityText Regular", sans-serif;
-  font-size: clamp(12px, 5cqi, 15px);
   text-align: center;
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  white-space: wrap;
 }
 
-.preview-image.missing img {
+picture.missing img {
   display: none;
 }

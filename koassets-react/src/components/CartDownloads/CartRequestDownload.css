@@ -89,21 +89,6 @@
     min-width: 0;
 }
 
-.asset-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #333;
-    line-height: 1.4;
-    margin-bottom: 6px;
-    word-wrap: break-word;
-}
-
-.asset-type {
-    font-size: 12px;
-    color: #666;
-    font-weight: 600;
-}
-
 /* Intended Use Form Column */
 .cart-request-download-form {
     display: flex;

@@ -66,7 +66,7 @@
     background: #a8a8a8;
 }
 
-.cart-panel .cart-item-row {
+.cart-panel .cart-asset-row {
     display: grid;
     grid-template-columns: 0.5fr 1fr 0.5fr 0.5fr;
     gap: 16px;
@@ -75,7 +75,7 @@
     align-items: center;
 }
 
-.cart-panel .cart-item-row.disabled {
+.cart-panel .cart-asset-row.disabled {
     opacity: 0.6;
     background-color: #fafafa;
 }
@@ -99,19 +99,6 @@
 .cart-panel .col-action {
     display: flex;
     justify-content: flex-end;
-}
-
-.cart-panel .item-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #333;
-    line-height: 1.4;
-}
-
-.cart-panel .item-type {
-    font-size: 12px;
-    color: #666;
-    font-weight: 600;
 }
 
 .cart-panel .rights-badge {

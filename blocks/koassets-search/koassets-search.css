@@ -19,12 +19,9 @@
     width: 100%;
 
     /* Remove height: 100vh constraint for natural page flow */
-    min-height: 600px;
+    min-height: 100vh;
     position: relative;
     background: #fff;
-
-    /* Remove overflow: hidden to allow scrolling */
-    box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
 }
 
 .koassets-search-container .koassets-search-wrapper {

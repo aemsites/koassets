@@ -4,6 +4,7 @@ import type { CartRequestRightsExtensionProps, RequestRightsExtensionStepData } 
 import MyDatePicker from '../MyDatePicker';
 import Picture from '../Picture';
 import './CartRequestRightsExtension.css';
+import { EAGER_LOAD_IMAGE_COUNT } from '../../constants/images';
 
 const CartRequestRightsExtension: React.FC<CartRequestRightsExtensionProps> = ({
     restrictedAssets,
@@ -145,11 +146,11 @@ const CartRequestRightsExtension: React.FC<CartRequestRightsExtensionProps> = ({
 
                     {/* Asset List */}
                     <div className="asset-list-items">
-                        {restrictedAssets.map((asset) => (
+                        {restrictedAssets.map((asset, index: number) => (
                             <div key={asset.assetId} className="asset-list-item">
                                 <div className="asset-thumbnail">
                                     <div className="item-thumbnail">
-                                        <Picture key={asset.assetId} asset={asset} width={350} />
+                                        <Picture key={asset.assetId} asset={asset} width={350} eager={index < EAGER_LOAD_IMAGE_COUNT} />
                                     </div>
                                 </div>
                                 <div className="asset-details">

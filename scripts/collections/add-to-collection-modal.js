@@ -3,12 +3,50 @@
  * Listens for custom events from React components and shows collection selection modal
  */
 
+// Import the centralized JavaScript collections client with auth
+import { DynamicMediaCollectionsClient } from './collections-api-client.js';
+import { transformApiCollectionToInternal } from './collections-utils.js';
+
+// Check if we're in cookie auth mode (same logic as main app)
+function isCookieAuth() {
+  return window.location.origin.endsWith('adobeaem.workers.dev')
+    || window.location.origin === 'http://localhost:8787';
+}
+
+// Global state
+let collectionsClient = null;
+let allCollections = [];
 let currentAsset = null; // legacy single asset support
 let currentAssets = [];
 let collectionsModal = null;
 
 // Initialize the modal system
-function initAddToCollectionModal() {
+async function initAddToCollectionModal() {
+  // Load user if not already available
+  if (!window.user) {
+    // eslint-disable-next-line no-console
+    console.warn('⚠️ [Collections Client Modal] Failed to load user, proceeding without user context');
+  }
+
+  // Initialize the Collections client with same config as main app
+  try {
+    const accessToken = localStorage.getItem('accessToken') || '';
+    const currentUser = window.user; // Get current user for auth
+
+    collectionsClient = new DynamicMediaCollectionsClient({
+      accessToken,
+      user: currentUser, // Pass user for auth filtering
+    });
+    // eslint-disable-next-line no-console
+    console.log('🔧 [Collections Client Modal] Initialized with:', {
+      hasAccessToken: Boolean(accessToken),
+      isCookieAuth: isCookieAuth(),
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to initialize Collections client for modal:', error);
+  }
+
   // Listen for the custom event from React components
   window.addEventListener('openCollectionModal', handleOpenCollectionModal);
 
@@ -120,15 +158,30 @@ function hideCollectionsModal() {
   currentAssets = [];
 }
 
-// Load collections and create checkboxes
-function loadCollectionsForSelection() {
+// Load collections from API and create checkboxes
+async function loadCollectionsForSelection() {
   const collectionsContainer = collectionsModal.querySelector('.collections-list');
   const noCollectionsMessage = collectionsModal.querySelector('.no-collections-message');
 
-  try {
-    const collections = JSON.parse(localStorage.getItem('koassets-my-collections') || '[]');
+  if (!collectionsClient) {
+    collectionsContainer.innerHTML = '<div class="error">Collections service not available</div>';
+    return;
+  }
 
-    if (collections.length === 0) {
+  try {
+    // Show loading state
+    collectionsContainer.innerHTML = '<div class="loading">Loading collections...</div>';
+    // eslint-disable-next-line no-console
+    console.log('Loading collections from Dynamic Media API for modal...');
+    const response = await collectionsClient.listCollections({ limit: 100 });
+
+    // Transform API response to internal format
+    allCollections = response.items.map(transformApiCollectionToInternal);
+
+    // eslint-disable-next-line no-console
+    console.log(`Loaded ${allCollections.length} collections from API for modal`);
+
+    if (allCollections.length === 0) {
       collectionsContainer.style.display = 'none';
       noCollectionsMessage.style.display = 'block';
       return;
@@ -141,7 +194,7 @@ function loadCollectionsForSelection() {
     collectionsContainer.innerHTML = '';
 
     // Create checkbox for each collection
-    collections.forEach((collection) => {
+    allCollections.forEach((collection) => {
       const collectionItem = document.createElement('div');
       collectionItem.className = 'collection-item';
 
@@ -158,24 +211,15 @@ function loadCollectionsForSelection() {
       const labelContent = document.createElement('div');
       labelContent.className = 'collection-label-content';
 
-      // First row: name and item count
-      const firstRow = document.createElement('div');
-      firstRow.className = 'collection-first-row';
-
-      const name = document.createElement('span');
+      // Collection name
+      const name = document.createElement('div');
       name.className = 'collection-name';
       name.textContent = collection.name;
 
-      const itemCount = document.createElement('span');
-      itemCount.className = 'collection-count';
-      itemCount.textContent = `(${collection.contents ? collection.contents.length : 0} items)`;
-
-      firstRow.appendChild(name);
-      firstRow.appendChild(itemCount);
-      labelContent.appendChild(firstRow);
+      labelContent.appendChild(name);
 
       // Second row: description (if exists)
-      if (collection.description) {
+      if (collection.description && collection.description.trim()) {
         const description = document.createElement('div');
         description.className = 'collection-description';
         description.textContent = collection.description;
@@ -190,13 +234,14 @@ function loadCollectionsForSelection() {
       collectionsContainer.appendChild(collectionItem);
     });
   } catch (error) {
-    console.error('Error loading collections:', error);
+    // eslint-disable-next-line no-console
+    console.error('Error loading collections for modal:', error);
     collectionsContainer.innerHTML = '<div class="error">Error loading collections</div>';
   }
 }
 
 // Handle adding asset to selected collections
-function handleAddToSelectedCollections() {
+async function handleAddToSelectedCollections() {
   // Dump the full currentAsset JSON at the time of add for debugging
   try {
     // eslint-disable-next-line no-console
@@ -216,80 +261,63 @@ function handleAddToSelectedCollections() {
     return;
   }
 
+  if (!collectionsClient) {
+    showToast('Collections service not available', 'error');
+    return;
+  }
+
   const selectedCollectionIds = Array.from(checkboxes).map((cb) => cb.value);
 
   try {
-    const collections = JSON.parse(localStorage.getItem('koassets-my-collections') || '[]');
     let updatedCount = 0;
+    // Prepare assets to add
+    let assets;
+    if (currentAssets.length > 0) {
+      assets = currentAssets;
+    } else if (currentAsset) {
+      assets = [currentAsset];
+    } else {
+      assets = [];
+    }
 
-    const updatedCollections = collections.map((collection) => {
-      if (selectedCollectionIds.includes(collection.id)) {
-        if (!collection.contents) {
-          collection.contents = [];
-        }
+    // Add assets to each selected collection using API
+    const addPromises = selectedCollectionIds.map(async (collectionId) => {
+      try {
+        // Prepare add operations for all assets (API expects array format)
+        const addOperations = assets.map((asset) => ({
+          op: 'add',
+          id: asset.assetId || asset.id,
+          type: 'asset',
+        }));
 
-        const asString = (v) => {
-          if (!v) return '';
-          if (typeof v === 'string') return v;
-          if (typeof v === 'object') {
-            if (typeof v.url === 'string') return v.url;
-            if (typeof v.src === 'string') return v.src;
-          }
-          return '';
-        };
+        // eslint-disable-next-line no-console
+        console.log('➕ [Add to Collection] Adding assets to collection:', { collectionId, operations: addOperations });
 
-        let assets;
-        if (currentAssets.length > 0) {
-          assets = currentAssets;
-        } else if (currentAsset) {
-          assets = [currentAsset];
-        } else {
-          assets = [];
-        }
-        assets.forEach((a) => {
-          const ap = a.assetPath || a.assetId;
-          const exists = collection.contents.some((item) => (typeof item === 'string' ? item : item.assetPath || item.assetId) === ap);
-          if (exists) return;
+        // Add assets to collection via API
+        await collectionsClient.updateCollectionItems(collectionId, addOperations);
 
-          const thumbnailUrl = asString(a.previewUrl)
-            || asString(a.thumbnail)
-            || asString(a.url)
-            || asString(a.imageUrl)
-            || asString(a.thumbnailUrl)
-            || asString(a.preview_image_url);
-
-          collection.contents.push({
-            assetId: a.assetId,
-            assetPath: ap,
-            title: a.title || a.name,
-            repoName: a.name || (a.renditions && a.renditions['repo:name']) || '',
-            thumbnail: thumbnailUrl || '',
-            previewUrl: thumbnailUrl || '',
-            addedDate: new Date().toISOString(),
-          });
-          updatedCount += 1;
-        });
-
-        if (updatedCount > 0) {
-          collection.lastUpdated = new Date().toISOString();
-          collection.dateLastUsed = Date.now();
-        }
+        return assets.length;
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error(`Failed to add assets to collection ${collectionId}:`, error);
+        // Continue with other collections even if one fails
+        return 0;
       }
-      return collection;
     });
 
-    // Save updated collections
-    localStorage.setItem('koassets-my-collections', JSON.stringify(updatedCollections));
+    const results = await Promise.all(addPromises);
+    updatedCount = results.reduce((sum, count) => sum + count, 0);
 
     // Hide modal and show success
     hideCollectionsModal();
 
     if (updatedCount > 0) {
-      showToast('ASSETS ADDED TO COLLECTIONS', 'success');
+      showToast('ASSETS ADDED TO COLLECTIONS SUCCESSFULLY', 'success');
     } else {
-      showToast('ASSET ALREADY EXISTS IN SELECTED COLLECTIONS', 'info');
+      showToast('Failed to add assets to collections', 'error');
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error adding asset to collections:', error);
     showToast('Error adding asset to collections', 'error');
   }

@@ -22,6 +22,8 @@ import AssetDetailsSystem from './AssetDetailsSystem';
 import AssetDetailsSystemInfoLegacy from './AssetDetailsSystemInfoLegacy';
 import AssetDetailsTechnicalInfo from './AssetDetailsTechnicalInfo';
 import { populateAssetFromMetadata } from '../../utils/assetTransformers';
+import { isPdfPreview } from '../../constants/filetypes';
+import PDFViewer from '../PDFViewer';
 
 /* Displayed on the asset details modal header section
 campaignName 
@@ -131,19 +133,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 
             const fetchMetadata = async () => {
                 // Populate image with metadata
-                const metadataCache = JSON.parse(sessionStorage.getItem('assetMetadataCache') || '{}');
-                let metadata = metadataCache[selectedImage.assetId];
-
-                if (!metadata) {
-                    // Fetch metadata if not in cache
-                    metadata = await dynamicMediaClient?.getMetadata(selectedImage.assetId);
-
-                    // Store in sessionStorage
-                    if (metadata) {
-                        metadataCache[selectedImage.assetId] = metadata;
-                        sessionStorage.setItem('assetMetadataCache', JSON.stringify(metadataCache));
-                    }
-                }
+                const metadata = await dynamicMediaClient?.getMetadata(selectedImage.assetId);
 
                 console.debug('Metadata:', metadata);
                 setPopulatedImage(
@@ -227,13 +217,27 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     <span>Add to Collection</span>
                                 </div>
                             </div>
-                            <Picture
-                                key={selectedImage?.assetId}
-                                asset={populatedImage}
-                                width={1200}
-                                className="asset-details-main-image"
-                                eager={true}
-                            />
+                            {(() => {
+                                const pictureComponent = (
+                                    <Picture
+                                        key={selectedImage?.assetId}
+                                        asset={selectedImage as Asset}
+                                        width={1200}
+                                        className="asset-details-main-image"
+                                        eager={true}
+                                        fetchPriority="high"
+                                    />
+                                );
+                                return isPdfPreview(selectedImage?.format as string) ? (
+                                    <PDFViewer 
+                                        selectedImage={selectedImage as Asset} 
+                                        renditions={renditions}
+                                        fallbackComponent={pictureComponent}
+                                    />
+                                ) : (
+                                    pictureComponent
+                                );
+                            })()}
                         </div>
                     </div>
 
