@@ -1,19 +1,11 @@
 /**
  * Service Worker for WebLLM
- * Uses WebLLM's built-in ServiceWorkerMLCEngineHandler
  * 
- * This is an ES module Service Worker - uses static imports
+ * WebLLM's ServiceWorkerMLCEngine will communicate with this service worker
+ * We don't need to manually import anything - WebLLM handles it internally
  */
 
-// Try unpkg which has better ES module support and no redirects
-import { ServiceWorkerMLCEngineHandler } from 'https://unpkg.com/@mlc-ai/web-llm@0.2.63/lib/index.js';
-
-console.log('[SW WebLLM] Initializing WebLLM Service Worker');
-
-// Create the handler - WebLLM handles all fetch interception internally
-const handler = new ServiceWorkerMLCEngineHandler();
-
-console.log('[SW WebLLM] Handler created successfully');
+console.log('[SW WebLLM] Service Worker initializing');
 
 self.addEventListener('install', (event) => {
   console.log('[SW WebLLM] Installing...');
@@ -22,7 +14,18 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   console.log('[SW WebLLM] Activating...');
-  event.waitUntil(clients.claim());
-  console.log('[SW WebLLM] Ready to serve WebLLM requests');
+  event.waitUntil(self.clients.claim());
+  console.log('[SW WebLLM] Activated and claimed clients');
+});
+
+self.addEventListener('message', (event) => {
+  console.log('[SW WebLLM] Received message:', event.data);
+  
+  // WebLLM will send messages to coordinate model loading
+  // We just need to acknowledge and let WebLLM handle the details
+  if (event.data && event.data.kind === 'ping') {
+    console.log('[SW WebLLM] Responding to ping');
+    event.ports[0].postMessage({ kind: 'pong' });
+  }
 });
 
