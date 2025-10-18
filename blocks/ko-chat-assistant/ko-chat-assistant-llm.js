@@ -82,42 +82,68 @@ class WebLLMProvider extends LLMProvider {
 
       console.log('[WebLLM] Creating engine with model ID:', this.modelId);
 
-      // Create custom model config that uses our Cloudflare proxy
-      // This bypasses CORS issues with Hugging Face
-      const proxyBaseUrl = `${window.location.origin}/api/hf-proxy`;
-      const modelRepoPath = `mlc-ai/${this.modelId}`;
-      const modelUrl = `${proxyBaseUrl}/${modelRepoPath}/resolve/main/`;
+      // First, try using the default configuration without proxy
+      // If CORS fails, we'll catch it and try the proxy approach
+      try {
+        console.log('[WebLLM] Attempting default configuration first...');
 
-      console.log('[WebLLM] Using proxy URL:', modelUrl);
-
-      // Create custom appConfig with complete model configuration
-      const appConfig = {
-        model_list: [
+        this.engine = await window.mlc.CreateMLCEngine(
+          this.modelId,
           {
-            model_id: this.modelId,
-            model_url: modelUrl,
-            model_lib_url: `${modelUrl}${this.modelId.replace(/-MLC$/, '')}-ctx2k_cs1k-webgpu.wasm`,
-            vram_required_MB: 2048,
-            low_resource_required: false,
-            required_features: ['shader-f16'],
+            initProgressCallback: (progress) => {
+              this.handleInitProgress(progress);
+            },
           },
-        ],
-      };
+        );
 
-      console.log('[WebLLM] Model config:', JSON.stringify(appConfig, null, 2));
+        console.log('[WebLLM] Engine created successfully with default config');
+      } catch (defaultError) {
+        console.warn('[WebLLM] Default config failed, trying proxy approach:', defaultError.message);
 
-      // Create engine with custom config
-      const config = {
-        appConfig,
-        initProgressCallback: (progress) => {
-          this.handleInitProgress(progress);
-        },
-      };
+        // Fallback: Create custom model config using our Cloudflare proxy
+        const proxyBaseUrl = `${window.location.origin}/api/hf-proxy`;
+        const modelRepoPath = `mlc-ai/${this.modelId}`;
 
-      this.engine = await window.mlc.CreateMLCEngine(
-        this.modelId,
-        config,
-      );
+        // Fetch the original model config from HuggingFace through our proxy
+        const configUrl = `${proxyBaseUrl}/${modelRepoPath}/resolve/main/mlc-chat-config.json`;
+        console.log('[WebLLM] Fetching model config from:', configUrl);
+
+        const configResponse = await fetch(configUrl);
+        if (!configResponse.ok) {
+          throw new Error(`Failed to fetch model config: ${configResponse.status}`);
+        }
+
+        const originalConfig = await configResponse.json();
+        console.log('[WebLLM] Original config:', originalConfig);
+
+        // Create appConfig with proxy URLs
+        const modelUrl = `${proxyBaseUrl}/${modelRepoPath}/resolve/main/`;
+        const appConfig = {
+          model_list: [
+            {
+              ...originalConfig,
+              model_id: this.modelId,
+              model_url: modelUrl,
+              model_lib_url: `${modelUrl}${this.modelId.replace(/-MLC$/, '')}-ctx2k_cs1k-webgpu.wasm`,
+            },
+          ],
+        };
+
+        console.log('[WebLLM] Custom appConfig:', JSON.stringify(appConfig, null, 2));
+
+        // Create engine with custom proxied config
+        this.engine = await window.mlc.CreateMLCEngine(
+          this.modelId,
+          {
+            appConfig,
+            initProgressCallback: (progress) => {
+              this.handleInitProgress(progress);
+            },
+          },
+        );
+
+        console.log('[WebLLM] Engine created successfully with proxy config');
+      }
 
       console.log('[WebLLM] Engine created successfully');
 
