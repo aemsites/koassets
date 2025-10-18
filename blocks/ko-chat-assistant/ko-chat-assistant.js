@@ -110,72 +110,8 @@ function createChatUI(block) {
 }
 
 /**
- * Initialize LLM Manager
+ * Initialize the WebLLM engine with locally hosted model
  */
-/**
- * Register Service Worker for WebLLM proxy
- * This intercepts HuggingFace requests and proxies them through Cloudflare
- */
-async function registerServiceWorker() {
-  if (!('serviceWorker' in navigator)) {
-    console.warn('[Chat] Service Workers not supported');
-    return false;
-  }
-
-  try {
-    console.log('[Chat] Registering Service Worker for WebLLM proxy...');
-
-    const registration = await navigator.serviceWorker.register(
-      '/blocks/ko-chat-assistant/sw.js',
-      { scope: '/blocks/ko-chat-assistant/' },
-    );
-
-    console.log('[Chat] Service Worker registered:', registration.scope);
-
-    // Wait for service worker to be active
-    if (registration.active) {
-      console.log('[Chat] Service Worker already active');
-      return true;
-    }
-
-    // Wait for activation
-    return new Promise((resolve) => {
-      const checkAndResolve = () => {
-        if (registration.active) {
-          console.log('[Chat] Service Worker is now active');
-          resolve(true);
-        }
-      };
-
-      if (registration.installing) {
-        console.log('[Chat] Service Worker installing...');
-        registration.installing.addEventListener('statechange', function checkState() {
-          console.log('[Chat] Service Worker state:', this.state);
-          if (this.state === 'activated') {
-            console.log('[Chat] Service Worker activated');
-            // Add a small delay to ensure it's ready
-            setTimeout(() => resolve(true), 100);
-          }
-        });
-      } else if (registration.waiting) {
-        console.log('[Chat] Service Worker waiting, forcing activation...');
-        // Force waiting service worker to activate
-        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          console.log('[Chat] Service Worker activated (was waiting)');
-          setTimeout(() => resolve(true), 100);
-        });
-      } else {
-        // Already active or unknown state
-        checkAndResolve();
-      }
-    });
-  } catch (error) {
-    console.error('[Chat] Service Worker registration failed:', error);
-    return false;
-  }
-}
-
 async function initializeLLM() {
   try {
     console.log('[Chat] Initializing LLM...');
@@ -257,7 +193,7 @@ function showInitializationUI() {
   `;
 
   messagesContainer.parentElement.appendChild(overlay);
-  
+
   // Add cancel button handler
   document.getElementById('llm-init-cancel')?.addEventListener('click', () => {
     console.warn('[Chat] User cancelled LLM initialization');

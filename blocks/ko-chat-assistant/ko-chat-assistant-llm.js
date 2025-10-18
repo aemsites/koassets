@@ -50,99 +50,25 @@ class WebLLMProvider extends LLMProvider {
     this.engine = null;
     this.status = 'uninitialized'; // uninitialized, downloading, loading, ready, error
     this.downloadProgress = 0;
-    // Use a valid pre-built WebLLM model that's in version 0.2.63
-    // List: https://github.com/mlc-ai/web-llm/blob/main/src/config.ts
-    // TinyLlama is small (~600MB) and definitely in 0.2.63
-    // WASM files are hosted on WebLLM's binary CDN, not on HuggingFace
+    // Use locally hosted model on same domain (no CORS issues!)
     this.modelId = 'TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC';
     this.initCallbacks = [];
-    this.originalFetch = null; // Store original fetch for cleanup
-  }
 
-  /**
-   * Install fetch interceptor to redirect HuggingFace requests through proxy
-   */
-  installFetchInterceptor() {
-    // Only install once
-    if (this.originalFetch) {
-      return;
-    }
-
-    console.log('[WebLLM] Installing fetch interceptor for HuggingFace proxy');
-
-    // Store original fetch with proper binding to window
-    this.originalFetch = window.fetch.bind(window);
-    const proxyBaseUrl = `${window.location.origin}/api/hf-proxy`;
-    const { originalFetch } = this;
-
-    // Create interceptor function
-    const interceptorFn = async (input, init) => {
-      let url;
-      try {
-        if (typeof input === 'string') {
-          url = input;
-        } else if (input instanceof Request) {
-          url = input.url;
-        } else {
-          url = input.url;
-        }
-      } catch (e) {
-        // If we can't get URL, just pass through
-        console.warn('[WebLLM Proxy] Could not extract URL from fetch input:', input);
-        return originalFetch(input, init);
-      }
-
-      // Log ALL fetch requests for debugging
-      console.log('[WebLLM Proxy] 🔍 Checking fetch:', url.substring(0, 100));
-
-      // Check if this is a HuggingFace request
-      if (url.startsWith('https://huggingface.co/')) {
-        // Redirect through our proxy
-        const proxiedUrl = url.replace('https://huggingface.co/', `${proxyBaseUrl}/`);
-        console.log('[WebLLM Proxy] ✓ Redirecting HF request to proxy');
-        console.log(`  FROM: ${url.substring(0, 80)}...`);
-        console.log(`  TO:   ${proxiedUrl.substring(0, 80)}...`);
-
-        // Call original fetch with proxied URL
-        return originalFetch(proxiedUrl, init);
-      }
-
-      // For all other requests, use original fetch
-      return originalFetch(input, init);
+    // Custom app config pointing to locally hosted model
+    this.appConfig = {
+      model_list: [
+        {
+          model_id: this.modelId,
+          model: '/models/TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC/',
+          model_lib: '/models/TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC/TinyLlama-1.1B-Chat-v1.0-q4f16_1-ctx2k_cs1k-webgpu.wasm',
+        },
+      ],
     };
-
-    // Override both window.fetch and global fetch
-    window.fetch = interceptorFn;
-    // eslint-disable-next-line no-undef
-    if (typeof globalThis !== 'undefined') {
-      // eslint-disable-next-line no-undef
-      globalThis.fetch = interceptorFn;
-    }
-
-    console.log('[WebLLM] Fetch interceptor installed');
-    console.log('[WebLLM] Verifying interceptor - window.fetch is:', window.fetch === originalFetch ? '❌ NOT patched!' : '✓ patched');
-
-    // Test the interceptor with a dummy call
-    console.log('[WebLLM] Testing interceptor with dummy HuggingFace call...');
-    fetch('https://huggingface.co/test').catch(() => {
-      console.log('[WebLLM] ✓ Interceptor test completed (error expected)');
-    });
   }
 
   /**
-   * Remove fetch interceptor (cleanup)
-   */
-  removeFetchInterceptor() {
-    if (this.originalFetch) {
-      console.log('[WebLLM] Removing fetch interceptor');
-      window.fetch = this.originalFetch;
-      this.originalFetch = null;
-    }
-  }
-
-  /**
-   * Initialize WebLLM engine using Service Worker
-   * Uses WebLLM's built-in ServiceWorkerMLCEngine
+   * Initialize WebLLM engine with locally hosted model
+   * Creates MLCEngine directly in main thread with custom appConfig
    */
   async initialize() {
     if (this.status === 'ready') {
@@ -157,9 +83,6 @@ class WebLLMProvider extends LLMProvider {
     }
 
     try {
-      // Install fetch proxy FIRST, before WebLLM loads
-      this.installGlobalFetchProxy();
-
       // Check if WebLLM library is loaded
       if (typeof window.mlc === 'undefined' || typeof window.mlc.CreateMLCEngine === 'undefined') {
         await this.loadWebLLMLibrary();
@@ -168,11 +91,13 @@ class WebLLMProvider extends LLMProvider {
       this.status = 'downloading';
       this.notifyStatusChange();
 
-      console.log('[WebLLM] Creating MLCEngine in main thread (like the Medium article)');
-      console.log('[WebLLM] Using model:', this.modelId);
+      console.log('[WebLLM] Creating MLCEngine with locally hosted model');
+      console.log('[WebLLM] Model ID:', this.modelId);
+      console.log('[WebLLM] Model path:', this.appConfig.model_list[0].model);
 
-      // Simple approach: CreateMLCEngine directly (no Web Worker)
+      // Create MLCEngine with custom config pointing to locally hosted model
       this.engine = await window.mlc.CreateMLCEngine(this.modelId, {
+        appConfig: this.appConfig,
         initProgressCallback: (progress) => {
           console.log('[WebLLM] Progress:', progress);
           this.handleInitProgress(progress);
@@ -211,36 +136,6 @@ class WebLLMProvider extends LLMProvider {
   }
 
   /**
-   * Install global fetch proxy to intercept HuggingFace requests
-   */
-  installGlobalFetchProxy() {
-    if (window._webllmFetchProxyInstalled) {
-      return; // Already installed
-    }
-
-    console.log('[WebLLM] Installing global fetch proxy for HuggingFace CORS');
-
-    const originalFetch = window.fetch.bind(window);
-    const proxyBaseUrl = `${window.location.origin}/api/hf-proxy`;
-
-    window.fetch = function proxiedFetch(url, options) {
-      const urlString = typeof url === 'string' ? url : url.toString();
-      
-      // Intercept HuggingFace requests and route through our proxy
-      if (urlString.includes('huggingface.co')) {
-        const proxiedUrl = urlString.replace('https://huggingface.co/', `${proxyBaseUrl}/`);
-        console.log('[WebLLM Proxy] HF → Proxy:', proxiedUrl);
-        return originalFetch(proxiedUrl, options);
-      }
-      
-      return originalFetch(url, options);
-    };
-
-    window._webllmFetchProxyInstalled = true;
-    console.log('[WebLLM] Fetch proxy installed successfully');
-  }
-
-  /**
    * Load WebLLM library dynamically
    */
   async loadWebLLMLibrary() {
@@ -250,7 +145,6 @@ class WebLLMProvider extends LLMProvider {
         return;
       }
 
-      // Fetch proxy should already be installed by initialize()
       // Try multiple CDN sources in order of preference
       // Using newer versions which have better CORS support
       const cdnUrls = [

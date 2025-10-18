@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WebLLM Model Config Test</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+    .success { color: #4ec9b0; }
+    .error { color: #f48771; }
+    .info { color: #dcdcaa; }
+    pre { background: #2d2d30; padding: 10px; border-radius: 4px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>WebLLM Configuration Test</h1>
+  <div id="results"></div>
+  
+  <script>
+    const log = (message, type = 'info') => {
+      const div = document.createElement('div');
+      div.className = type;
+      div.textContent = message;
+      document.getElementById('results').appendChild(div);
+    };
+    
+    async function testConfig() {
+      log('Testing WebLLM configuration...', 'info');
+      log('', 'info');
+      
+      // Test 1: Check if files exist at expected path
+      const modelPath = '/models/TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC/';
+      const files = [
+        'mlc-chat-config.json',
+        'params_shard_0.bin',
+        'tokenizer.json',
+        'TinyLlama-1.1B-Chat-v1.0-q4f16_1-ctx2k_cs1k-webgpu.wasm'
+      ];
+      
+      log('1. Testing model file accessibility:', 'info');
+      for (const file of files) {
+        try {
+          const response = await fetch(modelPath + file, { method: 'HEAD' });
+          if (response.ok) {
+            log(`  ✓ ${file} - accessible`, 'success');
+          } else {
+            log(`  ✗ ${file} - ${response.status} ${response.statusText}`, 'error');
+          }
+        } catch (e) {
+          log(`  ✗ ${file} - ${e.message}`, 'error');
+        }
+      }
+      
+      log('', 'info');
+      log('2. Fetching model config:', 'info');
+      try {
+        const response = await fetch(modelPath + 'mlc-chat-config.json');
+        const config = await response.json();
+        log('  ✓ Config loaded successfully', 'success');
+        log('', 'info');
+        log('Config contents:', 'info');
+        log(JSON.stringify(config, null, 2), 'info');
+      } catch (e) {
+        log(`  ✗ Failed to load config: ${e.message}`, 'error');
+      }
+      
+      log('', 'info');
+      log('3. WebGPU availability:', 'info');
+      if (navigator.gpu) {
+        log('  ✓ WebGPU is available', 'success');
+      } else {
+        log('  ✗ WebGPU is NOT available (required for WebLLM)', 'error');
+      }
+    }
+    
+    testConfig();
+  </script>
+</body>
+</html>
