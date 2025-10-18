@@ -178,11 +178,23 @@ class WebLLMProvider extends LLMProvider {
       );
       console.log('[WebLLM] Worker created successfully');
 
+      // Unregister any old Service Workers that might interfere
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        // eslint-disable-next-line no-restricted-syntax
+        for (const registration of registrations) {
+          console.log('[WebLLM] Unregistering old Service Worker:', registration.scope);
+          // eslint-disable-next-line no-await-in-loop
+          await registration.unregister();
+        }
+      }
+
       // Create WebWorkerMLCEngine client (communicates with the worker)
       console.log('[WebLLM] Calling CreateWebWorkerMLCEngine with model:', this.modelId);
       console.log('[WebLLM] This may take a moment to initialize...');
       
-      this.engine = await window.mlc.CreateWebWorkerMLCEngine(
+      // Add timeout to detect if it hangs
+      const enginePromise = window.mlc.CreateWebWorkerMLCEngine(
         worker,
         this.modelId,
         {
@@ -192,6 +204,12 @@ class WebLLMProvider extends LLMProvider {
           },
         }
       );
+      
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('CreateWebWorkerMLCEngine timeout after 30 seconds')), 30000);
+      });
+      
+      this.engine = await Promise.race([enginePromise, timeoutPromise]);
 
       console.log('[WebLLM] Model loaded successfully');
 
