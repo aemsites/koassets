@@ -168,11 +168,44 @@ class WebLLMProvider extends LLMProvider {
 
       console.log('[WebLLM] Creating engine with model ID:', this.modelId);
 
-      // Now use WebLLM's default configuration
-      // All HuggingFace requests will automatically be proxied
+      // WebLLM has its own bundled fetch that we can't intercept
+      // Solution: Pre-fetch the model config through our proxy and provide custom appConfig
+      const proxyBaseUrl = `${window.location.origin}/api/hf-proxy`;
+      const modelRepoPath = `mlc-ai/${this.modelId}`;
+
+      console.log('[WebLLM] Pre-fetching model config through proxy...');
+      const configUrl = `${proxyBaseUrl}/${modelRepoPath}/resolve/main/mlc-chat-config.json`;
+      const configResponse = await this.originalFetch(configUrl);
+
+      if (!configResponse.ok) {
+        throw new Error(`Failed to fetch model config: ${configResponse.status} ${configResponse.statusText}`);
+      }
+
+      const modelConfig = await configResponse.json();
+      console.log('[WebLLM] Model config fetched successfully');
+
+      // Create appConfig with proxied URLs
+      const modelBaseUrl = `${proxyBaseUrl}/${modelRepoPath}/resolve/main/`;
+      const appConfig = {
+        model_list: [
+          {
+            ...modelConfig,
+            model_id: this.modelId,
+            model_url: modelBaseUrl,
+            model_lib_url: `${modelBaseUrl}${this.modelId.replace(/-MLC$/, '')}-ctx2k_cs1k-webgpu.wasm`,
+            // Convert tokenizer files to absolute URLs
+            tokenizer_files: modelConfig.tokenizer_files?.map((file) => `${modelBaseUrl}${file}`),
+          },
+        ],
+        useIndexedDBCache: true,
+      };
+
+      console.log('[WebLLM] Creating engine with custom proxy config');
+
       this.engine = await window.mlc.CreateMLCEngine(
         this.modelId,
         {
+          appConfig,
           initProgressCallback: (progress) => {
             this.handleInitProgress(progress);
           },
