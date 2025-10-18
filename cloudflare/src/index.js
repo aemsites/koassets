@@ -11,13 +11,15 @@
  */
 
 import { error, Router, withCookies } from 'itty-router';
-import { authRouter, withAuthentication } from './auth';
-import { originDynamicMedia } from './origin/dm';
-import { originHelix } from './origin/helix';
-import { originFadel } from './origin/fadel';
-import { cors } from './util/itty';
-import { apiUser } from './user';
 import { savedSearchesApi } from './api/savedsearches';
+import { authRouter, withAuthentication } from './auth';
+import { apiMcp } from './mcp/mcp.js';
+import { originDynamicMedia } from './origin/dm';
+import { originFadel } from './origin/fadel';
+import { originHelix } from './origin/helix';
+import { proxyHuggingFace } from './proxy/huggingface.js';
+import { apiUser } from './user';
+import { cors } from './util/itty';
 
 // Shared CORS origins
 const allowedOrigins = [
@@ -25,7 +27,7 @@ const allowedOrigins = [
   // development URLs
   /https:\/\/.*-koassets\.adobeaem\.workers\.dev$/,
   /https:\/\/.*-koassets--aemsites\.aem\.(live|page)$/,
-  /http:\/\/localhost:(3000|8787)/
+  /http:\/\/localhost:(3000|8787)/,
 ];
 
 // Standard CORS for most routes (GET, POST only)
@@ -70,7 +72,37 @@ const router = Router({
   },
 });
 
+// Global request logging middleware
+router.all('*', (request) => {
+  const url = new URL(request.url);
+  console.log(`[Router] ${request.method} ${url.pathname}`);
+});
+
 router
+  // Hugging Face proxy for WebLLM models (no auth required)
+  .all('/api/hf-proxy/*', proxyHuggingFace)
+
+  // WebLLM model files - rewrite HuggingFace URL structure to direct file access
+  // Converts: /models/{model}/resolve/main/{file} -> /models/{model}/{file}
+  .get('/models/:model/resolve/main/:file+', (request, env) => {
+    const url = new URL(request.url);
+    // Remove /resolve/main/ from the path
+    const newPath = url.pathname.replace('/resolve/main', '');
+    const newUrl = `${url.origin}${newPath}${url.search}`;
+    console.log('[Models] Rewriting URL from:', url.pathname, 'to:', newPath);
+    
+    // Create a fresh request with the rewritten URL
+    const newRequest = new Request(newUrl, {
+      method: request.method,
+      headers: request.headers,
+    });
+    
+    return originHelix(newRequest, env);
+  })
+
+  // Direct model file access (for files that don't go through /resolve/main/)
+  .get('/models/*', originHelix)
+
   // public content
   .get('/public/*', originHelix)
   .get('/tools/*', originHelix)
@@ -106,6 +138,8 @@ router
   // fadel
   .all('/api/fadel/*', originFadel)
 
+  // MCP (Model Context Protocol) - AI assistant tools
+  .all('/api/mcp*', apiMcp)
   // Saved Searches API (with extended CORS for DELETE/PUT)
   .all('/api/savedsearches/*', savedSearchesApi)
 
@@ -114,4 +148,4 @@ router
 
   .all('*', originHelix);
 
-export default { ...router }
+export default { ...router };

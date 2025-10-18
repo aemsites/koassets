@@ -1,0 +1,29 @@
+name = "koassets-mcp-server"
+main = "src/index.js"
+compatibility_date = "2024-12-01"
+node_compat = true
+
+[[kv_namespaces]]
+binding = "CHAT_SESSIONS"
+id = "24ba7d13a5994fdeb9c14ea5b641aecc"
+
+[env.staging]
+name = "koassets-mcp-server-staging"
+route = { pattern = "mcp.koassets-staging.adobeaem.workers.dev", zone_name = "adobeaem.workers.dev" }
+
+[env.production]
+name = "koassets-mcp-server"
+route = { pattern = "mcp.koassets.adobeaem.workers.dev", zone_name = "adobeaem.workers.dev" }
+
+# Environment variables (secrets should be set via wrangler secret put)
+[vars]
+KOASSETS_API_URL = "http://localhost:8787"
+MCP_SERVER_NAME = "koassets-search"
+MCP_SERVER_VERSION = "1.0.0"
+
+[env.staging.vars]
+KOASSETS_API_URL = "https://koassets-staging.adobeaem.workers.dev"
+
+[env.production.vars]
+KOASSETS_API_URL = "https://koassets.adobeaem.workers.dev"
+
