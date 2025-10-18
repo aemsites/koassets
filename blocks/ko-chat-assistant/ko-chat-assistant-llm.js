@@ -166,9 +166,27 @@ class WebLLMProvider extends LLMProvider {
       this.notifyStatusChange();
 
       console.log('[WebLLM] Creating MLCEngine (WebGPU-based, runs in main thread)');
+      console.log('[WebLLM] Using HuggingFace proxy to avoid CORS issues');
+
+      // Get the proxy base URL
+      const proxyBaseUrl = `${window.location.origin}/api/hf-proxy`;
+
+      // Create custom app config that routes HuggingFace requests through our proxy
+      const appConfig = {
+        model_list: [
+          {
+            model_url: `${proxyBaseUrl}/mlc-ai/${this.modelId}/resolve/main/`,
+            model_id: this.modelId,
+            model_lib_url: `${proxyBaseUrl}/mlc-ai/${this.modelId}/resolve/main/TinyLlama-1.1B-Chat-v1.0-q4f16_1-ctx2k_cs1k-webgpu.wasm`,
+          },
+        ],
+      };
+
+      console.log('[WebLLM] Using proxy URL:', appConfig.model_list[0].model_url);
 
       // Create regular MLCEngine instance (runs in main thread with WebGPU)
       this.engine = await window.mlc.CreateMLCEngine(this.modelId, {
+        appConfig,
         initProgressCallback: (progress) => {
           this.handleInitProgress(progress);
         },
