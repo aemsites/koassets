@@ -127,7 +127,7 @@ async function registerServiceWorker() {
 
     const registration = await navigator.serviceWorker.register(
       '/blocks/ko-chat-assistant/sw.js',
-      { scope: '/' },
+      { scope: '/blocks/ko-chat-assistant/' },
     );
 
     console.log('[Chat] Service Worker registered:', registration.scope);
@@ -140,20 +140,34 @@ async function registerServiceWorker() {
 
     // Wait for activation
     return new Promise((resolve) => {
+      const checkAndResolve = () => {
+        if (registration.active) {
+          console.log('[Chat] Service Worker is now active');
+          resolve(true);
+        }
+      };
+
       if (registration.installing) {
+        console.log('[Chat] Service Worker installing...');
         registration.installing.addEventListener('statechange', function checkState() {
+          console.log('[Chat] Service Worker state:', this.state);
           if (this.state === 'activated') {
             console.log('[Chat] Service Worker activated');
-            resolve(true);
+            // Add a small delay to ensure it's ready
+            setTimeout(() => resolve(true), 100);
           }
         });
       } else if (registration.waiting) {
+        console.log('[Chat] Service Worker waiting, forcing activation...');
         // Force waiting service worker to activate
         registration.waiting.postMessage({ type: 'SKIP_WAITING' });
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           console.log('[Chat] Service Worker activated (was waiting)');
-          resolve(true);
+          setTimeout(() => resolve(true), 100);
         });
+      } else {
+        // Already active or unknown state
+        checkAndResolve();
       }
     });
   } catch (error) {
@@ -164,11 +178,16 @@ async function registerServiceWorker() {
 
 async function initializeLLM() {
   try {
-    // Register Service Worker first (for HuggingFace proxy)
+    // Register Service Worker first (required for WebLLM)
     const swRegistered = await registerServiceWorker();
     if (!swRegistered) {
-      console.warn('[Chat] Service Worker not registered, WebLLM may face CORS issues');
+      throw new Error('Service Worker registration failed. WebLLM requires Service Worker support.');
     }
+
+    // Ensure Service Worker is ready
+    console.log('[Chat] Waiting for Service Worker to be ready...');
+    await navigator.serviceWorker.ready;
+    console.log('[Chat] Service Worker is ready');
 
     // Create LLM Manager and MCP Client
     llmManager = new window.LLMManager();
