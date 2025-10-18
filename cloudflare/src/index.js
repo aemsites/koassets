@@ -78,13 +78,20 @@ router
 
   // WebLLM model files - rewrite HuggingFace URL structure to direct file access
   // Converts: /models/{model}/resolve/main/{file} -> /models/{model}/{file}
-  .get('/models/*/resolve/main/*', (request) => {
+  .get('/models/*/resolve/main/*', (request, env) => {
     const url = new URL(request.url);
     // Remove /resolve/main/ from the path
-    url.pathname = url.pathname.replace('/resolve/main', '');
-    console.log('[Models] Rewriting URL:', request.url, '->', url.toString());
-    // Create new request with rewritten URL
-    return originHelix(new Request(url.toString(), request));
+    const newPath = url.pathname.replace('/resolve/main', '');
+    const newUrl = `${url.origin}${newPath}${url.search}`;
+    console.log('[Models] Rewriting URL from:', url.pathname, 'to:', newPath);
+    
+    // Create a fresh request with the rewritten URL
+    const newRequest = new Request(newUrl, {
+      method: request.method,
+      headers: request.headers,
+    });
+    
+    return originHelix(newRequest, env);
   })
 
   // Direct model file access (for files that don't go through /resolve/main/)
