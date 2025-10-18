@@ -171,12 +171,25 @@ class WebLLMProvider extends LLMProvider {
       // Get the proxy base URL
       const proxyBaseUrl = `${window.location.origin}/api/hf-proxy`;
 
-      // Create custom app config that routes HuggingFace requests through our proxy
+      // Fetch the full model config from HuggingFace through our proxy
+      console.log('[WebLLM] Fetching model config through proxy...');
+      const configUrl = `${proxyBaseUrl}/mlc-ai/${this.modelId}/resolve/main/mlc-chat-config.json`;
+      const configResponse = await fetch(configUrl);
+      
+      if (!configResponse.ok) {
+        throw new Error(`Failed to fetch model config: ${configResponse.status}`);
+      }
+      
+      const modelConfig = await configResponse.json();
+      console.log('[WebLLM] Model config fetched successfully');
+
+      // Create custom app config with the full model config and proxied URLs
       const appConfig = {
         model_list: [
           {
-            model_url: `${proxyBaseUrl}/mlc-ai/${this.modelId}/resolve/main/`,
+            ...modelConfig,
             model_id: this.modelId,
+            model_url: `${proxyBaseUrl}/mlc-ai/${this.modelId}/resolve/main/`,
             model_lib_url: `${proxyBaseUrl}/mlc-ai/${this.modelId}/resolve/main/TinyLlama-1.1B-Chat-v1.0-q4f16_1-ctx2k_cs1k-webgpu.wasm`,
           },
         ],
