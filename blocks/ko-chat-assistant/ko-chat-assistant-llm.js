@@ -189,13 +189,13 @@ class WebLLMProvider extends LLMProvider {
           {
             ...modelConfig,
             model_id: this.modelId,
-            model_url: `${proxyBaseUrl}/mlc-ai/${this.modelId}/resolve/main/`,
-            model_lib_url: `${proxyBaseUrl}/mlc-ai/${this.modelId}/resolve/main/TinyLlama-1.1B-Chat-v1.0-q4f16_1-ctx2k_cs1k-webgpu.wasm`,
+            model: `${proxyBaseUrl}/mlc-ai/${this.modelId}/resolve/main/`,
+            model_lib: `${proxyBaseUrl}/mlc-ai/${this.modelId}/resolve/main/TinyLlama-1.1B-Chat-v1.0-q4f16_1-ctx2k_cs1k-webgpu.wasm`,
           },
         ],
       };
 
-      console.log('[WebLLM] Using proxy URL:', appConfig.model_list[0].model_url);
+      console.log('[WebLLM] Using proxy URL:', appConfig.model_list[0].model);
 
       // Create regular MLCEngine instance (runs in main thread with WebGPU)
       this.engine = await window.mlc.CreateMLCEngine(this.modelId, {
