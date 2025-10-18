@@ -173,7 +173,7 @@ class WebLLMProvider extends LLMProvider {
 
       // Create a Web Worker to run the MLCEngine
       const worker = new Worker(
-        new URL('./llm-worker.js', import.meta.url),
+        '/blocks/ko-chat-assistant/llm-worker.js',
         { type: 'module' }
       );
 
