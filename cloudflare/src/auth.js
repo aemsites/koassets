@@ -1,5 +1,6 @@
-import { json, Router } from 'itty-router';
-import { createRemoteJWKSet, jwtVerify, SignJWT } from "jose";
+import { Router } from 'itty-router';
+import { createRemoteJWKSet, jwtVerify, SignJWT } from 'jose';
+import { createSession, getUser } from './user.js';
 import {
   createSignedCookie,
   deleteCookie,
@@ -18,29 +19,14 @@ const ORIGINAL_URL_PARAM = 'url';
 const REQUIRED_ENV_VARS = [
   'MICROSOFT_ENTRA_TENANT_ID',
   'MICROSOFT_ENTRA_CLIENT_ID',
-  'MICROSOFT_ENTRA_JWKS_URL',
   'COOKIE_SECRET',
 ];
 
-const ALLOWED_EMAIL_DOMAINS = [
-  'coca-cola.com',
-  'adobe.com',
-];
-
-async function createSessionJWT(request, idToken, env) {
+async function createSessionJWT(request, env, session) {
   const payload = {
+    ...session,
     // session id
     sid: crypto.randomUUID(),
-    // user id in MS Entra IDP
-    sub: idToken.oid,
-    // full name (first + last name)
-    name: idToken.name,
-    // fields needed for access control
-    email: idToken.email?.toLowerCase(),
-    country: idToken.ctry,
-    usertype: idToken.EmployeeType,
-    // company - informational
-    company: idToken.Company,
   };
 
   const key = new TextEncoder().encode(await env.COOKIE_SECRET.get());
@@ -126,24 +112,9 @@ async function validateIdToken(request, rawIdToken, env, nonce) {
   }
 }
 
-function validateUserEmail(email) {
-  if (!email) {
-    return false;
-  }
-
-  const emailDomain = email.split('@').pop();
-
-  if (!ALLOWED_EMAIL_DOMAINS.includes(emailDomain.toLowerCase())) {
-    console.error('User denied access because email domain is not allowed:', email);
-    return false;
-  }
-
-  return true;
-}
-
 function unauthorized(request) {
   if (request.error) {
-    console.error(request.error);
+    console.warn(request.error);
     return new Response(`Unauthorized - ${request.error}`, { status: 401 });
   }
   return new Response('Unauthorized', { status: 401 });
@@ -153,30 +124,6 @@ function redirect(url, status = 302) {
   const response = new Response(null, { status });
   response.headers.set('Location', url);
   return response;
-
-  // TODO: use one of these redirect tricks below to get the original page into the browser history?
-
-  // also redirect() which does HTTP 302 redirect
-
-  // const page = `<meta http-equiv="refresh" content="1;url=${targetUrl}">`;
-  // // const page = `<script>window.location.href = "${targetUrl}";</script>`;
-  // // const redirectPage = `
-  // // <html>
-  // //   <head>
-  // //     <title>${request.url}</title>
-  // //   </head>
-  // //   <body>
-  // //     <script>
-  // //       window.location.assign("${targetUrl}");
-  // //     </script>
-  // //   </body>
-  // // </html>
-  // // `;
-  // return new Response(page, {
-  //   headers: {
-  //     'Content-Type': 'text/html',
-  //   },
-  // });
 }
 
 function redirectToLoginPage(request, env, page = env.LOGIN_PAGE) {
@@ -199,40 +146,40 @@ function redirectToLoginPage(request, env, page = env.LOGIN_PAGE) {
   return response;
 }
 
-// middleware to check if user is authenticated
+/** middleware to check if user is authenticated */
 export async function withAuthentication(request, env) {
   request.uri = new URL(request.url);
 
   if (env.DISABLE_AUTHENTICATION) {
-    request.session = {};
+    request.user = {};
     console.warn('Authentication is disabled because DISABLE_AUTHENTICATION is set');
     return;
   }
 
   const sessionJWT = request.cookies[COOKIE_SESSION];
   if (!sessionJWT) {
-    console.log('No session cookie found');
+    console.log('No session cookie found', request.url);
     return redirectToLoginPage(request, env);
   }
 
   const session = await validateSessionJWT(request, env, sessionJWT);
   if (!session) {
-    console.error(request.error);
+    console.warn(request.error);
     // if session cookie was found but invalid, user was previously logged in,
     // so let's send them straight to the MS login page which might auto-login them
     return redirectToLoginPage(request, env, `${AUTH_PREFIX}/login`);
   }
 
-  if (!validateUserEmail(session.email)) {
-    request.error = 'User not allowed to access this application';
+  request.user = await getUser(request, env, session);
+  if (!request.user) {
+    request.error = request.error || 'User not allowed to access this application';
     return unauthorized(request);
   }
 
-  // authenticated
-  request.session = session;
+  // successfully authenticated
 }
 
-// router for dedicated login & logout flows
+/** router for dedicated login & logout flows */
 export const authRouter = Router({
   base: AUTH_PREFIX,
   route: `${AUTH_PREFIX}/*`,
@@ -313,17 +260,18 @@ authRouter
       return unauthorized(request);
     }
 
-    const idToken = await validateIdToken(request, formData.get('id_token'), env, state.nonce);
-    if (!idToken) {
+    request.idToken = await validateIdToken(request, formData.get('id_token'), env, state.nonce);
+    if (!request.idToken) {
       return unauthorized(request);
     }
 
-    if (!validateUserEmail(idToken.email)) {
-      request.error = 'User not allowed to access this application';
+    const session = await createSession(request, env);
+    if (!session) {
+      request.error = request.error || 'User not allowed to access this application';
       return unauthorized(request);
     }
 
-    const sessionJWT = await createSessionJWT(request, idToken, env);
+    const sessionJWT = await createSessionJWT(request, env, session);
 
     let redirectUrl = `${request.uri.origin}/`;
     // get original redirect url from state parameter (if present)
@@ -347,20 +295,8 @@ authRouter
     return response;
   })
 
-  .get('/user', withAuthentication, (request) => {
-    const user = request.session;
-    return json({
-      name: user.name,
-      email: user.email,
-      country: user.country,
-      usertype: user.usertype,
-      company: user.company,
-      sessionExpiresInSec: user.exp && Math.floor((user.exp * 1000 - Date.now()) / 1000),
-    });
-  })
-
   .get('/logout', withAuthentication, (request, env) => {
-    console.log('User logout:', request.session);
+    console.log('User logout:', request.user.email);
 
     // redirect to MS logout page
     const logoutUrl = `https://login.microsoftonline.com/${env.MICROSOFT_ENTRA_TENANT_ID}/oauth2/logout?` +

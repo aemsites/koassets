@@ -4,8 +4,7 @@ import { AuthorizationStatus } from '../clients/fadel-client';
 import { DEFAULT_ACCORDION_CONFIG } from '../constants/accordion';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type { Asset, ImageGalleryProps } from '../types';
-import AssetCardViewGrid from './AssetCardViewGrid';
-import AssetCardViewList from './AssetCardViewList';
+import AssetCard from './AssetCard';
 import AssetDetails from './AssetDetails/';
 import AssetPreview from './AssetPreview';
 import './ImageGallery.css';
@@ -38,7 +37,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     imagePresets = {},
     assetRenditionsCache = {},
     fetchAssetRenditions,
-    isRightsSearch = false
+    isRightsSearch = false,
+    onFacetCheckbox,
+    onClearAllFacets
 }: ImageGalleryProps) => {
     // Get external params and dynamic media client from context
     const { externalParams } = useAppConfig();
@@ -155,8 +156,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
     // Handler to close asset details modal
     const closeDetailsModal = () => {
-        setShowDetailsModal(false);
         setSelectedCard(null);
+        setShowDetailsModal(false);
     };
 
     // Handle checkbox selection
@@ -294,10 +295,10 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                     <>
                         <div className={viewType === 'grid' ? 'image-grid' : 'image-grid-list'}>
                             {visibleImages.map((visibleImage, index) => {
-                                const CardComponent = viewType === 'grid' ? AssetCardViewGrid : AssetCardViewList;
                                 return (
-                                    <CardComponent
+                                    <AssetCard
                                         key={visibleImage.assetId}
+                                        viewMode={viewType}
                                         image={visibleImage}
                                         handleCardDetailClick={handleCardDetailClick}
                                         handlePreviewClick={handleCardPreviewClick}
@@ -308,6 +309,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                                         onCheckboxChange={handleCheckboxChange}
                                         expandAllDetails={expandAllDetails}
                                         index={index}
+                                        onFacetCheckbox={onFacetCheckbox}
+                                        onClearAllFacets={onClearAllFacets}
                                     />
                                 );
                             })}
