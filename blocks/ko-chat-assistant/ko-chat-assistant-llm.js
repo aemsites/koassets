@@ -51,11 +51,22 @@ class WebLLMProvider extends LLMProvider {
     this.status = 'uninitialized'; // uninitialized, downloading, loading, ready, error
     this.downloadProgress = 0;
     // Use Phi-3-mini (3.8B params) - much better reasoning and tool calling than TinyLlama
-    // Using WebLLM's default CDN for easy setup (model files cached in browser)
+    // Self-hosted on same domain to avoid CORS issues
     this.modelId = 'Phi-3-mini-4k-instruct-q4f16_1-MLC';
     this.initCallbacks = [];
-    // Use WebLLM's default config - it will download from their CDN and cache in browser
-    this.appConfig = null; // null = use default config
+
+    // Custom app config pointing to locally hosted model
+    // WebLLM requires absolute URLs, so we construct them dynamically
+    const baseUrl = window.location.origin;
+    this.appConfig = {
+      model_list: [
+        {
+          model_id: this.modelId,
+          model: `${baseUrl}/models/Phi-3-mini-4k-instruct-q4f16_1-MLC/`,
+          model_lib: `${baseUrl}/models/Phi-3-mini-4k-instruct-q4f16_1-MLC/Phi-3-mini-4k-instruct-q4f16_1-ctx4k_cs1k-webgpu.wasm`,
+        },
+      ],
+    };
   }
 
   /**
@@ -83,9 +94,10 @@ class WebLLMProvider extends LLMProvider {
       this.status = 'downloading';
       this.notifyStatusChange();
 
-      console.log('[WebLLM] Creating MLCEngine with Phi-3-mini');
+      console.log('[WebLLM] Creating MLCEngine with self-hosted Phi-3-mini');
       console.log('[WebLLM] Model ID:', this.modelId);
-      console.log('[WebLLM] Loading from WebLLM CDN (cached in browser after first load)');
+      console.log('[WebLLM] Model path:', this.appConfig.model_list[0].model);
+      console.log('[WebLLM] WASM lib:', this.appConfig.model_list[0].model_lib);
 
       // Create MLCEngine with WebLLM's default config (CDN-hosted)
       const engineOptions = {
