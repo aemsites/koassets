@@ -109,8 +109,11 @@ router
       });
 
       if (!r2Response.ok) {
+        const errorBody = await r2Response.text();
         console.error('[Models] R2 fetch failed for rewritten URL:', r2Response.status);
-        return new Response(`Model file not found: ${newPath}`, {
+        console.error('[Models] R2 error body:', errorBody);
+        console.error('[Models] Attempted R2 URL:', r2Url);
+        return new Response(`Model file not found: ${newPath}\nR2 Status: ${r2Response.status}\nR2 Error: ${errorBody}`, {
           status: r2Response.status,
           headers: { 'Content-Type': 'text/plain' },
         });
@@ -169,8 +172,11 @@ router
       });
 
       if (!r2Response.ok) {
+        const errorBody = await r2Response.text();
         console.error('[Models] R2 fetch failed:', r2Response.status, r2Response.statusText);
-        return new Response(`Model file not found: ${modelPath}`, {
+        console.error('[Models] R2 error body:', errorBody);
+        console.error('[Models] R2 headers:', JSON.stringify([...r2Response.headers]));
+        return new Response(`Model file not found: ${modelPath}\nR2 Status: ${r2Response.status}\nR2 Error: ${errorBody}`, {
           status: r2Response.status,
           headers: { 'Content-Type': 'text/plain' },
         });
