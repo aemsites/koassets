@@ -1,64 +1,53 @@
 /**
  * API Client for KO Assets
- * Connects to the main Cloudflare worker to access asset APIs
+ * Makes requests directly to origin APIs (DynamicMedia, Fadel)
+ * Avoids HTTP round-trips by importing origin functions directly
  */
+
+import { originDynamicMedia } from '../../origin/dm.js';
+import { originFadel } from '../../origin/fadel.js';
 
 /**
  * Make a request to the KO Assets API
+ * Routes internally to origin handlers without HTTP round-trip
  */
 export async function makeApiRequest(endpoint, options = {}, env, request) {
-  // Auto-detect base URL: use env var if set, otherwise infer from request
-  let baseUrl = env.KOASSETS_API_URL;
-  
-  if (!baseUrl && request) {
-    // Infer from the incoming request URL
-    const requestUrl = new URL(request.url);
-    baseUrl = `${requestUrl.protocol}//${requestUrl.host}`;
-    console.log('[MCP API Client] Auto-detected base URL from request:', baseUrl);
-  }
-  
-  // Fallback to localhost for local dev
-  if (!baseUrl) {
-    baseUrl = 'http://localhost:8787';
-    console.log('[MCP API Client] Using localhost fallback');
-  }
-  
-  const url = `${baseUrl}${endpoint}`;
-
   console.log('[MCP API Client] ======================');
-  console.log('[MCP API Client] Base URL:', baseUrl);
   console.log('[MCP API Client] Endpoint:', endpoint);
-  console.log('[MCP API Client] Full URL:', url);
   console.log('[MCP API Client] Method:', options.method || 'GET');
 
-  const headers = {
-    'Content-Type': 'application/json',
-    'User-Agent': 'KOAssets-MCP-Server/1.0',
-    ...options.headers,
-  };
-
-  // Forward authentication cookie if present
-  const cookie = request?.headers?.get('cookie');
-  if (cookie) {
-    headers.Cookie = cookie;
-    console.log('[MCP API Client] Forwarding auth cookie');
+  // Route to appropriate origin handler based on endpoint
+  let handler;
+  if (endpoint.startsWith('/api/adobe/assets')) {
+    handler = originDynamicMedia;
+    console.log('[MCP API Client] → Routing to Dynamic Media (internal call)');
+  } else if (endpoint.startsWith('/api/fadel')) {
+    handler = originFadel;
+    console.log('[MCP API Client] → Routing to Fadel (internal call)');
   } else {
-    console.log('[MCP API Client] ⚠️ No auth cookie to forward');
+    throw new Error(`Unsupported endpoint for MCP: ${endpoint}`);
   }
 
-  const fetchOptions = {
-    ...options,
-    headers,
-  };
+  // Create a mock request object that mimics an HTTP request
+  const mockRequest = new Request(`https://internal${endpoint}`, {
+    method: options.method || 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+      // Forward the original cookie for authentication
+      'Cookie': request?.headers?.get('cookie') || '',
+    },
+    body: options.body,
+  });
 
-  console.log('[MCP API Client] Making request...');
+  console.log('[MCP API Client] Making internal call...');
   
   let response;
   try {
-    response = await fetch(url, fetchOptions);
-  } catch (fetchError) {
-    console.error('[MCP API Client] ❌ Fetch error:', fetchError);
-    throw new Error(`Network error calling ${url}: ${fetchError.message}`);
+    response = await handler(mockRequest, env);
+  } catch (error) {
+    console.error('[MCP API Client] ❌ Internal call error:', error);
+    throw new Error(`Internal API call failed: ${error.message}`);
   }
   
   console.log('[MCP API Client] Response status:', response.status, response.statusText);
@@ -67,25 +56,12 @@ export async function makeApiRequest(endpoint, options = {}, env, request) {
     const errorText = await response.text();
     console.error('[MCP API Client] ❌ Error response:', errorText);
     
-    // Create detailed error message
-    const errorDetails = {
-      url,
-      method: options.method || 'GET',
-      status: response.status,
-      statusText: response.statusText,
-      body: errorText,
-      baseUrl,
-      endpoint,
-    };
-    
     throw new Error(
       `API request failed:\n` +
-      `URL: ${url}\n` +
+      `Endpoint: ${endpoint}\n` +
       `Method: ${options.method || 'GET'}\n` +
       `Status: ${response.status} ${response.statusText}\n` +
-      `Response: ${errorText}\n` +
-      `Base URL: ${baseUrl}\n` +
-      `Endpoint: ${endpoint}`
+      `Response: ${errorText}`
     );
   }
 
