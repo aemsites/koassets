@@ -50,24 +50,58 @@ class WebLLMProvider extends LLMProvider {
     this.engine = null;
     this.status = 'uninitialized'; // uninitialized, downloading, loading, ready, error
     this.downloadProgress = 0;
-    // Use Phi-3-mini (3.8B params) - much better reasoning and tool calling
-    // Self-hosted on same domain to avoid CORS issues
-    // Persistent storage request prevents quota issues
-    this.modelId = 'Phi-3-mini-4k-instruct-q4f16_1-MLC';
+
+    // Adaptive model selection based on available storage
+    // Will be determined in initialize() based on quota
+    this.modelId = null;
+    this.selectedModel = null;
     this.initCallbacks = [];
 
-    // Custom app config pointing to locally hosted model
-    // WebLLM requires absolute URLs, so we construct them dynamically
+    // Available models with their storage requirements
     const baseUrl = window.location.origin;
-    this.appConfig = {
-      model_list: [
-        {
-          model_id: this.modelId,
-          model: `${baseUrl}/models/Phi-3-mini-4k-instruct-q4f16_1-MLC/`,
-          model_lib: `${baseUrl}/models/Phi-3-mini-4k-instruct-q4f16_1-MLC/Phi-3-mini-4k-instruct-q4f16_1-ctx4k_cs1k-webgpu.wasm`,
-        },
-      ],
+    this.availableModels = {
+      phi3mini: {
+        id: 'Phi-3-mini-4k-instruct-q4f16_1-MLC',
+        name: 'Phi-3-mini (3.8B)',
+        sizeGB: 2.0,
+        path: `${baseUrl}/models/Phi-3-mini-4k-instruct-q4f16_1-MLC/`,
+        lib: `${baseUrl}/models/Phi-3-mini-4k-instruct-q4f16_1-MLC/Phi-3-mini-4k-instruct-q4f16_1-ctx4k_cs1k-webgpu.wasm`,
+        description: 'Best reasoning and tool calling',
+      },
+      tinyllama: {
+        id: 'TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC',
+        name: 'TinyLlama (1.1B)',
+        sizeGB: 0.6,
+        path: `${baseUrl}/models/TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC/`,
+        lib: `${baseUrl}/models/TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC/TinyLlama-1.1B-Chat-v1.0-q4f16_1-ctx2k_cs1k-webgpu.wasm`,
+        description: 'Smaller, fits on limited storage',
+      },
     };
+  }
+
+  /**
+   * Select best model based on available storage
+   */
+  selectModelForQuota(availableGB) {
+    console.log(`[Model Selection] Available storage: ${availableGB.toFixed(2)}GB`);
+
+    // Try Phi-3-mini first (best quality)
+    if (availableGB >= this.availableModels.phi3mini.sizeGB + 0.5) { // +0.5GB buffer
+      console.log('[Model Selection] ✅ Selected Phi-3-mini (3.8B) - sufficient storage');
+      return this.availableModels.phi3mini;
+    }
+
+    // Fall back to TinyLlama (smaller)
+    if (availableGB >= this.availableModels.tinyllama.sizeGB + 0.2) { // +0.2GB buffer
+      console.log('[Model Selection] ⚠️ Selected TinyLlama (1.1B) - limited storage');
+      console.log('[Model Selection] Note: Query preprocessing enabled to improve results');
+      return this.availableModels.tinyllama;
+    }
+
+    // Not enough storage for any model
+    const minSize = this.availableModels.tinyllama.sizeGB;
+    console.error(`[Model Selection] ❌ Insufficient storage for any model (need at least ${minSize}GB)`);
+    return null;
   }
 
   /**
@@ -78,8 +112,13 @@ class WebLLMProvider extends LLMProvider {
 
     // Check if Storage API is available
     if (!navigator.storage) {
-      console.warn('[Storage] Storage API not available in this browser');
-      return { granted: false, quota: 0, usage: 0 };
+      console.warn('[Storage] Storage API not available in this browser, assuming 10GB available');
+      return {
+        granted: false,
+        quota: 10 * 1024 * 1024 * 1024,
+        usage: 0,
+        available: 10 * 1024 * 1024 * 1024,
+      };
     }
 
     try {
@@ -104,37 +143,33 @@ class WebLLMProvider extends LLMProvider {
 
         console.log(`[Storage] Quota: ${quotaGB}GB, Usage: ${usageGB}GB (${usagePercent}%)`);
 
-        // Model is ~2GB, warn if we don't have enough space
-        const availableGB = parseFloat(quotaGB) - parseFloat(usageGB);
-        const modelSizeGB = 2.0;
-
-        if (availableGB < modelSizeGB) {
-          console.warn(`[Storage] ⚠️ Low storage: ${availableGB.toFixed(2)}GB available, need ~${modelSizeGB}GB for model`);
-          return {
-            granted: false,
-            quota: estimate.quota,
-            usage: estimate.usage,
-            error: `Insufficient storage: ${availableGB.toFixed(2)}GB available, need ~${modelSizeGB}GB`,
-          };
-        }
-
-        console.log(`[Storage] ✅ Sufficient space: ${availableGB.toFixed(2)}GB available for ${modelSizeGB}GB model`);
+        // Return storage info for adaptive model selection
+        const availableBytes = estimate.quota - estimate.usage;
 
         return {
           granted: true,
           quota: estimate.quota,
           usage: estimate.usage,
-          available: estimate.quota - estimate.usage,
+          available: availableBytes,
         };
       }
 
-      return { granted: false, quota: 0, usage: 0 };
-    } catch (error) {
-      console.error('[Storage] Error checking storage:', error);
+      // Fallback: assume 10GB available if estimate() unavailable
+      console.warn('[Storage] estimate() unavailable, assuming 10GB available');
       return {
         granted: false,
-        quota: 0,
+        quota: 10 * 1024 * 1024 * 1024,
         usage: 0,
+        available: 10 * 1024 * 1024 * 1024,
+      };
+    } catch (error) {
+      console.error('[Storage] Error checking storage:', error);
+      // Fallback: assume 10GB available on error
+      return {
+        granted: false,
+        quota: 10 * 1024 * 1024 * 1024,
+        usage: 0,
+        available: 10 * 1024 * 1024 * 1024,
         error: error.message,
       };
     }
@@ -160,9 +195,53 @@ class WebLLMProvider extends LLMProvider {
       // Request persistent storage before loading model
       const storageStatus = await this.requestPersistentStorage();
 
-      if (storageStatus.error) {
-        throw new Error(storageStatus.error);
+      // Select best model based on available storage
+      const availableGB = storageStatus.available / (1024 * 1024 * 1024);
+      this.selectedModel = this.selectModelForQuota(availableGB);
+
+      // Not enough storage for any model
+      if (!this.selectedModel) {
+        const minRequired = this.availableModels.tinyllama.sizeGB;
+        return {
+          success: false,
+          error: 'insufficient_storage',
+          details: {
+            availableGB: parseFloat(availableGB.toFixed(2)),
+            requiredGB: minRequired,
+            quotaGB: parseFloat((storageStatus.quota / (1024 * 1024 * 1024)).toFixed(2)),
+            usageGB: parseFloat((storageStatus.usage / (1024 * 1024 * 1024)).toFixed(2)),
+            selectedModel: null,
+          },
+        };
       }
+
+      // Falling back to smaller model - ask user for confirmation
+      if (this.selectedModel.id === this.availableModels.tinyllama.id) {
+        return {
+          success: false,
+          error: 'limited_storage',
+          details: {
+            availableGB: parseFloat(availableGB.toFixed(2)),
+            requiredGB: this.availableModels.phi3mini.sizeGB,
+            quotaGB: parseFloat((storageStatus.quota / (1024 * 1024 * 1024)).toFixed(2)),
+            usageGB: parseFloat((storageStatus.usage / (1024 * 1024 * 1024)).toFixed(2)),
+            selectedModel: this.selectedModel,
+            preferredModel: this.availableModels.phi3mini,
+          },
+        };
+      }
+
+      // Set model ID and create app config for selected model
+      this.modelId = this.selectedModel.id;
+      const appConfig = {
+        model_list: [
+          {
+            model_id: this.selectedModel.id,
+            model: this.selectedModel.path,
+            model_lib: this.selectedModel.lib,
+          },
+        ],
+      };
 
       // Check if WebLLM library is loaded
       if (typeof window.mlc === 'undefined' || typeof window.mlc.CreateMLCEngine === 'undefined') {
@@ -172,25 +251,21 @@ class WebLLMProvider extends LLMProvider {
       this.status = 'downloading';
       this.notifyStatusChange();
 
-      console.log('[WebLLM] Creating MLCEngine with self-hosted Phi-3-mini');
+      console.log(`[WebLLM] Creating MLCEngine with ${this.selectedModel.name}`);
       console.log('[WebLLM] Model ID:', this.modelId);
-      console.log('[WebLLM] Model path:', this.appConfig.model_list[0].model);
-      console.log('[WebLLM] WASM lib:', this.appConfig.model_list[0].model_lib);
+      console.log('[WebLLM] Model path:', this.selectedModel.path);
+      console.log('[WebLLM] WASM lib:', this.selectedModel.lib);
       console.log('[WebLLM] Storage: Persistent storage requested');
 
-      // Create MLCEngine with WebLLM's default config (CDN-hosted)
+      // Create MLCEngine with custom config for selected model
       const engineOptions = {
+        appConfig,
         initProgressCallback: (progress) => {
           console.log('[WebLLM] Progress:', progress);
           this.handleInitProgress(progress);
         },
         logLevel: 'INFO',
       };
-
-      // Only add appConfig if we have a custom one
-      if (this.appConfig) {
-        engineOptions.appConfig = this.appConfig;
-      }
 
       this.engine = await window.mlc.CreateMLCEngine(this.modelId, engineOptions);
 
@@ -405,28 +480,69 @@ Keep responses concise and helpful.`;
       || lower.includes('assets for')
     ) {
       // Extract brand names
-      const brands = ['coca-cola', 'sprite', 'fanta', 'powerade', 'dasani', 'smartwater', 'vitaminwater'];
+      const brands = ['coca-cola', 'sprite', 'fanta', 'powerade', 'dasani', 'smartwater', 'vitaminwater', 'minute maid', 'schweppes'];
       const mentionedBrands = brands.filter((brand) => lower.includes(brand));
 
-      // Extract categories
-      const categories = ['image', 'video', 'document'];
-      const mentionedCategories = categories.filter((cat) => lower.includes(cat));
+      // Extract categories/formats
+      const formats = {
+        image: ['image', 'images', 'picture', 'pictures', 'photo', 'photos'],
+        video: ['video', 'videos', 'clip', 'clips', 'footage'],
+        document: ['document', 'documents', 'doc', 'docs', 'pdf'],
+      };
+      const mentionedFormats = [];
+      // eslint-disable-next-line no-restricted-syntax
+      for (const [format, keywords] of Object.entries(formats)) {
+        // eslint-disable-next-line no-restricted-syntax
+        for (const keyword of keywords) {
+          if (lower.includes(keyword)) {
+            mentionedFormats.push(format.charAt(0).toUpperCase() + format.slice(1));
+            break;
+          }
+        }
+      }
 
+      // Build facetFilters
       const facetFilters = {};
       if (mentionedBrands.length > 0) {
-        facetFilters.brand = mentionedBrands.map((b) => b.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join('-'));
+        facetFilters.brand = mentionedBrands.map((b) => b.split(/[\s-]/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '));
       }
-      if (mentionedCategories.length > 0) {
-        facetFilters.category = mentionedCategories.map(
-          (c) => c.charAt(0).toUpperCase() + c.slice(1),
-        );
+      if (mentionedFormats.length > 0) {
+        facetFilters.format = mentionedFormats;
       }
+
+      // Extract additional keywords (not brand/format)
+      let keywords = lower;
+      // eslint-disable-next-line no-restricted-syntax
+      for (const brand of brands) {
+        keywords = keywords.replace(new RegExp(brand, 'gi'), '');
+      }
+      // eslint-disable-next-line no-restricted-syntax
+      for (const formatKeywords of Object.values(formats)) {
+        // eslint-disable-next-line no-restricted-syntax
+        for (const keyword of formatKeywords) {
+          keywords = keywords.replace(new RegExp(`\\b${keyword}\\b`, 'gi'), '');
+        }
+      }
+      // Remove common command words
+      keywords = keywords
+        .replace(/\b(find|search|show|look for|get|give|me|some|the|all|recent|latest|please|can you)\b/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      // Use empty query if we have facet filters and no meaningful keywords
+      const hasFacets = mentionedBrands.length > 0 || mentionedFormats.length > 0;
+      const query = hasFacets && keywords.length < 3 ? '' : keywords;
+
+      console.log('[WebLLM] Detected search intent:');
+      console.log('  Brands:', mentionedBrands);
+      console.log('  Formats:', mentionedFormats);
+      console.log('  Query:', query || '(empty)');
 
       toolCalls.push({
         id: `call_${Date.now()}`,
         name: 'search_assets',
         arguments: {
-          query: originalMessage,
+          query,
           facetFilters,
           hitsPerPage: 12,
         },
@@ -564,111 +680,21 @@ class MCPClient {
   constructor() {
     // MCP is now integrated into the main worker at /api/mcp
     this.mcpServerUrl = '/api/mcp';
-
-    // Brand names for query preprocessing
-    this.brands = ['Coca-Cola', 'Sprite', 'Fanta', 'Powerade', 'Dasani', 'smartwater', 'vitaminwater', 'Minute Maid', 'Schweppes'];
-    this.categories = ['Image', 'Video', 'Document'];
-  }
-
-  /**
-   * Preprocess search_assets arguments to fix common LLM mistakes
-   * Extracts brands/categories from query and moves them to facetFilters
-   */
-  preprocessSearchArgs(args) {
-    if (!args.query || typeof args.query !== 'string') {
-      return args;
-    }
-
-    const originalQuery = args.query;
-    let remainingQuery = originalQuery.toLowerCase();
-    const extractedBrands = [];
-    const extractedCategories = [];
-
-    console.log('[MCP Client] Preprocessing query:', originalQuery);
-
-    // Extract brand names from query
-    // eslint-disable-next-line no-restricted-syntax
-    for (const brand of this.brands) {
-      const brandLower = brand.toLowerCase();
-      if (remainingQuery.includes(brandLower)) {
-        extractedBrands.push(brand);
-        // Remove brand from query
-        remainingQuery = remainingQuery.replace(new RegExp(brandLower, 'gi'), '').trim();
-        console.log('[MCP Client] Extracted brand:', brand);
-      }
-    }
-
-    // Extract categories from query
-    // eslint-disable-next-line no-restricted-syntax
-    for (const category of this.categories) {
-      const categoryLower = category.toLowerCase();
-      // Also check for plural forms
-      const patterns = [categoryLower, `${categoryLower}s`];
-      // eslint-disable-next-line no-restricted-syntax
-      for (const pattern of patterns) {
-        if (remainingQuery.includes(pattern)) {
-          extractedCategories.push(category);
-          remainingQuery = remainingQuery.replace(new RegExp(pattern, 'gi'), '').trim();
-          console.log('[MCP Client] Extracted category:', category);
-          break;
-        }
-      }
-    }
-
-    // Clean up remaining query
-    remainingQuery = remainingQuery
-      .replace(/\s+/g, ' ') // Normalize whitespace
-      .replace(/^(find|show|get|search|display|give|me|some|the|all|recent|latest)\s+/gi, '') // Remove common words
-      .trim();
-
-    // If we extracted brands or categories, move them to facetFilters
-    if (extractedBrands.length > 0 || extractedCategories.length > 0) {
-      const facetFilters = args.facetFilters || {};
-
-      if (extractedBrands.length > 0) {
-        facetFilters.brand = [...(facetFilters.brand || []), ...extractedBrands];
-      }
-
-      if (extractedCategories.length > 0) {
-        facetFilters.format = [...(facetFilters.format || []), ...extractedCategories];
-      }
-
-      // If query is now empty or just punctuation, set to empty string
-      if (!remainingQuery || /^[^a-z0-9]+$/i.test(remainingQuery)) {
-        remainingQuery = '';
-      }
-
-      console.log('[MCP Client] Preprocessed:');
-      console.log('  Original query:', originalQuery);
-      console.log('  New query:', remainingQuery || '(empty)');
-      console.log('  facetFilters:', facetFilters);
-
-      return {
-        ...args,
-        query: remainingQuery,
-        facetFilters,
-      };
-    }
-
-    return args;
   }
 
   /**
    * Call an MCP tool
    */
   async callTool(toolName, args) {
-    // Preprocess search_assets queries to fix LLM mistakes
-    let processedArgs = args;
-    if (toolName === 'search_assets') {
-      processedArgs = this.preprocessSearchArgs(args);
-    }
+    console.log('[MCP Client] Calling tool:', toolName);
+    console.log('[MCP Client] Arguments:', JSON.stringify(args, null, 2));
 
     const mcpRequest = {
       jsonrpc: '2.0',
       method: 'tools/call',
       params: {
         name: toolName,
-        arguments: processedArgs,
+        arguments: args,
       },
       id: Date.now(),
     };
