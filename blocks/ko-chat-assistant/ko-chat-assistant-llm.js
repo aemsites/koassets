@@ -59,13 +59,14 @@ class WebLLMProvider extends LLMProvider {
 
     // Available models with their storage requirements
     const baseUrl = window.location.origin;
+    const cacheBuster = '?v=20251019'; // Update this when WASM file changes
     this.availableModels = {
       hermes2pro: {
         id: 'Hermes-2-Pro-Mistral-7B-q4f16_1-MLC',
         name: 'Hermes-2-Pro-Mistral-7B',
         sizeGB: 4.0,
         path: `${baseUrl}/models/Hermes-2-Pro-Mistral-7B-q4f16_1-MLC/`,
-        lib: `${baseUrl}/models/Hermes-2-Pro-Mistral-7B-q4f16_1-MLC/Hermes-2-Pro-Mistral-7B-q4f16_1-sw4k_cs1k-webgpu.wasm`,
+        lib: `${baseUrl}/models/Hermes-2-Pro-Mistral-7B-q4f16_1-MLC/Hermes-2-Pro-Mistral-7B-q4f16_1-sw4k_cs1k-webgpu.wasm${cacheBuster}`,
         description: 'Best for function calling - WebLLM native support',
       },
       tinyllama: {
