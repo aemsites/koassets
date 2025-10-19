@@ -6,6 +6,8 @@
 
 import { originDynamicMedia } from '../../origin/dm.js';
 import { originFadel } from '../../origin/fadel.js';
+import { withAuthentication } from '../../auth.js';
+import { withCookies } from '../../util/itty.js';
 
 /**
  * Make a request to the KO Assets API
@@ -40,6 +42,26 @@ export async function makeApiRequest(endpoint, options = {}, env, request) {
     body: options.body,
   });
 
+  // Apply authentication middleware to attach request.user
+  console.log('[MCP API Client] Applying authentication...');
+  await withCookies(mockRequest);
+  // Decode cookie values (same as main router does)
+  for (const key in mockRequest.cookies) {
+    mockRequest.cookies[key] = decodeURIComponent(mockRequest.cookies[key]);
+  }
+  
+  const authResult = await withAuthentication(mockRequest, env);
+  if (authResult) {
+    // withAuthentication returns a Response if auth fails
+    const errorText = await authResult.text();
+    throw new Error(`Authentication failed: ${authResult.status} ${errorText}`);
+  }
+  
+  if (!mockRequest.user) {
+    throw new Error('Authentication failed: No user object');
+  }
+  
+  console.log('[MCP API Client] ✓ Authenticated as:', mockRequest.user.email);
   console.log('[MCP API Client] Making internal call...');
   
   let response;
