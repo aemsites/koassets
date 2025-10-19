@@ -6,8 +6,6 @@
 
 import { originDynamicMedia } from '../../origin/dm.js';
 import { originFadel } from '../../origin/fadel.js';
-import { withAuthentication } from '../../auth.js';
-import { withCookies } from '../../util/itty.js';
 
 /**
  * Make a request to the KO Assets API
@@ -42,26 +40,22 @@ export async function makeApiRequest(endpoint, options = {}, env, request) {
     body: options.body,
   });
 
-  // Apply authentication middleware to attach request.user
-  console.log('[MCP API Client] Applying authentication...');
-  await withCookies(mockRequest);
-  // Decode cookie values (same as main router does)
-  for (const key in mockRequest.cookies) {
-    mockRequest.cookies[key] = decodeURIComponent(mockRequest.cookies[key]);
+  // Copy authentication data from the original request
+  // The original request already went through withAuthentication middleware
+  console.log('[MCP API Client] Copying authentication from original request...');
+  
+  if (!request.user) {
+    console.error('[MCP API Client] ❌ Original request has no user!');
+    throw new Error('Original request is not authenticated');
   }
   
-  const authResult = await withAuthentication(mockRequest, env);
-  if (authResult) {
-    // withAuthentication returns a Response if auth fails
-    const errorText = await authResult.text();
-    throw new Error(`Authentication failed: ${authResult.status} ${errorText}`);
-  }
+  // Copy user object to mock request
+  mockRequest.user = request.user;
+  mockRequest.uri = new URL(mockRequest.url);
+  mockRequest.cookies = request.cookies || {};
   
-  if (!mockRequest.user) {
-    throw new Error('Authentication failed: No user object');
-  }
-  
-  console.log('[MCP API Client] ✓ Authenticated as:', mockRequest.user.email);
+  console.log('[MCP API Client] ✓ User:', mockRequest.user.email);
+  console.log('[MCP API Client] ✓ Roles:', mockRequest.user.roles);
   console.log('[MCP API Client] Making internal call...');
   
   let response;
