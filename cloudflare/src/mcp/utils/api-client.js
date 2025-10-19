@@ -7,7 +7,22 @@
  * Make a request to the KO Assets API
  */
 export async function makeApiRequest(endpoint, options = {}, env, request) {
-  const baseUrl = env.KOASSETS_API_URL || 'http://localhost:8787';
+  // Auto-detect base URL: use env var if set, otherwise infer from request
+  let baseUrl = env.KOASSETS_API_URL;
+  
+  if (!baseUrl && request) {
+    // Infer from the incoming request URL
+    const requestUrl = new URL(request.url);
+    baseUrl = `${requestUrl.protocol}//${requestUrl.host}`;
+    console.log('[MCP API Client] Auto-detected base URL from request:', baseUrl);
+  }
+  
+  // Fallback to localhost for local dev
+  if (!baseUrl) {
+    baseUrl = 'http://localhost:8787';
+    console.log('[MCP API Client] Using localhost fallback');
+  }
+  
   const url = `${baseUrl}${endpoint}`;
 
   console.log('[MCP API Client] ======================');
