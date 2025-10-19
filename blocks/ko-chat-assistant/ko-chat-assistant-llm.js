@@ -60,13 +60,12 @@ class WebLLMProvider extends LLMProvider {
     // Available models with their storage requirements
     const baseUrl = window.location.origin;
     this.availableModels = {
-      phi3mini: {
-        id: 'Phi-3-mini-4k-instruct-q4f16_1-MLC',
-        name: 'Phi-3-mini (3.8B)',
-        sizeGB: 2.0,
-        path: `${baseUrl}/models/Phi-3-mini-4k-instruct-q4f16_1-MLC/`,
-        lib: `${baseUrl}/models/Phi-3-mini-4k-instruct-q4f16_1-MLC/Phi-3-mini-4k-instruct-q4f16_1-ctx4k_cs1k-webgpu.wasm`,
-        description: 'Best reasoning and tool calling',
+      hermes3: {
+        id: 'Hermes-3-Llama-3.1-8B-q4f16_1-MLC',
+        name: 'Hermes-3-Llama-3.1-8B',
+        sizeGB: 4.5,
+        useCDN: true, // WebLLM will load from default CDN
+        description: 'Best for function calling - WebLLM native support',
       },
       tinyllama: {
         id: 'TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC',
@@ -74,7 +73,7 @@ class WebLLMProvider extends LLMProvider {
         sizeGB: 0.6,
         path: `${baseUrl}/models/TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC/`,
         lib: `${baseUrl}/models/TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC/TinyLlama-1.1B-Chat-v1.0-q4f16_1-ctx2k_cs1k-webgpu.wasm`,
-        description: 'Smaller, fits on limited storage',
+        description: 'Smaller, fallback for limited storage',
       },
     };
   }
@@ -85,16 +84,16 @@ class WebLLMProvider extends LLMProvider {
   selectModelForQuota(availableGB) {
     console.log(`[Model Selection] Available storage: ${availableGB.toFixed(2)}GB`);
 
-    // Try Phi-3-mini first (best quality)
-    if (availableGB >= this.availableModels.phi3mini.sizeGB + 0.5) { // +0.5GB buffer
-      console.log('[Model Selection] ✅ Selected Phi-3-mini (3.8B) - sufficient storage');
-      return this.availableModels.phi3mini;
+    // Try Hermes-3 first (best for function calling)
+    if (availableGB >= this.availableModels.hermes3.sizeGB + 0.5) { // +0.5GB buffer
+      console.log('[Model Selection] ✅ Selected Hermes-3-Llama-3.1-8B - sufficient storage');
+      return this.availableModels.hermes3;
     }
 
-    // Fall back to TinyLlama (smaller)
+    // Fall back to TinyLlama (smaller, but no native tool calling)
     if (availableGB >= this.availableModels.tinyllama.sizeGB + 0.2) { // +0.2GB buffer
       console.log('[Model Selection] ⚠️ Selected TinyLlama (1.1B) - limited storage');
-      console.log('[Model Selection] Note: Query preprocessing enabled to improve results');
+      console.log('[Model Selection] Note: Using pattern-based fallback (no native tool calling)');
       return this.availableModels.tinyllama;
     }
 
@@ -222,26 +221,31 @@ class WebLLMProvider extends LLMProvider {
           error: 'limited_storage',
           details: {
             availableGB: parseFloat(availableGB.toFixed(2)),
-            requiredGB: this.availableModels.phi3mini.sizeGB,
+            requiredGB: this.availableModels.hermes3.sizeGB,
             quotaGB: parseFloat((storageStatus.quota / (1024 * 1024 * 1024)).toFixed(2)),
             usageGB: parseFloat((storageStatus.usage / (1024 * 1024 * 1024)).toFixed(2)),
             selectedModel: this.selectedModel,
-            preferredModel: this.availableModels.phi3mini,
+            preferredModel: this.availableModels.hermes3,
           },
         };
       }
 
       // Set model ID and create app config for selected model
       this.modelId = this.selectedModel.id;
-      const appConfig = {
-        model_list: [
-          {
-            model_id: this.selectedModel.id,
-            model: this.selectedModel.path,
-            model_lib: this.selectedModel.lib,
-          },
-        ],
-      };
+
+      // Use CDN if specified, otherwise use local paths
+      let appConfig = null;
+      if (!this.selectedModel.useCDN) {
+        appConfig = {
+          model_list: [
+            {
+              model_id: this.selectedModel.id,
+              model: this.selectedModel.path,
+              model_lib: this.selectedModel.lib,
+            },
+          ],
+        };
+      }
 
       // Check if WebLLM library is loaded
       if (typeof window.mlc === 'undefined' || typeof window.mlc.CreateMLCEngine === 'undefined') {
@@ -253,19 +257,26 @@ class WebLLMProvider extends LLMProvider {
 
       console.log(`[WebLLM] Creating MLCEngine with ${this.selectedModel.name}`);
       console.log('[WebLLM] Model ID:', this.modelId);
-      console.log('[WebLLM] Model path:', this.selectedModel.path);
-      console.log('[WebLLM] WASM lib:', this.selectedModel.lib);
+      if (this.selectedModel.useCDN) {
+        console.log('[WebLLM] Using WebLLM default CDN for model and WASM');
+      } else {
+        console.log('[WebLLM] Model path:', this.selectedModel.path);
+        console.log('[WebLLM] WASM lib:', this.selectedModel.lib);
+      }
       console.log('[WebLLM] Storage: Persistent storage requested');
 
-      // Create MLCEngine with custom config for selected model
+      // Create MLCEngine with custom config for selected model (or default if CDN)
       const engineOptions = {
-        appConfig,
         initProgressCallback: (progress) => {
           console.log('[WebLLM] Progress:', progress);
           this.handleInitProgress(progress);
         },
         logLevel: 'INFO',
       };
+
+      if (appConfig) {
+        engineOptions.appConfig = appConfig;
+      }
 
       this.engine = await window.mlc.CreateMLCEngine(this.modelId, engineOptions);
 
