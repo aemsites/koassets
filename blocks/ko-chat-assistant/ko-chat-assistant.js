@@ -366,14 +366,34 @@ async function sendMessage() {
         const toolResults = await mcpClient.executeToolCalls(result.toolCalls);
 
         // Process tool results
+        let hasError = false;
         // eslint-disable-next-line no-restricted-syntax
         for (const toolResult of toolResults) {
-          if (toolResult.name === 'search_assets' && toolResult.success) {
-            assets = formatAssetResponse(toolResult.data);
-            responseText = generateSearchResponseText(assets);
+          if (toolResult.name === 'search_assets') {
+            if (toolResult.success) {
+              assets = formatAssetResponse(toolResult.data);
+              const query = result.toolCalls.find((tc) => tc.name === 'search_assets')?.arguments?.query || '';
+              responseText = generateSearchResponseText(assets, query);
+            } else {
+              hasError = true;
+              responseText = `Search failed: ${toolResult.error || 'Unknown error'}. Please try again or contact support.`;
+              console.error('[Search Error]', toolResult);
+            }
           } else if (toolResult.name === 'check_asset_rights' && toolResult.success) {
             rightsReport = formatRightsResponse(toolResult.data);
+          } else if (toolResult.name === 'get_asset_metadata') {
+            if (toolResult.success) {
+              responseText = formatMetadataResponse(toolResult.data);
+            } else {
+              hasError = true;
+              responseText = `Could not retrieve asset details: ${toolResult.error || 'Unknown error'}.`;
+            }
           }
+        }
+
+        // If all tool calls failed, show helpful message
+        if (hasError && !assets) {
+          responseText = 'I encountered an error while searching. Please try:\n• Simplifying your query\n• Using different keywords\n• Refreshing the page if the issue persists';
         }
       }
 
@@ -389,10 +409,11 @@ async function sendMessage() {
       messagesContainer.appendChild(assistantMsg);
       scrollToBottom();
 
-      // Add to conversation history
+      // Add to conversation history (with tool calls for context)
       conversationHistory.push({
         role: 'assistant',
         content: responseText,
+        toolCalls: result.toolCalls || [],
         assets,
         rightsReport,
         timestamp: Date.now(),
@@ -407,8 +428,26 @@ async function sendMessage() {
     console.error('[Chat] Error:', error);
     typingIndicator.remove();
 
+    // Provide context-specific error messages
+    let errorMessage = "I'm sorry, I encountered an error processing your request.";
+    let suggestions = 'Please try again or contact support if the issue persists.';
+
+    if (error.message?.includes('not ready')) {
+      errorMessage = 'The AI model is still loading.';
+      suggestions = 'Please wait a moment and try again.';
+    } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+      errorMessage = 'Connection error.';
+      suggestions = 'Please check your internet connection and try again.';
+    } else if (error.message?.includes('timeout')) {
+      errorMessage = 'Request timed out.';
+      suggestions = 'The server took too long to respond. Please try a simpler query or try again later.';
+    } else if (error.message?.includes('authentication') || error.message?.includes('unauthorized')) {
+      errorMessage = 'Authentication error.';
+      suggestions = 'Please refresh the page and sign in again.';
+    }
+
     const errorMsg = createAssistantMessage(
-      "I'm sorry, I encountered an error processing your request. Please try again or contact support if the issue persists.",
+      `${errorMessage}\n\n${suggestions}`,
       { isError: true },
     );
     messagesContainer.appendChild(errorMsg);
@@ -423,25 +462,99 @@ function formatAssetResponse(data) {
   try {
     const hits = data.data?.hits || data.hits || [];
     const nbHits = data.data?.nbHits || data.nbHits || hits.length;
+    const facets = data.data?.facets || data.facets || null;
 
     return {
       total: nbHits,
       count: hits.length,
+      facets: facets ? formatFacets(facets) : null,
       assets: hits.slice(0, 12).map((hit) => ({
         id: hit.assetId || hit.objectID || hit.id,
-        title: hit.title || hit['dc:title'] || 'Untitled Asset',
+        title: hit.title || hit['dc-title'] || hit['dc:title'] || 'Untitled Asset',
         thumbnail: hit.thumbnail || hit.thumbnailUrl || hit.url || '',
-        brand: hit.brand || '',
-        category: hit.category || hit['dam:assetType'] || '',
-        format: hit.format || hit['dc:format'] || '',
-        created: hit.created || hit['xmp:CreateDate'] || '',
+        brand: hit.brand || extractFromHierarchy(hit['tccc-brand']) || '',
+        category: hit.category || extractFromHierarchy(hit['tccc-assetCategoryAndType']) || '',
+        format: hit.format || hit['dc-format'] || hit['dc:format'] || hit['dc-format-label'] || '',
+        created: hit.created || hit['repo-createDate'] || hit['xmp:CreateDate'] || '',
+        modified: hit.modified || hit['repo-modifyDate'] || '',
         description: hit.description || hit['dc:description'] || '',
+        readyToUse: hit['tccc-readyToUse'] || '',
+        assetStatus: hit['tccc-assetStatus'] || hit['dam-assetStatus'] || '',
+        channel: extractFromHierarchy(hit['tccc-intendedChannel']) || '',
+        size: hit.size || 0,
       })),
     };
   } catch (error) {
     console.error('[Format Asset Error]', error);
-    return { total: 0, count: 0, assets: [] };
+    return {
+      total: 0, count: 0, assets: [], facets: null,
+    };
   }
+}
+
+/**
+ * Extract value from TCCC hierarchical tag structure
+ */
+function extractFromHierarchy(hierarchyObj) {
+  if (!hierarchyObj) return '';
+  if (hierarchyObj.TCCC?.['#values']?.[0]) {
+    return hierarchyObj.TCCC['#values'][0];
+  }
+  return '';
+}
+
+/**
+ * Format facets from Algolia response
+ */
+function formatFacets(facets) {
+  const formatted = {};
+
+  // Extract brand facets
+  const brandFacet = facets['tccc-brand.TCCC.#hierarchy.lvl1'] || facets['tccc-brand.TCCC.#values'];
+  if (brandFacet) {
+    formatted.brands = Object.entries(brandFacet)
+      .map(([key, count]) => ({
+        name: key.replace('Brand / ', ''),
+        count,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+  }
+
+  // Extract format/category facets
+  const categoryFacet = facets['tccc-assetCategoryAndType.TCCC.#hierarchy.lvl0'];
+  if (categoryFacet) {
+    formatted.formats = Object.entries(categoryFacet)
+      .map(([key, count]) => ({
+        name: key.replace('Asset Category and Asset Type Execution / ', ''),
+        count,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+  }
+
+  // Extract channel facets
+  const channelFacet = facets['tccc-intendedChannel.TCCC.#hierarchy.lvl1'];
+  if (channelFacet) {
+    formatted.channels = Object.entries(channelFacet)
+      .map(([key, count]) => ({
+        name: key.replace('Intended Channel / ', ''),
+        count,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+  }
+
+  // Extract ready-to-use facet
+  const readyFacet = facets['tccc-readyToUse'];
+  if (readyFacet) {
+    formatted.readyToUse = Object.entries(readyFacet).map(([key, count]) => ({
+      name: key === 'yes' ? 'Ready to Use' : 'Not Ready',
+      count,
+    }));
+  }
+
+  return formatted;
 }
 
 /**
@@ -475,11 +588,43 @@ function formatRightsResponse(data) {
 }
 
 /**
+ * Format metadata response from MCP data
+ */
+function formatMetadataResponse(data) {
+  try {
+    const metadata = data.data || data;
+    const details = [];
+
+    if (metadata.title) details.push(`Title: ${metadata.title}`);
+    if (metadata.brand) details.push(`Brand: ${metadata.brand}`);
+    if (metadata.format) details.push(`Format: ${metadata.format}`);
+    if (metadata.created) details.push(`Created: ${metadata.created}`);
+    if (metadata.description) details.push(`Description: ${metadata.description}`);
+
+    return details.length > 0
+      ? `Asset Details:\n${details.join('\n')}`
+      : 'Asset metadata retrieved successfully.';
+  } catch (error) {
+    console.error('[Format Metadata Error]', error);
+    return 'Could not format asset metadata.';
+  }
+}
+
+/**
  * Generate response text for search results
  */
-function generateSearchResponseText(assets) {
+function generateSearchResponseText(assets, query = '') {
   if (!assets || assets.count === 0) {
-    return "I couldn't find any assets matching your search. Try different keywords or check your filters.";
+    let suggestion = 'Try different keywords or check your filters.';
+
+    // Provide specific suggestions based on context
+    if (query && query.length > 0) {
+      suggestion = 'Try:\n• Using broader keywords\n• Checking spelling\n• Removing filters';
+    } else if (assets && assets.facets) {
+      suggestion = 'Try refining your search using the facets above.';
+    }
+
+    return `I couldn't find any assets matching your search. ${suggestion}`;
   }
 
   const { total } = assets;
@@ -548,6 +693,11 @@ function createAssistantMessage(text, options = {}) {
 
   let content = `<div class="message-content"><p>${escapeHtml(text)}</p>`;
 
+  // Add facets panel if present
+  if (assets && assets.facets) {
+    content += createFacetsPanel(assets.facets);
+  }
+
   // Add asset cards if present
   if (assets && assets.assets && assets.assets.length > 0) {
     content += '<div class="asset-cards-container">';
@@ -594,31 +744,109 @@ function createAssistantMessage(text, options = {}) {
 }
 
 /**
+ * Create facets panel HTML
+ */
+function createFacetsPanel(facets) {
+  let html = '<div class="facets-panel"><div class="facets-header">Refine your search:</div><div class="facets-grid">';
+
+  // Show brand facets
+  if (facets.brands && facets.brands.length > 0) {
+    html += '<div class="facet-group"><div class="facet-label">By Brand:</div><div class="facet-options">';
+    facets.brands.slice(0, 5).forEach((brand) => {
+      html += `<button class="facet-option" data-facet="brand" data-value="${escapeHtml(brand.name)}">${escapeHtml(brand.name)} (${brand.count})</button>`;
+    });
+    html += '</div></div>';
+  }
+
+  // Show format facets
+  if (facets.formats && facets.formats.length > 0) {
+    html += '<div class="facet-group"><div class="facet-label">By Format:</div><div class="facet-options">';
+    facets.formats.slice(0, 3).forEach((format) => {
+      html += `<button class="facet-option" data-facet="format" data-value="${escapeHtml(format.name)}">${escapeHtml(format.name)} (${format.count})</button>`;
+    });
+    html += '</div></div>';
+  }
+
+  // Show channel facets
+  if (facets.channels && facets.channels.length > 0) {
+    html += '<div class="facet-group"><div class="facet-label">By Channel:</div><div class="facet-options">';
+    facets.channels.slice(0, 3).forEach((channel) => {
+      html += `<button class="facet-option" data-facet="channel" data-value="${escapeHtml(channel.name)}">${escapeHtml(channel.name)} (${channel.count})</button>`;
+    });
+    html += '</div></div>';
+  }
+
+  // Show ready-to-use facet
+  if (facets.readyToUse && facets.readyToUse.length > 0) {
+    html += '<div class="facet-group"><div class="facet-label">Status:</div><div class="facet-options">';
+    facets.readyToUse.forEach((status) => {
+      html += `<button class="facet-option" data-facet="ready" data-value="${status.name === 'Ready to Use' ? 'yes' : 'no'}">${escapeHtml(status.name)} (${status.count})</button>`;
+    });
+    html += '</div></div>';
+  }
+
+  html += '</div></div>';
+  return html;
+}
+
+/**
  * Create an asset card HTML
  */
 function createAssetCard(asset) {
-  const thumbnail = asset.thumbnail || '/icons/file-icon.svg';
-  const title = asset.title || 'Untitled';
-  const brand = asset.brand || '';
-  const category = asset.category || '';
+  const {
+    thumbnail = '/icons/file-icon.svg',
+    title = 'Untitled',
+    brand = '',
+    category = '',
+    format = '',
+    readyToUse,
+    assetStatus,
+    size,
+  } = asset;
+
+  // Format file size
+  let sizeText = '';
+  if (size > 0) {
+    if (size >= 1024 * 1024) {
+      sizeText = `${(size / (1024 * 1024)).toFixed(1)} MB`;
+    } else if (size >= 1024) {
+      sizeText = `${(size / 1024).toFixed(1)} KB`;
+    } else {
+      sizeText = `${size} B`;
+    }
+  }
+
+  // Status badges
+  const badges = [];
+  if (readyToUse === 'yes') {
+    badges.push('<span class="asset-badge ready">Ready to Use</span>');
+  }
+  if (assetStatus === 'approved') {
+    badges.push('<span class="asset-badge approved">Approved</span>');
+  }
 
   return `
     <div class="asset-card" data-asset-id="${escapeHtml(asset.id)}">
       <div class="asset-thumbnail">
         <img src="${escapeHtml(thumbnail)}" alt="${escapeHtml(title)}" loading="lazy" />
+        ${badges.length > 0 ? `<div class="asset-badges">${badges.join('')}</div>` : ''}
       </div>
       <div class="asset-info">
-        <h4 class="asset-title">${escapeHtml(title)}</h4>
-        ${brand ? `<p class="asset-brand">${escapeHtml(brand)}</p>` : ''}
-        ${category ? `<p class="asset-category">${escapeHtml(category)}</p>` : ''}
+        <h4 class="asset-title" title="${escapeHtml(title)}">${escapeHtml(title)}</h4>
+        ${brand ? `<p class="asset-brand"><strong>Brand:</strong> ${escapeHtml(brand)}</p>` : ''}
+        <div class="asset-metadata">
+          ${format ? `<span class="asset-meta-item"><strong>Format:</strong> ${escapeHtml(format)}</span>` : ''}
+          ${sizeText ? `<span class="asset-meta-item"><strong>Size:</strong> ${sizeText}</span>` : ''}
+          ${category ? `<span class="asset-meta-item"><strong>Category:</strong> ${escapeHtml(category)}</span>` : ''}
+        </div>
       </div>
       <div class="asset-actions">
-        <button class="asset-action-btn" data-action="view" aria-label="View asset">
+        <button class="asset-action-btn" data-action="view" aria-label="View asset" title="View details">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
             <path d="M8 3C4.5 3 1.5 5.5 0 8c1.5 2.5 4.5 5 8 5s6.5-2.5 8-5c-1.5-2.5-4.5-5-8-5zm0 8c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/>
           </svg>
         </button>
-        <button class="asset-action-btn" data-action="download" aria-label="Download asset">
+        <button class="asset-action-btn" data-action="download" aria-label="Download asset" title="Download">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
             <path d="M8 12L3 7h3V1h4v6h3l-5 5zm6 2H2v2h12v-2z"/>
           </svg>

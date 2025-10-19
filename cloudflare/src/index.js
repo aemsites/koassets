@@ -90,13 +90,13 @@ router
     const newPath = url.pathname.replace('/resolve/main', '');
     const newUrl = `${url.origin}${newPath}${url.search}`;
     console.log('[Models] Rewriting URL from:', url.pathname, 'to:', newPath);
-    
+
     // Create a fresh request with the rewritten URL
     const newRequest = new Request(newUrl, {
       method: request.method,
       headers: request.headers,
     });
-    
+
     return originHelix(newRequest, env);
   })
 

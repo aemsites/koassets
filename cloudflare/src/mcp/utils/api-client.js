@@ -35,7 +35,7 @@ export async function makeApiRequest(endpoint, options = {}, env, request) {
       'Content-Type': 'application/json',
       ...options.headers,
       // Forward the original cookie for authentication
-      'Cookie': request?.headers?.get('cookie') || '',
+      Cookie: request?.headers?.get('cookie') || '',
     },
     body: options.body,
   });
@@ -43,21 +43,21 @@ export async function makeApiRequest(endpoint, options = {}, env, request) {
   // Copy authentication data from the original request
   // The original request already went through withAuthentication middleware
   console.log('[MCP API Client] Copying authentication from original request...');
-  
+
   if (!request.user) {
     console.error('[MCP API Client] ❌ Original request has no user!');
     throw new Error('Original request is not authenticated');
   }
-  
+
   // Copy user object to mock request
   mockRequest.user = request.user;
   mockRequest.uri = new URL(mockRequest.url);
   mockRequest.cookies = request.cookies || {};
-  
+
   console.log('[MCP API Client] ✓ User:', mockRequest.user.email);
   console.log('[MCP API Client] ✓ Roles:', mockRequest.user.roles);
   console.log('[MCP API Client] Making internal call...');
-  
+
   let response;
   try {
     response = await handler(mockRequest, env);
@@ -65,19 +65,19 @@ export async function makeApiRequest(endpoint, options = {}, env, request) {
     console.error('[MCP API Client] ❌ Internal call error:', error);
     throw new Error(`Internal API call failed: ${error.message}`);
   }
-  
+
   console.log('[MCP API Client] Response status:', response.status, response.statusText);
 
   if (!response.ok) {
     const errorText = await response.text();
     console.error('[MCP API Client] ❌ Error response:', errorText);
-    
+
     throw new Error(
-      `API request failed:\n` +
-      `Endpoint: ${endpoint}\n` +
-      `Method: ${options.method || 'GET'}\n` +
-      `Status: ${response.status} ${response.statusText}\n` +
-      `Response: ${errorText}`
+      'API request failed:\n'
+      + `Endpoint: ${endpoint}\n`
+      + `Method: ${options.method || 'GET'}\n`
+      + `Status: ${response.status} ${response.statusText}\n`
+      + `Response: ${errorText}`,
     );
   }
 

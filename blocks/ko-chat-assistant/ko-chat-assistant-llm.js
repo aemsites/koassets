@@ -377,21 +377,65 @@ class WebLLMProvider extends LLMProvider {
       // Build messages for the model
       const messages = this.buildMessages(message, conversationHistory);
 
-      // Generate response
+      // Get MCP tools
+      const tools = this.getMCPTools();
+
+      console.log('[WebLLM] Generating response with', tools.length, 'tools available');
+
+      // Generate response with function calling support
       const response = await this.engine.chat.completions.create({
         messages,
+        tools,
+        tool_choice: 'auto', // Let model decide when to use tools
         temperature: 0.7,
         max_tokens: 512,
       });
 
-      const content = response.choices[0]?.message?.content || '';
+      const choice = response.choices[0];
+      const responseMessage = choice?.message;
 
-      // Parse response and detect tool calls
-      const { text, toolCalls } = this.parseResponse(content, message);
+      console.log('[WebLLM] Response:', {
+        hasContent: !!responseMessage?.content,
+        hasToolCalls: !!responseMessage?.tool_calls,
+        toolCallsCount: responseMessage?.tool_calls?.length || 0,
+      });
+
+      // Extract tool calls from response
+      const toolCalls = [];
+      if (responseMessage?.tool_calls && responseMessage.tool_calls.length > 0) {
+        // eslint-disable-next-line no-restricted-syntax
+        for (const toolCall of responseMessage.tool_calls) {
+          try {
+            toolCalls.push({
+              id: toolCall.id || `call_${Date.now()}`,
+              name: toolCall.function.name,
+              arguments: typeof toolCall.function.arguments === 'string'
+                ? JSON.parse(toolCall.function.arguments)
+                : toolCall.function.arguments,
+            });
+            console.log('[WebLLM] Tool call detected:', toolCall.function.name);
+            console.log('[WebLLM] Arguments:', toolCalls[toolCalls.length - 1].arguments);
+          } catch (parseError) {
+            console.error('[WebLLM] Failed to parse tool call arguments:', parseError);
+          }
+        }
+      }
+
+      // If no tool calls, fall back to pattern-based detection as backup
+      if (toolCalls.length === 0) {
+        console.log('[WebLLM] No tool calls from model, using fallback pattern detection');
+        const fallbackToolCalls = this.parseResponseFallback(
+          responseMessage?.content || '',
+          messages[messages.length - 1].content,
+        );
+        if (fallbackToolCalls.length > 0) {
+          toolCalls.push(...fallbackToolCalls);
+        }
+      }
 
       return {
         success: true,
-        text,
+        text: responseMessage?.content || '',
         toolCalls,
         usage: {
           promptTokens: response.usage?.prompt_tokens || 0,
@@ -421,25 +465,202 @@ class WebLLMProvider extends LLMProvider {
   }
 
   /**
+   * Define MCP tools available to the LLM
+   */
+  getMCPTools() {
+    return [
+      {
+        type: 'function',
+        function: {
+          name: 'search_assets',
+          description: 'Search for digital assets (images, videos, documents) in KO Assets. Use empty query with facetFilters for brand/format filtering, or add keywords for additional refinement.',
+          parameters: {
+            type: 'object',
+            properties: {
+              query: {
+                type: 'string',
+                description: 'Search keywords for additional filtering. Use empty string "" when filtering by brand/format only. Examples: "", "bottle", "summer campaign"',
+              },
+              facetFilters: {
+                type: 'object',
+                description: 'Filters for brand, format, market, channel, campaign, and other metadata',
+                properties: {
+                  brand: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Brand names: Coca-Cola, Sprite, Fanta, Powerade, Dasani, smartwater, vitaminwater, Minute Maid, Schweppes',
+                  },
+                  format: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Asset formats: Image, Video, Document',
+                  },
+                  market: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Markets/regions: North America, Europe, ASEAN, Latin America, etc.',
+                  },
+                  channel: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Intended channels: TV, Social Media, Out of Home, Print, Digital, POS',
+                  },
+                  campaign: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Campaign names (e.g., Summer Campaign, Holiday 2024)',
+                  },
+                  country: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Target countries (ISO codes: US, JP, VN, etc.)',
+                  },
+                  language: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Languages (ISO codes: en_US, ja_JP, etc.)',
+                  },
+                  readyToUse: {
+                    type: 'string',
+                    description: 'Filter by ready-to-use status: yes, no',
+                  },
+                  assetStatus: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Asset approval status: approved, pending, rejected',
+                  },
+                },
+              },
+              dateRange: {
+                type: 'object',
+                description: 'Filter by date range',
+                properties: {
+                  field: {
+                    type: 'string',
+                    enum: ['repo-createDate', 'repo-modifyDate', 'tccc-rightsStartDate', 'tccc-rightsEndDate'],
+                    description: 'Date field: created, modified, rights start, rights end',
+                  },
+                  from: {
+                    type: 'string',
+                    description: 'Start date (ISO 8601 format: 2024-01-01)',
+                  },
+                  to: {
+                    type: 'string',
+                    description: 'End date (ISO 8601 format: 2024-12-31)',
+                  },
+                },
+              },
+              hitsPerPage: {
+                type: 'number',
+                description: 'Number of results to return (default: 12, max: 100)',
+                default: 12,
+              },
+            },
+            required: ['query'],
+          },
+        },
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'check_asset_rights',
+          description: 'Check if an asset can be used for a specific purpose, verifying rights clearance and usage restrictions',
+          parameters: {
+            type: 'object',
+            properties: {
+              assetId: {
+                type: 'string',
+                description: 'The unique ID of the asset to check',
+              },
+              intendedUse: {
+                type: 'object',
+                description: 'Intended use details',
+                properties: {
+                  market: {
+                    type: 'string',
+                    description: 'Target market/region',
+                  },
+                  channel: {
+                    type: 'string',
+                    description: 'Intended channel (TV, Social, Print, etc.)',
+                  },
+                  startDate: {
+                    type: 'string',
+                    description: 'Usage start date (ISO format)',
+                  },
+                  endDate: {
+                    type: 'string',
+                    description: 'Usage end date (ISO format)',
+                  },
+                },
+              },
+            },
+            required: ['assetId'],
+          },
+        },
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'get_asset_metadata',
+          description: 'Get detailed metadata for a specific asset including technical details, rights information, and usage guidelines',
+          parameters: {
+            type: 'object',
+            properties: {
+              assetId: {
+                type: 'string',
+                description: 'The unique ID of the asset',
+              },
+            },
+            required: ['assetId'],
+          },
+        },
+      },
+    ];
+  }
+
+  /**
    * Build messages array for the model
    */
   buildMessages(message, conversationHistory) {
+    // Check for search context in conversation history
+    const lastSearch = this.extractLastSearchContext(conversationHistory);
+    const contextNote = lastSearch
+      ? `\n\nCONVERSATION CONTEXT:\nPrevious search: ${JSON.stringify(lastSearch, null, 2)}\nFor refinement queries ("filter to videos", "only approved", "now show Sprite"), modify this search instead of creating a new one.`
+      : '';
+
     const systemPrompt = `You are a helpful assistant for KO Assets, The Coca-Cola Company's digital asset management system.
 
-Your role is to help find and explore digital assets including images, videos, and documents.
+Your role is to help users find and manage digital assets including images, videos, and documents.
 
-CRITICAL SEARCH RULES:
-1. When searching by brand/category/format, use EMPTY query string "" with facetFilters
-2. Only add query keywords for additional filtering within facets
-3. Brand names: Coca-Cola, Sprite, Fanta, Powerade, Dasani, smartwater, vitaminwater
-4. Categories: Image, Video, Document
+AVAILABLE TOOLS:
+- search_assets: Find assets by brand, format, keywords, market, channel, etc.
+- check_asset_rights: Verify if an asset can be used for specific purposes
+- get_asset_metadata: Get detailed information about an asset
+
+SEARCH GUIDELINES:
+1. Use empty query ("") with facetFilters when searching by brand/format/market only
+2. Add keywords to query for additional refinement within those filters
+3. Always specify hitsPerPage (default 12) for reasonable result sets
+4. Combine multiple facets for precise filtering
+5. For refinement queries, build on the previous search context
 
 EXAMPLES:
-- "Find Coca-Cola images" → query: "", facetFilters: {brand: ["Coca-Cola"], format: ["Image"]}
-- "Find bottle images" → query: "bottle", facetFilters: {format: ["Image"]}
-- "Sprite summer videos" → query: "summer", facetFilters: {brand: ["Sprite"], format: ["Video"]}
+- "Find Coca-Cola images" → search_assets(query="", facetFilters={brand:["Coca-Cola"], format:["Image"]}, hitsPerPage=12)
+- "Sprite summer videos" → search_assets(query="summer", facetFilters={brand:["Sprite"], format:["Video"]}, hitsPerPage=12)
+- "Assets for social media in ASEAN" → search_assets(query="", facetFilters={channel:["Social Media"], market:["ASEAN"]}, hitsPerPage=12)
+- "Approved Coca-Cola assets for Vietnam TV" → search_assets(query="", facetFilters={brand:["Coca-Cola"], assetStatus:["approved"], country:["VN"], channel:["TV"]}, hitsPerPage=12)
+- "Ready-to-use campaign materials from 2024" → search_assets(query="", facetFilters={readyToUse:"yes"}, dateRange:{field:"repo-createDate", from:"2024-01-01", to:"2024-12-31"}, hitsPerPage=12)
 
-Keep responses concise and helpful.`;
+REFINEMENT EXAMPLES:
+- After "Find Coca-Cola images":
+  - "Only show videos" → search_assets(query="", facetFilters={brand:["Coca-Cola"], format:["Video"]}, hitsPerPage=12)
+  - "Filter to approved only" → search_assets(query="", facetFilters={brand:["Coca-Cola"], format:["Image"], assetStatus:["approved"]}, hitsPerPage=12)
+- After "Show summer assets":
+  - "Now for Sprite" → search_assets(query="summer", facetFilters={brand:["Sprite"]}, hitsPerPage=12)
+  - "Add social media filter" → search_assets(query="summer", facetFilters={channel:["Social Media"]}, hitsPerPage=12)
+
+Keep responses concise, friendly, and helpful. Use tools when appropriate to answer user questions.${contextNote}`;
 
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -464,9 +685,34 @@ Keep responses concise and helpful.`;
   }
 
   /**
-   * Parse LLM response and detect intent/tool calls
+   * Extract last search context from conversation history
    */
-  parseResponse(content, originalMessage) {
+  extractLastSearchContext(conversationHistory) {
+    // Look backwards through history for the last tool call with search_assets
+    // eslint-disable-next-line no-restricted-syntax
+    for (let i = conversationHistory.length - 1; i >= 0; i -= 1) {
+      const msg = conversationHistory[i];
+      if (msg.toolCalls && msg.toolCalls.length > 0) {
+        // eslint-disable-next-line no-restricted-syntax
+        for (const call of msg.toolCalls) {
+          if (call.name === 'search_assets') {
+            return {
+              query: call.arguments.query,
+              facetFilters: call.arguments.facetFilters,
+              dateRange: call.arguments.dateRange,
+              hitsPerPage: call.arguments.hitsPerPage,
+            };
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Fallback pattern-based tool detection (used when model doesn't use function calling)
+   */
+  parseResponseFallback(content, originalMessage) {
     const lower = originalMessage.toLowerCase();
     const toolCalls = [];
 
