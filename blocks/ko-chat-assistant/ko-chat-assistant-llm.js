@@ -50,22 +50,12 @@ class WebLLMProvider extends LLMProvider {
     this.engine = null;
     this.status = 'uninitialized'; // uninitialized, downloading, loading, ready, error
     this.downloadProgress = 0;
-    // Use locally hosted model on same domain (no CORS issues!)
-    this.modelId = 'TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC';
+    // Use Phi-3-mini (3.8B params) - much better reasoning and tool calling than TinyLlama
+    // Using WebLLM's default CDN for easy setup (model files cached in browser)
+    this.modelId = 'Phi-3-mini-4k-instruct-q4f16_1-MLC';
     this.initCallbacks = [];
-
-    // Custom app config pointing to locally hosted model
-    // WebLLM requires absolute URLs, so we construct them dynamically
-    const baseUrl = window.location.origin;
-    this.appConfig = {
-      model_list: [
-        {
-          model_id: this.modelId,
-          model: `${baseUrl}/models/TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC/`,
-          model_lib: `${baseUrl}/models/TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC/TinyLlama-1.1B-Chat-v1.0-q4f16_1-ctx2k_cs1k-webgpu.wasm`,
-        },
-      ],
-    };
+    // Use WebLLM's default config - it will download from their CDN and cache in browser
+    this.appConfig = null; // null = use default config
   }
 
   /**
@@ -93,19 +83,25 @@ class WebLLMProvider extends LLMProvider {
       this.status = 'downloading';
       this.notifyStatusChange();
 
-      console.log('[WebLLM] Creating MLCEngine with locally hosted model');
+      console.log('[WebLLM] Creating MLCEngine with Phi-3-mini');
       console.log('[WebLLM] Model ID:', this.modelId);
-      console.log('[WebLLM] Model path:', this.appConfig.model_list[0].model);
+      console.log('[WebLLM] Loading from WebLLM CDN (cached in browser after first load)');
 
-      // Create MLCEngine with custom config pointing to locally hosted model
-      this.engine = await window.mlc.CreateMLCEngine(this.modelId, {
-        appConfig: this.appConfig,
+      // Create MLCEngine with WebLLM's default config (CDN-hosted)
+      const engineOptions = {
         initProgressCallback: (progress) => {
           console.log('[WebLLM] Progress:', progress);
           this.handleInitProgress(progress);
         },
         logLevel: 'INFO',
-      });
+      };
+
+      // Only add appConfig if we have a custom one
+      if (this.appConfig) {
+        engineOptions.appConfig = this.appConfig;
+      }
+
+      this.engine = await window.mlc.CreateMLCEngine(this.modelId, engineOptions);
 
       console.log('[WebLLM] Model loaded successfully');
 
@@ -266,12 +262,18 @@ class WebLLMProvider extends LLMProvider {
 
 Your role is to help find and explore digital assets including images, videos, and documents.
 
-When users ask to find or search for assets:
-- Extract brand names: Coca-Cola, Sprite, Fanta, Powerade, Dasani, smartwater, vitaminwater
-- Extract categories: Image, Video, Document
-- Respond with: "I'll search for [what they want]"
+CRITICAL SEARCH RULES:
+1. When searching by brand/category/format, use EMPTY query string "" with facetFilters
+2. Only add query keywords for additional filtering within facets
+3. Brand names: Coca-Cola, Sprite, Fanta, Powerade, Dasani, smartwater, vitaminwater
+4. Categories: Image, Video, Document
 
-Keep responses concise and helpful. Focus on asset search and discovery.`;
+EXAMPLES:
+- "Find Coca-Cola images" → query: "", facetFilters: {brand: ["Coca-Cola"], format: ["Image"]}
+- "Find bottle images" → query: "bottle", facetFilters: {format: ["Image"]}
+- "Sprite summer videos" → query: "summer", facetFilters: {brand: ["Sprite"], format: ["Video"]}
+
+Keep responses concise and helpful.`;
 
     const messages = [
       { role: 'system', content: systemPrompt },

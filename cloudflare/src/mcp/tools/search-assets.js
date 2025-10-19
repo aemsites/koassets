@@ -8,13 +8,19 @@ import { searchAssets } from '../utils/api-client.js';
 export const definition = {
   name: 'search_assets',
   description:
-    'Search for digital assets (images, videos, documents) using keywords and filters. Returns a list of assets with metadata including brand, category, format, rights information, and URLs.',
+    'Search for digital assets (images, videos, documents) using keywords and filters. Returns a list of assets with metadata including brand, category, format, rights information, and URLs. ' +
+    'IMPORTANT: When using facetFilters (brand, category, format), set query to empty string "" to get all matching assets. ' +
+    'Only use query for additional keyword search within filtered results.',
   inputSchema: {
     type: 'object',
     properties: {
       query: {
         type: 'string',
-        description: 'Search term or keyword to find assets. Can be empty to retrieve all assets with filters applied.',
+        description: 
+          'Search keywords to find assets (e.g., "bottle", "logo", "commercial"). ' +
+          'Use empty string "" when filtering by brand/category/format only. ' +
+          'Use simple keywords, NOT full sentences. ' +
+          'Examples: "" (with filters), "bottle", "summer campaign", "logo red"',
       },
       facetFilters: {
         type: 'object',
@@ -77,6 +83,32 @@ export const definition = {
         default: 24,
       },
     },
+    examples: [
+      {
+        description: 'Find all Coca-Cola images',
+        arguments: {
+          query: '',
+          facetFilters: { brand: ['Coca-Cola'], format: ['Image'] },
+          hitsPerPage: 12,
+        },
+      },
+      {
+        description: 'Find recent Sprite videos with "summer" keyword',
+        arguments: {
+          query: 'summer',
+          facetFilters: { brand: ['Sprite'], format: ['Video'] },
+          hitsPerPage: 12,
+        },
+      },
+      {
+        description: 'Find bottle images across all brands',
+        arguments: {
+          query: 'bottle',
+          facetFilters: { format: ['Image'] },
+          hitsPerPage: 24,
+        },
+      },
+    ],
   },
 };
 
