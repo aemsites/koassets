@@ -84,7 +84,7 @@ router
 
   // WebLLM model files - rewrite HuggingFace URL structure to direct file access
   // Converts: /models/{model}/resolve/main/{file} -> /models/{model}/{file}
-  .get('/models/:model/resolve/main/:file+', (request, env) => {
+  .get('/models/:model/resolve/main/:file+', async (request, env) => {
     const url = new URL(request.url);
     // Remove /resolve/main/ from the path
     const newPath = url.pathname.replace('/resolve/main', '');
@@ -97,11 +97,31 @@ router
       headers: request.headers,
     });
 
-    return originHelix(newRequest, env);
+    const response = await originHelix(newRequest, env);
+    
+    // Clone response to add no-cache headers
+    const newResponse = new Response(response.body, response);
+    newResponse.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    newResponse.headers.set('Pragma', 'no-cache');
+    newResponse.headers.set('Expires', '0');
+    
+    return newResponse;
   })
 
   // Direct model file access (for files that don't go through /resolve/main/)
-  .get('/models/*', originHelix)
+  // Add no-cache headers to prevent serving stale LFS pointers
+  .get('/models/*', async (request, env) => {
+    const response = await originHelix(request, env);
+    
+    // Clone response to modify headers
+    const newResponse = new Response(response.body, response);
+    newResponse.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    newResponse.headers.set('Pragma', 'no-cache');
+    newResponse.headers.set('Expires', '0');
+    
+    console.log('[Models] Serving with no-cache headers:', new URL(request.url).pathname);
+    return newResponse;
+  })
 
   // public content
   .get('/public/*', originHelix)
