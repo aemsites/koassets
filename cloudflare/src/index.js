@@ -84,43 +84,123 @@ router
 
   // WebLLM model files - rewrite HuggingFace URL structure to direct file access
   // Converts: /models/{model}/resolve/main/{file} -> /models/{model}/{file}
-  .get('/models/:model/resolve/main/:file+', async (request, env) => {
+  // Then proxy to R2
+  .get('/models/:model/resolve/main/:file+', async (request) => {
     const url = new URL(request.url);
     // Remove /resolve/main/ from the path
     const newPath = url.pathname.replace('/resolve/main', '');
-    const newUrl = `${url.origin}${newPath}${url.search}`;
     console.log('[Models] Rewriting URL from:', url.pathname, 'to:', newPath);
 
-    // Create a fresh request with the rewritten URL
-    const newRequest = new Request(newUrl, {
-      method: request.method,
-      headers: request.headers,
-    });
+    // R2 bucket URL (public bucket for LLM models)
+    const r2BaseUrl = 'https://pub-0945642565ac4afc9e23f2a0ffcbd46e.r2.dev';
+    const r2Url = `${r2BaseUrl}${newPath}`;
 
-    const response = await originHelix(newRequest, env);
-    
-    // Clone response to add no-cache headers
-    const newResponse = new Response(response.body, response);
-    newResponse.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-    newResponse.headers.set('Pragma', 'no-cache');
-    newResponse.headers.set('Expires', '0');
-    
-    return newResponse;
+    console.log('[Models] Proxying rewritten URL to R2:', r2Url);
+
+    try {
+      // Fetch from R2 bucket
+      const r2Response = await fetch(r2Url, {
+        method: request.method,
+        headers: {
+          Range: request.headers.get('Range'),
+          'If-None-Match': request.headers.get('If-None-Match'),
+          'If-Modified-Since': request.headers.get('If-Modified-Since'),
+        },
+      });
+
+      if (!r2Response.ok) {
+        console.error('[Models] R2 fetch failed for rewritten URL:', r2Response.status);
+        return new Response(`Model file not found: ${newPath}`, {
+          status: r2Response.status,
+          headers: { 'Content-Type': 'text/plain' },
+        });
+      }
+
+      console.log('[Models] R2 response:', r2Response.status, 'Size:', r2Response.headers.get('content-length'));
+
+      // Create response with CORS and caching headers
+      const response = new Response(r2Response.body, {
+        status: r2Response.status,
+        statusText: r2Response.statusText,
+        headers: r2Response.headers,
+      });
+
+      // Add CORS headers
+      response.headers.set('Access-Control-Allow-Origin', '*');
+      response.headers.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+      response.headers.set('Access-Control-Allow-Headers', '*');
+
+      // Set caching headers
+      response.headers.set('Cache-Control', 'public, max-age=3600, immutable');
+
+      return response;
+    } catch (err) {
+      console.error('[Models] R2 proxy error for rewritten URL:', err);
+      return new Response(`Error fetching model file: ${err.message}`, {
+        status: 500,
+        headers: { 'Content-Type': 'text/plain' },
+      });
+    }
   })
 
-  // Direct model file access (for files that don't go through /resolve/main/)
-  // Add no-cache headers to prevent serving stale LFS pointers
-  .get('/models/*', async (request, env) => {
-    const response = await originHelix(request, env);
-    
-    // Clone response to modify headers
-    const newResponse = new Response(response.body, response);
-    newResponse.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-    newResponse.headers.set('Pragma', 'no-cache');
-    newResponse.headers.set('Expires', '0');
-    
-    console.log('[Models] Serving with no-cache headers:', new URL(request.url).pathname);
-    return newResponse;
+  // Direct model file access - proxy to R2 bucket
+  // Serves LLM model files from Cloudflare R2 storage
+  .get('/models/*', async (request) => {
+    const url = new URL(request.url);
+    const modelPath = url.pathname; // e.g., /models/Hermes-2-Pro.../params_shard_0.bin
+
+    // R2 bucket URL (public bucket for LLM models)
+    const r2BaseUrl = 'https://pub-0945642565ac4afc9e23f2a0ffcbd46e.r2.dev';
+    const r2Url = `${r2BaseUrl}${modelPath}`;
+
+    console.log('[Models] Proxying to R2:', modelPath);
+    console.log('[Models] R2 URL:', r2Url);
+
+    try {
+      // Fetch from R2 bucket
+      const r2Response = await fetch(r2Url, {
+        method: request.method,
+        headers: {
+          // Forward relevant headers
+          Range: request.headers.get('Range'),
+          'If-None-Match': request.headers.get('If-None-Match'),
+          'If-Modified-Since': request.headers.get('If-Modified-Since'),
+        },
+      });
+
+      if (!r2Response.ok) {
+        console.error('[Models] R2 fetch failed:', r2Response.status, r2Response.statusText);
+        return new Response(`Model file not found: ${modelPath}`, {
+          status: r2Response.status,
+          headers: { 'Content-Type': 'text/plain' },
+        });
+      }
+
+      console.log('[Models] R2 response:', r2Response.status, 'Size:', r2Response.headers.get('content-length'));
+
+      // Create response with CORS and caching headers
+      const response = new Response(r2Response.body, {
+        status: r2Response.status,
+        statusText: r2Response.statusText,
+        headers: r2Response.headers,
+      });
+
+      // Add CORS headers
+      response.headers.set('Access-Control-Allow-Origin', '*');
+      response.headers.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+      response.headers.set('Access-Control-Allow-Headers', '*');
+
+      // Set caching headers (cache for 1 hour since files are immutable)
+      response.headers.set('Cache-Control', 'public, max-age=3600, immutable');
+
+      return response;
+    } catch (err) {
+      console.error('[Models] R2 proxy error:', err);
+      return new Response(`Error fetching model file: ${err.message}`, {
+        status: 500,
+        headers: { 'Content-Type': 'text/plain' },
+      });
+    }
   })
 
   // public content
