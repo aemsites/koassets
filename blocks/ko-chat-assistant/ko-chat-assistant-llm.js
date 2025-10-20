@@ -57,20 +57,21 @@ class WebLLMProvider extends LLMProvider {
     this.selectedModel = null;
     this.initCallbacks = [];
 
-    // Hermes-2-Pro ONLY - SELF-HOSTED via R2 + Worker Proxy (no CORS issues!)
+    // Qwen2.5-7B-Instruct - Much better tool calling than Hermes-2-Pro
+    // SELF-HOSTED via R2 + Worker Proxy (same as before)
     const baseUrl = window.location.origin;
     this.model = {
-      id: 'Hermes-2-Pro-Mistral-7B-q4f16_1-MLC',
-      name: 'Hermes-2-Pro-Mistral-7B',
-      sizeGB: 4.0,
-      path: `${baseUrl}/models/Hermes-2-Pro-Mistral-7B-q4f16_1-MLC/`,
-      lib: `${baseUrl}/models/Hermes-2-Pro-Mistral-7B-q4f16_1-MLC/Hermes-2-Pro-Mistral-7B-q4f16_1-sw4k_cs1k-webgpu.wasm`,
-      description: 'Self-hosted LLM with native tool calling for KO Assets search',
+      id: 'Qwen2.5-7B-Instruct-q4f16_1-MLC',
+      name: 'Qwen2.5-7B-Instruct',
+      sizeGB: 5.0, // Slightly larger than Hermes
+      path: `${baseUrl}/models/Qwen2.5-7B-Instruct-q4f16_1-MLC/`,
+      lib: `${baseUrl}/models/Qwen2.5-7B-Instruct-q4f16_1-MLC/Qwen2.5-7B-Instruct-q4f16_1-sw4k_cs1k-webgpu.wasm`,
+      description: 'Self-hosted Qwen2.5 with superior tool calling capabilities',
     };
   }
 
   /**
-   * Check if there's sufficient storage for Hermes-2-Pro
+   * Check if there's sufficient storage for the model
    */
   checkStorageForModel(availableGB) {
     console.log(`[Model Selection] Available storage: ${availableGB.toFixed(2)}GB`);
@@ -217,6 +218,7 @@ class WebLLMProvider extends LLMProvider {
       console.log('[WebLLM] Model path:', this.model.path);
       console.log('[WebLLM] WASM lib:', this.model.lib);
       console.log('[WebLLM] Storage: Persistent storage requested');
+      console.log('[WebLLM] NOTE: Qwen2.5 has MUCH better tool calling than Hermes-2-Pro');
 
       // Create custom appConfig for self-hosted model
       const appConfig = {
