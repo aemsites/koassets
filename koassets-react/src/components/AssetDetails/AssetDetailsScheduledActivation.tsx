@@ -30,13 +30,13 @@ const AssetDetailsScheduledActivation: React.FC<AssetDetailsScheduledActivationP
                 <div className="asset-details-content">
                     <div className="asset-details-grid">
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">On Time</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.onTime as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">On Time</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.onTime as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Off Time</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.offTime as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Off Time</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.offTime as string}</span>
                         </div>
                     </div>
                 </div>

@@ -30,53 +30,53 @@ const AssetDetailsTechnicalInfo: React.FC<AssetDetailsTechnicalInfoProps> = ({ s
                 <div className="asset-details-content">
                     <div className="asset-details-grid">
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">File Size</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.formatedSize as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">File Size</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.formatedSize as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">ID</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.assetId as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">ID</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.assetId as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Resolution</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.resolution as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Resolution</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.resolution as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Image Height</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.imageHeight as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Image Height</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.imageHeight as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Image Width</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.imageWidth as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Image Width</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.imageWidth as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Duration</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.duration as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Duration</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.duration as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Broadcast Format</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.broadcastFormat as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Broadcast Format</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.broadcastFormat as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Titling</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.titling as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Titling</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.titling as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Ratio</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.ratio as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Ratio</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.ratio as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Orientation</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.orientation as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Orientation</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.orientation as string}</span>
                         </div>
                     </div>
                 </div>
