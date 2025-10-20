@@ -57,52 +57,36 @@ class WebLLMProvider extends LLMProvider {
     this.selectedModel = null;
     this.initCallbacks = [];
 
-    // Available models with their storage requirements
+    // Hermes-2-Pro ONLY - SELF-HOSTED via R2 + Worker Proxy (no CORS issues!)
     const baseUrl = window.location.origin;
-    const cacheBuster = '?v=20251019'; // Update this when WASM file changes
-    this.availableModels = {
-      hermes2pro: {
-        id: 'Hermes-2-Pro-Mistral-7B-q4f16_1-MLC',
-        name: 'Hermes-2-Pro-Mistral-7B',
-        sizeGB: 4.0,
-        path: `${baseUrl}/models/Hermes-2-Pro-Mistral-7B-q4f16_1-MLC/`,
-        lib: `${baseUrl}/models/Hermes-2-Pro-Mistral-7B-q4f16_1-MLC/Hermes-2-Pro-Mistral-7B-q4f16_1-sw4k_cs1k-webgpu.wasm${cacheBuster}`,
-        description: 'Best for function calling - WebLLM native support',
-      },
-      tinyllama: {
-        id: 'TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC',
-        name: 'TinyLlama (1.1B)',
-        sizeGB: 0.6,
-        path: `${baseUrl}/models/TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC/`,
-        lib: `${baseUrl}/models/TinyLlama-1.1B-Chat-v1.0-q4f16_1-MLC/TinyLlama-1.1B-Chat-v1.0-q4f16_1-ctx2k_cs1k-webgpu.wasm`,
-        description: 'Smaller, fallback for limited storage',
-      },
+    this.model = {
+      id: 'Hermes-2-Pro-Mistral-7B-q4f16_1-MLC',
+      name: 'Hermes-2-Pro-Mistral-7B',
+      sizeGB: 4.0,
+      path: `${baseUrl}/models/Hermes-2-Pro-Mistral-7B-q4f16_1-MLC/`,
+      lib: `${baseUrl}/models/Hermes-2-Pro-Mistral-7B-q4f16_1-MLC/Hermes-2-Pro-Mistral-7B-q4f16_1-sw4k_cs1k-webgpu.wasm`,
+      description: 'Self-hosted LLM with native tool calling for KO Assets search',
     };
   }
 
   /**
-   * Select best model based on available storage
+   * Check if there's sufficient storage for Hermes-2-Pro
    */
-  selectModelForQuota(availableGB) {
+  checkStorageForModel(availableGB) {
     console.log(`[Model Selection] Available storage: ${availableGB.toFixed(2)}GB`);
+    console.log(`[Model Selection] Required for ${this.model.name}: ${this.model.sizeGB}GB + 0.5GB buffer`);
 
-    // Try Hermes-2-Pro first (best for function calling)
-    if (availableGB >= this.availableModels.hermes2pro.sizeGB + 0.5) { // +0.5GB buffer
-      console.log('[Model Selection] ✅ Selected Hermes-2-Pro-Mistral-7B - sufficient storage');
-      return this.availableModels.hermes2pro;
+    const requiredGB = this.model.sizeGB + 0.5; // +0.5GB buffer
+
+    if (availableGB >= requiredGB) {
+      console.log(`[Model Selection] ✅ Sufficient storage for ${this.model.name}`);
+      return { hasSpace: true, model: this.model };
     }
 
-    // Fall back to TinyLlama (smaller, but no native tool calling)
-    if (availableGB >= this.availableModels.tinyllama.sizeGB + 0.2) { // +0.2GB buffer
-      console.log('[Model Selection] ⚠️ Selected TinyLlama (1.1B) - limited storage');
-      console.log('[Model Selection] Note: Using pattern-based fallback (no native tool calling)');
-      return this.availableModels.tinyllama;
-    }
-
-    // Not enough storage for any model
-    const minSize = this.availableModels.tinyllama.sizeGB;
-    console.error(`[Model Selection] ❌ Insufficient storage for any model (need at least ${minSize}GB)`);
-    return null;
+    console.error(`[Model Selection] ❌ Insufficient storage (need ${requiredGB}GB, have ${availableGB.toFixed(2)}GB)`);
+    return {
+      hasSpace: false, model: null, requiredGB, availableGB,
+    };
   }
 
   /**
@@ -196,53 +180,28 @@ class WebLLMProvider extends LLMProvider {
       // Request persistent storage before loading model
       const storageStatus = await this.requestPersistentStorage();
 
-      // Select best model based on available storage
+      // Check if there's sufficient storage for Hermes-2-Pro
       const availableGB = storageStatus.available / (1024 * 1024 * 1024);
-      this.selectedModel = this.selectModelForQuota(availableGB);
+      const storageCheck = this.checkStorageForModel(availableGB);
 
-      // Not enough storage for any model
-      if (!this.selectedModel) {
-        const minRequired = this.availableModels.tinyllama.sizeGB;
+      // Not enough storage
+      if (!storageCheck.hasSpace) {
         return {
           success: false,
           error: 'insufficient_storage',
           details: {
-            availableGB: parseFloat(availableGB.toFixed(2)),
-            requiredGB: minRequired,
+            availableGB: parseFloat(storageCheck.availableGB.toFixed(2)),
+            requiredGB: storageCheck.requiredGB,
             quotaGB: parseFloat((storageStatus.quota / (1024 * 1024 * 1024)).toFixed(2)),
             usageGB: parseFloat((storageStatus.usage / (1024 * 1024 * 1024)).toFixed(2)),
-            selectedModel: null,
+            model: this.model.name,
           },
         };
       }
 
-      // Falling back to smaller model - ask user for confirmation
-      if (this.selectedModel.id === this.availableModels.tinyllama.id) {
-        return {
-          success: false,
-          error: 'limited_storage',
-          details: {
-            availableGB: parseFloat(availableGB.toFixed(2)),
-            requiredGB: this.availableModels.hermes2pro.sizeGB,
-            quotaGB: parseFloat((storageStatus.quota / (1024 * 1024 * 1024)).toFixed(2)),
-            usageGB: parseFloat((storageStatus.usage / (1024 * 1024 * 1024)).toFixed(2)),
-            selectedModel: this.selectedModel,
-            preferredModel: this.availableModels.hermes2pro,
-          },
-        };
-      }
-
-      // Set model ID and create app config for selected model
-      this.modelId = this.selectedModel.id;
-      const appConfig = {
-        model_list: [
-          {
-            model_id: this.selectedModel.id,
-            model: this.selectedModel.path,
-            model_lib: this.selectedModel.lib,
-          },
-        ],
-      };
+      // Set model
+      this.selectedModel = storageCheck.model;
+      this.modelId = this.model.id;
 
       // Check if WebLLM library is loaded
       if (typeof window.mlc === 'undefined' || typeof window.mlc.CreateMLCEngine === 'undefined') {
@@ -252,23 +211,36 @@ class WebLLMProvider extends LLMProvider {
       this.status = 'downloading';
       this.notifyStatusChange();
 
-      console.log(`[WebLLM] Creating MLCEngine with ${this.selectedModel.name}`);
+      console.log(`[WebLLM] Creating MLCEngine with ${this.model.name}`);
       console.log('[WebLLM] Model ID:', this.modelId);
-      console.log('[WebLLM] Model path:', this.selectedModel.path);
-      console.log('[WebLLM] WASM lib:', this.selectedModel.lib);
+      console.log('[WebLLM] Source: SELF-HOSTED via R2 + Worker Proxy');
+      console.log('[WebLLM] Model path:', this.model.path);
+      console.log('[WebLLM] WASM lib:', this.model.lib);
       console.log('[WebLLM] Storage: Persistent storage requested');
 
-      // Create MLCEngine with custom config for selected model
-      const engineOptions = {
-        appConfig,
-        initProgressCallback: (progress) => {
-          console.log('[WebLLM] Progress:', progress);
-          this.handleInitProgress(progress);
-        },
-        logLevel: 'INFO',
+      // Create custom appConfig for self-hosted model
+      const appConfig = {
+        model_list: [
+          {
+            model_id: this.model.id,
+            model: this.model.path,
+            model_lib: this.model.lib,
+          },
+        ],
       };
 
-      this.engine = await window.mlc.CreateMLCEngine(this.modelId, engineOptions);
+      // Create MLCEngine with self-hosted config
+      this.engine = await window.mlc.CreateMLCEngine(
+        this.modelId,
+        {
+          appConfig,
+          initProgressCallback: (progress) => {
+            console.log('[WebLLM] Progress:', progress);
+            this.handleInitProgress(progress);
+          },
+          logLevel: 'INFO',
+        },
+      );
 
       console.log('[WebLLM] Model loaded successfully');
 
@@ -310,12 +282,10 @@ class WebLLMProvider extends LLMProvider {
         return;
       }
 
-      // Try multiple CDN sources in order of preference
-      // Using newer versions which have better CORS support
+      // Use older WebLLM version compatible with self-hosted WASM files
       const cdnUrls = [
-        'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.63/+esm',
-        'https://esm.run/@mlc-ai/web-llm@0.2.63',
-        'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@latest/+esm',
+        'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.46/+esm',
+        'https://esm.run/@mlc-ai/web-llm@0.2.46',
       ];
 
       let lastError;
