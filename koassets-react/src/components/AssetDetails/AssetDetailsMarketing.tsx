@@ -31,43 +31,43 @@ const AssetDetailsMarketing: React.FC<AssetDetailsMarketingProps> = ({ selectedI
                 <div className="asset-details-content">
                     <div className="asset-details-grid">
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Campaign Name</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.campaignName ? getAssetFieldDisplayFacetName('campaignName', selectedImage.campaignName as string) : ''}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Campaign Name</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.campaignName ? getAssetFieldDisplayFacetName('campaignName', selectedImage.campaignName as string) : ''}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Experience ID</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.experienceId as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Experience ID</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.experienceId as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Campaign Activation Remark</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.campaignActivationRemark as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Campaign Activation Remark</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.campaignActivationRemark as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Campaign Sub-Activation Remark</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.campaignSubActivationRemark as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Campaign Sub-Activation Remark</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.campaignSubActivationRemark as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Brand</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.brand as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Brand</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.brand as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Sub-brand</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.subBrand as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Sub-brand</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.subBrand as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Beverage Type</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.beverageType as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Beverage Type</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.beverageType as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Agency Name</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.agencyName ? getAssetFieldDisplayFacetName('agencyName', selectedImage.agencyName as string) : ''}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Agency Name</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.agencyName ? getAssetFieldDisplayFacetName('agencyName', selectedImage.agencyName as string) : ''}</span>
                         </div>
                     </div>
                 </div>

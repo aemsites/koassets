@@ -8,8 +8,7 @@ import { getAssetFieldDisplayFacetName } from '../utils/displayUtils';
 import ActionButton from './ActionButton';
 import { BUTTON_CONFIGS } from './ActionButtonConfigs';
 import Picture from './Picture';
-import './AssetCardViewGrid.css';
-import './AssetCardViewList.css';
+import './AssetCard.css';
 
 export type ViewMode = 'grid' | 'list';
 
