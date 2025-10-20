@@ -440,13 +440,32 @@ class WebLLMProvider extends LLMProvider {
               console.warn('[WebLLM] Skipping invalid tool call. This is a model hallucination.');
               hadInvalidTools = true;
             } else {
+              // Parse arguments
+              const args = typeof toolCall.function.arguments === 'string'
+                ? JSON.parse(toolCall.function.arguments)
+                : toolCall.function.arguments;
+
+              // Validate facetFilters structure for search_assets
+              if (toolName === 'search_assets' && args.facetFilters) {
+                if (Array.isArray(args.facetFilters)) {
+                  console.warn('[WebLLM] ⚠️ Invalid facetFilters: must be an object, not an array');
+                  console.warn('[WebLLM] Correcting: moving to query and clearing facetFilters');
+                  // Move array content to query if query is empty
+                  if (!args.query && args.facetFilters.length > 0) {
+                    args.query = args.facetFilters.join(' ');
+                  }
+                  args.facetFilters = {};
+                } else if (typeof args.facetFilters !== 'object') {
+                  console.warn('[WebLLM] ⚠️ Invalid facetFilters: must be an object');
+                  args.facetFilters = {};
+                }
+              }
+
               // Valid tool - add it to the list
               toolCalls.push({
                 id: toolCall.id || `call_${Date.now()}`,
                 name: toolName,
-                arguments: typeof toolCall.function.arguments === 'string'
-                  ? JSON.parse(toolCall.function.arguments)
-                  : toolCall.function.arguments,
+                arguments: args,
               });
               console.log('[WebLLM] ✓ Valid tool call detected:', toolName);
               console.log('[WebLLM] Arguments:', toolCalls[toolCalls.length - 1].arguments);
@@ -523,17 +542,17 @@ class WebLLMProvider extends LLMProvider {
         type: 'function',
         function: {
           name: 'search_assets',
-          description: 'Search for digital assets (images, videos, documents) in KO Assets. Use empty query with facetFilters for brand/format filtering, or add keywords for additional refinement.',
+          description: 'Search for digital assets (images, videos, documents) in KO Assets. CRITICAL: Use "query" for search terms/keywords. Use "facetFilters" ONLY when user explicitly mentions brands, formats, channels, or markets.',
           parameters: {
             type: 'object',
             properties: {
               query: {
                 type: 'string',
-                description: 'Search keywords for additional filtering. Use empty string "" when filtering by brand/format only. Examples: "", "bottle", "summer campaign"',
+                description: 'Search keywords and terms (e.g., "summer", "bottle", "campaign"). Use this for ANY descriptive search terms. Use empty string "" ONLY when filtering by specific facets like brand/format.',
               },
               facetFilters: {
                 type: 'object',
-                description: 'Filters for brand, format, market, channel, campaign, and other metadata',
+                description: 'MUST be an object (not array) with specific facet keys. Use ONLY when user explicitly mentions: brand names (Coca-Cola, Sprite), formats (Image, Video), channels (TV, Social Media), markets, or status. Leave empty {} for general keyword searches.',
                 properties: {
                   brand: {
                     type: 'array',
@@ -690,19 +709,35 @@ CRITICAL: You MUST use ONLY these exact tool names - no variations or similar na
 
 DO NOT use any other tool names. DO NOT create new tool names. If a user request doesn't fit these tools, respond conversationally without calling a tool.
 
-SEARCH GUIDELINES:
-1. Use empty query ("") with facetFilters when searching by brand/format/market only
-2. Add keywords to query for additional refinement within those filters
-3. Always specify hitsPerPage (default 12) for reasonable result sets
-4. Combine multiple facets for precise filtering
-5. For refinement queries, build on the previous search context
+CRITICAL SEARCH RULES:
+1. ALWAYS use the exact tool name: "search_assets" (never "Search", "Find", "Search results", etc.)
+2. The "query" parameter is for KEYWORDS and SEARCH TERMS (e.g., "summer", "bottle", "campaign")
+3. The "facetFilters" parameter is an OBJECT (not array) with ONLY these specific keys:
+   - brand: array of brand names (Coca-Cola, Sprite, Fanta, etc.)
+   - format: array of formats (Image, Video, Document)
+   - market: array of markets/regions
+   - channel: array of channels (TV, Social Media, Print, etc.)
+   - campaign: array of campaign names
+   - country: array of country codes
+   - language: array of language codes
+   - readyToUse: string ("yes" or "no")
+   - assetStatus: array of status values (approved, pending, rejected)
+4. NEVER put search terms or keywords in facetFilters - they go in "query"
+5. ONLY use facetFilters when the user explicitly mentions brands, formats, channels, markets, or status
+6. If no specific facets mentioned, use query with empty facetFilters {}
 
-EXAMPLES:
+CORRECT EXAMPLES:
+- "Search for summer" → search_assets(query="summer", facetFilters={}, hitsPerPage=12)
+- "Find bottle assets" → search_assets(query="bottle", facetFilters={}, hitsPerPage=12)
+- "Show me campaign materials" → search_assets(query="campaign", facetFilters={}, hitsPerPage=12)
 - "Find Coca-Cola images" → search_assets(query="", facetFilters={brand:["Coca-Cola"], format:["Image"]}, hitsPerPage=12)
 - "Sprite summer videos" → search_assets(query="summer", facetFilters={brand:["Sprite"], format:["Video"]}, hitsPerPage=12)
-- "Assets for social media in ASEAN" → search_assets(query="", facetFilters={channel:["Social Media"], market:["ASEAN"]}, hitsPerPage=12)
-- "Approved Coca-Cola assets for Vietnam TV" → search_assets(query="", facetFilters={brand:["Coca-Cola"], assetStatus:["approved"], country:["VN"], channel:["TV"]}, hitsPerPage=12)
-- "Ready-to-use campaign materials from 2024" → search_assets(query="", facetFilters={readyToUse:"yes"}, dateRange:{field:"repo-createDate", from:"2024-01-01", to:"2024-12-31"}, hitsPerPage=12)
+- "Approved TV assets" → search_assets(query="", facetFilters={assetStatus:["approved"], channel:["TV"]}, hitsPerPage=12)
+
+WRONG EXAMPLES (DO NOT DO THIS):
+- ❌ "Search for summer" → search_assets(facetFilters=["summer"]) - WRONG: facetFilters is not an array
+- ❌ "Find bottles" → search_assets(facetFilters={query:["bottle"]}) - WRONG: "query" is not a facet
+- ❌ Tool name: "Search results" - WRONG: must be "search_assets"
 
 REFINEMENT EXAMPLES:
 - After "Find Coca-Cola images":
