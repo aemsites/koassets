@@ -85,7 +85,7 @@ router
   // WebLLM model files - rewrite HuggingFace URL structure to direct file access
   // Converts: /models/{model}/resolve/main/{file} -> /models/{model}/{file}
   // Then proxy to R2
-  .get('/models/:model/resolve/main/:file+', async (request) => {
+  .all('/models/:model/resolve/main/:file+', async (request) => {
     const url = new URL(request.url);
     // Remove /resolve/main/ from the path
     const newPath = url.pathname.replace('/resolve/main', '');
@@ -154,7 +154,7 @@ router
 
   // Direct model file access - proxy to R2 bucket
   // Serves LLM model files from Cloudflare R2 storage
-  .get('/models/*', async (request) => {
+  .all('/models/*', async (request) => {
     const url = new URL(request.url);
     const modelPath = url.pathname; // e.g., /models/Hermes-2-Pro.../params_shard_0.bin
 
