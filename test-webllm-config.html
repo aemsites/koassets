@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebLLM 0.2.63 Config Inspector</title>
+</head>
+<body>
+    <h1>WebLLM 0.2.63 Configuration</h1>
+    <pre id="output">Loading...</pre>
+
+    <script type="module">
+        import * as mlc from 'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.63/+esm';
+
+        const output = document.getElementById('output');
+        
+        try {
+            const config = mlc.prebuiltAppConfig;
+            const model = config.model_list.find(m => m.model_id === 'Hermes-2-Pro-Mistral-7B-q4f16_1-MLC');
+            
+            if (model) {
+                output.textContent = JSON.stringify({
+                    model_id: model.model_id,
+                    model_url: model.model,
+                    model_lib: model.model_lib,
+                    model_lib_url: model.model_lib_url,
+                    vram_required_MB: model.vram_required_MB,
+                    low_resource_required: model.low_resource_required,
+                }, null, 2);
+            } else {
+                output.textContent = 'Hermes-2-Pro-Mistral-7B-q4f16_1-MLC not found in config!\n\nAvailable models:\n' + 
+                    config.model_list.map(m => m.model_id).join('\n');
+            }
+        } catch (e) {
+            output.textContent = `Error: ${e.message}\n\n${e.stack}`;
+        }
+    </script>
+</body>
+</html>
+
