@@ -390,19 +390,32 @@ class WebLLMProvider extends LLMProvider {
 
       // Extract tool calls from response
       const toolCalls = [];
+      const validToolNames = ['search_assets', 'check_asset_rights', 'get_asset_metadata'];
+      let hadInvalidTools = false;
+
       if (responseMessage?.tool_calls && responseMessage.tool_calls.length > 0) {
         // eslint-disable-next-line no-restricted-syntax
         for (const toolCall of responseMessage.tool_calls) {
           try {
-            toolCalls.push({
-              id: toolCall.id || `call_${Date.now()}`,
-              name: toolCall.function.name,
-              arguments: typeof toolCall.function.arguments === 'string'
-                ? JSON.parse(toolCall.function.arguments)
-                : toolCall.function.arguments,
-            });
-            console.log('[WebLLM] Tool call detected:', toolCall.function.name);
-            console.log('[WebLLM] Arguments:', toolCalls[toolCalls.length - 1].arguments);
+            const toolName = toolCall.function.name;
+
+            // Validate tool name
+            if (!validToolNames.includes(toolName)) {
+              console.warn(`[WebLLM] ⚠️ Invalid tool name: "${toolName}". Valid tools: ${validToolNames.join(', ')}`);
+              console.warn('[WebLLM] Skipping invalid tool call. This is a model hallucination.');
+              hadInvalidTools = true;
+            } else {
+              // Valid tool - add it to the list
+              toolCalls.push({
+                id: toolCall.id || `call_${Date.now()}`,
+                name: toolName,
+                arguments: typeof toolCall.function.arguments === 'string'
+                  ? JSON.parse(toolCall.function.arguments)
+                  : toolCall.function.arguments,
+              });
+              console.log('[WebLLM] ✓ Valid tool call detected:', toolName);
+              console.log('[WebLLM] Arguments:', toolCalls[toolCalls.length - 1].arguments);
+            }
           } catch (parseError) {
             console.error('[WebLLM] Failed to parse tool call arguments:', parseError);
           }
@@ -411,6 +424,20 @@ class WebLLMProvider extends LLMProvider {
 
       // If no tool calls, fall back to pattern-based detection as backup
       if (toolCalls.length === 0) {
+        // If we had invalid tools, provide a helpful message
+        if (hadInvalidTools) {
+          console.warn('[WebLLM] Model tried to use invalid tools. Providing error response.');
+          return {
+            success: true,
+            text: responseMessage?.content || "I'm sorry, I tried to use a tool that doesn't exist. I can help you with:\n• **search_assets** - Find images, videos, and documents\n• **check_asset_rights** - Verify usage rights\n• **get_asset_metadata** - Get detailed asset information\n\nPlease try rephrasing your request.",
+            toolCalls: [],
+            usage: {
+              promptTokens: response.usage?.prompt_tokens || 0,
+              completionTokens: response.usage?.completion_tokens || 0,
+            },
+          };
+        }
+
         console.log('[WebLLM] No tool calls from model, using fallback pattern detection');
         const fallbackToolCalls = this.parseResponseFallback(
           responseMessage?.content || '',
@@ -621,10 +648,12 @@ class WebLLMProvider extends LLMProvider {
 
 Your role is to help users find and manage digital assets including images, videos, and documents.
 
-AVAILABLE TOOLS:
-- search_assets: Find assets by brand, format, keywords, market, channel, etc.
-- check_asset_rights: Verify if an asset can be used for specific purposes
-- get_asset_metadata: Get detailed information about an asset
+CRITICAL: You MUST use ONLY these exact tool names - no variations or similar names:
+1. search_assets - Find assets by brand, format, keywords, market, channel, etc.
+2. check_asset_rights - Verify if an asset can be used for specific purposes
+3. get_asset_metadata - Get detailed information about an asset
+
+DO NOT use any other tool names. DO NOT create new tool names. If a user request doesn't fit these tools, respond conversationally without calling a tool.
 
 SEARCH GUIDELINES:
 1. Use empty query ("") with facetFilters when searching by brand/format/market only
