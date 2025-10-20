@@ -98,14 +98,20 @@ router
     console.log('[Models] Proxying rewritten URL to R2:', r2Url);
 
     try {
+      // Build headers object - only include headers that are present
+      const r2Headers = {};
+      const rangeHeader = request.headers.get('Range');
+      const ifNoneMatch = request.headers.get('If-None-Match');
+      const ifModifiedSince = request.headers.get('If-Modified-Since');
+
+      if (rangeHeader) r2Headers.Range = rangeHeader;
+      if (ifNoneMatch) r2Headers['If-None-Match'] = ifNoneMatch;
+      if (ifModifiedSince) r2Headers['If-Modified-Since'] = ifModifiedSince;
+
       // Fetch from R2 bucket
       const r2Response = await fetch(r2Url, {
         method: request.method,
-        headers: {
-          Range: request.headers.get('Range'),
-          'If-None-Match': request.headers.get('If-None-Match'),
-          'If-Modified-Since': request.headers.get('If-Modified-Since'),
-        },
+        headers: r2Headers,
       });
 
       if (!r2Response.ok) {
@@ -160,15 +166,20 @@ router
     console.log('[Models] R2 URL:', r2Url);
 
     try {
+      // Build headers object - only include headers that are present
+      const r2Headers = {};
+      const rangeHeader = request.headers.get('Range');
+      const ifNoneMatch = request.headers.get('If-None-Match');
+      const ifModifiedSince = request.headers.get('If-Modified-Since');
+
+      if (rangeHeader) r2Headers.Range = rangeHeader;
+      if (ifNoneMatch) r2Headers['If-None-Match'] = ifNoneMatch;
+      if (ifModifiedSince) r2Headers['If-Modified-Since'] = ifModifiedSince;
+
       // Fetch from R2 bucket
       const r2Response = await fetch(r2Url, {
         method: request.method,
-        headers: {
-          // Forward relevant headers
-          Range: request.headers.get('Range'),
-          'If-None-Match': request.headers.get('If-None-Match'),
-          'If-Modified-Since': request.headers.get('If-Modified-Since'),
-        },
+        headers: r2Headers,
       });
 
       if (!r2Response.ok) {
