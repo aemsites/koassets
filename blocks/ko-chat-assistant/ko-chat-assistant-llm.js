@@ -352,9 +352,27 @@ class WebLLMProvider extends LLMProvider {
 
       console.log('[WebLLM] Generating response with', tools.length, 'tools available');
 
+      // Hermes-2-Pro doesn't allow custom system prompts with function calling
+      // Filter out system messages and convert to user message with context
+      const messagesWithoutSystem = messages.filter((msg) => msg.role !== 'system');
+
+      // If we had a system prompt, prepend it to the first user message as context
+      const systemMsg = messages.find((msg) => msg.role === 'system');
+      if (systemMsg && messagesWithoutSystem.length > 0) {
+        const firstUserMsgIndex = messagesWithoutSystem.findIndex((msg) => msg.role === 'user');
+        if (firstUserMsgIndex >= 0) {
+          messagesWithoutSystem[firstUserMsgIndex] = {
+            ...messagesWithoutSystem[firstUserMsgIndex],
+            content: `${systemMsg.content}\n\n---\n\nUser request: ${messagesWithoutSystem[firstUserMsgIndex].content}`,
+          };
+        }
+      }
+
+      console.log('[WebLLM] Using messages without system prompt (Hermes-2-Pro requirement)');
+
       // Generate response with function calling support
       const response = await this.engine.chat.completions.create({
-        messages,
+        messages: messagesWithoutSystem,
         tools,
         tool_choice: 'auto', // Let model decide when to use tools
         temperature: 0.7,
