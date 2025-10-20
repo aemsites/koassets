@@ -263,7 +263,7 @@ async function loadCollectionsFromAPI() {
   try {
     // eslint-disable-next-line no-console
     console.trace('Loading collections from Dynamic Media API...');
-    const response = await collectionsClient.listCollections({ limit: 100 });
+    const response = await collectionsClient.searchCollections({ limit: 100 });
 
     // Transform API response to internal format
     allCollections = response.items.map(transformApiCollectionToInternal);

@@ -18,17 +18,23 @@ export function transformApiCollectionToInternal(apiCollection) {
   const repoMetadata = apiCollection.repositoryMetadata || {};
   const tcccMetadata = metadata['tccc:metadata'] || {};
 
+  // Support both colon and hyphen formats for repo metadata (Algolia uses hyphens)
+  const modifyDate = repoMetadata['repo:modifyDate'] || repoMetadata['repo-modifyDate'] || metadata['jcr:lastModified'];
+  const createDate = repoMetadata['repo:createDate'] || repoMetadata['repo-createDate'] || metadata['jcr:created'];
+  const createdBy = repoMetadata['repo:createdBy'] || repoMetadata['repo-createdBy'];
+  const modifiedBy = repoMetadata['repo:modifiedBy'] || repoMetadata['repo-modifiedBy'];
+
   return {
     id: apiCollection.collectionId || apiCollection.id,
     name: metadata.title || metadata['dam:collectionTitle'] || 'Untitled Collection',
     description: metadata.description || metadata['dam:collectionDescription'] || '',
-    lastUpdated: repoMetadata['repo:modifyDate'] || metadata['jcr:lastModified'],
-    dateLastUsed: repoMetadata['repo:modifyDate']
-      ? new Date(repoMetadata['repo:modifyDate']).getTime()
+    lastUpdated: modifyDate,
+    dateLastUsed: modifyDate
+      ? new Date(modifyDate).getTime()
       : Date.now(),
-    dateCreated: repoMetadata['repo:createDate'] || metadata['jcr:created'],
-    createdBy: repoMetadata['repo:createdBy'],
-    modifiedBy: repoMetadata['repo:modifiedBy'],
+    dateCreated: createDate,
+    createdBy,
+    modifiedBy,
     accessLevel: metadata.accessLevel || 'private',
     itemCount: apiCollection.itemCount || 0,
     thumbnailUrl: metadata['dam:thumbnailUrl'] || '',
