@@ -9,6 +9,23 @@ import { hasCollectionAccess, assertCollectionAccess } from './collections-auth.
 // Re-export utilities for convenience
 export { hasCollectionAccess, assertCollectionAccess };
 
+// Algolia search configuration constants
+const ALGOLIA_SEARCH_DEFAULTS = {
+  HITS_PER_PAGE: 40,
+  MAX_VALUES_PER_FACET: 10,
+  HIGHLIGHT_PRE_TAG: '__ais-highlight__',
+  HIGHLIGHT_POST_TAG: '__/ais-highlight__',
+  DEFAULT_ACCESS_LEVEL: 'private',
+  DEFAULT_PAGE: 0,
+  SYSTEM_USER_PLACEHOLDER: '{{SYSTEM_USER_ID}}',
+};
+
+// Algolia facet field names
+const FACET_FIELDS = {
+  ACCESS_LEVEL: 'collectionMetadata.accessLevel',
+  REPO_CREATED_BY: 'repositoryMetadata.repo-createdBy',
+};
+
 /**
  * Dynamic Media Collections API Client
  */
@@ -286,32 +303,80 @@ export class DynamicMediaCollectionsClient {
   // ==========================================
   // Collections API Methods with Auth
   // ==========================================
-
   /**
-   * List all collections (with authorization filtering)
-   * @param {Object} options - Query options (limit, offset, etc.)
-   * @returns {Promise} Promise with collections list (filtered by user access permissions)
+   * Search collections using Algolia-style query
+   * @param {Object} options - Search options
+   * @param {string} [options.query=''] - Search query string
+   * @param {number} [options.limit=40] - Number of results per page (hitsPerPage)
+   * @param {number} [options.page=0] - Page number (0-based)
+   * @param {string} [options.accessLevel='private'] - Filter by access level
+   * @returns {Promise<{items: Array, total: number}>} Promise with filtered search results
    */
-  async listCollections(options = {}) {
+  async searchCollections(options = {}) {
     try {
       // eslint-disable-next-line no-console
-      console.trace('DynamicMediaCollectionsClient.listCollections() REQUEST');
+      console.trace('DynamicMediaCollectionsClient.searchCollections() REQUEST');
+
+      // Extract options with defaults from constants
+      const {
+        query = '',
+        limit = ALGOLIA_SEARCH_DEFAULTS.HITS_PER_PAGE,
+        page = ALGOLIA_SEARCH_DEFAULTS.DEFAULT_PAGE,
+        accessLevel = ALGOLIA_SEARCH_DEFAULTS.DEFAULT_ACCESS_LEVEL,
+      } = options;
+
+      // Build Algolia-style search body
+      const searchBody = {
+        requests: [
+          {
+            params: {
+              facetFilters: [
+                `${FACET_FIELDS.REPO_CREATED_BY}:${ALGOLIA_SEARCH_DEFAULTS.SYSTEM_USER_PLACEHOLDER}`,
+                `${FACET_FIELDS.ACCESS_LEVEL}:${accessLevel}`,
+              ],
+              facets: [
+                FACET_FIELDS.ACCESS_LEVEL,
+                FACET_FIELDS.REPO_CREATED_BY,
+              ],
+              highlightPostTag: ALGOLIA_SEARCH_DEFAULTS.HIGHLIGHT_POST_TAG,
+              highlightPreTag: ALGOLIA_SEARCH_DEFAULTS.HIGHLIGHT_PRE_TAG,
+              hitsPerPage: limit,
+              maxValuesPerFacet: ALGOLIA_SEARCH_DEFAULTS.MAX_VALUES_PER_FACET,
+              page,
+              query,
+              tagFilters: '',
+            },
+          },
+        ],
+      };
+
+      // eslint-disable-next-line no-console
+      console.log('🔍 [Search Collections] Request body:', JSON.stringify(searchBody, null, 2));
+
       const { data } = await this.makeRequest({
-        url: '/adobe/assets/collections',
-        method: 'GET',
-        params: options,
+        url: '/adobe/assets/search-collections',
+        method: 'POST',
+        data: searchBody,
       });
 
+      // Extract first result from Algolia response structure
+      const result = data.results?.[0];
+      const hits = result?.hits || [];
+      const total = result?.nbHits || 0;
+
+      // eslint-disable-next-line no-console
+      console.log('🔍 [Search Collections] Response hits:', hits.length);
+
       // Apply authorization filtering to the collections
-      const filteredItems = assertCollectionAccess(data.items, this.user, 'read');
+      const filteredItems = assertCollectionAccess(hits, this.user, 'read');
 
       return {
-        ...data,
         items: filteredItems,
+        total,
       };
     } catch (error) {
       if (error instanceof Error) {
-        throw new Error(`Failed to list collections: ${error.message}`);
+        throw new Error(`Failed to search collections: ${error.message}`);
       }
       throw error;
     }
