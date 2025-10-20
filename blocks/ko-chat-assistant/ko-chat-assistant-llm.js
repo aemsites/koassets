@@ -370,6 +370,12 @@ class WebLLMProvider extends LLMProvider {
 
       console.log('[WebLLM] Using messages without system prompt (Hermes-2-Pro requirement)');
 
+      console.log('[WebLLM] ───────────────────────────────────────────────────────');
+      console.log('[WebLLM] 📤 Sending to model:');
+      console.log('[WebLLM] Messages:', JSON.stringify(messagesWithoutSystem, null, 2));
+      console.log('[WebLLM] Tools:', tools.length, 'available');
+      console.log('[WebLLM] ───────────────────────────────────────────────────────');
+
       // Generate response with function calling support
       const response = await this.engine.chat.completions.create({
         messages: messagesWithoutSystem,
@@ -382,7 +388,36 @@ class WebLLMProvider extends LLMProvider {
       const choice = response.choices[0];
       const responseMessage = choice?.message;
 
-      console.log('[WebLLM] Response:', {
+      console.log('[WebLLM] ═══════════════════════════════════════════════════════');
+      console.log('[WebLLM] 🧠 MODEL THINKING:');
+      console.log('[WebLLM] ═══════════════════════════════════════════════════════');
+
+      if (responseMessage?.content) {
+        console.log('[WebLLM] 💭 Model\'s thoughts/response:');
+        console.log(responseMessage.content);
+      } else {
+        console.log('[WebLLM] 💭 (No text content - model only called tools)');
+      }
+
+      if (responseMessage?.tool_calls && responseMessage.tool_calls.length > 0) {
+        console.log('[WebLLM] ═══════════════════════════════════════════════════════');
+        console.log('[WebLLM] 🔧 Tool calls requested by model:');
+        responseMessage.tool_calls.forEach((tc, idx) => {
+          console.log(`[WebLLM]   ${idx + 1}. ${tc.function.name}`);
+          try {
+            const args = typeof tc.function.arguments === 'string'
+              ? JSON.parse(tc.function.arguments)
+              : tc.function.arguments;
+            console.log('[WebLLM]      Arguments:', JSON.stringify(args, null, 2));
+          } catch (e) {
+            console.log('[WebLLM]      Arguments (raw):', tc.function.arguments);
+          }
+        });
+      }
+
+      console.log('[WebLLM] ═══════════════════════════════════════════════════════');
+
+      console.log('[WebLLM] Response summary:', {
         hasContent: !!responseMessage?.content,
         hasToolCalls: !!responseMessage?.tool_calls,
         toolCallsCount: responseMessage?.tool_calls?.length || 0,
