@@ -489,7 +489,9 @@ function formatAssetResponse(data) {
           const filename = repoPath ? repoPath.split('/').pop() : 'thumbnail.jpg';
           const oldThumbnail = thumbnail;
           thumbnail = `/api/adobe/assets/${urn}/as/${filename}?width=350`;
-          console.log('[Thumbnail Debug] Converted:', { oldThumbnail, thumbnail, repoPath, filename });
+          console.log('[Thumbnail Debug] Converted:', {
+            oldThumbnail, thumbnail, repoPath, filename,
+          });
         } else if (assetId && !thumbnail) {
           // If no thumbnail but we have an asset ID, construct one
           thumbnail = `/api/adobe/assets/${assetId}?width=350`;
