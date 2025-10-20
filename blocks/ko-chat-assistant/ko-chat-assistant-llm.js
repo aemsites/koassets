@@ -402,15 +402,18 @@ class WebLLMProvider extends LLMProvider {
       if (responseMessage?.tool_calls && responseMessage.tool_calls.length > 0) {
         console.log('[WebLLM] ═══════════════════════════════════════════════════════');
         console.log('[WebLLM] 🔧 Tool calls requested by model:');
+        console.log('[WebLLM] RAW tool_calls array:', JSON.stringify(responseMessage.tool_calls, null, 2));
         responseMessage.tool_calls.forEach((tc, idx) => {
-          console.log(`[WebLLM]   ${idx + 1}. ${tc.function.name}`);
+          console.log(`[WebLLM]   ${idx + 1}. Tool name: "${tc.function.name}"`);
+          console.log(`[WebLLM]      Tool ID: ${tc.id || 'none'}`);
           try {
             const args = typeof tc.function.arguments === 'string'
               ? JSON.parse(tc.function.arguments)
               : tc.function.arguments;
-            console.log('[WebLLM]      Arguments:', JSON.stringify(args, null, 2));
+            console.log('[WebLLM]      Arguments (parsed):', JSON.stringify(args, null, 2));
           } catch (e) {
-            console.log('[WebLLM]      Arguments (raw):', tc.function.arguments);
+            console.log('[WebLLM]      Arguments (PARSE ERROR):', tc.function.arguments);
+            console.log('[WebLLM]      Parse error:', e.message);
           }
         });
       }
