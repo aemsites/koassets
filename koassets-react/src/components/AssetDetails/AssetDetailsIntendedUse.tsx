@@ -29,18 +29,18 @@ const AssetDetailsIntendedUse: React.FC<AssetDetailsIntendedUseProps> = ({ selec
                 <div className="asset-details-content">
                     <div className="asset-details-grid">
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Intended Bottler Country</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.intendedBottlerCountry ? getAssetFieldDisplayFacetName('intendedBottlerCountry', selectedImage.intendedBottlerCountry as string) : ''}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Intended Bottler Country</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.intendedBottlerCountry ? getAssetFieldDisplayFacetName('intendedBottlerCountry', selectedImage.intendedBottlerCountry as string) : ''}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Intended Customers</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.intendedCustomers as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Intended Customers</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.intendedCustomers as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Intended Channel</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.intendedChannel as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Intended Channel</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.intendedChannel as string}</span>
                         </div>
                     </div>
                 </div>

@@ -92,10 +92,11 @@
 }
 
 /* Shared section title */
+.tccc-assets-rights-inner .asset-details-title,
 .asset-details-header .asset-details-title {
     color: var(--secondary-color);
     font-size: 18px;
-    font-family: "TCCC UnityHeadline", "Helvetica Neue", Arial, Helvetica, sans-serif;
+    font-family: "TCCC UnityText Medium", "Helvetica Neue", Arial, Helvetica, sans-serif;
     font-weight: 600;
     line-height: 1.575rem;
     margin: 0;
@@ -315,11 +316,6 @@
 
 .details-metadata-label {
     text-transform: uppercase;
-    letter-spacing: 0.8px;
-}
-
-.details-metadata-value {
-    overflow-wrap: break-word;
 }
 
 .asset-details-main-add-to-cart-button.remove-from-cart {
@@ -328,7 +324,7 @@
 
 /* TCCC Assets Rights Container */
 .tccc-assets-rights-container {
-    padding: 20px 0;
+    padding: 5px 0;
     border: 1px solid #e1e1e1;
     border-radius: 5px;
 }
@@ -337,17 +333,10 @@
     padding: 0 20px 20px 20px;
 }
 
-.tccc-assets-rights-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: #333;
-    margin: 0 0 15px 0;
-    line-height: 1.3;
-}
-
 .tccc-assets-rights-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    padding-top: 20px;
     gap: 30px;
 }
 
@@ -406,11 +395,6 @@
     padding: 0;
     text-transform: none;
     word-wrap: break-word;
-    color: #707070;
-    font-family: "TCCC UnityHeadline", "Helvetica Neue", Arial, Helvetica, sans-serif;
-    font-size: .6875rem;
-    font-weight: 400;
-    line-height: .825rem;
     padding-bottom: .375rem;
     width: 100%;
 }
@@ -420,11 +404,6 @@
     box-sizing: inherit;
     margin: 0;
     word-wrap: break-word;
-    color: #0e202e;
-    font-family: "TCCC UnityHeadline", "Helvetica Neue", Arial, Helvetica, sans-serif;
-    font-size: .75rem;
-    font-weight: 600;
-    line-height: .9rem;
     padding-left: 0rem;
     width: 100%;
 }

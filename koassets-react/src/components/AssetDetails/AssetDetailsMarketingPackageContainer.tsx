@@ -31,23 +31,23 @@ const AssetDetailsMarketingPackageContainer: React.FC<AssetDetailsMarketingPacka
                 <div className="asset-details-content">
                     <div className="asset-details-grid">
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Package or Container Type</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.packageOrContainerType as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Package or Container Type</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.packageOrContainerType as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Package or Container Material</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.packageOrContainerMaterial as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Package or Container Material</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.packageOrContainerMaterial as string}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Package or Container Size</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.packageOrContainerSize ? getAssetFieldDisplayFacetName('packageContainerSize', selectedImage.packageOrContainerSize as string) : ''}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Package or Container Size</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.packageOrContainerSize ? getAssetFieldDisplayFacetName('packageContainerSize', selectedImage.packageOrContainerSize as string) : ''}</span>
                         </div>
 
                         <div className="asset-details-group">
-                            <h4 className="asset-details-main-metadata-label">Secondary Packaging</h4>
-                            <span className="asset-details-main-metadata-value">{selectedImage?.secondaryPackaging as string}</span>
+                            <h4 className="asset-details-main-metadata-label tccc-metadata-label">Secondary Packaging</h4>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.secondaryPackaging as string}</span>
                         </div>
                     </div>
                 </div>

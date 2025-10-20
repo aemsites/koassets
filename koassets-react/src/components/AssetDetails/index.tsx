@@ -303,7 +303,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 
                             <div className="tccc-assets-rights-container">
                                 <div className="tccc-assets-rights-inner">
-                                    <h3 className="tccc-assets-rights-title">Rights</h3>
+                                    <h3 className="asset-details-title">Rights</h3>
                                     <div className="tccc-assets-rights-grid">
                                         <div className="tccc-assets-rights-group">
                                             <span className="tccc-metadata-label">RIGHTS PROFILE TITLE</span>
