@@ -468,21 +468,39 @@ function formatAssetResponse(data) {
       total: nbHits,
       count: hits.length,
       facets: facets ? formatFacets(facets) : null,
-      assets: hits.slice(0, 12).map((hit) => ({
-        id: hit.assetId || hit.objectID || hit.id,
-        title: hit.title || hit['dc-title'] || hit['dc:title'] || 'Untitled Asset',
-        thumbnail: hit.thumbnail || hit.thumbnailUrl || hit.url || '',
-        brand: hit.brand || extractFromHierarchy(hit['tccc-brand']) || '',
-        category: hit.category || extractFromHierarchy(hit['tccc-assetCategoryAndType']) || '',
-        format: hit.format || hit['dc-format'] || hit['dc:format'] || hit['dc-format-label'] || '',
-        created: hit.created || hit['repo-createDate'] || hit['xmp:CreateDate'] || '',
-        modified: hit.modified || hit['repo-modifyDate'] || '',
-        description: hit.description || hit['dc:description'] || '',
-        readyToUse: hit['tccc-readyToUse'] || '',
-        assetStatus: hit['tccc-assetStatus'] || hit['dam-assetStatus'] || '',
-        channel: extractFromHierarchy(hit['tccc-intendedChannel']) || '',
-        size: hit.size || 0,
-      })),
+      assets: hits.slice(0, 12).map((hit) => {
+        // Convert thumbnail URL from asset:// to API format
+        let thumbnail = hit.thumbnail || hit.thumbnailUrl || hit.url || '';
+        const assetId = hit.assetId || hit.objectID || hit.id;
+
+        // Convert asset://urn:... to /api/adobe/assets/urn:.../as/...
+        if (thumbnail.startsWith('asset://')) {
+          const urn = thumbnail.replace('asset://', '');
+          // Try to get the repository path for the filename
+          const repoPath = hit['repo:path'] || hit.repositoryPath || hit.path || '';
+          const filename = repoPath ? repoPath.split('/').pop() : 'thumbnail.jpg';
+          thumbnail = `/api/adobe/assets/${urn}/as/${filename}?width=350`;
+        } else if (assetId && !thumbnail) {
+          // If no thumbnail but we have an asset ID, construct one
+          thumbnail = `/api/adobe/assets/${assetId}?width=350`;
+        }
+
+        return {
+          id: assetId,
+          title: hit.title || hit['dc-title'] || hit['dc:title'] || 'Untitled Asset',
+          thumbnail,
+          brand: hit.brand || extractFromHierarchy(hit['tccc-brand']) || '',
+          category: hit.category || extractFromHierarchy(hit['tccc-assetCategoryAndType']) || '',
+          format: hit.format || hit['dc-format'] || hit['dc:format'] || hit['dc-format-label'] || '',
+          created: hit.created || hit['repo-createDate'] || hit['xmp:CreateDate'] || '',
+          modified: hit.modified || hit['repo-modifyDate'] || '',
+          description: hit.description || hit['dc:description'] || '',
+          readyToUse: hit['tccc-readyToUse'] || '',
+          assetStatus: hit['tccc-assetStatus'] || hit['dam-assetStatus'] || '',
+          channel: extractFromHierarchy(hit['tccc-intendedChannel']) || '',
+          size: hit.size || 0,
+        };
+      }),
     };
   } catch (error) {
     console.error('[Format Asset Error]', error);
