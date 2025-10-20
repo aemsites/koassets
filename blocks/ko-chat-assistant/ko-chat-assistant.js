@@ -473,16 +473,27 @@ function formatAssetResponse(data) {
         let thumbnail = hit.thumbnail || hit.thumbnailUrl || hit.url || '';
         const assetId = hit.assetId || hit.objectID || hit.id;
 
+        console.log('[Thumbnail Debug] Raw hit data:', {
+          assetId,
+          thumbnail,
+          repoPath: hit['repo:path'],
+          repositoryPath: hit.repositoryPath,
+          path: hit.path,
+        });
+
         // Convert asset://urn:... to /api/adobe/assets/urn:.../as/...
         if (thumbnail.startsWith('asset://')) {
           const urn = thumbnail.replace('asset://', '');
           // Try to get the repository path for the filename
           const repoPath = hit['repo:path'] || hit.repositoryPath || hit.path || '';
           const filename = repoPath ? repoPath.split('/').pop() : 'thumbnail.jpg';
+          const oldThumbnail = thumbnail;
           thumbnail = `/api/adobe/assets/${urn}/as/${filename}?width=350`;
+          console.log('[Thumbnail Debug] Converted:', { oldThumbnail, thumbnail, repoPath, filename });
         } else if (assetId && !thumbnail) {
           // If no thumbnail but we have an asset ID, construct one
           thumbnail = `/api/adobe/assets/${assetId}?width=350`;
+          console.log('[Thumbnail Debug] Constructed from assetId:', thumbnail);
         }
 
         return {
