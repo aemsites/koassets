@@ -282,11 +282,11 @@ class WebLLMProvider extends LLMProvider {
         return;
       }
 
-      // Try multiple WebLLM versions to find WASM-compatible one
+      // Try multiple WebLLM versions for WASM + WebGPU compatibility
       const cdnUrls = [
-        'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.30/+esm', // Pre-grammar support
-        'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.35/+esm', // Fallback
-        'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.40/+esm', // Fallback
+        'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.50/+esm', // Newer WebGPU
+        'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.55/+esm', // Fallback
+        'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.60/+esm', // Fallback
       ];
 
       let lastError;
