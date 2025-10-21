@@ -527,6 +527,7 @@ class WebLLMProvider extends LLMProvider {
       const isFunctionCallingError = error.message && (
         error.message.includes('ToolCallOutputParseError') ||
         error.message.includes('ToolCallOutputInvalidTypeError') ||
+        error.message.includes('JSONFieldError') ||
         error.message.includes('function calling') ||
         error.message.includes('tool call')
       );
@@ -557,7 +558,38 @@ class WebLLMProvider extends LLMProvider {
    */
   parseTextBasedToolCall(errorMessage) {
     try {
-      // Extract the model's output from the error message
+      // Case 1: JSONFieldError - model used "tool" instead of "name"
+      // Error format: 'Expect generated tool call to have fields "`name`", "`arguments`", but got object: {...}'
+      const jsonFieldMatch = errorMessage.match(/but got object: ({.+})/);
+      if (jsonFieldMatch) {
+        console.log('[WebLLM] Found JSONFieldError with object:', jsonFieldMatch[1]);
+        try {
+          const toolCallObj = JSON.parse(jsonFieldMatch[1]);
+          console.log('[WebLLM] Parsed object:', toolCallObj);
+          
+          // Fix field name if needed: "tool" → "name"
+          if (toolCallObj.tool && !toolCallObj.name) {
+            console.log('[WebLLM] Converting "tool" field to "name"');
+            toolCallObj.name = toolCallObj.tool;
+            delete toolCallObj.tool;
+          }
+          
+          // Validate it has the required fields
+          if (toolCallObj.name && toolCallObj.arguments) {
+            console.log('[WebLLM] ✅ Valid tool call extracted:', toolCallObj.name);
+            return {
+              success: true,
+              text: '',
+              toolCalls: [toolCallObj],
+              usage: { promptTokens: 0, completionTokens: 0 },
+            };
+          }
+        } catch (parseError) {
+          console.error('[WebLLM] Failed to parse JSON from error:', parseError);
+        }
+      }
+
+      // Case 2: ToolCallOutputParseError - extract from output message
       const outputMatch = errorMessage.match(/Got outputMessage: (.+?)Got error:/s);
       if (!outputMatch) {
         console.log('[WebLLM] Could not extract output message from error');
@@ -891,7 +923,7 @@ FUNCTION CALLING RULES
 You MUST return tool calls in this STRICT JSON ARRAY format:
 [
   {
-    "tool": "<tool_name>",
+    "name": "<tool_name>",
     "arguments": {
       "<arg_name>": <value>
     }
@@ -909,7 +941,7 @@ User: "Search for summer"
 Your response (ONLY THIS JSON):
 [
   {
-    "tool": "search_assets",
+    "name": "search_assets",
     "arguments": {
       "query": "summer",
       "facetFilters": {},
@@ -923,7 +955,7 @@ User: "Find Coca-Cola images"
 Your response (ONLY THIS JSON):
 [
   {
-    "tool": "search_assets",
+    "name": "search_assets",
     "arguments": {
       "query": "",
       "facetFilters": {
@@ -940,7 +972,7 @@ User: "Sprite summer videos"
 Your response (ONLY THIS JSON):
 [
   {
-    "tool": "search_assets",
+    "name": "search_assets",
     "arguments": {
       "query": "summer",
       "facetFilters": {
