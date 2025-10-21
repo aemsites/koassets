@@ -885,26 +885,54 @@ CRITICAL SEARCH RULES:
 5. ONLY use facetFilters when the user explicitly mentions brands, formats, channels, markets, or status
 6. If no specific facets mentioned, use query with empty facetFilters {}
 
-CORRECT EXAMPLES:
-- "Search for summer" → search_assets(query="summer", facetFilters={}, hitsPerPage=12)
-- "Find bottle assets" → search_assets(query="bottle", facetFilters={}, hitsPerPage=12)
-- "Show me campaign materials" → search_assets(query="campaign", facetFilters={}, hitsPerPage=12)
-- "Find Coca-Cola images" → search_assets(query="", facetFilters={brand:["Coca-Cola"], format:["Image"]}, hitsPerPage=12)
-- "Sprite summer videos" → search_assets(query="summer", facetFilters={brand:["Sprite"], format:["Video"]}, hitsPerPage=12)
-- "Approved TV assets" → search_assets(query="", facetFilters={assetStatus:["approved"], channel:["TV"]}, hitsPerPage=12)
+When the user requests a search, you MUST call the search_assets tool using proper function calling format.
 
-WRONG EXAMPLES (DO NOT DO THIS):
-- ❌ "Search for summer" → search_assets(facetFilters=["summer"]) - WRONG: facetFilters is not an array
-- ❌ "Find bottles" → search_assets(facetFilters={query:["bottle"]}) - WRONG: "query" is not a facet
-- ❌ Tool name: "Search results" - WRONG: must be "search_assets"
+CORRECT JSON FORMAT EXAMPLES:
 
-REFINEMENT EXAMPLES:
-- After "Find Coca-Cola images":
-  - "Only show videos" → search_assets(query="", facetFilters={brand:["Coca-Cola"], format:["Video"]}, hitsPerPage=12)
-  - "Filter to approved only" → search_assets(query="", facetFilters={brand:["Coca-Cola"], format:["Image"], assetStatus:["approved"]}, hitsPerPage=12)
-- After "Show summer assets":
-  - "Now for Sprite" → search_assets(query="summer", facetFilters={brand:["Sprite"]}, hitsPerPage=12)
-  - "Add social media filter" → search_assets(query="summer", facetFilters={channel:["Social Media"]}, hitsPerPage=12)
+Example 1 - Simple keyword search:
+User: "Search for summer"
+Tool call: Use search_assets with arguments:
+{
+  "query": "summer",
+  "facetFilters": {},
+  "hitsPerPage": 12
+}
+
+Example 2 - Brand and format filter:
+User: "Find Coca-Cola images"
+Tool call: Use search_assets with arguments:
+{
+  "query": "",
+  "facetFilters": {
+    "brand": ["Coca-Cola"],
+    "format": ["Image"]
+  },
+  "hitsPerPage": 12
+}
+
+Example 3 - Keyword with brand filter:
+User: "Sprite summer videos"
+Tool call: Use search_assets with arguments:
+{
+  "query": "summer",
+  "facetFilters": {
+    "brand": ["Sprite"],
+    "format": ["Video"]
+  },
+  "hitsPerPage": 12
+}
+
+Example 4 - Multiple filters:
+User: "Approved TV assets"
+Tool call: Use search_assets with arguments:
+{
+  "query": "",
+  "facetFilters": {
+    "assetStatus": ["approved"],
+    "channel": ["TV"]
+  },
+  "hitsPerPage": 12
+}
 
 Keep responses concise, friendly, and helpful. Use tools when appropriate to answer user questions.${contextNote}`;
 
