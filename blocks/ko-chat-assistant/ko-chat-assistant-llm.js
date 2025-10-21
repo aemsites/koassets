@@ -379,12 +379,14 @@ class WebLLMProvider extends LLMProvider {
       console.log('[WebLLM] ───────────────────────────────────────────────────────');
 
       // Generate response with function calling support
+      // Use low temperature for more deterministic, format-compliant output
       const response = await this.engine.chat.completions.create({
         messages: messagesWithoutSystem,
         tools,
         tool_choice: 'auto', // Let model decide when to use tools
-        temperature: 0.7,
+        temperature: 0.1, // Low temperature = more deterministic, less creative
         max_tokens: 512,
+        top_p: 0.9, // Nucleus sampling to reduce randomness
       });
 
       const choice = response.choices[0];
@@ -518,10 +520,21 @@ class WebLLMProvider extends LLMProvider {
       };
     } catch (error) {
       console.error('[WebLLM] Generation failed:', error);
+      console.error('[WebLLM] Error type:', error.constructor.name);
+      console.error('[WebLLM] Error message:', error.message);
 
-      // If it's a ToolCallOutputParseError, try pattern-based parsing
-      if (error.message && error.message.includes('ToolCallOutputParseError')) {
+      // If it's any function calling error, try pattern-based parsing
+      const isFunctionCallingError = error.message && (
+        error.message.includes('ToolCallOutputParseError') ||
+        error.message.includes('ToolCallOutputInvalidTypeError') ||
+        error.message.includes('function calling') ||
+        error.message.includes('tool call')
+      );
+
+      if (isFunctionCallingError) {
         console.log('[WebLLM] 🔄 Native function calling failed, trying pattern-based parser...');
+        console.log('[WebLLM] Will attempt to extract tool calls from raw output...');
+        
         const fallbackResult = this.parseTextBasedToolCall(error.message);
         if (fallbackResult) {
           console.log('[WebLLM] ✅ Pattern-based parser succeeded!');
@@ -533,7 +546,7 @@ class WebLLMProvider extends LLMProvider {
       return {
         success: false,
         error: error.message,
-        text: "I'm sorry, I encountered an error processing your request.",
+        text: "I'm sorry, I encountered an error processing your request. The AI model may not be responding in the expected format.",
       };
     }
   }
@@ -885,7 +898,21 @@ CRITICAL SEARCH RULES:
 5. ONLY use facetFilters when the user explicitly mentions brands, formats, channels, markets, or status
 6. If no specific facets mentioned, use query with empty facetFilters {}
 
-When the user requests a search, you MUST call the search_assets tool using proper function calling format.
+═══════════════════════════════════════════════════════════════════
+CRITICAL: JSON FUNCTION CALLING FORMAT ONLY
+═══════════════════════════════════════════════════════════════════
+
+You MUST return tool calls in STRICT JSON ARRAY FORMAT ONLY.
+
+❌ NEVER use Python-style function syntax like:
+   search_assets(query="summer", facetFilters={}, hitsPerPage=12)
+
+❌ NEVER use parentheses () or equal signs = for function calls
+
+✅ ALWAYS use the WebLLM function calling API format:
+   Return a structured tool_calls array in JSON
+
+═══════════════════════════════════════════════════════════════════
 
 CORRECT JSON FORMAT EXAMPLES:
 
