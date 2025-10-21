@@ -1040,10 +1040,33 @@ ADDITIONAL RULES
     const recentHistory = conversationHistory.slice(-10);
     // eslint-disable-next-line no-restricted-syntax
     for (const msg of recentHistory) {
-      if (msg.role === 'user' || msg.role === 'assistant') {
+      if (msg.role === 'user') {
         messages.push({
           role: msg.role,
           content: msg.content,
+        });
+      } else if (msg.role === 'assistant') {
+        // CRITICAL FIX: Don't send user-friendly response text back to model
+        // If assistant made tool calls, send JSON examples instead of formatted results
+        // This prevents the model from learning to mimic "I found X assets..." responses
+        // and reinforces the correct JSON tool call format
+        let assistantContent = msg.content;
+        
+        if (msg.toolCalls && msg.toolCalls.length > 0) {
+          // Replace user-friendly text with JSON tool call examples
+          // Model will see: [{"name": "search_assets", "arguments": {...}}]
+          // Instead of: "I found 93 assets matching your search..."
+          assistantContent = msg.toolCalls.map((tc) => {
+            const args = JSON.stringify(tc.arguments);
+            return `[{"name": "${tc.name}", "arguments": ${args}}]`;
+          }).join('\n');
+          
+          console.log('[WebLLM] buildMessages: Replaced user-friendly text with JSON for history');
+        }
+        
+        messages.push({
+          role: msg.role,
+          content: assistantContent,
         });
       }
     }
