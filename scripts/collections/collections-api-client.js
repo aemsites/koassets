@@ -300,6 +300,25 @@ export class DynamicMediaCollectionsClient {
     return etag;
   }
 
+  /**
+   * Get current epoch time for expiration filtering
+   * @returns {number} Current epoch time
+   * @private
+   */
+  // eslint-disable-next-line class-methods-use-this
+  getSearchEpoch() {
+    return Math.floor(Date.now() / 1000);
+  }
+
+  /**
+   * Get non-expired assets filter string
+   * @returns {string} Filter string for non-expired assets
+   * @private
+   */
+  getNonExpiredAssetsFilter() {
+    return `is_pur-expirationDate = 0 OR pur-expirationDate > ${this.getSearchEpoch()}`;
+  }
+
   // ==========================================
   // Collections API Methods with Auth
   // ==========================================
@@ -591,6 +610,83 @@ export class DynamicMediaCollectionsClient {
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`Failed to update collection items for "${collectionId}": ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Search for assets in a specific collection
+   * @param {string} query - Search query string
+   * @param {Object} options - Search options
+   * @param {string} options.collectionId - Required collection ID to filter by
+   * @param {number} [options.hitsPerPage=100] - Number of results per page
+   * @param {number} [options.page=0] - Page number (0-based)
+   * @param {Array} [options.facets=[]] - Facets to include in results
+   * @param {Array} [options.facetFilters=[]] - Facet filters to apply
+   * @returns {Promise} Promise with search results containing assets with full metadata
+   */
+  async searchAssetsInCollection(query = '', options = {}) {
+    try {
+      // eslint-disable-next-line no-console
+      console.trace('DynamicMediaCollectionsClient.searchAssetsInCollection() REQUEST');
+
+      const {
+        collectionId,
+        hitsPerPage = 100,
+        page = 0,
+        facets = [],
+        facetFilters = [],
+      } = options;
+
+      // Require collection ID
+      if (!collectionId) {
+        throw new Error('collectionId is required for searchAssetsInCollection');
+      }
+
+      // Build facet filters - add collection ID filter
+      const combinedFacetFilters = [...facetFilters];
+      // Extract UUID from URN format: urn:cid:aem:f3b0f080-9be4-45da-8a48-12015758f31f
+      // API expects just the UUID part: f3b0f080-9be4-45da-8a48-12015758f31f
+      const collectionUuid = collectionId.includes(':') ? collectionId.split(':')[3] : collectionId;
+      combinedFacetFilters.push([`collectionIds:${collectionUuid}`]);
+
+      // Build Algolia-style search body
+      const searchBody = {
+        requests: [
+          {
+            params: {
+              facets,
+              facetFilters: combinedFacetFilters,
+              filters: this.getNonExpiredAssetsFilter(),
+              highlightPostTag: '__/ais-highlight__',
+              highlightPreTag: '__ais-highlight__',
+              hitsPerPage,
+              maxValuesPerFacet: 1000,
+              page,
+              query: query || '',
+              tagFilters: '',
+            },
+          },
+        ],
+      };
+
+      // eslint-disable-next-line no-console
+      console.log('🔍 [Search Assets] Request body:', JSON.stringify(searchBody, null, 2));
+
+      const { data } = await this.makeRequest({
+        url: '/adobe/assets/search',
+        method: 'POST',
+        data: searchBody,
+      });
+
+      // eslint-disable-next-line no-console
+      console.log('✅ [Search Assets] Response:', data);
+
+      return data;
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Failed to search assets: ${error.message}`);
       }
       throw error;
     }
