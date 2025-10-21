@@ -11,12 +11,12 @@ import { json, error } from 'itty-router';
 export async function savedSearchesApi(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
-  
+
   if (path.endsWith('/list')) return listKeys(request, env);
   if (path.endsWith('/get')) return getValue(request, env);
   if (path.endsWith('/set')) return setValue(request, env);
   if (path.endsWith('/delete')) return deleteKey(request, env);
-  
+
   return error(404, { success: false, error: 'Saved searches endpoint not found' });
 }
 
@@ -29,15 +29,15 @@ export async function listKeys(request, env) {
     const url = new URL(request.url);
     const prefix = url.searchParams.get('prefix') || '';
     const limit = parseInt(url.searchParams.get('limit') || '100', 10);
-    
+
     const { keys } = await env.SAVED_SEARCHES.list({
       prefix,
       limit,
     });
-    
+
     return json({
       success: true,
-      keys: keys.map(key => ({
+      keys: keys.map((key) => ({
         name: key.name,
         expiration: key.expiration,
         metadata: key.metadata,
@@ -62,13 +62,13 @@ export async function getValue(request, env) {
     if (!key) {
       return error(400, { success: false, error: 'Key is required' });
     }
-    
+
     const value = await env.SAVED_SEARCHES.get(key, { type: 'text' });
-    
+
     if (value === null) {
       return error(404, { success: false, error: 'Key not found' });
     }
-    
+
     // Try to parse as JSON
     let parsedValue;
     try {
@@ -76,7 +76,7 @@ export async function getValue(request, env) {
     } catch {
       parsedValue = value;
     }
-    
+
     return json({
       success: true,
       key,
@@ -97,19 +97,21 @@ export async function getValue(request, env) {
 export async function setValue(request, env) {
   try {
     const body = await request.json();
-    const { key, value, metadata, expirationTtl } = body;
-    
+    const {
+      key, value, metadata, expirationTtl,
+    } = body;
+
     if (!key) {
       return error(400, { success: false, error: 'Key is required' });
     }
-    
+
     if (value === undefined) {
       return error(400, { success: false, error: 'Value is required' });
     }
-    
+
     // Convert value to string if it's an object
     const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
-    
+
     const options = {};
     if (metadata) {
       options.metadata = metadata;
@@ -117,9 +119,9 @@ export async function setValue(request, env) {
     if (expirationTtl) {
       options.expirationTtl = expirationTtl;
     }
-    
+
     await env.SAVED_SEARCHES.put(key, stringValue, options);
-    
+
     return json({
       success: true,
       key,
@@ -143,9 +145,9 @@ export async function deleteKey(request, env) {
     if (!key) {
       return error(400, { success: false, error: 'Key is required' });
     }
-    
+
     await env.SAVED_SEARCHES.delete(key);
-    
+
     return json({
       success: true,
       key,

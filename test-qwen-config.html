@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebLLM Qwen2.5 Configuration Test</title>
+    <script type="module">
+        import { prebuiltAppConfig } from 'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.63/+esm';
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const outputDiv = document.getElementById('output');
+            try {
+                const config = prebuiltAppConfig;
+                
+                // Search for Qwen2.5 models
+                const qwenModels = config.model_list.filter(m => 
+                    m.model_id.toLowerCase().includes('qwen2.5') && 
+                    m.model_id.includes('7B')
+                );
+
+                if (qwenModels.length > 0) {
+                    outputDiv.innerHTML = '<h2>Qwen2.5-7B Models Found:</h2>';
+                    qwenModels.forEach(model => {
+                        outputDiv.innerHTML += `
+                            <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ccc;">
+                                <h3>${model.model_id}</h3>
+                                <pre>${JSON.stringify(model, null, 2)}</pre>
+                            </div>
+                        `;
+                    });
+                    console.log('Qwen2.5 Models:', qwenModels);
+                } else {
+                    outputDiv.textContent = 'No Qwen2.5-7B models found in WebLLM 0.2.63 prebuilt config.';
+                    console.log('All available models:', config.model_list.map(m => m.model_id));
+                }
+            } catch (error) {
+                outputDiv.textContent = `Error loading WebLLM config: ${error.message}`;
+                console.error('Error loading WebLLM config:', error);
+            }
+        });
+    </script>
+</head>
+<body>
+    <h1>WebLLM 0.2.63 - Qwen2.5 Configuration</h1>
+    <div id="output">Loading...</div>
+</body>
+</html>
+

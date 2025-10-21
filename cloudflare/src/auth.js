@@ -38,7 +38,7 @@ async function createSessionJWT(request, env, session) {
     // use same audience as MS entra IDP app
     .setAudience(env.MICROSOFT_ENTRA_CLIENT_ID)
     .setExpirationTime(env.SESSION_COOKIE_EXPIRATION || '6h')
-    .setNotBefore("0m")
+    .setNotBefore('0m')
     .sign(key);
 
   return jwt;
@@ -54,7 +54,6 @@ async function validateSessionJWT(request, env, sessionJWT) {
       clockTolerance: 5,
     });
     return payload;
-
   } catch (error) {
     request.error = `Invalid ${COOKIE_SESSION} cookie: ${error.message}`;
     return null;
@@ -105,7 +104,6 @@ async function validateIdToken(request, rawIdToken, env, nonce) {
       return null;
     }
     return payload;
-
   } catch (error) {
     request.error = `OIDC error: Invalid id_token: ${error.message}`;
     return null;
@@ -192,7 +190,7 @@ export const authRouter = Router({
         console.error(`Missing required environment variables: ${missing.join(', ')}`);
         return new Response('Service Unavailable', { status: 503 });
       }
-    }
+    },
   ],
 });
 
@@ -222,7 +220,7 @@ authRouter
     };
 
     // redirect to MS login page
-    const authorizeUrl = `https://login.microsoftonline.com/${env.MICROSOFT_ENTRA_TENANT_ID}/oauth2/v2.0/authorize?` +
+    const authorizeUrl = `https://login.microsoftonline.com/${env.MICROSOFT_ENTRA_TENANT_ID}/oauth2/v2.0/authorize?${
       new URLSearchParams({
         client_id: env.MICROSOFT_ENTRA_CLIENT_ID,
         response_type: 'id_token',
@@ -231,7 +229,7 @@ authRouter
         scope: 'openid profile',
         state: state.state,
         nonce: state.nonce,
-      });
+      })}`;
 
     const response = redirect(authorizeUrl);
 
@@ -299,10 +297,10 @@ authRouter
     console.log('User logout:', request.user.email);
 
     // redirect to MS logout page
-    const logoutUrl = `https://login.microsoftonline.com/${env.MICROSOFT_ENTRA_TENANT_ID}/oauth2/logout?` +
+    const logoutUrl = `https://login.microsoftonline.com/${env.MICROSOFT_ENTRA_TENANT_ID}/oauth2/logout?${
       new URLSearchParams({
         post_logout_redirect_uri: `${request.uri.origin}/`,
-      });
+      })}`;
 
     const response = redirect(logoutUrl);
     deleteCookie(response, COOKIE_SESSION);

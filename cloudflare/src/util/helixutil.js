@@ -16,9 +16,9 @@ export async function fetchHelixSheet(env, path, options) {
   const json = await response.json();
 
   function handleArrays(obj, arrays) {
-    arrays?.forEach(array => {
+    arrays?.forEach((array) => {
       if (obj[array]) {
-        obj[array] = obj[array].split(',').map(item => item.trim());
+        obj[array] = obj[array].split(',').map((item) => item.trim());
       } else {
         obj[array] = [];
       }
@@ -54,22 +54,18 @@ export async function fetchHelixSheet(env, path, options) {
       if (sheet) {
         if (opt?.key) {
           return [name, convertToMap(sheet.data, opt)];
-        } else {
-          return [name, convertRows(sheet.data, opt)];
         }
-      } else {
-        return [name, []];
+        return [name, convertRows(sheet.data, opt)];
       }
+      return [name, []];
     }));
-  } else if (options?.sheet) {
+  } if (options?.sheet) {
     if (options.sheet.key) {
       return convertToMap(json.data, options.sheet);
-    } else {
-      return convertRows(json.data, options.sheet);
     }
+    return convertRows(json.data, options.sheet);
   }
 
   // without options return the raw json
   return json;
 }
-

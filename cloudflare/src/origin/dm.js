@@ -1,5 +1,5 @@
-import { ROLE } from '../user';
 import { decodeJwt } from 'jose';
+import { ROLE } from '../user';
 
 // create IMS token using Oauth server-to-server credentials
 async function createIMSToken(request, clientId, clientSecret, scope) {
@@ -13,7 +13,7 @@ async function createIMSToken(request, clientId, clientSecret, scope) {
       grant_type: 'client_credentials',
       client_id: clientId,
       client_secret: clientSecret,
-      scope: scope,
+      scope,
     }),
   });
 
@@ -21,9 +21,8 @@ async function createIMSToken(request, clientId, clientSecret, scope) {
     const data = await response.json();
     if (data.access_token && data.expires_in) {
       return data;
-    } else {
-      throw new Error(`Failed to generate IMS token: ${JSON.stringify(data)}`);
     }
+    throw new Error(`Failed to generate IMS token: ${JSON.stringify(data)}`);
   } else {
     throw new Error(`Failed to generate IMS token: ${response.status} ${response.statusText} ${await response.text()}`);
   }
@@ -32,40 +31,38 @@ async function createIMSToken(request, clientId, clientSecret, scope) {
 async function getIMSToken(request, env) {
   try {
     // get cached token
-    const { value: token, metadata } = await env.AUTH_TOKENS.getWithMetadata("dm-ims-token");
+    const { value: token, metadata } = await env.AUTH_TOKENS.getWithMetadata('dm-ims-token');
 
     // use token until 5 minutes before expiry
-    if (token && metadata?.expiration > (Math.floor(Date.now() / 1000) + 5*60)) {
+    if (token && metadata?.expiration > (Math.floor(Date.now() / 1000) + 5 * 60)) {
       return token;
-    } else {
-      const clientId = await env.DM_CLIENT_ID.get();
-      const clientSecret = await env.DM_CLIENT_SECRET.get();
-      const scope = 'AdobeID,openid';
-
-      const tokenData = await createIMSToken(request, clientId, clientSecret, scope);
-
-      // seconds since epoch
-      const expiration = Math.floor(Date.now() / 1000) + tokenData.expires_in;
-
-      // cache token in KV store
-      await env.AUTH_TOKENS.put("dm-ims-token", tokenData.access_token, {
-        expiration,
-        metadata: {
-          expiration
-        }
-      });
-
-      return tokenData.access_token;
     }
+    const clientId = await env.DM_CLIENT_ID.get();
+    const clientSecret = await env.DM_CLIENT_SECRET.get();
+    const scope = 'AdobeID,openid';
+
+    const tokenData = await createIMSToken(request, clientId, clientSecret, scope);
+
+    // seconds since epoch
+    const expiration = Math.floor(Date.now() / 1000) + tokenData.expires_in;
+
+    // cache token in KV store
+    await env.AUTH_TOKENS.put('dm-ims-token', tokenData.access_token, {
+      expiration,
+      metadata: {
+        expiration,
+      },
+    });
+
+    return tokenData.access_token;
   } catch (error) {
     console.error(error);
-    return;
   }
 }
 
 function setIndexName(search, indexName) {
   // for each request in search.requests
-  search.requests?.forEach(request => {
+  search.requests?.forEach((request) => {
     request.indexName = indexName;
   });
 }
@@ -91,7 +88,7 @@ function forceSearchFilter(search, constraint) {
 }
 
 async function searchAuthorization(request, search) {
-  const user = request.user;
+  const { user } = request;
 
   // Algolia search request. Enforce a filter that ensures only authorized assets are returned
   // https://www.algolia.com/doc/api-reference/api-parameters/filters
@@ -109,24 +106,24 @@ async function searchAuthorization(request, search) {
   // INTENDED BOTTLER COUNTRY CHECK
   let intendedBottlerCountry = '';
   // these users can see every bottler country
-  if (![ROLE.EMPLOYEE, ROLE.CONTINGENT_WORKER, ROLE.AGENCY].some(r => user.roles.includes(r))) {
+  if (![ROLE.EMPLOYEE, ROLE.CONTINGENT_WORKER, ROLE.AGENCY].some((r) => user.roles.includes(r))) {
     const countries = user.bottlerCountries || [];
     if (user.roles.includes(ROLE.BOTTLER)) {
       countries.push('all-countries');
     }
     if (countries.length > 0) {
-      intendedBottlerCountry = `(${countries.map(c => `tccc-intendedBottlerCountry:'${c}'`).join(' OR ')})`;
+      intendedBottlerCountry = `(${countries.map((c) => `tccc-intendedBottlerCountry:'${c}'`).join(' OR ')})`;
     } else {
       // should normally not happen, but safety net to ensure no hits
-      intendedBottlerCountry = `tccc-intendedBottlerCountry:'___does_not_exist___'`;
+      intendedBottlerCountry = 'tccc-intendedBottlerCountry:\'___does_not_exist___\'';
     }
   }
 
   // INTENDED CUSTOMER CHECK
-  const intendedCustomer = `(NOT tccc-assetType:'customers'${user.customers.map(c => ` OR tccc-intendedCustomers:'${c}'`).join('')})`;
+  const intendedCustomer = `(NOT tccc-assetType:'customers'${user.customers.map((c) => ` OR tccc-intendedCustomers:'${c}'`).join('')})`;
 
   // all checks are required (AND)
-  const constraint = [restrictedBrand, intendedBottlerCountry, intendedCustomer].filter(c => c).join(' AND ');
+  const constraint = [restrictedBrand, intendedBottlerCountry, intendedCustomer].filter((c) => c).join(' AND ');
   console.log(`[${request.user.email}] authz filter: ${constraint}`);
 
   forceSearchFilter(search, constraint);
@@ -155,7 +152,7 @@ export async function originDynamicMedia(request, env) {
   url.pathname = url.pathname.replace(/^\/api/, '');
 
   const headers = new Headers(request.headers);
-  let body = request.body;
+  let { body } = request;
 
   // set DM authorization
   const imsToken = await getIMSToken(request, env);
@@ -205,8 +202,8 @@ export async function originDynamicMedia(request, env) {
 
   const response = await fetch(url, {
     method: request.method,
-    headers: headers,
-    body: body,
+    headers,
+    body,
     cf: {
       // cf doesn't cache all file types by default: need to override the default behavior
       // https://developers.cloudflare.com/cache/concepts/default-cache-behavior/#default-cached-file-extensions

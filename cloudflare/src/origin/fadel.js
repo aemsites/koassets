@@ -15,9 +15,8 @@ async function createFadelToken(request, env) {
     const data = await response.json();
     if (data.accessToken && data.expiryDate) {
       return data;
-    } else {
-      throw new Error(`Failed to generate Fadel token: ${JSON.stringify(data)}`);
     }
+    throw new Error(`Failed to generate Fadel token: ${JSON.stringify(data)}`);
   } else {
     throw new Error(`Failed to generate Fadel token: ${response.status} ${response.statusText} ${await response.text()}`);
   }
@@ -25,24 +24,23 @@ async function createFadelToken(request, env) {
 
 async function getFadelToken(request, env) {
   // get cached token
-  const { value: token, metadata } = await env.AUTH_TOKENS.getWithMetadata("fadel-token");
+  const { value: token, metadata } = await env.AUTH_TOKENS.getWithMetadata('fadel-token');
 
   // use token until 5 minutes before expiry
-  if (token && metadata?.expiryDate > (Date.now() + 5*60*1000)) {
+  if (token && metadata?.expiryDate > (Date.now() + 5 * 60 * 1000)) {
     return token;
-  } else {
-    const tokenData = await createFadelToken(request, env);
-
-    // cache token in KV store
-    await env.AUTH_TOKENS.put("fadel-token", tokenData.accessToken, {
-      expiration: tokenData.expiryDate / 1000,
-      metadata: {
-        expiryDate: tokenData.expiryDate
-      }
-    });
-
-    return tokenData.accessToken;
   }
+  const tokenData = await createFadelToken(request, env);
+
+  // cache token in KV store
+  await env.AUTH_TOKENS.put('fadel-token', tokenData.accessToken, {
+    expiration: tokenData.expiryDate / 1000,
+    metadata: {
+      expiryDate: tokenData.expiryDate,
+    },
+  });
+
+  return tokenData.accessToken;
 }
 
 export async function originFadel(request, env) {
@@ -77,7 +75,7 @@ export async function originFadel(request, env) {
   // console.log('>>>', req.method, req.url, req.headers);
 
   const resp = await fetch(req, {
-    method: req.method
+    method: req.method,
   });
 
   // console.log('<<<', resp.status, resp.headers);
