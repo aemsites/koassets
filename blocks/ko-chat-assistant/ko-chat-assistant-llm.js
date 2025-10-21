@@ -930,6 +930,13 @@ You MUST return tool calls in this STRICT JSON ARRAY format:
   }
 ]
 
+CRITICAL RULES:
+❌ NEVER say "I found X assets" or "Here are the results" — CALL THE TOOL FIRST
+❌ NEVER pretend you executed a tool — ACTUALLY CALL IT with JSON
+❌ NEVER provide conversational responses when a tool exists for the task
+✅ ALWAYS call the tool using ONLY the JSON format above
+✅ If user asks to search/find/show assets → IMMEDIATELY return search_assets JSON
+
 No extra text, no code, no Markdown, no explanations — ONLY valid JSON in a top-level array.
 
 ────────────────────────────────────────
