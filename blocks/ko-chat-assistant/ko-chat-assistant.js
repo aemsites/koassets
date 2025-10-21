@@ -116,7 +116,7 @@ function createChatUI(block) {
   initializeLLM(block);
 
   // Setup event listeners
-  setupEventListeners();
+  setupEventListeners(block);
 }
 
 /**
@@ -283,7 +283,7 @@ function showInitializationError(result) {
 /**
  * Setup event listeners for chat interactions
  */
-function setupEventListeners() {
+function setupEventListeners(block) {
   const input = document.getElementById('chat-input');
   const sendButton = document.getElementById('chat-send');
 
