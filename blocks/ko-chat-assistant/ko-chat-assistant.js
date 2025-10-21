@@ -31,8 +31,18 @@ function createChatUI(block) {
   const header = document.createElement('div');
   header.className = 'chat-header';
   header.innerHTML = `
-    <h3>KO Assets Assistant</h3>
-    <p>Ask me to find assets, check usage rights, and more</p>
+    <div class="chat-header-content">
+      <div class="chat-header-text">
+        <h3>KO Assets Assistant</h3>
+        <p>Ask me to find assets, check usage rights, and more</p>
+      </div>
+      <button class="clear-chat-btn" title="Start a new conversation">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M4 4L16 16M4 16L16 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        New Chat
+      </button>
+    </div>
   `;
 
   // Messages container
@@ -281,6 +291,24 @@ function setupEventListeners() {
   sendButton.addEventListener('click', () => {
     sendMessage();
   });
+
+  // Clear chat on "New Chat" button click
+  const clearChatBtn = block.querySelector('.clear-chat-btn');
+  if (clearChatBtn) {
+    clearChatBtn.addEventListener('click', () => {
+      if (confirm('Start a new conversation? This will clear all messages.')) {
+        // Clear conversation history
+        conversationHistory = [];
+        sessionStorage.removeItem('ko-chat-history');
+        
+        // Clear messages from UI (keep welcome message)
+        messagesContainer.innerHTML = '';
+        messagesContainer.appendChild(createWelcomeMessage());
+        
+        console.log('[Chat] Conversation cleared');
+      }
+    });
+  }
 
   // Send message on Enter (Shift+Enter for new line)
   input.addEventListener('keydown', (e) => {

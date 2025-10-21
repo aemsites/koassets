@@ -28,6 +28,17 @@
   border-bottom: 1px solid rgb(255 255 255 / 20%);
 }
 
+.chat-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.chat-header-text {
+  flex: 1;
+}
+
 .chat-header h3 {
   margin: 0 0 8px;
   font-size: 20px;
@@ -38,6 +49,36 @@
   margin: 0;
   font-size: 14px;
   opacity: 0.9;
+}
+
+.clear-chat-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgb(255 255 255 / 20%);
+  border: 1px solid rgb(255 255 255 / 30%);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.clear-chat-btn:hover {
+  background: rgb(255 255 255 / 30%);
+  border-color: rgb(255 255 255 / 40%);
+  transform: translateY(-1px);
+}
+
+.clear-chat-btn:active {
+  transform: translateY(0);
+}
+
+.clear-chat-btn svg {
+  flex-shrink: 0;
 }
 
 /* Messages Container */
