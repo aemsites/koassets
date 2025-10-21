@@ -437,18 +437,24 @@ async function sendMessage() {
       messagesContainer.appendChild(assistantMsg);
       scrollToBottom();
 
-      // Add to conversation history (with tool calls for context)
-      conversationHistory.push({
-        role: 'assistant',
-        content: responseText,
-        toolCalls: result.toolCalls || [],
-        assets,
-        rightsReport,
-        timestamp: Date.now(),
-      });
+      // CRITICAL: Only add to conversation history if we actually called tools successfully
+      // This prevents hallucinated "I found X assets" from poisoning the conversation
+      if (result.toolCalls && result.toolCalls.length > 0) {
+        conversationHistory.push({
+          role: 'assistant',
+          content: responseText,
+          toolCalls: result.toolCalls,
+          assets,
+          rightsReport,
+          timestamp: Date.now(),
+        });
 
-      // Save to sessionStorage
-      sessionStorage.setItem('ko-chat-history', JSON.stringify(conversationHistory));
+        // Save to sessionStorage
+        sessionStorage.setItem('ko-chat-history', JSON.stringify(conversationHistory));
+        console.log('[Chat] ✓ Response stored in conversation history (tool calls present)');
+      } else {
+        console.log('[Chat] ⚠️ Response NOT stored in history (no tool calls - likely hallucination)');
+      }
     } else {
       throw new Error(result.error || 'Unknown error');
     }
