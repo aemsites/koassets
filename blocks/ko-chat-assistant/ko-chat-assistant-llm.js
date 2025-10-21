@@ -518,12 +518,166 @@ class WebLLMProvider extends LLMProvider {
       };
     } catch (error) {
       console.error('[WebLLM] Generation failed:', error);
+
+      // If it's a ToolCallOutputParseError, try pattern-based parsing
+      if (error.message && error.message.includes('ToolCallOutputParseError')) {
+        console.log('[WebLLM] 🔄 Native function calling failed, trying pattern-based parser...');
+        const fallbackResult = this.parseTextBasedToolCall(error.message);
+        if (fallbackResult) {
+          console.log('[WebLLM] ✅ Pattern-based parser succeeded!');
+          return fallbackResult;
+        }
+        console.log('[WebLLM] ❌ Pattern-based parser also failed');
+      }
+
       return {
         success: false,
         error: error.message,
         text: "I'm sorry, I encountered an error processing your request.",
       };
     }
+  }
+
+  /**
+   * Parse text-based tool calls from conversational output
+   * Fallback for when Hermes-3 outputs tool calls as text instead of JSON
+   */
+  parseTextBasedToolCall(errorMessage) {
+    try {
+      // Extract the model's output from the error message
+      const outputMatch = errorMessage.match(/Got outputMessage: (.+?)Got error:/s);
+      if (!outputMatch) {
+        console.log('[WebLLM] Could not extract output message from error');
+        return null;
+      }
+
+      const outputText = outputMatch[1].trim();
+      console.log('[WebLLM] Extracted output text:', outputText);
+
+      // Pattern to match: tool_name(arg1="value1", arg2={...}, arg3=123)
+      const toolCallRegex = /(search_assets|check_asset_rights|get_asset_metadata)\s*\(([^)]+)\)/g;
+      const matches = [...outputText.matchAll(toolCallRegex)];
+
+      if (matches.length === 0) {
+        console.log('[WebLLM] No tool calls found in output text');
+        return null;
+      }
+
+      console.log('[WebLLM] Found', matches.length, 'tool call(s) in text');
+
+      const toolCalls = [];
+
+      // eslint-disable-next-line no-restricted-syntax
+      for (const match of matches) {
+        const toolName = match[1];
+        const argsText = match[2];
+
+        console.log('[WebLLM] Parsing tool:', toolName);
+        console.log('[WebLLM] Args text:', argsText);
+
+        try {
+          // Parse the arguments
+          const args = this.parseToolArguments(argsText);
+          console.log('[WebLLM] Parsed args:', JSON.stringify(args, null, 2));
+
+          toolCalls.push({
+            name: toolName,
+            arguments: args,
+          });
+        } catch (parseError) {
+          console.error('[WebLLM] Failed to parse arguments for', toolName, ':', parseError);
+        }
+      }
+
+      if (toolCalls.length === 0) {
+        return null;
+      }
+
+      return {
+        success: true,
+        text: '', // No conversational text, just tool calls
+        toolCalls,
+        usage: {
+          promptTokens: 0,
+          completionTokens: 0,
+        },
+      };
+    } catch (error) {
+      console.error('[WebLLM] Pattern-based parser error:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Parse tool arguments from text format: query="value", facetFilters={...}, hitsPerPage=12
+   */
+  parseToolArguments(argsText) {
+    const args = {};
+
+    // Split by commas, but not within braces or quotes
+    const parts = [];
+    let current = '';
+    let depth = 0;
+    let inQuotes = false;
+
+    // eslint-disable-next-line no-restricted-syntax
+    for (let i = 0; i < argsText.length; i += 1) {
+      const char = argsText[i];
+
+      if (char === '"' && argsText[i - 1] !== '\\') {
+        inQuotes = !inQuotes;
+      } else if (!inQuotes) {
+        if (char === '{' || char === '[') {
+          depth += 1;
+        } else if (char === '}' || char === ']') {
+          depth -= 1;
+        }
+      }
+
+      if (char === ',' && depth === 0 && !inQuotes) {
+        parts.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    if (current.trim()) {
+      parts.push(current.trim());
+    }
+
+    console.log('[WebLLM] Split args into parts:', parts);
+
+    // Parse each part: key="value" or key={...} or key=123
+    // eslint-disable-next-line no-restricted-syntax
+    for (const part of parts) {
+      const eqIndex = part.indexOf('=');
+      if (eqIndex === -1) continue; // eslint-disable-line no-continue
+
+      const key = part.substring(0, eqIndex).trim();
+      let value = part.substring(eqIndex + 1).trim();
+
+      // Remove surrounding quotes if present
+      if (value.startsWith('"') && value.endsWith('"')) {
+        value = value.slice(1, -1);
+      } else if (value.startsWith('{') || value.startsWith('[')) {
+        // Parse JSON objects/arrays
+        try {
+          value = JSON.parse(value);
+        } catch (e) {
+          console.error('[WebLLM] Failed to parse JSON value:', value, e);
+        }
+      } else if (value === 'true' || value === 'false') {
+        // Parse booleans
+        value = value === 'true';
+      } else if (!Number.isNaN(Number(value))) {
+        // Parse numbers
+        value = Number(value);
+      }
+
+      args[key] = value;
+    }
+
+    return args;
   }
 
   /**
