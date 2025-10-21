@@ -940,6 +940,34 @@ CRITICAL RULES:
 No extra text, no code, no Markdown, no explanations — ONLY valid JSON in a top-level array.
 
 ────────────────────────────────────────
+QUERY vs FACETFILTERS RULES
+────────────────────────────────────────
+
+CRITICAL: Use "query" for keywords by default. Use "facetFilters" ONLY when explicitly requested.
+
+✅ USE "query" (and empty facetFilters) FOR:
+- Keywords: "summer", "bottle", "logo", "campaign"
+- Descriptive terms: "red", "outdoor", "celebration"
+- Concepts: "happiness", "family", "sports"
+- General searches: "find summer assets", "show me bottles"
+
+❌ USE "facetFilters" ONLY WHEN USER EXPLICITLY SAYS:
+- Brand names: "Coca-Cola", "Sprite", "Fanta"
+- Formats: "images", "videos", "documents"
+- Channels: "TV", "social media", "print"
+- Status: "approved", "ready to use"
+- Markets/countries: "US", "Japan", "Vietnam"
+
+EXAMPLES OF CORRECT USAGE:
+- "summer" → query="summer", facetFilters={}
+- "bottle" → query="bottle", facetFilters={}
+- "red logo" → query="red logo", facetFilters={}
+- "Coca-Cola summer" → query="summer", facetFilters={brand:["Coca-Cola"]}
+- "approved images" → query="", facetFilters={assetStatus:["approved"],format:["Image"]}
+
+DEFAULT RULE: When in doubt, use "query" with empty facetFilters.
+
+────────────────────────────────────────
 EXAMPLES
 ────────────────────────────────────────
 
@@ -999,9 +1027,10 @@ ADDITIONAL RULES
 - Never use parentheses () or equal signs =
 - Never include any commentary, explanations, or labels
 - Only output JSON that the parser can read directly
-- Use "query" for keywords and "facetFilters" for structured filters
-- If no filters are specified, use "facetFilters": {}
-- For search_assets: "query" = keywords, "facetFilters" = brand/format/channel/status/etc.${contextNote}`;
+- ALWAYS prefer "query" for keywords — only use "facetFilters" when user explicitly mentions brands/formats/status
+- Default to empty "facetFilters": {} unless user explicitly requests filtering
+- NEVER put search keywords in facetFilters — they belong in "query"
+- Examples: "summer" → query, "Coca-Cola" → facetFilter, "bottle" → query, "approved" → facetFilter${contextNote}`;
 
     const messages = [
       { role: 'system', content: systemPrompt },
