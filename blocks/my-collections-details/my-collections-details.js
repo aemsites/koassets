@@ -19,14 +19,27 @@ async function loadCollectionFromAPI(collectionId) {
   isLoading = true;
   try {
     // eslint-disable-next-line no-console
-    console.log('Loading collection items from Dynamic Media API...');
-    const data = await collectionsClient.getCollectionItems(collectionId, { limit: 100 });
+    console.log('Loading collection assets using search API...');
 
-    // Transform API response to internal format
-    currentCollection = transformApiCollectionItemsToInternal(data, collectionId);
+    // Get collection metadata first (for title, description, etc.)
+    const collectionMetadata = await collectionsClient.getCollectionMetadata(collectionId);
+
+    // Search for assets in this collection to get full metadata
+    const searchData = await collectionsClient.searchAssetsInCollection('', {
+      collectionId,
+      hitsPerPage: 100,
+      page: 0,
+    });
+
+    // Transform search response to internal format
+    currentCollection = transformSearchResultsToInternal(
+      searchData,
+      collectionId,
+      collectionMetadata,
+    );
 
     // eslint-disable-next-line no-console
-    console.log(`Loaded collection with ${currentCollection.contents.length} items from API`);
+    console.log(`Loaded collection with ${currentCollection.contents.length} assets from search`);
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Failed to load collection from API:', error);
@@ -38,56 +51,71 @@ async function loadCollectionFromAPI(collectionId) {
 }
 
 /**
- * Transform API collection items response to internal format
- * @param {Object} apiResponse - Response from getCollectionItems API
+ * Transform search results to internal collection format
+ * @param {Object} searchResponse - Response from searchAssets API (Algolia format)
  * @param {string} collectionId - Collection ID
+ * @param {Object} collectionMetadata - Collection metadata from getCollectionMetadata
  * @returns {Object} Internal collection format
  */
-function transformApiCollectionItemsToInternal(apiResponse, collectionId) {
-  // Extract collection metadata from self array
-  const selfData = apiResponse.self && apiResponse.self[0];
-  const collectionMetadata = selfData ? selfData.collectionMetadata : {};
-  const repositoryMetadata = selfData ? selfData.repositoryMetadata : {};
+function transformSearchResultsToInternal(searchResponse, collectionId, collectionMetadata) {
+  // Extract hits from Algolia response
+  const result = searchResponse.results?.[0];
+  const hits = result?.hits || [];
 
-  // Transform items to internal asset format
-  const contents = (apiResponse.items || []).map(transformApiItemToAsset);
+  // eslint-disable-next-line no-console
+  console.log(`🔍 [Collection Details] Transforming ${hits.length} search results`);
+
+  // Transform search hits to internal asset format
+  const contents = hits.map(transformSearchHitToAsset);
+
+  // Extract metadata from collection metadata response
+  const metadata = collectionMetadata.collectionMetadata || {};
+  const repoMetadata = collectionMetadata.repositoryMetadata || {};
 
   return {
     id: collectionId,
-    name: collectionMetadata.title || 'Untitled Collection',
-    description: collectionMetadata.description || '',
-    lastUpdated: repositoryMetadata['repo:modifyDate'] || new Date().toISOString(),
-    dateLastUsed: new Date(repositoryMetadata['repo:modifyDate'] || Date.now()).getTime(),
-    dateCreated: repositoryMetadata['repo:createDate'] || new Date().toISOString(),
-    createdBy: repositoryMetadata['repo:createdBy'] || '',
-    modifiedBy: repositoryMetadata['repo:modifiedBy'] || '',
+    name: metadata.title || 'Untitled Collection',
+    description: metadata.description || '',
+    lastUpdated: repoMetadata['repo:modifyDate'] || new Date().toISOString(),
+    dateLastUsed: new Date(repoMetadata['repo:modifyDate'] || Date.now()).getTime(),
+    dateCreated: repoMetadata['repo:createDate'] || new Date().toISOString(),
+    createdBy: repoMetadata['repo:createdBy'] || '',
+    modifiedBy: repoMetadata['repo:modifiedBy'] || '',
     contents,
     favorite: false, // Not supported by API yet
     // Keep original API data for reference
-    _apiData: apiResponse,
+    _searchData: searchResponse,
+    _collectionMetadata: collectionMetadata,
   };
 }
 
 /**
- * Transform API item to internal asset format
- * @param {Object} apiItem - Item from API response
- * @returns {Object} Internal asset format
+ * Transform Algolia search hit to internal asset format
+ * @param {Object} hit - Search hit from Algolia response
+ * @returns {Object} Internal asset format with full metadata
  */
-function transformApiItemToAsset(apiItem) {
+function transformSearchHitToAsset(hit) {
+  // Extract the most useful fields from the search hit
+  // Algolia returns full asset metadata with hyphenated field names (dc-title, repo-name, etc.)
+  // The 'assetId' field contains the clean asset ID (urn:aaid:aem:xxx)
+  // while 'objectID' includes repository ID suffix (_urn:rid:aem:xxx)
   return {
-    assetId: apiItem.id,
-    id: apiItem.id,
-    name: apiItem.id, // Use ID as name for now
-    title: apiItem.id, // Use ID as title for now
-    type: apiItem.type || 'asset',
-    repositoryId: apiItem['repo:repositoryId'],
-    // These will need to be populated when we have asset details
-    url: '',
-    previewUrl: '',
-    thumbnail: '',
-    imageUrl: '',
-    // Keep original API data
-    _apiData: apiItem,
+    assetId: hit.assetId || hit['repo-assetId'] || hit.objectID,
+    id: hit.assetId || hit['repo-assetId'] || hit.objectID,
+    name: hit['dc-title'] || hit['repo-name'] || 'Untitled Asset',
+    title: hit['dc-title'] || hit['repo-name'] || 'Untitled Asset',
+    type: hit['dc-format'] || 'asset',
+    repositoryId: hit['repo-repositoryId'],
+    repoName: hit['repo-name'],
+    // Metadata fields that are useful for search and display
+    format: hit['dc-format'],
+    assetType: hit['tccc-assetType'],
+    brand: hit['tccc-brand']?.TCCC?.['#values'],
+    campaign: hit['tccc-campaignName'],
+    intendedChannel: hit['tccc-intendedChannel'],
+    marketCovered: hit['tccc-marketCovered'],
+    // Keep original search hit data for reference
+    _searchHit: hit,
   };
 }
 
@@ -458,12 +486,17 @@ function createAssetCard(asset, collectionId) {
   card.appendChild(infoArea);
   card.appendChild(actionArea);
 
-  // Make card searchable
+  // Make card searchable - now with more metadata fields
   try {
     const searchable = [
       asset && (asset.title || asset.name),
       asset && asset.repoName,
       asset && (asset.assetId || asset.id),
+      asset && asset.campaign,
+      asset && asset.assetType,
+      asset && (Array.isArray(asset.brand) ? asset.brand.join(' ') : asset.brand),
+      asset && (Array.isArray(asset.intendedChannel) ? asset.intendedChannel.join(' ') : asset.intendedChannel),
+      asset && (Array.isArray(asset.marketCovered) ? asset.marketCovered.join(' ') : asset.marketCovered),
     ].filter(Boolean).join(' ').toLowerCase();
     card.dataset.searchtext = searchable;
   } catch (_e) {
