@@ -47,7 +47,7 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       sourcemap: true, // Enable source maps for production builds too
-      minify: 'terser', // Use terser for aggressive minification
+      minify: envMode === 'development' ? false : 'terser', // Use terser for aggressive minification
       rollupOptions: {
         external: [],
         output: {

@@ -135,13 +135,13 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                 // Populate image with metadata
                 const metadata = await dynamicMediaClient?.getMetadata(selectedImage.assetId);
 
-                console.debug('Metadata:', metadata);
+                console.debug('Metadata:', JSON.stringify(metadata, null, 2));
                 setPopulatedImage(
                     { ...selectedImage, ...populateAssetFromMetadata(metadata as Metadata) }
                 );
             }
 
-            fetchMetadata();
+            // fetchMetadata();
         };
     }, [showModal, selectedImage, dynamicMediaClient]);
 
