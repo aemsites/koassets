@@ -40,10 +40,14 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     fetchAssetRenditions,
     isRightsSearch = false,
     onFacetCheckbox,
-    onClearAllFacets
+    onClearAllFacets,
+    deepLinkAsset,
+    onCloseDeepLinkModal
 }: ImageGalleryProps) => {
     // Get external params and dynamic media client from context
     const { externalParams } = useAppConfig();
+
+    console.debug('ImageGallery received deepLinkAsset:', deepLinkAsset);
 
     // Extract accordion parameters from external params with fallbacks
     const accordionTitle = externalParams?.accordionTitle || DEFAULT_ACCORDION_CONFIG.accordionTitle;
@@ -83,6 +87,16 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         setSelectAuthorized(false);
     }, [images]);
 
+    // Handler to close asset details modal
+    const closeDetailsModal = useCallback(() => {
+        setSelectedCard(null);
+        setShowDetailsModal(false);
+        // If this was a deep link modal, notify parent
+        if (deepLinkAsset && onCloseDeepLinkModal) {
+            onCloseDeepLinkModal();
+        }
+    }, [deepLinkAsset, onCloseDeepLinkModal]);
+
     // Handle keyboard events for modals
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -104,16 +118,23 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
             document.removeEventListener('keydown', handleKeyDown);
             document.body.style.overflow = 'unset'; // Restore scrolling
         };
-    }, [showPreviewModal, showDetailsModal]);
+    }, [showPreviewModal, showDetailsModal, closeDetailsModal]);
 
     // Create stable callback for opening details view
-    const openDetailsView = useCallback(async (asset?: Asset, loadMetadata: boolean = false) => {
-        console.debug('openDetailsView called with asset:', JSON.stringify(asset, null, 2), 'loadMetadata:', loadMetadata);
+    const openDetailsView = useCallback(async (asset?: Asset) => {
+        console.debug('openDetailsView called with asset:', JSON.stringify(asset, null, 2));
         if (asset) {
-            // Transform the asset to ensure all object fields are converted to strings
-            const transformedAsset = populateAssetFromHit(asset._searchHit as Record<string, unknown>);
-            console.debug('Setting selected card with asset ID:', transformedAsset.assetId, 'Asset object:', JSON.stringify(transformedAsset, null, 2));
-            setSelectedCard(transformedAsset);
+            // Check if asset has _searchHit (from search results) or is already fully populated (from metadata/deep link)
+            if (asset._searchHit) {
+                // Transform the asset from search hit
+                const transformedAsset = populateAssetFromHit(asset._searchHit as Record<string, unknown>);
+                console.debug('Setting selected card with asset ID:', transformedAsset.assetId, 'Asset object:', JSON.stringify(transformedAsset, null, 2));
+                setSelectedCard(transformedAsset);
+            } else {
+                // Asset is already fully populated
+                console.debug('Setting selected card with asset ID:', asset.assetId, 'Asset object:', JSON.stringify(asset, null, 2));
+                setSelectedCard(asset);
+            }
         } else {
             console.log('No asset provided to openDetailsView');
         }
@@ -129,7 +150,16 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
             delete window.openDetailsView;
             delete window.closeDetailsView;
         };
-    }, [openDetailsView]);
+    }, [openDetailsView, closeDetailsModal]);
+
+    // Handle deep link asset
+    useEffect(() => {
+        console.debug('deepLinkAsset useEffect triggered with:', deepLinkAsset);
+        if (deepLinkAsset) {
+            console.debug('deepLinkAsset is truthy, calling openDetailsView');
+            openDetailsView(deepLinkAsset);
+        }
+    }, [deepLinkAsset, openDetailsView]);
 
     // Handler for Add to Cart click with animation
     const handleAddToCart = (image: Asset, e?: React.MouseEvent) => {
@@ -155,12 +185,6 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         e.stopPropagation();
         setSelectedCard(image);
         setShowDetailsModal(true);
-    };
-
-    // Handler to close asset details modal
-    const closeDetailsModal = () => {
-        setSelectedCard(null);
-        setShowDetailsModal(false);
     };
 
     // Handle checkbox selection

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppConfig } from '../../hooks/useAppConfig';
-import type { AssetDetailsProps, Rendition, Asset } from '../../types';
+import type { AssetDetailsProps, Rendition, Asset, Metadata } from '../../types';
 
 import { AuthorizationStatus } from '../../clients/fadel-client';
 import ActionButton from '../ActionButton';
@@ -23,6 +23,7 @@ import AssetDetailsSystemInfoLegacy from './AssetDetailsSystemInfoLegacy';
 import AssetDetailsTechnicalInfo from './AssetDetailsTechnicalInfo';
 import { isPdfPreview } from '../../constants/filetypes';
 import PDFViewer from '../PDFViewer';
+import { populateAssetFromMetadata } from '../../utils/assetTransformers';
 
 /* Displayed on the asset details modal header section
 campaignName 
@@ -128,21 +129,21 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 
     useEffect(() => {
         if (showModal && selectedImage && dynamicMediaClient) {
-            setPopulatedImage(selectedImage as Asset);
-
-            /*
+            // Always fetch metadata to ensure complete asset data
             const fetchMetadata = async () => {
-                // Populate image with metadata
-                const metadata = await dynamicMediaClient?.getMetadata(selectedImage.assetId);
-
-                console.debug('Metadata:', JSON.stringify(metadata, null, 2));
-                setPopulatedImage(
-                    { ...selectedImage, ...populateAssetFromMetadata(metadata as Metadata) }
-                );
-            }
-
+                try {
+                    console.debug('Fetching metadata for asset:', selectedImage.assetId);
+                    const metadata = await dynamicMediaClient.getMetadata(selectedImage.assetId);
+                    const populatedAsset = populateAssetFromMetadata(metadata as Metadata);
+                    console.debug('Setting populated image with metadata:', populatedAsset.assetId);
+                    setPopulatedImage(populatedAsset);
+                } catch (error) {
+                    console.error('Failed to fetch metadata:', error);
+                    // Fallback to the provided asset
+                    setPopulatedImage(selectedImage as Asset);
+                }
+            };
             fetchMetadata();
-            */
         };
     }, [showModal, selectedImage, dynamicMediaClient]);
 
