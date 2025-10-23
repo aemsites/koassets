@@ -96,6 +96,18 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
             console.warn('Failed to open Add to Collection modal from cart:', err);
         }
     };
+
+    const handleShareCartAssets = (e: React.MouseEvent): void => {
+        e.preventDefault();
+        try {
+            if (!cartAssetItems || cartAssetItems.length === 0) return;
+            const detail = { assets: cartAssetItems } as unknown as Record<string, unknown>;
+            window.dispatchEvent(new CustomEvent('openShareModal', { detail }));
+        } catch (err) {
+            console.warn('Failed to open Share modal from cart:', err);
+        }
+    };
+
     return (
         <div className="cart-actions-footer">
             <button className="cart-panel-action-btn secondary-button" onClick={onCloseCartPanel}>
@@ -104,7 +116,7 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
             <button className="cart-panel-action-btn secondary-button" onClick={onClearCart}>
                 Clear Cart
             </button>
-            <button className="cart-panel-action-btn secondary-button disabled" onClick={(e) => e.preventDefault()}>
+            <button className="cart-panel-action-btn secondary-button" onClick={handleShareCartAssets}>
                 Share Cart
             </button>
             <button
