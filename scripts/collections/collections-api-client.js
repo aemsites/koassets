@@ -324,11 +324,12 @@ export class DynamicMediaCollectionsClient {
   // ==========================================
   /**
    * Search collections using Algolia-style query
+   * Filters collections created by the system user where the current user
+   * is owner, editor, or viewer
    * @param {Object} options - Search options
    * @param {string} [options.query=''] - Search query string
    * @param {number} [options.limit=40] - Number of results per page (hitsPerPage)
    * @param {number} [options.page=0] - Page number (0-based)
-   * @param {string} [options.accessLevel='private'] - Filter by access level
    * @returns {Promise<{items: Array, total: number}>} Promise with filtered search results
    */
   async searchCollections(options = {}) {
@@ -341,22 +342,30 @@ export class DynamicMediaCollectionsClient {
         query = '',
         limit = ALGOLIA_SEARCH_DEFAULTS.HITS_PER_PAGE,
         page = ALGOLIA_SEARCH_DEFAULTS.DEFAULT_PAGE,
-        accessLevel = ALGOLIA_SEARCH_DEFAULTS.DEFAULT_ACCESS_LEVEL,
       } = options;
+
+      // Get current user email for ACL filtering
+      const userEmail = this.user?.email || this.user?.userId || '';
+      if (!userEmail) {
+        throw new Error('User email is required for collection search');
+      }
+
+      // Build system user filter - collections must be created by the system user
+      const systemUserFilter = `${FACET_FIELDS.REPO_CREATED_BY}:${ALGOLIA_SEARCH_DEFAULTS.SYSTEM_USER_PLACEHOLDER}`;
+
+      // Build ACL filter string to check if user is owner, editor, or viewer
+      const aclFilters = `'collectionMetadata.tccc:metadata.tccc:acl.tccc:assetCollectionOwner':'${userEmail}' OR 'collectionMetadata.tccc:metadata.tccc:acl.tccc:assetCollectionEditor':'${userEmail}' OR 'collectionMetadata.tccc:metadata.tccc:acl.tccc:assetCollectionViewer':'${userEmail}'`;
+
+      // Combine filters: must be created by system user AND user must have access
+      const combinedFilters = `(${systemUserFilter}) AND (${aclFilters})`;
 
       // Build Algolia-style search body
       const searchBody = {
         requests: [
           {
             params: {
-              facetFilters: [
-                `${FACET_FIELDS.REPO_CREATED_BY}:${ALGOLIA_SEARCH_DEFAULTS.SYSTEM_USER_PLACEHOLDER}`,
-                `${FACET_FIELDS.ACCESS_LEVEL}:${accessLevel}`,
-              ],
-              facets: [
-                FACET_FIELDS.ACCESS_LEVEL,
-                FACET_FIELDS.REPO_CREATED_BY,
-              ],
+              facets: ['*'],
+              filters: combinedFilters,
               highlightPostTag: ALGOLIA_SEARCH_DEFAULTS.HIGHLIGHT_POST_TAG,
               highlightPreTag: ALGOLIA_SEARCH_DEFAULTS.HIGHLIGHT_PRE_TAG,
               hitsPerPage: limit,
