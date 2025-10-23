@@ -91,6 +91,68 @@ function forceSearchFilter(search, constraint) {
   }
 }
 
+function collectionsSearchAuthorization(request, search) {
+  const user = request.user;
+  const userEmail = user.email?.toLowerCase();
+
+  if (!userEmail) {
+    search.requests = [];
+    return;
+  }
+
+  // Build ACL filter: user must be owner, editor, or viewer
+  const aclFilter = [
+    `'collectionMetadata.tccc:metadata.tccc:acl.tccc:assetCollectionOwner':'${userEmail}'`,
+    `'collectionMetadata.tccc:metadata.tccc:acl.tccc:assetCollectionEditor':'${userEmail}'`,
+    `'collectionMetadata.tccc:metadata.tccc:acl.tccc:assetCollectionViewer':'${userEmail}'`,
+  ].join(' OR ');
+
+  forceSearchFilter(search, `(${aclFilter})`);
+  console.log(`[${userEmail}] collections search filter applied`);
+}
+
+async function validateCollectionAccess(collectionId, userEmail, requiredRole, imsToken, dmOrigin) {
+  // Fetch collection metadata
+  const metadataUrl = `${dmOrigin}/adobe/assets/collections/${collectionId}`;
+  const response = await fetch(metadataUrl, {
+    headers: {
+      'Authorization': `Bearer ${imsToken}`,
+      'x-api-key': 'aem-assets-content-hub-1',
+    },
+  });
+
+  if (!response.ok) {
+    return { allowed: false, reason: 'collection not found' };
+  }
+
+  const collection = await response.json();
+  const acl = collection?.collectionMetadata?.['tccc:metadata']?.['tccc:acl'];
+
+  if (!acl) {
+    return { allowed: false, reason: 'no ACL' };
+  }
+
+  // Check owner (has all permissions)
+  if (acl['tccc:assetCollectionOwner']?.toLowerCase() === userEmail) {
+    return { allowed: true, role: 'owner' };
+  }
+
+  // Check editor (write permission, also grants read)
+  if (Array.isArray(acl['tccc:assetCollectionEditor']) &&
+      acl['tccc:assetCollectionEditor'].some((e) => e.toLowerCase() === userEmail)) {
+    return { allowed: true, role: 'editor' };
+  }
+
+  // Check viewer (read permission only)
+  if (requiredRole === 'read' &&
+      Array.isArray(acl['tccc:assetCollectionViewer']) &&
+      acl['tccc:assetCollectionViewer'].some((e) => e.toLowerCase() === userEmail)) {
+    return { allowed: true, role: 'viewer' };
+  }
+
+  return { allowed: false, reason: 'not in ACL' };
+}
+
 async function searchAuthorization(request, env, search) {
   const user = request.user;
 
@@ -187,12 +249,12 @@ export async function originDynamicMedia(request, env) {
 
     const search = JSON.parse(body);
 
-    await searchAuthorization(request, env, search);
-
     if (url.pathname === '/adobe/assets/search-collections') {
+      collectionsSearchAuthorization(request, search);
       url.pathname = '/adobe/assets/search';
       setIndexName(search, `${envId}_collections`);
     } else {
+      await searchAuthorization(request, env, search);
       setIndexName(search, envId);
     }
 
@@ -205,6 +267,48 @@ export async function originDynamicMedia(request, env) {
   // general proxying best practices
   headers.set('user-agent', headers.get('user-agent'));
   headers.set('x-forwarded-host', headers.get('host'));
+
+  // Authorization check for individual collection operations
+  if (url.pathname.match(/^\/adobe\/assets\/collections\/[^/]+$/)) {
+    const collectionId = url.pathname.split('/').pop();
+    const requiredRole = (request.method === 'GET') ? 'read' : 'write';
+
+    const access = await validateCollectionAccess(
+      collectionId,
+      request.user.email?.toLowerCase(),
+      requiredRole,
+      imsToken,
+      dmOrigin,
+    );
+
+    if (!access.allowed) {
+      console.warn(`[${request.user.email}] denied ${request.method} on collection ${collectionId}: ${access.reason}`);
+      return new Response('Forbidden', { status: 403 });
+    }
+
+    console.log(`[${request.user.email}] allowed ${request.method} on collection ${collectionId} as ${access.role}`);
+  }
+
+  // Authorization check for collection items endpoint
+  if (url.pathname.match(/^\/adobe\/assets\/collections\/[^/]+\/items$/)) {
+    const collectionId = url.pathname.split('/')[4];
+    const requiredRole = (request.method === 'GET') ? 'read' : 'write';
+
+    const access = await validateCollectionAccess(
+      collectionId,
+      request.user.email?.toLowerCase(),
+      requiredRole,
+      imsToken,
+      dmOrigin,
+    );
+
+    if (!access.allowed) {
+      console.warn(`[${request.user.email}] denied ${request.method} on collection items ${collectionId}: ${access.reason}`);
+      return new Response('Forbidden', { status: 403 });
+    }
+
+    console.log(`[${request.user.email}] allowed ${request.method} on collection items ${collectionId} as ${access.role}`);
+  }
 
   // console.log('>>>', request.method, url, headers);
 
