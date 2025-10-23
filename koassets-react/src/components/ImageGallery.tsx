@@ -4,6 +4,7 @@ import { AuthorizationStatus } from '../clients/fadel-client';
 import { DEFAULT_ACCORDION_CONFIG } from '../constants/accordion';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type { Asset, ImageGalleryProps } from '../types';
+import { populateAssetFromHit } from '../utils/assetTransformers';
 import AssetCard from './AssetCard';
 import AssetDetails from './AssetDetails/';
 import AssetPreview from './AssetPreview';
@@ -107,10 +108,12 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
     // Create stable callback for opening details view
     const openDetailsView = useCallback(async (asset?: Asset, loadMetadata: boolean = false) => {
-        console.debug('openDetailsView called with asset:', asset, 'loadMetadata:', loadMetadata);
+        console.debug('openDetailsView called with asset:', JSON.stringify(asset, null, 2), 'loadMetadata:', loadMetadata);
         if (asset) {
-            console.debug('Setting selected card with asset ID:', asset.assetId, 'Asset object:', JSON.stringify(asset, null, 2));
-            setSelectedCard(asset as Asset);
+            // Transform the asset to ensure all object fields are converted to strings
+            const transformedAsset = populateAssetFromHit(asset._searchHit as Record<string, unknown>);
+            console.debug('Setting selected card with asset ID:', transformedAsset.assetId, 'Asset object:', JSON.stringify(transformedAsset, null, 2));
+            setSelectedCard(transformedAsset);
         } else {
             console.log('No asset provided to openDetailsView');
         }
