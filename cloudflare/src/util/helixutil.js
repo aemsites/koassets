@@ -16,7 +16,7 @@ export async function fetchHelixSheet(env, path, options) {
   });
 
   // TODO: remove after debugging in production (to understand caching headers)
-  console.debug('>>> fetchHelixSheet response:', url, response.headers);
+  console.log('fetchHelixSheet response headers:', url, Object.fromEntries(response.headers.entries()));
 
   if (!response.ok) {
     console.error('Failed to fetch spreadsheet:', response.status, response.statusText);
