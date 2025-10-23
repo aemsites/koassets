@@ -246,21 +246,21 @@ Authored at `/config/access/companies`.
 
 This has 3 sheets, one for each role: `customers`, `bottlers` and `agencies`.
 
-`customers` sheet:
+`customer` sheet:
 
 | Column | Values | Description |
 |--------|--------|-------------|
 | `domain` | `customer.com` | Domain of the customer company. Matches all users with an email address ending in `@customer.com`. |
 | `name` | `customerX` | Exact value used in the `tccc:intendedCustomers` asset metadata field. |
 
-`bottlers` sheet:
+`bottler` sheet:
 
 | Column | Values | Description |
 |--------|--------|-------------|
 | `domain` | `bottler.com` | Domain of the bottler company. Matches all users with an email address ending in `@bottler.com`. |
 | `countries` | `us, ca, es` | Comma separated list of bottler countries the company has access to. 2 letter ISO code. Examples: `us`, `ca`, `es`. |
 
-`agencies` sheet:
+`agency` sheet:
 
 | Column | Values | Description |
 |--------|--------|-------------|

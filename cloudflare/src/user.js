@@ -41,23 +41,23 @@ async function getUserAttributes(env, user) {
 
   const companies = await fetchHelixSheet(env, '/config/access/companies', {
     sheets: {
-      customers: { key: 'domain' },
-      bottlers:  { key: 'domain', arrays: ['countries'] },
-      agencies:  { key: 'domain' },
+      customer: { key: 'domain' },
+      bottler:  { key: 'domain', arrays: ['countries'] },
+      agency:  { key: 'domain' },
     }
   });
 
   if (companies) {
-    if (companies.customers[domain]) {
-      pushUnique(attributes.customers, companies.customers[domain].name);
+    if (companies.customer[domain]) {
+      pushUnique(attributes.customers, companies.customer[domain].name);
     }
 
-    if (companies.bottlers[domain]) {
+    if (companies.bottler[domain]) {
       pushUnique(attributes.roles, ROLE.BOTTLER);
-      pushUnique(attributes.bottlerCountries, companies.bottlers[domain].countries);
+      pushUnique(attributes.bottlerCountries, companies.bottler[domain].countries);
     }
 
-    if (companies.agencies[domain]) {
+    if (companies.agency[domain]) {
       pushUnique(attributes.roles, ROLE.AGENCY);
     }
   }
