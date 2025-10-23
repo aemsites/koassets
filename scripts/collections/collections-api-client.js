@@ -1,13 +1,9 @@
 /**
  * Dynamic Media Collections API Client (JavaScript)
- * Centralized collections client with authorization filtering
+ * Centralized collections client for making API calls
+ * Note: Authorization is enforced server-side in Cloudflare worker
+ * Client-side auth helpers are in collections-auth.js for UI control
  */
-
-// Import configuration and utilities from separate modules
-import { hasCollectionAccess, assertCollectionAccess } from './collections-auth.js';
-
-// Re-export utilities for convenience
-export { hasCollectionAccess, assertCollectionAccess };
 
 // Algolia search configuration constants
 const ALGOLIA_SEARCH_DEFAULTS = {
@@ -29,6 +25,7 @@ const FACET_FIELDS = {
 /**
  * Dynamic Media Collections API Client
  */
+// eslint-disable-next-line import/prefer-default-export
 export class DynamicMediaCollectionsClient {
   constructor(config) {
     this.accessToken = config.accessToken?.replace(/^Bearer /, '');
