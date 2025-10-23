@@ -1,5 +1,6 @@
 // Import the centralized JavaScript collections client with auth
 import { DynamicMediaCollectionsClient } from '../../scripts/collections/collections-api-client.js';
+import { populateAssetFromHit } from '../../scripts/asset-transformers.js';
 
 // Check if we're in cookie auth mode (same logic as main app)
 function isCookieAuth() {
@@ -638,7 +639,8 @@ function handleAddToCart(asset) {
     const stored = JSON.parse(localStorage.getItem('cartAssetItems') || '[]');
     const exists = stored.some((item) => item.assetId === (asset.assetId || asset.id));
     if (!exists) {
-      stored.push({ ...asset });
+      const transformedAsset = populateAssetFromHit(asset);
+      stored.push(transformedAsset);
       localStorage.setItem('cartAssetItems', JSON.stringify(stored));
     }
     showToast('ASSET ADDED TO CART', 'success');
