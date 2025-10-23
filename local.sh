@@ -10,6 +10,9 @@ DM_ORIGIN=${DM_ORIGIN:-https://delivery-p64403-e544653.adobeaemcloud.com}
 # https://www.aem.live/developer/cli-reference#general-options
 AEM_LOG_LEVEL=${AEM_LOG_LEVEL:-info}
 
+# setting for wrangler dev --log-level
+CLOUDFLARE_LOG_LEVEL=${CLOUDFLARE_LOG_LEVEL:-info}
+
 export FORCE_COLOR=1
 set -e
 set -o pipefail
@@ -41,6 +44,7 @@ function run_cloudflare() {
   npm run dev -- \
     --var "HELIX_ORIGIN:http://localhost:3000" \
     --var "DM_ORIGIN:${DM_ORIGIN}" \
+    --log-level="${CLOUDFLARE_LOG_LEVEL}" \
     2>&1 | filter_cf_logs
 }
 

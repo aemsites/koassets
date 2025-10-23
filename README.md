@@ -97,8 +97,9 @@ Environment variables supported by `npm run dev`:
 | `AEM_PAGES_URL` | EDS content URL | https://main--koassets--aemsites.aem.page |
 | `DM_ORIGIN` | Dynamic Media API URL | https://delivery-p64403-e544653.adobeaemcloud.com |
 | `DEV_BROWSER` | Browser to open. Mac OS only.<br><br>Options:<ul><li>`Google Chrome`</li><li>`Safari`</li><li>`Firefox`</li></ul> | - (system default) |
-| `CLOUDFLARE_REQUEST_LOGS` | Set to `1` to show request logs from cloudflare worker, which is the default behavior of `wrangler dev` but we turn it off to keep things readable.<br><br> Example request log:<br>`[wrangler:info] GET /path 200 OK (10ms)` | - (off) |
 | `AEM_LOG_LEVEL` | Set [`aem` log level](https://www.aem.live/developer/cli-reference#general-options). | `info` |
+| `CLOUDFLARE_LOG_LEVEL` | Set [wrangler dev --log-level](https://developers.cloudflare.com/workers/wrangler/commands/#dev). Maps to `console.<level>()` in js. <br><br>From most to least verbose: <ul><li>`debug` (avoid, very noisy with internals)</li><li>`log`</li><li>`info`</li><li>`warn`</li><li>`error`</li><li>`none`</li></ul> | `info`<br><br> This hides `console.log` output, but works well if you treat `console.log` as "debug" level that should be hidden by default from local output. Then use `console.info` for your test logs you want to see immediately.  |
+| `CLOUDFLARE_REQUEST_LOGS` | Set to `1` to show request logs from cloudflare worker, which is the default behavior of `wrangler dev` but we turn it off to keep things readable.<br><br> Example request log:<br>`[wrangler:info] GET /path 200 OK (10ms)` | - (off) |
 
 ### Troubleshooting: Ports still open
 
