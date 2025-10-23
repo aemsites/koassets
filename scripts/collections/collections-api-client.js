@@ -395,11 +395,10 @@ export class DynamicMediaCollectionsClient {
       // eslint-disable-next-line no-console
       console.log('🔍 [Search Collections] Response hits:', hits.length);
 
-      // Apply authorization filtering to the collections
-      const filteredItems = assertCollectionAccess(hits, this.user, 'read');
-
+      // Note: Authorization filtering is enforced server-side in Cloudflare worker
+      // Results are already filtered by ACL before reaching the client
       return {
-        items: filteredItems,
+        items: hits,
         total,
       };
     } catch (error) {
@@ -443,6 +442,7 @@ export class DynamicMediaCollectionsClient {
 
   /**
    * Retrieve collection metadata
+   * Note: Authorization is enforced server-side in Cloudflare worker
    * @param {string} collectionId - Collection ID
    * @returns {Promise} Promise with collection metadata (includes _etag property)
    */
@@ -454,11 +454,6 @@ export class DynamicMediaCollectionsClient {
         url: `/adobe/assets/collections/${collectionId}`,
         method: 'GET',
       });
-
-      // Check read access for this collection
-      if (!hasCollectionAccess(collection, this.user, 'read')) {
-        throw new Error(`Access denied: You do not have permission to view collection "${collectionId}"`);
-      }
 
       // Attach ETag to collection object for later use
       const etag = this.getETag(headers);
@@ -478,6 +473,7 @@ export class DynamicMediaCollectionsClient {
 
   /**
    * Delete a collection
+   * Note: Authorization is enforced server-side in Cloudflare worker
    * @param {string} collectionId - Collection ID
    * @returns {Promise} Promise with deletion result
    */
@@ -485,12 +481,6 @@ export class DynamicMediaCollectionsClient {
     try {
       // eslint-disable-next-line no-console
       console.trace('DynamicMediaCollectionsClient.deleteCollection() REQUEST');
-
-      // Check write access before deleting
-      const collection = await this.getCollectionMetadata(collectionId);
-      if (!hasCollectionAccess(collection, this.user, 'write')) {
-        throw new Error(`Access denied: You do not have permission to delete collection "${collectionId}"`);
-      }
 
       // Use If-Match: * to delete regardless of ETag value
       const { data } = await this.makeRequest({
@@ -512,6 +502,7 @@ export class DynamicMediaCollectionsClient {
 
   /**
    * Update collection metadata
+   * Note: Authorization is enforced server-side in Cloudflare worker
    * @param {string} collectionId - Collection ID
    * @param {Object} updateData - Updated collection metadata (only changed fields)
    * @returns {Promise} Promise with updated collection data
@@ -521,14 +512,8 @@ export class DynamicMediaCollectionsClient {
       // eslint-disable-next-line no-console
       console.trace('DynamicMediaCollectionsClient.updateCollectionMetadata() REQUEST');
 
-      // First get current collection metadata to preserve existing data
-      // This also checks read access AND retrieves the ETag
+      // First get current collection metadata to preserve existing data and retrieve ETag
       const currentCollection = await this.getCollectionMetadata(collectionId);
-
-      // Check write access before updating
-      if (!hasCollectionAccess(currentCollection, this.user, 'write')) {
-        throw new Error(`Access denied: You do not have permission to modify collection "${collectionId}"`);
-      }
 
       // Use ETag from getCollectionMetadata response
       // eslint-disable-next-line no-underscore-dangle
@@ -560,6 +545,7 @@ export class DynamicMediaCollectionsClient {
 
   /**
    * Get collection items (assets in the collection)
+   * Note: Authorization is enforced server-side in Cloudflare worker
    * @param {string} collectionId - Collection ID
    * @param {Object} options - Query options (limit, offset, etc.)
    * @returns {Promise} Promise with collection items
@@ -569,11 +555,6 @@ export class DynamicMediaCollectionsClient {
       // eslint-disable-next-line no-console
       console.trace('DynamicMediaCollectionsClient.getCollectionItems() REQUEST');
 
-      // First get collection metadata to check access (throws if access denied)
-      await this.getCollectionMetadata(collectionId);
-
-      // If we got here, access check in getCollectionMetadata passed
-      // Now get the items
       const { data } = await this.makeRequest({
         url: `/adobe/assets/collections/${collectionId}/items`,
         method: 'GET',
@@ -591,6 +572,7 @@ export class DynamicMediaCollectionsClient {
 
   /**
    * Update collection items (add/remove assets from collection)
+   * Note: Authorization is enforced server-side in Cloudflare worker
    * @param {string} collectionId - Collection ID
    * @param {Object} itemsData - Items to add/remove with operation type
    * @returns {Promise} Promise with update result
@@ -599,12 +581,6 @@ export class DynamicMediaCollectionsClient {
     try {
       // eslint-disable-next-line no-console
       console.trace('DynamicMediaCollectionsClient.updateCollectionItems() REQUEST');
-
-      // Check write access before updating
-      const collection = await this.getCollectionMetadata(collectionId);
-      if (!hasCollectionAccess(collection, this.user, 'write')) {
-        throw new Error(`Access denied: You do not have permission to modify collection "${collectionId}"`);
-      }
 
       const { data } = await this.makeRequest({
         url: `/adobe/assets/collections/${collectionId}/items`,
