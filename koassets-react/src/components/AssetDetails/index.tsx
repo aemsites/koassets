@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppConfig } from '../../hooks/useAppConfig';
-import type { AssetDetailsProps, Rendition, Asset, Metadata } from '../../types';
+import type { AssetDetailsProps, Rendition, Asset } from '../../types';
 
 import { AuthorizationStatus } from '../../clients/fadel-client';
 import ActionButton from '../ActionButton';
@@ -21,7 +21,6 @@ import AssetDetailsScheduledActivation from './AssetDetailsScheduledActivation';
 import AssetDetailsSystem from './AssetDetailsSystem';
 import AssetDetailsSystemInfoLegacy from './AssetDetailsSystemInfoLegacy';
 import AssetDetailsTechnicalInfo from './AssetDetailsTechnicalInfo';
-import { populateAssetFromMetadata } from '../../utils/assetTransformers';
 import { isPdfPreview } from '../../constants/filetypes';
 import PDFViewer from '../PDFViewer';
 
@@ -131,6 +130,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
         if (showModal && selectedImage && dynamicMediaClient) {
             setPopulatedImage(selectedImage as Asset);
 
+            /*
             const fetchMetadata = async () => {
                 // Populate image with metadata
                 const metadata = await dynamicMediaClient?.getMetadata(selectedImage.assetId);
@@ -141,7 +141,8 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                 );
             }
 
-            // fetchMetadata();
+            fetchMetadata();
+            */
         };
     }, [showModal, selectedImage, dynamicMediaClient]);
 

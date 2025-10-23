@@ -451,7 +451,6 @@ export function populateAssetFromMetadata(metadata: Metadata): Asset {
         ageDemographic: ageDemographic,
         alt: safeMetadataStringField(repoMeta, assetMeta, 'dc:title') || name,
         assetAssociatedWithBrand: associatedWBrand,
-        assetId: metadata.assetId,
         assetStatus: safeMetadataStringField(repoMeta, assetMeta, 'tccc:assetStatus'),
         beverageType: beverageType,
         brand: brand,
