@@ -113,7 +113,7 @@ async function searchAuthorization(request, env, search) {
   let bottlerCountryCheck = '';
   // these users can see every bottler country
   if (![ROLE.EMPLOYEE, ROLE.CONTINGENT_WORKER, ROLE.AGENCY].some(r => user.roles.includes(r))) {
-    const countries = user.bottlerCountries || [];
+    const countries = user.countries || [];
     // bottlers can see content intended for all countries
     if (user.roles.includes(ROLE.BOTTLER)) {
       countries.push('all-countries');

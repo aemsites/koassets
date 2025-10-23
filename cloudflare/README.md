@@ -244,7 +244,7 @@ General notes:
 
 Authored at `/config/access/companies`.
 
-This has 3 sheets, one for each role: `customers`, `bottlers` and `agencies`.
+This has 3 sheets, one for each role: `customer`, `bottler` and `agency`.
 
 `customer` sheet:
 
@@ -279,5 +279,5 @@ Authored at `/config/access/users`.
 | | `agency`  | Agency. |
 | | `bottler`  | Bottler |
 | | `customer`  | Customer |
-| `bottlerCountries` | `us`, `ca`, `es` | Comma separated list of bottler countries the user has access to. 2 letter ISO code.Optional. |
+| `countries` | `us`, `ca`, `es` | Comma separated list of bottler countries the user has access to. 2 letter ISO code. Optional. |
 | `customers` | `customer1, customer2` | Comma separated list of customers the user has access to. Must use the exact value used in the `tccc:intendedCustomers` asset metadata field. |
