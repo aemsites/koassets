@@ -1,5 +1,6 @@
 import { ROLE } from '../user';
 import { decodeJwt } from 'jose';
+import { fetchHelixSheet } from '../util/helixutil';
 
 // create IMS token using Oauth server-to-server credentials
 async function createIMSToken(request, clientId, clientSecret, scope) {
@@ -90,7 +91,7 @@ function forceSearchFilter(search, constraint) {
   }
 }
 
-async function searchAuthorization(request, search) {
+async function searchAuthorization(request, env, search) {
   const user = request.user;
 
   // Algolia search request. Enforce a filter that ensures only authorized assets are returned
@@ -103,30 +104,34 @@ async function searchAuthorization(request, search) {
   }
 
   // RESTRICTED BRAND CHECK
-  // TODO: DISABLED until we have the right search index support
-  const restrictedBrand = '';
+  const restrictedBrands = await fetchHelixSheet(env, '/config/access/restricted-brands', { params: { limit: 1 } });
+  // determine all restricted brands that the user has no access to
+  const deniedBrands = restrictedBrands?.[':names']?.filter(b => !user.brands.includes(b)) || [];
+  const brandCheck = `${deniedBrands.map(b => `NOT tccc-brand._tagIDs:'tccc:brand/${b}'`).join(' AND ')}`;
 
   // INTENDED BOTTLER COUNTRY CHECK
-  let intendedBottlerCountry = '';
+  let bottlerCountryCheck = '';
   // these users can see every bottler country
   if (![ROLE.EMPLOYEE, ROLE.CONTINGENT_WORKER, ROLE.AGENCY].some(r => user.roles.includes(r))) {
     const countries = user.bottlerCountries || [];
+    // bottlers can see content intended for all countries
     if (user.roles.includes(ROLE.BOTTLER)) {
       countries.push('all-countries');
     }
     if (countries.length > 0) {
-      intendedBottlerCountry = `(${countries.map(c => `tccc-intendedBottlerCountry:'${c}'`).join(' OR ')})`;
+      // only allow countries the user has access to
+      bottlerCountryCheck = `(${countries.map(c => `tccc-intendedBottlerCountry:'${c}'`).join(' OR ')})`;
     } else {
       // should normally not happen, but safety net to ensure no hits
-      intendedBottlerCountry = `tccc-intendedBottlerCountry:'___does_not_exist___'`;
+      bottlerCountryCheck = `tccc-intendedBottlerCountry:'___does_not_exist___'`;
     }
   }
 
   // INTENDED CUSTOMER CHECK
-  const intendedCustomer = `(NOT tccc-assetType:'customers'${user.customers.map(c => ` OR tccc-intendedCustomers:'${c}'`).join('')})`;
+  const customerCheck = `(NOT tccc-assetType:'customers'${user.customers.map(c => ` OR tccc-intendedCustomers:'${c}'`).join('')})`;
 
   // all checks are required (AND)
-  const constraint = [restrictedBrand, intendedBottlerCountry, intendedCustomer].filter(c => c).join(' AND ');
+  const constraint = [bottlerCountryCheck, customerCheck, brandCheck].filter(c => c).join(' AND ');
   console.log(`[${request.user.email}] authz filter: ${constraint}`);
 
   forceSearchFilter(search, constraint);
@@ -182,7 +187,7 @@ export async function originDynamicMedia(request, env) {
 
     const search = JSON.parse(body);
 
-    await searchAuthorization(request, search);
+    await searchAuthorization(request, env, search);
 
     if (url.pathname === '/adobe/assets/search-collections') {
       url.pathname = '/adobe/assets/search';

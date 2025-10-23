@@ -4,11 +4,20 @@ export async function fetchHelixSheet(env, path, options) {
     headers.authorization = `token ${await env.HELIX_ORIGIN_AUTHENTICATION.get()}`;
   }
 
-  const response = await fetch(`${env.HELIX_ORIGIN}${path}.json`, {
+  let url = `${env.HELIX_ORIGIN}${path}.json`;
+  if (options?.params) {
+    url += `?${new URLSearchParams(options.params).toString()}`;
+  }
+
+  const response = await fetch(url, {
     // TODO: remove this once we have cache invalidation working
     cache: 'no-store',
     headers,
   });
+
+  // TODO: remove after debugging in production (to understand caching headers)
+  console.debug('>>> fetchHelixSheet response:', url, response.headers);
+
   if (!response.ok) {
     console.error('Failed to fetch spreadsheet:', response.status, response.statusText);
     return;
