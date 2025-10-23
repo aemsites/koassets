@@ -23,7 +23,7 @@ async function getUserAttributes(env, user) {
 
   const attributes = {
     roles: [],
-    bottlerCountries: [],
+    countries: [],
     customers: [],
     brands: [],
   };
@@ -54,7 +54,7 @@ async function getUserAttributes(env, user) {
 
     if (companies.bottler[domain]) {
       pushUnique(attributes.roles, ROLE.BOTTLER);
-      pushUnique(attributes.bottlerCountries, companies.bottler[domain].countries);
+      pushUnique(attributes.countries, companies.bottler[domain].countries);
     }
 
     if (companies.agency[domain]) {
@@ -65,24 +65,24 @@ async function getUserAttributes(env, user) {
   const users = await fetchHelixSheet(env, '/config/access/users', {
     sheet: {
       key: 'email',
-      arrays: ['roles', 'bottlerCountries', 'customers']
+      arrays: ['roles', 'countries', 'customers']
     }
   });
 
   const userOverride = users?.[email];
   if (userOverride) {
     pushUnique(attributes.roles, userOverride.roles);
-    pushUnique(attributes.bottlerCountries, userOverride.bottlerCountries);
+    pushUnique(attributes.countries, userOverride.countries);
     pushUnique(attributes.customers, userOverride.customers);
   }
 
   // use country from IDP if not configured in EDS sheets
-  if (attributes.roles.includes(ROLE.BOTTLER) && attributes.bottlerCountries.length === 0 && user.country) {
-    attributes.bottlerCountries.push(user.country);
+  if (attributes.roles.includes(ROLE.BOTTLER) && attributes.countries.length === 0 && user.country) {
+    attributes.countries.push(user.country);
   }
 
-  // make all attributes.bottlerCountries lowercase
-  attributes.bottlerCountries = attributes.bottlerCountries.map(c => c.toLowerCase());
+  // make all country codes lowercase
+  attributes.countries = attributes.countries.map(c => c.toLowerCase());
 
   const restrictedBrands = await fetchHelixSheet(env, '/config/access/restricted-brands', { params: { limit: 20000 } });
   // log nested json
