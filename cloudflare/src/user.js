@@ -25,7 +25,7 @@ async function getUserAttributes(env, user) {
     roles: [],
     bottlerCountries: [],
     customers: [],
-    // restrictedBrands: [],
+    brands: [],
   };
 
   // detailed user attributes / permissions
@@ -83,6 +83,16 @@ async function getUserAttributes(env, user) {
 
   // make all attributes.bottlerCountries lowercase
   attributes.bottlerCountries = attributes.bottlerCountries.map(c => c.toLowerCase());
+
+  const restrictedBrands = await fetchHelixSheet(env, '/config/access/restricted-brands', { params: { limit: 20000 } });
+  // log nested json
+  for (const brand of restrictedBrands?.[':names'] || []) {
+    for (const item of restrictedBrands[brand].data) {
+      if (item.user === email || item.user === domain || item.user === '*') {
+        pushUnique(attributes.brands, brand);
+      }
+    }
+  }
 
   return attributes;
 }
