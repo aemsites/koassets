@@ -1,6 +1,6 @@
 // Import the centralized JavaScript collections client with auth
 import { DynamicMediaCollectionsClient } from '../../scripts/collections/collections-api-client.js';
-import { populateAssetFromHit } from '../../scripts/asset-transformers.js';
+import { populateAssetFromHit, saveCartItems } from '../../scripts/asset-transformers.js';
 
 // Check if we're in cookie auth mode (same logic as main app)
 function isCookieAuth() {
@@ -639,9 +639,10 @@ function handleAddToCart(asset) {
     const stored = JSON.parse(localStorage.getItem('cartAssetItems') || '[]');
     const exists = stored.some((item) => item.assetId === (asset.assetId || asset.id));
     if (!exists) {
-      const transformedAsset = populateAssetFromHit(asset);
+      // eslint-disable-next-line no-underscore-dangle
+      const transformedAsset = populateAssetFromHit(asset._searchHit || {});
       stored.push(transformedAsset);
-      localStorage.setItem('cartAssetItems', JSON.stringify(stored));
+      saveCartItems(stored);
     }
     showToast('ASSET ADDED TO CART', 'success');
   } catch (e) {
@@ -684,7 +685,7 @@ function handleToggleCart(asset, buttonEl) {
     try {
       const stored = JSON.parse(localStorage.getItem('cartAssetItems') || '[]');
       const next = stored.filter((item) => item.assetId !== (asset.assetId || asset.id));
-      localStorage.setItem('cartAssetItems', JSON.stringify(next));
+      saveCartItems(next);
     } catch (err) {
       // ignore JSON errors
     }

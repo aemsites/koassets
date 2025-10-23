@@ -21,7 +21,7 @@ import type {
     SearchResults
 } from '../types';
 import { CURRENT_VIEW, LOADING, QUERY_TYPES } from '../types';
-import { populateAssetFromHit } from '../utils/assetTransformers';
+import { populateAssetFromHit, saveCartItems } from '../utils/assetTransformers';
 import { getExternalParams, saveSearchFiltersToSession, loadSearchFiltersFromSession, clearSearchFiltersFromSession } from '../utils/config';
 import { AppConfigProvider } from './AppConfigProvider';
 
@@ -260,12 +260,7 @@ function MainApp(): React.JSX.Element {
 
     // Save cart items to localStorage when they change
     useEffect(() => {
-        localStorage.setItem('cartAssetItems', JSON.stringify(cartAssetItems));
-
-        // Update cart badge count if the function exists
-        if (window.updateCartBadge && typeof window.updateCartBadge === 'function') {
-            window.updateCartBadge(cartAssetItems.length);
-        }
+        saveCartItems(cartAssetItems);
     }, [cartAssetItems]);
 
     useEffect(() => {

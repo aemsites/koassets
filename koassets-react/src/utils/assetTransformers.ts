@@ -17,3 +17,10 @@ export function populateAssetFromMetadata(metadata: Metadata): Asset {
 export function extractFromArrayValue(dataJson: Record<string, unknown>, key: string, fallback?: string): string {
   return extractFromArrayValueShared(dataJson, key, fallback);
 }
+
+// Import saveCartItems from shared file
+import { saveCartItems as saveCartItemsShared } from '../../../scripts/asset-transformers.js';
+
+export function saveCartItems(items: Array<Record<string, unknown>>): void {
+  saveCartItemsShared(items);
+}

@@ -680,3 +680,15 @@ export function populateAssetFromMetadata(metadata) {
     ...metadata,
   };
 }
+
+/**
+ * Save cart items to localStorage and update cart badge
+ * @param {Array} items - The array of cart items to save
+ * @returns {void}
+ */
+export function saveCartItems(items) {
+  localStorage.setItem('cartAssetItems', JSON.stringify(items));
+  if (window.updateCartBadge && typeof window.updateCartBadge === 'function') {
+    window.updateCartBadge(items.length);
+  }
+}
