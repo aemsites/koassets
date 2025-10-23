@@ -116,7 +116,7 @@ function transformSearchHitToAsset(hit) {
     intendedChannel: hit['tccc-intendedChannel'],
     marketCovered: hit['tccc-marketCovered'],
     // Keep original search hit data for reference
-    _searchHit: hit, // Don't remove this, used in the AssetDetails component to populate the asset
+    _searchHit: hit, // Don't remove this, used in the AssetDetails and CartPanel to populate asset
   };
 }
 
