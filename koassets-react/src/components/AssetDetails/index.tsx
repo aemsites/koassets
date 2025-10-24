@@ -40,7 +40,8 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     cartAssetItems = [],
     imagePresets = {},
     renditions = {},
-    fetchAssetRenditions
+    fetchAssetRenditions,
+    isDeepLinkAsset = false
 }) => {
     // Get dynamicMediaClient from context
     const { dynamicMediaClient } = useAppConfig();
@@ -246,9 +247,11 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                     <div className="asset-details-main-info-section">
                         <div className="asset-details-main-info-section-inner">
                             <div className="asset-details-main-header">
-                                <button className="asset-details-main-close-button" onClick={closeModal}>
-                                    ×
-                                </button>
+                                {isDeepLinkAsset ? null : (
+                                    <button className="asset-details-main-close-button" onClick={closeModal}>
+                                        ×
+                                    </button>
+                                )}
                                 {populatedImage?.xcmKeywords && (
                                     <div className="asset-details-main-tags">
                                         {populatedImage.xcmKeywords.split(',').map((keyword, index) => (

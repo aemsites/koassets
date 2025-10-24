@@ -87,6 +87,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         setSelectAuthorized(false);
     }, [images]);
 
+    // Helper to check if current selected card is from deep link
+    const isDeepLinkAsset = deepLinkAsset && selectedCard?.assetId === deepLinkAsset.assetId;
+
     // Handler to close asset details modal
     const closeDetailsModal = useCallback(() => {
         setSelectedCard(null);
@@ -102,7 +105,10 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
                 if (showDetailsModal) {
-                    closeDetailsModal();
+                    // Don't close if this is a deep link asset
+                    if (!isDeepLinkAsset) {
+                        closeDetailsModal();
+                    }
                 } else if (showPreviewModal) {
                     closeCardPreviewModal();
                 }
@@ -118,7 +124,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
             document.removeEventListener('keydown', handleKeyDown);
             document.body.style.overflow = 'unset'; // Restore scrolling
         };
-    }, [showPreviewModal, showDetailsModal, closeDetailsModal]);
+    }, [showPreviewModal, showDetailsModal, closeDetailsModal, isDeepLinkAsset]);
 
     // Create stable callback for opening details view
     const openDetailsView = useCallback(async (asset?: Asset) => {
@@ -392,6 +398,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 imagePresets={imagePresets}
                 renditions={selectedCard?.assetId ? assetRenditionsCache[selectedCard.assetId] : undefined}
                 fetchAssetRenditions={fetchAssetRenditions}
+                isDeepLinkAsset={!!isDeepLinkAsset}
             />
         </div>
     );

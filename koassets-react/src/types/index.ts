@@ -306,6 +306,7 @@ export interface AssetDetailsProps extends AssetPreviewProps {
         'repo:name'?: string;
     };
     fetchAssetRenditions?: (asset: Asset) => Promise<void>;
+    isDeepLinkAsset?: boolean;
 }
 
 export interface SavedSearch {
