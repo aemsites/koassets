@@ -128,12 +128,13 @@ else
   # branch/local deployment
   url="https://$tag-$WORKER.$WORKER_DOMAIN.workers.dev"
 
-  # create branch version (using aem.page preview content)
-  HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.page"
+  # create branch version
+  HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.live"
   upload_version "$tag" "$message"
   version=$(cat version.id)
 
   # create branch preview version
+  HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.page"
   upload_version "$tag-preview" "$message"
 fi
 
