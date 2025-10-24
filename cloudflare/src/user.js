@@ -31,20 +31,13 @@ async function getUserAttributes(env, user) {
 
   // detailed user attributes / permissions
 
-  // detect TCCC workers based on employee type in IDP
-  if (domain === 'coca-cola.com') {
-    if (user.employeeType === '10') {
-      attributes.roles.push(ROLE.EMPLOYEE);
-    } else if (user.employeeType === '11') {
-      attributes.roles.push(ROLE.CONTINGENT_WORKER);
-    }
-  }
-
   const companies = await fetchHelixSheet(env, '/config/access/companies', {
     sheets: {
       customer: { key: 'domain' },
       bottler:  { key: 'domain', arrays: ['countries'] },
-      agency:  { key: 'domain' },
+      agency:   { key: 'domain' },
+      employee: { key: 'domain' },
+      'contingent-worker': { key: 'domain' },
     }
   });
 
@@ -60,6 +53,18 @@ async function getUserAttributes(env, user) {
 
     if (companies.agency[domain]) {
       pushUnique(attributes.roles, ROLE.AGENCY);
+    }
+
+    if (companies.employee[domain]) {
+      if (user.employeeType === companies.employee[domain].employeeType) {
+        pushUnique(attributes.roles, ROLE.EMPLOYEE);
+      }
+    }
+
+    if (companies['contingent-worker'][domain]) {
+      if (user.employeeType === companies['contingent-worker'][domain].employeeType) {
+        pushUnique(attributes.roles, ROLE.CONTINGENT_WORKER);
+      }
     }
   }
 
@@ -86,7 +91,6 @@ async function getUserAttributes(env, user) {
   attributes.countries = attributes.countries.map(c => c.toLowerCase());
 
   const restrictedBrands = await fetchHelixSheet(env, '/config/access/restricted-brands', { params: { limit: 20000 } });
-  // log nested json
   for (const brand of restrictedBrands?.[':names'] || []) {
     for (const item of restrictedBrands[brand].data) {
       if (item.user === email || item.user === domain || item.user === '*') {
