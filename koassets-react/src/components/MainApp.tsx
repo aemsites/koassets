@@ -21,7 +21,7 @@ import type {
     SearchResults
 } from '../types';
 import { CURRENT_VIEW, LOADING, QUERY_TYPES } from '../types';
-import { populateAssetFromHit } from '../utils/assetTransformers';
+import { populateAssetFromHit, saveCartItems } from '../utils/assetTransformers';
 import { getExternalParams, saveSearchFiltersToSession, loadSearchFiltersFromSession, clearSearchFiltersFromSession } from '../utils/config';
 import { AppConfigProvider } from './AppConfigProvider';
 
@@ -201,6 +201,9 @@ function MainApp(): React.JSX.Element {
     // Mobile filter panel state
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false);
 
+    // Deep link asset details modal state
+    const [deepLinkAsset, setDeepLinkAsset] = useState<Asset | null>(null);
+
     // Save search filters to session storage whenever they change
     useEffect(() => {
         // Only save if at least one filter has a value
@@ -234,6 +237,16 @@ function MainApp(): React.JSX.Element {
         window.openDownloadPanel = () => setIsDownloadPanelOpen(true);
         window.closeDownloadPanel = () => setIsDownloadPanelOpen(false);
         window.toggleDownloadPanel = () => setIsDownloadPanelOpen(prev => !prev);
+        
+        // Expose details view functions
+        window.openDetailsView = (asset?: Asset) => {
+            if (asset && asset.assetId) {
+                setDeepLinkAsset(asset);
+            }
+        };
+        window.closeDetailsView = () => {
+            setDeepLinkAsset(null);
+        };
 
         return () => {
             delete window.openCart;
@@ -242,6 +255,8 @@ function MainApp(): React.JSX.Element {
             delete window.openDownloadPanel;
             delete window.closeDownloadPanel;
             delete window.toggleDownloadPanel;
+            delete window.openDetailsView;
+            delete window.closeDetailsView;
         };
     }, []);
 
@@ -260,12 +275,7 @@ function MainApp(): React.JSX.Element {
 
     // Save cart items to localStorage when they change
     useEffect(() => {
-        localStorage.setItem('cartAssetItems', JSON.stringify(cartAssetItems));
-
-        // Update cart badge count if the function exists
-        if (window.updateCartBadge && typeof window.updateCartBadge === 'function') {
-            window.updateCartBadge(cartAssetItems.length);
-        }
+        saveCartItems(cartAssetItems);
     }, [cartAssetItems]);
 
     useEffect(() => {
@@ -739,6 +749,10 @@ function MainApp(): React.JSX.Element {
                         isRightsSearch={isRightsSearch}
                         onFacetCheckbox={handleFacetCheckbox}
                         onClearAllFacets={clearAllFacetsFunction || undefined}
+                        deepLinkAsset={deepLinkAsset}
+                        onCloseDeepLinkModal={() => {
+                            setDeepLinkAsset(null);
+                        }}
                     />
                 </Suspense>
             ) : (

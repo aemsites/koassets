@@ -1,4 +1,4 @@
-import { AlgoliaSearchQuery, AlgoliaSearchRequest, Asset, Rendition } from '../types';
+import { AlgoliaSearchQuery, AlgoliaSearchRequest, Asset, Metadata, Rendition } from '../types';
 import { mimeTypeToExtension } from '../utils/mimeTypeConverter';
 
 // Extend window interface for user authentication
@@ -202,7 +202,7 @@ export class DynamicMediaClient {
         };
     }
 
-    async getMetadata(assetId: string, ifNoneMatch?: string): Promise<Asset> {
+    async getMetadata(assetId: string, ifNoneMatch?: string): Promise<Metadata> {
         const headers: Record<string, string> = {};
         if (ifNoneMatch) {
             headers['If-None-Match'] = ifNoneMatch;
@@ -210,7 +210,7 @@ export class DynamicMediaClient {
 
         try {
             console.trace('DynamicMediaClient.getMetadata() REQUEST');
-            return await this.makeRequest<Asset>({
+            return await this.makeRequest<Metadata>({
                 url: `/adobe/assets/${assetId}/metadata`,
                 method: 'GET',
                 headers

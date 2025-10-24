@@ -21,9 +21,9 @@ import AssetDetailsScheduledActivation from './AssetDetailsScheduledActivation';
 import AssetDetailsSystem from './AssetDetailsSystem';
 import AssetDetailsSystemInfoLegacy from './AssetDetailsSystemInfoLegacy';
 import AssetDetailsTechnicalInfo from './AssetDetailsTechnicalInfo';
-import { populateAssetFromMetadata } from '../../utils/assetTransformers';
 import { isPdfPreview } from '../../constants/filetypes';
 import PDFViewer from '../PDFViewer';
+import { populateAssetFromMetadata } from '../../utils/assetTransformers';
 
 /* Displayed on the asset details modal header section
 campaignName 
@@ -40,7 +40,8 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     cartAssetItems = [],
     imagePresets = {},
     renditions = {},
-    fetchAssetRenditions
+    fetchAssetRenditions,
+    isDeepLinkAsset = false
 }) => {
     // Get dynamicMediaClient from context
     const { dynamicMediaClient } = useAppConfig();
@@ -129,18 +130,20 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 
     useEffect(() => {
         if (showModal && selectedImage && dynamicMediaClient) {
-            setPopulatedImage(selectedImage as Asset);
-
+            // Always fetch metadata to ensure complete asset data
             const fetchMetadata = async () => {
-                // Populate image with metadata
-                const metadata = await dynamicMediaClient?.getMetadata(selectedImage.assetId);
-
-                console.debug('Metadata:', metadata);
-                setPopulatedImage(
-                    { ...selectedImage, ...populateAssetFromMetadata(metadata as Metadata) }
-                );
-            }
-
+                try {
+                    console.debug('Fetching metadata for asset:', selectedImage.assetId);
+                    const metadata = await dynamicMediaClient.getMetadata(selectedImage.assetId);
+                    const populatedAsset = populateAssetFromMetadata(metadata as Metadata);
+                    console.debug('Setting populated image with metadata:', populatedAsset.assetId);
+                    setPopulatedImage(populatedAsset);
+                } catch (error) {
+                    console.error('Failed to fetch metadata:', error);
+                    // Fallback to the provided asset
+                    setPopulatedImage(selectedImage as Asset);
+                }
+            };
             fetchMetadata();
         };
     }, [showModal, selectedImage, dynamicMediaClient]);
@@ -244,9 +247,11 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                     <div className="asset-details-main-info-section">
                         <div className="asset-details-main-info-section-inner">
                             <div className="asset-details-main-header">
-                                <button className="asset-details-main-close-button" onClick={closeModal}>
-                                    ×
-                                </button>
+                                {isDeepLinkAsset ? null : (
+                                    <button className="asset-details-main-close-button" onClick={closeModal}>
+                                        ×
+                                    </button>
+                                )}
                                 {populatedImage?.xcmKeywords && (
                                     <div className="asset-details-main-tags">
                                         {populatedImage.xcmKeywords.split(',').map((keyword, index) => (

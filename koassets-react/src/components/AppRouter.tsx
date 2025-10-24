@@ -9,6 +9,8 @@ const AppRouter: React.FC = () => {
         <Routes>
             <Route path="/" element={<MainApp />} />
             <Route path="/index.html" element={<MainApp />} />
+            {/* Route for asset details deep link */}
+            <Route path="/assetdetails" element={<MainApp />} />
             {/* Catch-all route to handle any path including /drafts/tphan/search */}
             <Route path="*" element={<MainApp />} />
         </Routes>

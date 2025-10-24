@@ -306,6 +306,7 @@ export interface AssetDetailsProps extends AssetPreviewProps {
         'repo:name'?: string;
     };
     fetchAssetRenditions?: (asset: Asset) => Promise<void>;
+    isDeepLinkAsset?: boolean;
 }
 
 export interface SavedSearch {
@@ -430,6 +431,8 @@ export interface ImageGalleryProps {
     isRightsSearch?: boolean;
     onFacetCheckbox?: (key: string, facet: string) => void;
     onClearAllFacets?: () => void;
+    deepLinkAsset?: Asset | null;
+    onCloseDeepLinkModal?: () => void;
 }
 
 // Main App types (for the most complex component)

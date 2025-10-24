@@ -255,6 +255,8 @@ const DownloadPanel: React.FC<DownloadPanelProps> = ({
                 console.debug('Cancelled polling for archive on panel close:', archiveId);
             });
             pollingControllers.current.clear();
+            // Clear polling results so they'll be re-fetched when panel reopens
+            setArchivePollingResults(new Map());
         }
     }, [isDownloadPanelOpen]);
 

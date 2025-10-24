@@ -6,6 +6,7 @@ import './BasePanel.css'; // Base panel styles
 import './CartPanel.css'; // Cart-specific styles
 import CartPanelAssets from './CartPanelAssets';
 import CartPanelTemplates from './CartPanelTemplates';
+import { useEffect } from 'react';
 
 interface CartPanelContentProps {
     activeTab?: string;
@@ -65,6 +66,21 @@ const CartPanel: React.FC<CartPanelProps> = ({
         { id: 'assets', label: 'Assets', count: cartAssetItems.length },
         { id: 'templates', label: 'Templates', count: cartTemplateItems.length }
     ];
+
+    // Sync cart items from localStorage when panel opens
+    useEffect(() => {
+        if (isCartPanelOpen) {
+            try {
+                const storedItems = localStorage.getItem('cartAssetItems');
+                if (storedItems) {
+                    const parsedItems = JSON.parse(storedItems);
+                    setCartAssetItems(parsedItems);
+                }
+            } catch (err) {
+                console.warn('Failed to sync cart items from localStorage:', err);
+            }
+        }
+    }, [isCartPanelOpen, setCartAssetItems]);
 
     return (
         <BasePanel
