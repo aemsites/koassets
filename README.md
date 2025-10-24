@@ -6,9 +6,9 @@ Astra Pilot for an Assets Share Portal built on Helix & Content Hub (Dynamic Med
 
 ### Main site (cloudflare worker):
 - Live: https://koassets.adobeaem.workers.dev
-- Branch Live: <https://{branch}-koassets.adobeaem.workers.dev>
 - Preview: https://preview-koassets.adobeaem.workers.dev
-- Branch Preview: <https://{branch}-preview-koassets.adobeaem.workers.dev>
+- Branch (preview): <https://{branch}-koassets.adobeaem.workers.dev>
+- Branch (live): <https://{branch}-live-koassets.adobeaem.workers.dev>
 
 Note: For branch URLs to work, the branch names must be short and only include lowercase letters, numbers, and dashes characters. Due to [cloudflare worker alias limitations](https://developers.cloudflare.com/workers/configuration/previews/#rules-and-limitations).
 
