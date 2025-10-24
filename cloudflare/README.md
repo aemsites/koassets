@@ -3,10 +3,11 @@
 A Cloudflare Worker that acts as outermost CDN for the KO Assets project with some additional features. It provides authentication, authorization, edge caching, and request routing to the various AEM backends (Helix/EDS, Dynamic Media OpenAPI and more).
 
 - [Worker in Cloudflare Dashboard](https://dash.cloudflare.com/852dfa4ae1b0d579df29be65b986c101/workers/services/view/koassets/production/metrics)
+
 - Live: https://koassets.adobeaem.workers.dev
-- Branch Live: <https://{branch}-koassets.adobeaem.workers.dev>
 - Preview: https://preview-koassets.adobeaem.workers.dev
-- Branch Preview: <https://{branch}-preview-koassets.adobeaem.workers.dev>
+- Branch (preview): <https://{branch}-koassets.adobeaem.workers.dev>
+- Branch (live): <https://{branch}-live-koassets.adobeaem.workers.dev>
 
 ## URL Paths
 
@@ -95,8 +96,8 @@ On each branch/PR push, the Github Actions CI will automatically deploy brancher
 
 | URL | Helix origin |
 |-----|--------------|
-| `https://{branch}-koassets.adobeaem.workers.dev` | `https://{branch}--koassets--aemsites.aem.live` |
-| `https://{branch}-preview-koassets.adobeaem.workers.dev` | `https://{branch}--koassets--aemsites.aem.page` |
+| `https://{branch}-koassets.adobeaem.workers.dev` | `https://{branch}--koassets--aemsites.aem.page` |
+| `https://{branch}-live-koassets.adobeaem.workers.dev` | `https://{branch}--koassets--aemsites.aem.live` |
 
 
 ### CI main

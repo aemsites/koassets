@@ -128,22 +128,22 @@ else
   # branch/local deployment
   url="https://$tag-$WORKER.$WORKER_DOMAIN.workers.dev"
 
-  # create branch version
-  HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.live"
+  # create branch version (using preview content)
+  HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.page"
   upload_version "$tag" "$message"
   version=$(cat version.id)
 
-  # create branch preview version
-  HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.page"
-  upload_version "$tag-preview" "$message"
+  # create branch live version (using live content)
+  HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.live"
+  upload_version "$tag-live" "$message"
 fi
 
 rm version.id || true
 
 echo
 echo "======================================================================================================================"
-echo "Branch Worker URL (preview): https://$tag-preview-$WORKER.$WORKER_DOMAIN.workers.dev"
-echo "Branch Worker URL (live)   : https://$tag-$WORKER.$WORKER_DOMAIN.workers.dev"
+echo "Branch Worker URL (preview): https://$tag-$WORKER.$WORKER_DOMAIN.workers.dev"
+echo "Branch Worker URL (live)   : https://$tag-live-$WORKER.$WORKER_DOMAIN.workers.dev"
 if [ "$ci" = "true" ] && [ "$branch" = "main" ]; then
   echo
   echo "Production Worker URL (preview): https://preview-$WORKER.$WORKER_DOMAIN.workers.dev"
