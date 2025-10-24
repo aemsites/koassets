@@ -28,7 +28,8 @@ WORKER_DOMAIN=adobeaem
 # Usage: upload_version <tag> <message>
 # Returns version id in version.id file
 function upload_version() {
-  echo "Deploying alias $1 with HELIX_ORIGIN = $HELIX_ORIGIN"
+  echo "Deploying alias '$1'"
+  echo "HELIX_ORIGIN: $HELIX_ORIGIN"
 
   npx wrangler versions upload \
     --preview-alias "$1" \
@@ -97,6 +98,7 @@ echo
 echo "Branch : $branch"
 echo "Tag    : $tag"
 echo "Message: $message"
+echo
 
 export FORCE_COLOR=1
 
@@ -126,13 +128,12 @@ else
   # branch/local deployment
   url="https://$tag-$WORKER.$WORKER_DOMAIN.workers.dev"
 
-  # create branch version
-  HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.live"
+  # create branch version (using aem.page preview content)
+  HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.page"
   upload_version "$tag" "$message"
   version=$(cat version.id)
 
-  # create branch preview version pointing to aem.page
-  HELIX_ORIGIN="https://$branch--$REPO--$ORG.aem.page"
+  # create branch preview version
   upload_version "$tag-preview" "$message"
 fi
 
