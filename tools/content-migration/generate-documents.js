@@ -1,7 +1,9 @@
+/* eslint-disable no-console, max-len */
+
 const fs = require('fs');
 const path = require('path');
-const { sanitize, buildFileNameWithId } = require('./sanitize-utils');
-const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client');
+const { sanitize } = require('./sanitize-utils.js');
+const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client.js');
 
 const PATH_SEPARATOR = ' > ';
 
@@ -76,8 +78,8 @@ const generateCardBlocks = (imageItems, parentTitle, parentHierarchy, baseIndent
         .replace(/\$\{TITLE\}/g, item.title);
     }
     // Log items without imageUrl with full parent hierarchy
-    const hierarchyPath = parentHierarchy ? `${parentHierarchy}${PATH_SEPARATOR}${parentTitle}` : parentTitle;
-    console.log(`⚠  Picture element skipped for: ${hierarchyPath}${PATH_SEPARATOR}${item.title} (no imageUrl)`);
+    const itemHierarchyPath = parentHierarchy ? `${parentHierarchy}${PATH_SEPARATOR}${parentTitle}` : parentTitle;
+    console.log(`⚠  Picture element skipped for: ${itemHierarchyPath}${PATH_SEPARATOR}${item.title} (no imageUrl)`);
 
     // Generate card without picture element (keep empty div)
     const cardWithoutPicture = `<div>
@@ -166,7 +168,7 @@ const processHierarchyByLevel = (items, currentDepth = 0, parentPath = '') => {
 };
 
 // Recursively process all items to find and generate cards for image parents
-const processImagesForCardGeneration = (items, parentPath = '', parentTitle = '', parentHierarchy = '') => {
+const processImagesForCardGeneration = (items, parentPath = '', parentHierarchy = '') => {
   items.forEach((item) => {
     if (!item.items || item.items.length === 0) {
       return;
@@ -207,7 +209,7 @@ const processImagesForCardGeneration = (items, parentPath = '', parentTitle = ''
     }
 
     // Continue recursing to process deeper levels
-    processImagesForCardGeneration(item.items, currentPath, item.title, currentHierarchy);
+    processImagesForCardGeneration(item.items, currentPath, currentHierarchy);
   });
 };
 

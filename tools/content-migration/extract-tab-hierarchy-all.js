@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
+/* eslint-disable no-console */
+
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const { URL } = require('url');
-const { sanitize, sanitizeFileName, buildFileNameWithId } = require('./sanitize-utils');
+const { sanitizeFileName, buildFileNameWithId } = require('./sanitize-utils.js');
 
 const AEM_AUTHOR = 'https://author-p64403-e544653.adobeaemcloud.com';
 const CONTENT_PATH = '/content/share/us/en/all-content-stores';
@@ -105,6 +107,34 @@ function downloadFile(url, outputPath) {
 async function discoverParentTabsPath() {
   console.log('🔍 Discovering parent tabs component path...');
 
+  // Find parent tabs path (similar to bash script logic)
+  function findTabsPath(obj, currentPath = '') {
+    const keys = Object.keys(obj);
+    for (let i = 0; i < keys.length; i += 1) {
+      const key = keys[i];
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        const item = obj[key];
+        const newPath = currentPath ? `${currentPath}/${key}` : key;
+
+        // Check if this is a tabs component
+        if (item && typeof item === 'object'
+                      && item['sling:resourceType'] === 'tccc-dam/components/tabs') {
+          // Check if this looks like a parent (not nested in item_*)
+          if (!newPath.includes('/item_')) {
+            return `/jcr:content/${newPath}`;
+          }
+        }
+
+        // Recursively search
+        if (item && typeof item === 'object') {
+          const found = findTabsPath(item, newPath);
+          if (found) return found;
+        }
+      }
+    }
+    return null;
+  }
+
   // First, fetch the JCR content structure
   const jcrUrl = `${AEM_AUTHOR}${CONTENT_PATH}/jcr:content.infinity.json`;
   console.log(`📡 Fetching JCR structure from: ${jcrUrl}`);
@@ -112,32 +142,6 @@ async function discoverParentTabsPath() {
   try {
     const jcrContent = await downloadFile(jcrUrl, path.join(OUTPUT_DIR, 'temp-jcr-content.json'));
     const jcrData = JSON.parse(jcrContent);
-
-    // Find parent tabs path (similar to bash script logic)
-    function findTabsPath(obj, currentPath = '') {
-      for (const key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          const item = obj[key];
-          const newPath = currentPath ? `${currentPath}/${key}` : key;
-
-          // Check if this is a tabs component
-          if (item && typeof item === 'object'
-                        && item['sling:resourceType'] === 'tccc-dam/components/tabs') {
-            // Check if this looks like a parent (not nested in item_*)
-            if (!newPath.includes('/item_')) {
-              return `/jcr:content/${newPath}`;
-            }
-          }
-
-          // Recursively search
-          if (item && typeof item === 'object') {
-            const found = findTabsPath(item, newPath);
-            if (found) return found;
-          }
-        }
-      }
-      return null;
-    }
 
     const parentTabsPath = findTabsPath(jcrData);
 
@@ -161,10 +165,7 @@ async function discoverParentTabsPath() {
 }
 
 // Function to get the right teaser path from the teaser path map during traversal
-function getTeaserForContext(itemKey, jcrPath, teaserMap) {
-  // Look up teaser directly by its jcrPath
-  return teaserMap[jcrPath];
-}
+// (This function is kept for potential future use, but currently unused)
 
 // Function to ensure images directory exists
 function ensureImagesDir() {
@@ -237,6 +238,7 @@ async function main() {
   }
 
   // Continue with parsing...
+  // eslint-disable-next-line no-use-before-define
   parseCompleteHierarchy();
 }
 
@@ -264,15 +266,18 @@ function buildJsonStructure(jsonData, teaserPathMap) {
         }
 
         // Get title using fallback chain
+        // eslint-disable-next-line no-use-before-define
         const title = getTitle(item, itemKey);
 
         // Build display path (hierarchy path for user viewing)
         const currentDisplayPath = displayPath ? `${displayPath} > ${title.trim()}` : title.trim();
 
         // Check if this is a teaser with image
+        // eslint-disable-next-line no-use-before-define
         const isTeaserWithImage = isTeaser(item, itemKey);
 
         // Get content items (skipping structural containers)
+        // eslint-disable-next-line no-use-before-define
         const contentItems = getContentItems(item);
         const hasChildren = contentItems && contentItems[':items']
                                   && Object.keys(contentItems[':items']).length > 0;
@@ -302,6 +307,7 @@ function buildJsonStructure(jsonData, teaserPathMap) {
           const compositeKey = `${item.id}:${itemKey}`;
           const matchingTeaser = teaserPathMap[compositeKey];
           if (matchingTeaser) {
+            // eslint-disable-next-line no-use-before-define
             const imageUrl = buildImageUrl(item, itemKey, matchingTeaser.jcrPath);
             if (imageUrl) {
               jsonItem.imageUrl = imageUrl;
@@ -402,7 +408,83 @@ function parseCompleteHierarchy() {
     process.exit(1);
   }
 
-  // Function to find teaser components and build their complete JCR paths
+  // Helper function to find main container path
+  function findMainContainerPath(obj, basePath = '') {
+    const entries = Object.entries(obj);
+    for (let i = 0; i < entries.length; i += 1) {
+      const [key, value] = entries[i];
+      const currentPath = `${basePath}/${key}`;
+
+      if (key.startsWith('container_') && typeof value === 'object' && value[':items']) {
+        // Check if this container has tabs inside it
+        // eslint-disable-next-line no-use-before-define
+        const hasTabsInside = checkForTabsRecursively(value[':items']);
+        if (hasTabsInside) {
+          return `${currentPath}/container`;
+        }
+      }
+
+      if (typeof value === 'object' && value[':items']) {
+        const found = findMainContainerPath(value[':items'], currentPath);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  // Helper function to check for tabs recursively
+  function checkForTabsRecursively(obj) {
+    if (!obj || typeof obj !== 'object') return false;
+
+    const entries = Object.entries(obj);
+    for (let i = 0; i < entries.length; i += 1) {
+      const [key, value] = entries[i];
+      if (key === 'tabs' || key.match(/^tabs_.*$/)) {
+        return true;
+      }
+      if (typeof value === 'object' && value[':items']) {
+        if (checkForTabsRecursively(value[':items'])) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // Ensure we have discovered the base path
+  if (!DISCOVERED_BASE_PATH) {
+    console.log('⚠️  Base path not discovered, trying to extract from existing file...');
+    // Try to infer from the existing content structure
+    if (jsonData && jsonData[':items']) {
+      // Look for the first container path pattern
+      const firstItemKey = Object.keys(jsonData[':items'])[0];
+      if (firstItemKey) {
+        // Assume pattern: /jcr:content/root/container/container_XXXX/container
+        DISCOVERED_BASE_PATH = '/jcr:content/root/container';
+
+        // Try to find the main container that contains tabs
+        const containerPath = findMainContainerPath(jsonData[':items'], '_jcr_content/root');
+        if (containerPath) {
+          DISCOVERED_BASE_PATH = containerPath;
+          console.log(`🔍 Inferred base path: ${DISCOVERED_BASE_PATH}`);
+        } else {
+          // Try a simpler approach - look for any container_ pattern in the JSON
+          console.log('🔍 Trying alternative container discovery...');
+          const jsonStr = JSON.stringify(jsonData);
+          const containerMatch = jsonStr.match(/container_\d+_\d+/);
+          if (containerMatch) {
+            DISCOVERED_BASE_PATH = `_jcr_content/root/container/${containerMatch[0]}/container`;
+            console.log(`🔍 Found container pattern: ${DISCOVERED_BASE_PATH}`);
+          } else {
+            console.log('⚠️  Could not determine container path, using minimal default');
+            DISCOVERED_BASE_PATH = '_jcr_content/root';
+          }
+        }
+      }
+    }
+  }
+
+  // First, find all teasers and their correct JCR paths
   function findTeasersRecursively(items, currentJcrPath = '', teasers = []) {
     if (!items || typeof items !== 'object') return teasers;
 
@@ -444,76 +526,6 @@ function parseCompleteHierarchy() {
     return teasers;
   }
 
-  // Ensure we have discovered the base path
-  if (!DISCOVERED_BASE_PATH) {
-    console.log('⚠️  Base path not discovered, trying to extract from existing file...');
-    // Try to infer from the existing content structure
-    if (jsonData && jsonData[':items']) {
-      // Look for the first container path pattern
-      const firstItemKey = Object.keys(jsonData[':items'])[0];
-      if (firstItemKey) {
-        // Assume pattern: /jcr:content/root/container/container_XXXX/container
-        DISCOVERED_BASE_PATH = '/jcr:content/root/container';
-
-        // Try to find the main container that contains tabs
-        function findMainContainerPath(obj, path = '') {
-          for (const [key, value] of Object.entries(obj)) {
-            const currentPath = `${path}/${key}`;
-
-            if (key.startsWith('container_') && typeof value === 'object' && value[':items']) {
-              // Check if this container has tabs inside it
-              const hasTabsInside = checkForTabsRecursively(value[':items']);
-              if (hasTabsInside) {
-                return `${currentPath}/container`;
-              }
-            }
-
-            if (typeof value === 'object' && value[':items']) {
-              const found = findMainContainerPath(value[':items'], currentPath);
-              if (found) return found;
-            }
-          }
-          return null;
-        }
-
-        function checkForTabsRecursively(obj) {
-          if (!obj || typeof obj !== 'object') return false;
-
-          for (const [key, value] of Object.entries(obj)) {
-            if (key === 'tabs' || key.match(/^tabs_.*$/)) {
-              return true;
-            }
-            if (typeof value === 'object' && value[':items']) {
-              if (checkForTabsRecursively(value[':items'])) {
-                return true;
-              }
-            }
-          }
-          return false;
-        }
-
-        const containerPath = findMainContainerPath(jsonData[':items'], '_jcr_content/root');
-        if (containerPath) {
-          DISCOVERED_BASE_PATH = containerPath;
-          console.log(`🔍 Inferred base path: ${DISCOVERED_BASE_PATH}`);
-        } else {
-          // Try a simpler approach - look for any container_ pattern in the JSON
-          console.log('🔍 Trying alternative container discovery...');
-          const jsonStr = JSON.stringify(jsonData);
-          const containerMatch = jsonStr.match(/container_\d+_\d+/);
-          if (containerMatch) {
-            DISCOVERED_BASE_PATH = `_jcr_content/root/container/${containerMatch[0]}/container`;
-            console.log(`🔍 Found container pattern: ${DISCOVERED_BASE_PATH}`);
-          } else {
-            console.log('⚠️  Could not determine container path, using minimal default');
-            DISCOVERED_BASE_PATH = '_jcr_content/root';
-          }
-        }
-      }
-    }
-  }
-
-  // First, find all teasers and their correct JCR paths
   const allTeasers = findTeasersRecursively(jsonData);
   const teaserPathMap = {};
   allTeasers.forEach((teaser) => {

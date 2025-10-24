@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
+/* eslint-disable no-console, max-len */
+
 const fs = require('fs');
 const path = require('path');
 const {
-  createSource, previewSource, DA_ORG, DA_REPO, DA_BRANCH, DA_DEST,
-} = require('./da-admin-client');
+  createSource, previewSource, DA_BRANCH,
+} = require('./da-admin-client.js');
 
 /**
  * Upload file to EDS
@@ -23,6 +25,7 @@ async function uploadToEDS(daFullPath, localFilePath, skipPreview = false) {
     // Step 1: Check if the file contains srcset references and upload images first
     const fileContent = fs.readFileSync(localFilePath, 'utf8');
     if (fileContent.includes('srcset')) {
+      // eslint-disable-next-line no-use-before-define
       await uploadImagesFromSrcset(fileContent);
     }
 
@@ -108,59 +111,7 @@ async function uploadImagesFromSrcset(htmlContent) {
 /**
  * Recursively upload all HTML files from generated-documents folder
  */
-async function uploadAllGeneratedDocuments() {
-  const generatedDocsDir = path.join(__dirname, 'generated-documents');
-
-  console.log('\n📁 Uploading all generated documents...\n');
-
-  /**
-   * Recursively process files in directory
-   * @param {string} dir - Directory to process
-   * @param {number} depth - Current depth (0 = top level)
-   */
-  async function processDirectory(dir, depth = 0) {
-    const files = fs.readdirSync(dir, { withFileTypes: true });
-
-    await files.reduce(async (promise, file) => {
-      await promise;
-
-      if (file.isDirectory()) {
-        // Recursively process subdirectories
-        await processDirectory(path.join(dir, file.name), depth + 1);
-      } else if (file.name.endsWith('.html')) {
-        const filePath = path.join(dir, file.name);
-        const filename = file.name;
-
-        // Calculate relative path from generated-documents
-        const relativeDir = path.relative(generatedDocsDir, dir);
-        const relativePath = relativeDir ? `${relativeDir}/` : '';
-
-        // Determine DA destination path
-        let daDestPath;
-        if (depth === 0) {
-          // Top-level files: remove '/fragments' from DA_DEST
-          const destWithoutFragments = DA_DEST.replace(/\/fragments$/, '');
-          daDestPath = `${DA_ORG}/${DA_REPO}/${destWithoutFragments}/${relativePath}${filename}`;
-        } else {
-          // Nested files: use DA_DEST as-is
-          daDestPath = `${DA_ORG}/${DA_REPO}/${DA_DEST}/${relativePath}${filename}`;
-        }
-
-        console.log(`\n📄 Uploading: ${filename} (depth: ${depth})`);
-        try {
-          console.log(`uploadToEDS('${daDestPath}', '${filePath}')`);
-          // await uploadToEDS(daDestPath, filePath);
-        } catch (error) {
-          console.error(`   ❌ Error uploading ${filename}: ${error.message}`);
-        }
-      }
-    }, Promise.resolve());
-  }
-
-  // Start processing from generated-documents root
-  await processDirectory(generatedDocsDir);
-  console.log('\n✅ All documents processed!');
-}
+// Note: uploadAllGeneratedDocuments is currently unused but kept for future reference
 
 // Run the upload
 // uploadAllGeneratedDocuments();
