@@ -244,27 +244,41 @@ General notes:
 
 Authored at `/config/access/companies`.
 
-This has 3 sheets, one for each role: `customer`, `bottler` and `agency`.
+This has sheets for each role: `customer`, `bottler`, `agency`, `employee` and `contingent-worker`.
 
-`customer` sheet:
+##### `customer` sheet
 
 | Column | Values | Description |
 |--------|--------|-------------|
 | `domain` | `customer.com` | Domain of the customer company. Matches all users with an email address ending in `@customer.com`. |
 | `name` | `customerX` | Exact value used in the `tccc:intendedCustomers` asset metadata field. |
 
-`bottler` sheet:
+##### `bottler` sheet
 
 | Column | Values | Description |
 |--------|--------|-------------|
 | `domain` | `bottler.com` | Domain of the bottler company. Matches all users with an email address ending in `@bottler.com`. |
 | `countries` | `us, ca, es` | Comma separated list of bottler countries the company has access to. 2 letter ISO code. Examples: `us`, `ca`, `es`. |
 
-`agency` sheet:
+##### `agency` sheet
 
 | Column | Values | Description |
 |--------|--------|-------------|
 | `domain` | `agency.com` | Domain of the agency company. Matches all users with an email address ending in `@agency.com`. |
+
+##### `employee` sheet
+
+| Column | Values | Description |
+|--------|--------|-------------|
+| `domain` | `company.com` | Email domain. Matches all users with an email address ending in `@company.com`. |
+| `employeeType` | `10` | Employee type field from users's Microsoft directory profile. Employee is typically `10`. If empty, this field will be ignored.  |
+
+##### `contingent-worker` sheet
+
+| Column | Values | Description |
+|--------|--------|-------------|
+| `domain` | `company.com` | Email domain. Matches all users with an email address ending in `@company.com`. |
+| `employeeType` | `11` | Employee type field from users's Microsoft directory profile. Contingent worker is typically `11`. If empty, this field will be ignored.  |
 
 #### User permissions
 
@@ -278,7 +292,6 @@ Authored at `/config/access/users`.
 | | `contingent-worker`  | TCCC contingent worker |
 | | `agency`  | Agency |
 | | `bottler`  | Bottler |
-| | `customer`  | Customer |
 | | `admin`  | Can always see all content. ⚠️ Only for admin users. |
 | `countries` | `us`, `ca`, `es` | Comma separated list of bottler countries the user has access to. 2 letter ISO code. Optional. |
 | `customers` | `customer1, customer2` | Comma separated list of customers the user has access to. Must use the exact value used in the `tccc:intendedCustomers` asset metadata field. |
