@@ -2,6 +2,7 @@ import { json } from 'itty-router';
 import { fetchHelixSheet } from './util/helixutil.js';
 
 export const ROLE = {
+  ADMIN: 'admin',
   EMPLOYEE: 'employee',
   CONTINGENT_WORKER: 'contingent-worker',
   AGENCY: 'agency',

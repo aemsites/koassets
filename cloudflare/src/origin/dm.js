@@ -100,6 +100,13 @@ async function searchAuthorization(request, env, search) {
   // if user roles is empty, make the search return nothing
   if (user.roles.length === 0) {
     search.requests = [];
+    console.log(`[${request.user.email}] authz filter: no roles => block search results`);
+    return;
+  }
+
+  if (user.roles.includes(ROLE.ADMIN)) {
+    // admins can see everything, no search constraint
+    console.log(`[${request.user.email}] authz filter: admin => show all search results`);
     return;
   }
 
