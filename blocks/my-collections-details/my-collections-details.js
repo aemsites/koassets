@@ -445,7 +445,7 @@ function createAssetCard(asset, collectionId) {
     event.preventDefault();
     event.stopPropagation();
     if (window.openDetailsView) {
-      window.openDetailsView(asset, true);
+      window.openDetailsView(asset);
     }
   });
 

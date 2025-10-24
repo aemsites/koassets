@@ -201,6 +201,9 @@ function MainApp(): React.JSX.Element {
     // Mobile filter panel state
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState<boolean>(false);
 
+    // Deep link asset details modal state
+    const [deepLinkAsset, setDeepLinkAsset] = useState<Asset | null>(null);
+
     // Save search filters to session storage whenever they change
     useEffect(() => {
         // Only save if at least one filter has a value
@@ -234,6 +237,16 @@ function MainApp(): React.JSX.Element {
         window.openDownloadPanel = () => setIsDownloadPanelOpen(true);
         window.closeDownloadPanel = () => setIsDownloadPanelOpen(false);
         window.toggleDownloadPanel = () => setIsDownloadPanelOpen(prev => !prev);
+        
+        // Expose details view functions
+        window.openDetailsView = (asset?: Asset) => {
+            if (asset && asset.assetId) {
+                setDeepLinkAsset(asset);
+            }
+        };
+        window.closeDetailsView = () => {
+            setDeepLinkAsset(null);
+        };
 
         return () => {
             delete window.openCart;
@@ -242,6 +255,8 @@ function MainApp(): React.JSX.Element {
             delete window.openDownloadPanel;
             delete window.closeDownloadPanel;
             delete window.toggleDownloadPanel;
+            delete window.openDetailsView;
+            delete window.closeDetailsView;
         };
     }, []);
 
@@ -734,6 +749,10 @@ function MainApp(): React.JSX.Element {
                         isRightsSearch={isRightsSearch}
                         onFacetCheckbox={handleFacetCheckbox}
                         onClearAllFacets={clearAllFacetsFunction || undefined}
+                        deepLinkAsset={deepLinkAsset}
+                        onCloseDeepLinkModal={() => {
+                            setDeepLinkAsset(null);
+                        }}
                     />
                 </Suspense>
             ) : (
