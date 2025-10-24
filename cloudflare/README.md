@@ -274,10 +274,11 @@ Authored at `/config/access/users`.
 |--------|-------|-------------|
 | `email` | `user@example.com` | Email address of the user. |
 | `roles` | | Comma separated list of roles. Optional. Can be empty if it is set via the `companies` sheet already. |
-| | `employee`  | TCCC employee. |
-| | `contingent-worker`  | TCCC contingent worker. |
-| | `agency`  | Agency. |
+| | `employee`  | TCCC employee |
+| | `contingent-worker`  | TCCC contingent worker |
+| | `agency`  | Agency |
 | | `bottler`  | Bottler |
 | | `customer`  | Customer |
+| | `admin`  | Can always see all content. ⚠️ Only for admin users. |
 | `countries` | `us`, `ca`, `es` | Comma separated list of bottler countries the user has access to. 2 letter ISO code. Optional. |
 | `customers` | `customer1, customer2` | Comma separated list of customers the user has access to. Must use the exact value used in the `tccc:intendedCustomers` asset metadata field. |
