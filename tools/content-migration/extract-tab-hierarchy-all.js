@@ -9,7 +9,10 @@ const { URL } = require('url');
 const { sanitizeFileName, buildFileNameWithId } = require('./sanitize-utils.js');
 
 const AEM_AUTHOR = 'https://author-p64403-e544653.adobeaemcloud.com';
-const CONTENT_PATH = '/content/share/us/en/all-content-stores';
+let CONTENT_PATH = '/content/share/us/en/all-content-stores';
+
+// Override CONTENT_PATH if provided as first command line argument
+[, , CONTENT_PATH = CONTENT_PATH] = process.argv;
 
 // Load AUTH_COOKIE from config file
 let AUTH_COOKIE;
@@ -26,7 +29,8 @@ try {
 }
 
 // File paths
-const OUTPUT_DIR = path.join(__dirname, 'extracted-results');
+const lastContentPathToken = CONTENT_PATH.split('/').pop();
+const OUTPUT_DIR = path.join(__dirname, lastContentPathToken, 'extracted-results');
 const INPUT_FILE = path.join(OUTPUT_DIR, 'parent-tabs.model.json');
 
 // Image URL configuration

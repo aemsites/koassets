@@ -7,9 +7,18 @@ const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client.js');
 
 const PATH_SEPARATOR = ' > ';
 
+// Extract last token from content path for consistent directory naming
+// Default CONTENT_PATH, can be overridden via first command line argument
+let CONTENT_PATH = '/content/share/us/en/all-content-stores';
+
+// Override CONTENT_PATH if provided as first command line argument
+[, , CONTENT_PATH = CONTENT_PATH] = process.argv;
+
+const lastContentPathToken = CONTENT_PATH.split('/').pop();
+
 // Read the hierarchy JSON and templates
-const hierarchyPath = path.join(__dirname, 'extracted-results', 'hierarchy-structure.json');
-const mainTemplatePath = path.join(__dirname, 'templates', 'all-content-stores-template.html');
+const hierarchyPath = path.join(__dirname, lastContentPathToken, 'extracted-results', 'hierarchy-structure.json');
+const mainTemplatePath = path.join(__dirname, 'templates', `${lastContentPathToken}-template.html`);
 const tabTemplatePath = path.join(__dirname, 'templates', 'tab-template.html');
 const fragmentTemplatePath = path.join(__dirname, 'templates', 'fragment-tabs-template.html');
 
@@ -45,7 +54,7 @@ const generateTabBlocks = (items, baseIndent, contentIndent) => items
       .replace(/\$\{TITLE\}/g, item.title)
       .replace(/\$\{SANITIZED_TITLE\}/g, sanitizedTitle)
       .replace(/\$\{DA_DEST\}/g, DA_DEST)
-      .replace(/\$\{PATH\}/g, sanitize(item.path.replaceAll(PATH_SEPARATOR, '/')));
+      .replace(/\$\{PATH\}/g, sanitize(`${lastContentPathToken}/${item.path.replaceAll(PATH_SEPARATOR, '/')}`));
   })
   .join('\n');
 
@@ -72,7 +81,7 @@ const generateCardBlocks = (imageItems, parentTitle, parentHierarchy, baseIndent
         .join('\n');
       return indentedTemplate
         .replace(/\$\{DA_DEST\}/g, DA_DEST)
-        .replace(/\$\{PATH\}/g, sanitize(parentHierarchy.replaceAll(PATH_SEPARATOR, '/')))
+        .replace(/\$\{PATH\}/g, sanitize(`${lastContentPathToken}/${parentHierarchy.replaceAll(PATH_SEPARATOR, '/')}`))
         .replace(/\$\{PARENT_TITLE\}/g, sanitizedParentTitle)
         .replace(/\$\{IMAGE_NAME\}/g, imageName)
         .replace(/\$\{TITLE\}/g, item.title);
@@ -150,7 +159,7 @@ const processHierarchyByLevel = (items, currentDepth = 0, parentPath = '') => {
         );
 
         // Create directory for this level
-        const outputDir = path.join(__dirname, 'generated-documents', currentPath);
+        const outputDir = path.join(__dirname, lastContentPathToken, 'generated-documents', currentPath);
         fs.mkdirSync(outputDir, { recursive: true });
 
         // Write HTML file
@@ -197,7 +206,7 @@ const processImagesForCardGeneration = (items, parentPath = '', parentHierarchy 
       );
 
       // Create output directory: grandparent/parent/
-      const outputDir = path.join(__dirname, 'generated-documents', currentPath);
+      const outputDir = path.join(__dirname, lastContentPathToken, 'generated-documents', currentPath);
       fs.mkdirSync(outputDir, { recursive: true });
 
       // File name: parent's sanitized title
@@ -227,10 +236,10 @@ const outputHtml = mainTemplateContent.replace(
 );
 
 // Ensure generated-documents folder exists
-const generatedDocsDir = path.join(__dirname, 'generated-documents');
+const generatedDocsDir = path.join(__dirname, lastContentPathToken, 'generated-documents');
 fs.mkdirSync(generatedDocsDir, { recursive: true });
 
-const mainOutputPath = path.join(generatedDocsDir, 'all-content-stores.html');
+const mainOutputPath = path.join(generatedDocsDir, `${lastContentPathToken}.html`);
 fs.writeFileSync(mainOutputPath, outputHtml, 'utf8');
 console.log(`✓ Generated: ${mainOutputPath}`);
 

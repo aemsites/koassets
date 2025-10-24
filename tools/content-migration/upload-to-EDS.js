@@ -7,6 +7,16 @@ const path = require('path');
 const {
   createSource, previewSource, DA_BRANCH,
 } = require('./da-admin-client.js');
+const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client.js');
+
+// Extract last token from content path for consistent directory naming
+// Default CONTENT_PATH, can be overridden via first command line argument
+let CONTENT_PATH = '/content/share/us/en/all-content-stores';
+
+// Override CONTENT_PATH if provided as first command line argument
+[, , CONTENT_PATH = CONTENT_PATH] = process.argv;
+
+const lastContentPathToken = CONTENT_PATH.split('/').pop();
 
 /**
  * Upload file to EDS
@@ -91,7 +101,7 @@ async function uploadImagesFromSrcset(htmlContent) {
     processedImages.add(imageName);
 
     // Check if image exists in extracted-results/images
-    const imagePath = path.join(__dirname, 'extracted-results', 'images', imageName);
+    const imagePath = path.join(__dirname, lastContentPathToken, 'extracted-results', 'images', imageName);
     if (fs.existsSync(imagePath)) {
       // Extract DA path from srcset URL (remove https://content.da.live/)
       const daPath = srcsetUrl.replace(/^https:\/\/content\.da\.live\//, '');
@@ -111,12 +121,64 @@ async function uploadImagesFromSrcset(htmlContent) {
 /**
  * Recursively upload all HTML files from generated-documents folder
  */
-// Note: uploadAllGeneratedDocuments is currently unused but kept for future reference
+async function uploadAllGeneratedDocuments() {
+  const generatedDocsDir = path.join(__dirname, lastContentPathToken, 'generated-documents');
+
+  console.log('\n📁 Uploading all generated documents...\n');
+
+  /**
+   * Recursively process files in directory
+   * @param {string} dir - Directory to process
+   * @param {number} depth - Current depth (0 = top level)
+   */
+  async function processDirectory(dir, depth = 0) {
+    const files = fs.readdirSync(dir, { withFileTypes: true });
+
+    await files.reduce(async (promise, file) => {
+      await promise;
+
+      if (file.isDirectory()) {
+        // Recursively process subdirectories
+        await processDirectory(path.join(dir, file.name), depth + 1);
+      } else if (file.name.endsWith('.html')) {
+        const filePath = path.join(dir, file.name);
+        const filename = file.name;
+
+        // Calculate relative path from generated-documents
+        const relativeDir = path.relative(generatedDocsDir, dir);
+        const relativePath = relativeDir ? `${relativeDir}/` : '';
+
+        // Determine DA destination path
+        let daDestPath;
+        if (depth === 0) {
+          // Top-level files: remove '/fragments' from DA_DEST
+          const destWithoutFragments = DA_DEST.replace(/\/fragments$/, '');
+          daDestPath = `${DA_ORG}/${DA_REPO}/${destWithoutFragments}/${relativePath}${filename}`; // DON'T add lastContentPathToken
+        } else {
+          // Nested files: use DA_DEST as-is
+          daDestPath = `${DA_ORG}/${DA_REPO}/${DA_DEST}/${lastContentPathToken}/${relativePath}${filename}`;
+        }
+
+        console.log(`\n📄 Uploading: ${filename} (depth: ${depth})`);
+        try {
+          console.log(`uploadToEDS('${daDestPath}', '${filePath}');`);
+          // await uploadToEDS(daDestPath, filePath);
+        } catch (error) {
+          console.error(`   ❌ Error uploading ${filename}: ${error.message}`);
+        }
+      }
+    }, Promise.resolve());
+  }
+
+  // Start processing from generated-documents root
+  await processDirectory(generatedDocsDir);
+  console.log('\n✅ All documents processed!');
+}
 
 // Run the upload
 // uploadAllGeneratedDocuments();
-// uploadToEDS('aemsites/koassets/drafts/tphan/all-content-stores.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/generated-documents/all-content-stores.html');
-// uploadToEDS('aemsites/koassets/drafts/tphan/fragments/global-initiatives/global-initiatives.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/generated-documents/global-initiatives/global-initiatives.html');
-// uploadToEDS('aemsites/koassets/drafts/tphan/fragments/global-initiatives/coca-cola/coca-cola.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/generated-documents/global-initiatives/coca-cola/coca-cola.html');
-// uploadToEDS('aemsites/koassets/drafts/tphan/fragments/global-initiatives/fanta/fanta.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/generated-documents/global-initiatives/fanta/fanta.html');
-uploadToEDS('aemsites/koassets/drafts/tphan/fragments/global-initiatives/sprite/sprite.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/generated-documents/global-initiatives/sprite/sprite.html');
+
+// uploadToEDS('aemsites/koassets/drafts/tphan/all-content-stores.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/all-content-stores.html');
+// uploadToEDS('aemsites/koassets/drafts/tphan/fragments/all-content-stores/global-initiatives/global-initiatives.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/global-initiatives.html');
+// uploadToEDS('aemsites/koassets/drafts/tphan/fragments/all-content-stores/global-initiatives/coca-cola/coca-cola.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/coca-cola/coca-cola.html');
+uploadToEDS('aemsites/koassets/drafts/tphan/fragments/all-content-stores/global-initiatives/fanta/fanta.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/fanta/fanta.html');
