@@ -1002,7 +1002,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       // Extract the immediate parent key (e.g., "/Half Time/container" -> "container")
       const keyPathParts = currentKeyPath.split('/').filter((p) => p);
       const immediateParentKey = keyPathParts.length > 1 ? keyPathParts[keyPathParts.length - 2] : keyPathParts[0];
-      const contextKey = `${String(title).trim()}|${immediateParentKey}`;
+      const contextKey = `${String(title)}|${immediateParentKey}`;
 
       // Look up linkURL using JCR context only - no fallback to title-only
       const linkURL = jcrLinkUrlMap[contextKey];
