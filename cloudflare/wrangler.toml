@@ -17,7 +17,6 @@ preview_urls = true
 main = "src/index.js"
 compatibility_date = "2025-08-16"
 
-tail_consumers = [{service = "koassets-logtail"}]
 
 # TODO: disable logs when development is done
 [observability.logs]
