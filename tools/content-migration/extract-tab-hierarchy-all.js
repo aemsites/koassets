@@ -176,7 +176,7 @@ async function main() {
 
     // Filter out nested tabs (tabs inside tab items) - they should remain nested
     // Nested tabs have '/tabs/' or '/tabs_' in their path (tabs inside tab items)
-    const topLevelTabsPaths = tabsPaths.filter(path => {
+    const topLevelTabsPaths = tabsPaths.filter((path) => {
       // Count how many times '/tabs' appears in the path after the first occurrence
       const match = path.match(/\/tabs/g);
       return !match || match.length === 1; // Keep only paths with exactly one /tabs
@@ -189,18 +189,18 @@ async function main() {
       // tabPath is like: /jcr:content/root/container/container/container_732554625_/tabs
       // or: /jcr:content/root/container/container_copy_copy_1873410646/container_732554625_/tabs
       // We need to find which ROOT-level container this path traverses through
-      
-      const pathParts = tabPath.split('/').filter(p => p && p !== 'jcr:content' && p !== 'root');
+
+      const pathParts = tabPath.split('/').filter((p) => p && p !== 'jcr:content' && p !== 'root');
       if (pathParts.length === 0) return null;
-      
+
       // Get all root-level container keys
       const rootContainer = jcrData.root.container;
-      const rootKeys = Object.keys(rootContainer).filter(k => !k.startsWith(':'));
-      
+      const rootKeys = Object.keys(rootContainer).filter((k) => !k.startsWith(':'));
+
       // Find the longest matching root-level container key in the path
       let matchedKey = null;
       let maxMatchLength = 0;
-      
+
       for (const key of rootKeys) {
         // Check if this key appears anywhere in the path
         if (pathParts.includes(key) && key.length > maxMatchLength) {
@@ -208,7 +208,7 @@ async function main() {
           maxMatchLength = key.length;
         }
       }
-      
+
       if (!matchedKey) {
         // Try matching by sequence - take all path parts until we find a root-level key
         for (let i = 0; i < pathParts.length; i++) {
@@ -218,14 +218,14 @@ async function main() {
           }
         }
       }
-      
+
       if (!matchedKey) return null;
-      
+
       const container = rootContainer[matchedKey];
       if (!container || typeof container !== 'object') {
         return null;
       }
-      
+
       // Recursively search for a title component within this container
       function findTitleInSubtree(obj) {
         for (const key in obj) {
@@ -241,7 +241,7 @@ async function main() {
         }
         return null;
       }
-      
+
       return findTitleInSubtree(container);
     }
 
@@ -253,13 +253,13 @@ async function main() {
       try {
         const tabsContent = await downloadFile(tabsUrl, null); // Pass null for intermediate files
         const tabsData = JSON.parse(tabsContent);
-        
+
         // Attach JCR section information
         const jcrSection = getJCRSectionForTabPath(topLevelTabsPaths[i], jcrData);
         if (jcrSection) {
           tabsData.__jcrSection = jcrSection;
         }
-        
+
         allTabsData.push(tabsData);
       } catch (err) {
         console.log(`  ⚠️  Failed to download this tabs: ${err.message}`);
@@ -271,6 +271,26 @@ async function main() {
     }
 
     console.log(`\n✅ Downloaded ${allTabsData.length} tabs model(s)`);
+
+    // Track the most comprehensive model (the one with the most items)
+    let mostComprehensiveModel = allTabsData[0];
+    let maxItemCount = allTabsData[0][':itemsOrder']?.length || 0;
+
+    allTabsData.forEach((tabs, idx) => {
+      const itemCount = tabs[':itemsOrder']?.length || 0;
+      console.log(`  - Tabs ${idx}: ${itemCount} items`);
+      if (itemCount > maxItemCount) {
+        maxItemCount = itemCount;
+        mostComprehensiveModel = tabs;
+      }
+    });
+
+    console.log(`\n📊 Most comprehensive model: ${maxItemCount} items`);
+    fs.writeFileSync(
+      path.join(OUTPUT_DIR, 'most-comprehensive-tabs.model.json'),
+      JSON.stringify(mostComprehensiveModel, null, 2),
+    );
+    console.log('💾 Saved most comprehensive model to: most-comprehensive-tabs.model.json\n');
 
     // Combine ALL tabs data to get complete hierarchy
     const combinedTabsData = {
@@ -294,7 +314,7 @@ async function main() {
         combinedTabsData[':itemsOrder'].push(uniqueKey);
         const item = items[key];
         combinedTabsData[':items'][uniqueKey] = item;
-        
+
         // Attach JCR section information from the tabs data
         if (tabs.__jcrSection) {
           item.__jcrSection = tabs.__jcrSection;
@@ -310,6 +330,8 @@ async function main() {
     const jcrLinkUrlMap = {}; // Map of (title|parentKey) -> linkURL
     const jcrTextMap = {}; // Map of (title|parentKey) -> text content
     const jcrButtonsWithoutLinkUrl = {}; // Track buttons that DON'T have linkURL
+    const jcrPathMap = {}; // Map of key -> full JCR path for image URLs
+    const jcrTeaserImageMap = {}; // Map of teaser key -> {fileName, lastModified, jcrPath}
     function indexJCRByTitle(obj, parentPath = '', parentKey = '') {
       if (!obj || typeof obj !== 'object') return;
       for (const key in obj) {
@@ -318,13 +340,43 @@ async function main() {
           const title = obj[key]['cq:panelTitle'] || obj[key]['jcr:title'] || obj[key].title;
           const { linkURL } = obj[key];
 
+          // Store JCR path for teasers and other items
+          if (key.startsWith('teaser') || key.startsWith('button')) {
+            jcrPathMap[key] = `${parentPath}/${key}`;
+          }
+
+          // Store teaser image information ONLY if it has imageResource in model
+          if (key.startsWith('teaser') && obj[key].file && obj[key].fileName) {
+            // Store all teasers - purely data-driven extraction
+            const { fileName } = obj[key];
+            // Use teaser's jcr:lastModified for timestamp
+            const lastModifiedStr = obj[key]['jcr:lastModified'] || obj[key].file['jcr:lastModified'] || obj[key].file['jcr:created'];
+            // Convert to Unix timestamp in milliseconds
+            const lastModified = new Date(lastModifiedStr).getTime();
+
+            // Create unique key for each teaser instance (path-based)
+            // Extract the path starting from first item_ component to match model paths
+            const pathParts = parentPath.split('/');
+            const itemIndex = pathParts.findIndex((p) => p.startsWith('item_'));
+            const modelPath = itemIndex >= 0 ? `/${pathParts.slice(itemIndex).join('/')}/${key}` : `${parentPath}/${key}`;
+
+            jcrTeaserImageMap[modelPath] = {
+              fileName,
+              lastModified,
+              jcrPath: `${parentPath}/${key}`,
+              teaserKey: key,
+              // Mark as pending - will be confirmed when checking model
+              hasImageResource: false,
+            };
+          }
+
           if (title && rt) {
-            jcrTitleMap[String(title).trim()] = rt;
+            jcrTitleMap[String(title)] = rt;
           }
 
           // Capture linkURL for button items
           if (title && rt && rt.includes('button')) {
-            const titleKey = String(title).trim();
+            const titleKey = String(title);
             const parentKeyContext = parentKey || 'root';
             const contextKey = `${titleKey}|${parentKeyContext}`;
 
@@ -339,7 +391,7 @@ async function main() {
 
           // Capture text content from text_* properties OR direct text component items
           if (title) {
-            const titleKey = String(title).trim();
+            const titleKey = String(title);
             const parentKeyContext = parentKey || 'root';
             const contextKey = `${titleKey}|${parentKeyContext}`;
 
@@ -389,8 +441,8 @@ async function main() {
       for (const key in items) {
         if (!key.startsWith(':') && typeof items[key] === 'object') {
           const title = items[key]['cq:panelTitle'] || items[key]['jcr:title'] || items[key].title;
-          if (title && jcrTitleMap[String(title).trim()]) {
-            items[key]['sling:resourceType'] = jcrTitleMap[String(title).trim()];
+          if (title && jcrTitleMap[String(title)]) {
+            items[key]['sling:resourceType'] = jcrTitleMap[String(title)];
           }
           if (items[key][':items']) enrichByTitle(items[key][':items']);
         }
@@ -398,9 +450,67 @@ async function main() {
     }
     enrichByTitle(mainTabsData[':items']);
 
+    // Extract jcr:lastModified timestamps from model data for teasers
+    function extractTimestampsFromModel(items, basePath = '') {
+      if (!items || typeof items !== 'object') return;
+
+      // Process items in order if :itemsOrder exists, otherwise use for...in
+      const itemsOrder = items[':itemsOrder'] || Object.keys(items).filter((k) => !k.startsWith(':'));
+
+      for (const key of itemsOrder) {
+        if (!key.startsWith(':') && items[key] && typeof items[key] === 'object') {
+          const newPath = `${basePath}/${key}`;
+          const item = items[key];
+
+          // Check if this is a teaser item with valid image data
+          if ((key.startsWith('teaser') || item['sling:resourceType']?.includes('teaser')) && item.imageResource && item.imageResource['jcr:lastModified']) {
+            // Create path-based unique key to match JCR indexing
+            const uniqueKey = `${newPath}`;
+
+            // Find JCR entry that matches both the component name AND the image filename
+            let matchingJcrKey = null;
+            const modelFileName = item.imageResource.fileName;
+
+            // Look for JCR entries with matching component name and filename
+            for (const [jcrPath, jcrData] of Object.entries(jcrTeaserImageMap)) {
+              if (jcrData.teaserKey === key && jcrData.fileName === modelFileName) {
+                matchingJcrKey = jcrPath;
+                break;
+              }
+            }
+
+            // Only update if we found a matching JCR entry with the same filename
+            if (matchingJcrKey) {
+              jcrTeaserImageMap[matchingJcrKey].lastModified = item.imageResource['jcr:lastModified'];
+              jcrTeaserImageMap[matchingJcrKey].hasImageResource = true;
+              jcrTeaserImageMap[matchingJcrKey].modelPath = uniqueKey; // Store model path for lookup
+            }
+          }
+
+          // Recurse into nested items
+          if (item[':items']) {
+            extractTimestampsFromModel(item[':items'], newPath);
+          }
+        }
+      }
+    }
+    extractTimestampsFromModel(mainTabsData[':items']);
+
+    // Remove teasers from jcrTeaserImageMap that don't have imageResource in model
+    const beforeCleanup = Object.keys(jcrTeaserImageMap).length;
+    for (const uniqueKey in jcrTeaserImageMap) {
+      if (!jcrTeaserImageMap[uniqueKey].hasImageResource) {
+        delete jcrTeaserImageMap[uniqueKey];
+      }
+    }
+    const afterCleanup = Object.keys(jcrTeaserImageMap).length;
+    if (beforeCleanup !== afterCleanup) {
+      console.log(`🧹 Cleaned up ${beforeCleanup - afterCleanup} teasers without imageResource from model`);
+    }
+
     // Continue with parsing
     // eslint-disable-next-line no-use-before-define
-    parseHierarchyFromModel(mainTabsData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrData);
+    parseHierarchyFromModel(mainTabsData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrData, jcrPathMap, jcrTeaserImageMap);
   } catch (error) {
     console.error(`❌ Failed: ${error.message}`);
     process.exit(1);
@@ -498,7 +608,7 @@ function buildJsonStructure(jsonData, teaserPathMap) {
           jsonItem.linkURL = jcrLinkUrlMap[item.id];
         } else {
           // Use title-based matching (only items WITH linkURLs are in the map)
-          const linkURL = jcrLinkUrlMap[String(title).trim()];
+          const linkURL = jcrLinkUrlMap[String(title)];
           if (linkURL) {
             jsonItem.linkURL = linkURL;
           }
@@ -620,7 +730,7 @@ function buildJsonStructure(jsonData, teaserPathMap) {
         jsonItem.linkURL = jcrLinkUrlMap[item.id];
       } else {
         // Use title-based matching (only items WITH linkURLs are in the map)
-        const linkURL = jcrLinkUrlMap[String(title).trim()];
+        const linkURL = jcrLinkUrlMap[String(title)];
         if (linkURL) {
           jsonItem.linkURL = linkURL;
         }
@@ -666,6 +776,24 @@ function buildImageUrl(item, itemKey, jcrPath) {
   // Build the complete image URL with dynamic format, prepend item.id to fileName
   const fileNameWithId = buildFileNameWithId(item.id, fileName);
   return `${BASE_URL}${jcrPath}/${itemKey}.${imageFormat}/${lastModified}/${fileNameWithId}`;
+}
+
+// Function to build image URL for teaser items during hierarchy extraction
+function buildTeaserImageUrl(item, key, currentKeyPath, contentPath) {
+  if (!item.imageResource || !item.imageResource.fileName) {
+    return null;
+  }
+
+  const { fileName } = item.imageResource;
+  const lastModified = item.imageResource['jcr:lastModified'] || new Date().toISOString();
+
+  // Extract file extension from the image filename
+  const fileExtension = fileName.substring(fileName.lastIndexOf('.') + 1);
+  const imageFormat = `coreimg.85.1600.${fileExtension}`;
+
+  // Build the teaser image URL
+  // URL format: {AEM_AUTHOR}{CONTENT_PATH}{currentKeyPath}/{key}.{imageFormat}/{lastModified}/{fileName}
+  return `${AEM_AUTHOR}${contentPath}/${currentKeyPath}/${key}.${imageFormat}/${lastModified}/${fileName}`;
 }
 
 // Function to check if item is a teaser with image
@@ -779,11 +907,11 @@ function getItemTypeFromResourceType(item, itemKey = '') {
   return 'item';
 }
 
-function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrData) {
+function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrData, jcrPathMap, jcrTeaserImageMap) {
   console.log('📖 Parsing hierarchy from combined-tabs.model.json...\n');
 
   // Function to recursively extract hierarchy from :items
-  function extractItemsHierarchy(itemsObj, parentKeyPath = '', displayPath = '') {
+  function extractItemsHierarchy(itemsObj, parentKeyPath = '', displayPath = '', jcrPathMap = {}, jcrTeaserImageMap = {}) {
     if (!itemsObj || typeof itemsObj !== 'object') {
       return [];
     }
@@ -801,13 +929,31 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         return;
       }
 
-      let title = item['cq:panelTitle'] || item.title || item['jcr:title'] || item.text || key;
+      let title = item['cq:panelTitle'] || item.title || item['jcr:title'] || item.text;
+
+      // Skip tabs/tabs_copy components without a custom title - they're just structural
+      if (!title && (key === 'tabs' || key.startsWith('tabs_'))) {
+        // But still recurse into their nested items, including the structural component in the path
+        if (item[':items']) {
+          const structuralKeyPath = `${parentKeyPath}/${key}`;
+          const childrenItems = extractItemsHierarchy(item[':items'], structuralKeyPath, displayPath, jcrPathMap, jcrTeaserImageMap);
+          if (childrenItems.length > 0) {
+            result.push(...childrenItems);
+          }
+        }
+        return;
+      }
+
+      if (!title) {
+        title = key;
+      }
 
       if (!title || String(title).includes('<')) {
         return;
       }
 
-      title = String(title).trim();
+      // Don't trim - preserve exact spacing from source data
+      title = String(title);
 
       let itemType = 'item';
       const resourceType = item['sling:resourceType'] || '';
@@ -834,7 +980,8 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       // Build display path only for output (for user viewing)
       const currentDisplayPath = displayPath ? `${displayPath} > ${title}` : title;
       // Build JCR key path for logic (context matching, hierarchy tracking)
-      const currentKeyPath = parentKeyPath ? `${parentKeyPath}/${key}` : key;
+      // Make sure it matches the format used in extractTimestampsFromModel
+      const currentKeyPath = `${parentKeyPath}/${key}`;
 
       const hierarchyItem = {
         title,
@@ -889,8 +1036,48 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         }
       }
 
+      // Generate imageUrl for teaser items
+      if (itemType === 'teaser') {
+        let imageUrl = null;
+
+        // Check if we have image info from model (only teasers with valid imageResource)
+        let teaserImageInfo = null;
+
+        // Find JCR entry that has this model path stored
+        for (const [jcrPath, jcrData] of Object.entries(jcrTeaserImageMap)) {
+          if (jcrData.modelPath === currentKeyPath && jcrData.hasImageResource) {
+            teaserImageInfo = jcrData;
+            break;
+          }
+        }
+
+        if (teaserImageInfo && teaserImageInfo.fileName) {
+          const { fileName } = teaserImageInfo;
+          const fileExtension = fileName.substring(fileName.lastIndexOf('.') + 1);
+          const imageFormat = `coreimg.85.1600.${fileExtension}`;
+          const { lastModified } = teaserImageInfo;
+
+          // Build full JCR path
+          const jcrPath = `${CONTENT_PATH}/_jcr_content/root${teaserImageInfo.jcrPath}`;
+
+          // Build filename with item ID for uniqueness
+          let finalFileName = fileName;
+          if (item.id) {
+            const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
+            const ext = fileName.substring(fileName.lastIndexOf('.'));
+            finalFileName = `${item.id}-${nameWithoutExt}${ext}`;
+          }
+
+          imageUrl = `${jcrPath}.${imageFormat}/${lastModified}/${finalFileName}`;
+        }
+
+        if (imageUrl) {
+          hierarchyItem.imageUrl = imageUrl;
+        }
+      }
+
       if (item[':items']) {
-        const childrenItems = extractItemsHierarchy(item[':items'], currentKeyPath, currentDisplayPath);
+        const childrenItems = extractItemsHierarchy(item[':items'], currentKeyPath, currentDisplayPath, jcrPathMap, jcrTeaserImageMap);
         if (childrenItems.length > 0) {
           hierarchyItem.items = childrenItems;
         }
@@ -905,7 +1092,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
   // Extract from root :items
   let mainHierarchy = [];
   if (modelData[':items']) {
-    const rawHierarchy = extractItemsHierarchy(modelData[':items']);
+    const rawHierarchy = extractItemsHierarchy(modelData[':items'], '', '', jcrPathMap, jcrTeaserImageMap);
 
     // Add tabs index tracking to top-level items based on unique keys
     rawHierarchy.forEach((item) => {
@@ -975,7 +1162,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
   // Function to extract sections from JCR structure
   function extractSectionsFromJCR(jcrData) {
     const sections = [];
-    
+
     if (!jcrData.root || !jcrData.root.container) {
       return null;
     }
@@ -1015,7 +1202,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
 
         // Recursively search nested items inside containers
         if (item && typeof item === 'object' && item['sling:resourceType'] === 'tccc-dam/components/container') {
-          foundSections.push(...searchForTitles(item, parentPath + '/' + key));
+          foundSections.push(...searchForTitles(item, `${parentPath}/${key}`));
         }
       });
 
@@ -1027,7 +1214,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
     }
 
     const foundSections = searchForTitles(jcrData.root.container);
-    
+
     // Remove duplicates (keep first occurrence of each title)
     const uniqueSections = [];
     const seenTitles = new Set();
@@ -1048,7 +1235,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
     if (jcrData) {
       jcrSections = extractSectionsFromJCR(jcrData);
       if (jcrSections) {
-        console.log('\n🔍 JCR sections detected:', jcrSections.map(s => s.title).join(', '));
+        console.log('\n🔍 JCR sections detected:', jcrSections.map((s) => s.title).join(', '));
       } else {
         console.log('\n🔍 No JCR sections detected in structure');
       }
@@ -1057,7 +1244,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
     if (jcrSections) {
       const result = groupByJCRSections(items, jcrSections);
       // Only use JCR grouping if it actually produced results
-      if (result.length > 0 && result.some(s => s.items.length > 0)) {
+      if (result.length > 0 && result.some((s) => s.items.length > 0)) {
         return result;
       }
     }
@@ -1074,9 +1261,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
 
     jcrSections.forEach((section) => {
       // Find all items that belong to this section based on __jcrSection metadata
-      const itemsInSection = items.filter((item) => {
-        return item.__jcrSection === section.title;
-      });
+      const itemsInSection = items.filter((item) => item.__jcrSection === section.title);
 
       if (itemsInSection.length > 0) {
         const sectionObj = {
@@ -1087,7 +1272,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
             const updatedItem = { ...item };
             // Remove the internal metadata before output
             delete updatedItem.__jcrSection;
-            
+
             if (!item.path.startsWith(section.title)) {
               updatedItem.path = `${section.title} > ${item.path}`;
             }
@@ -1263,8 +1448,171 @@ function findAllTabsPaths(node, currentPath = '', found = []) {
   return found;
 }
 
+// Function to download all imageUrls
+async function downloadAllImages(hierarchyData, outputDir) {
+  const fs = require('fs');
+  const path = require('path');
+  const https = require('https');
+
+  // Extract all imageUrls from hierarchy
+  function extractImageUrls(obj) {
+    const urls = [];
+    function traverse(item) {
+      if (item.imageUrl) {
+        urls.push(item.imageUrl);
+      }
+      if (item.items && Array.isArray(item.items)) {
+        item.items.forEach((i) => traverse(i));
+      }
+    }
+    if (Array.isArray(obj)) {
+      obj.forEach((item) => traverse(item));
+    }
+    return urls;
+  }
+
+  const imageUrls = extractImageUrls(hierarchyData);
+  console.log(`\n🖼️  Found ${imageUrls.length} images to download`);
+
+  // Create images directory
+  const imagesDir = path.join(outputDir, 'images');
+  if (!fs.existsSync(imagesDir)) {
+    fs.mkdirSync(imagesDir, { recursive: true });
+  }
+
+  let downloaded = 0;
+  let failed = 0;
+  const failedUrls = []; // Track failed URLs for final report
+
+  // Download function
+  function downloadImage(imageUrl, index) {
+    return new Promise((resolve) => {
+      // Prepend AEM_AUTHOR to the imageUrl
+      const fullUrl = AEM_AUTHOR + imageUrl;
+
+      // Extract filename from URL
+      const urlParts = imageUrl.split('/');
+      const filename = urlParts[urlParts.length - 1];
+      const safeFilename = `${index.toString().padStart(3, '0')}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const filePath = path.join(imagesDir, safeFilename);
+
+      // Skip if file already exists
+      if (fs.existsSync(filePath)) {
+        console.log(`⏭️  Skipping ${safeFilename} (already exists)`);
+        downloaded++;
+        resolve();
+        return;
+      }
+
+      const file = fs.createWriteStream(filePath);
+
+      const request = https.get(fullUrl, {
+        headers: {
+          Cookie: AUTH_COOKIE,
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        },
+      }, (response) => {
+        // Clear timeout since we got a response
+        request.setTimeout(0);
+
+        if (response.statusCode === 200) {
+          response.pipe(file);
+          file.on('finish', () => {
+            file.close();
+            downloaded++;
+            console.log(`✅ Downloaded ${fullUrl} -> ${safeFilename}`);
+            resolve();
+          });
+        } else {
+          // Immediately handle non-200 status codes (404, 403, etc.)
+          file.close();
+          fs.unlinkSync(filePath); // Delete empty file
+          failed++;
+          failedUrls.push({ url: fullUrl, reason: `HTTP ${response.statusCode}`, filename: safeFilename });
+          console.log(`❌ Failed ${fullUrl} (HTTP ${response.statusCode})`);
+          resolve();
+        }
+      }).on('error', (err) => {
+        // Clear timeout since we got an error response
+        request.setTimeout(0);
+
+        // Handle network errors (connection refused, DNS errors, etc.)
+        file.close();
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath); // Delete empty file
+        }
+        failed++;
+        failedUrls.push({ url: fullUrl, reason: `Network error: ${err.message}`, filename: safeFilename });
+        console.log(`❌ Network error ${fullUrl}: ${err.message}`);
+        resolve();
+      });
+
+      // Set timeout for network issues (server not responding)
+      request.setTimeout(30000, () => {
+        request.destroy();
+        file.close();
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+        failed++;
+        failedUrls.push({ url: fullUrl, reason: 'Timeout (server not responding)', filename: safeFilename });
+        console.log(`❌ Timeout ${fullUrl} (server not responding)`);
+        resolve();
+      });
+    });
+  }
+
+  // Download all images in parallel for maximum speed
+  console.log('🚀 Starting parallel downloads...');
+
+  // Create all download promises
+  const downloadPromises = imageUrls.map((url, index) => downloadImage(url, index + 1));
+
+  // Wait for all downloads to complete
+  await Promise.all(downloadPromises);
+
+  console.log('✅ All parallel downloads completed!');
+
+  console.log('\n🎉 Download complete!');
+  console.log(`   ✅ Successfully downloaded: ${downloaded}`);
+  console.log(`   ❌ Failed: ${failed}`);
+  console.log(`   📁 Images saved to: ${imagesDir}`);
+
+  // Log all failed URLs
+  if (failedUrls.length > 0) {
+    console.log('\n❌ FAILED DOWNLOADS:');
+    console.log('==================');
+    failedUrls.forEach((failure, index) => {
+      console.log(`${index + 1}. ${failure.url}`);
+      console.log(`   Reason: ${failure.reason}`);
+      console.log(`   File: ${failure.filename}`);
+      console.log('');
+    });
+  }
+
+  // Force process exit to prevent hanging
+  console.log('🏁 Process completed - exiting...');
+
+  // Force immediate exit to bypass debugger
+  setTimeout(() => {
+    process.exit(0);
+  }, 100);
+}
+
 // Run the main function
-main().catch((error) => {
+main().then(async () => {
+  // After successful extraction, download all images
+  const fs = require('fs');
+  const path = require('path');
+  const hierarchyPath = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
+  if (fs.existsSync(hierarchyPath)) {
+    const hierarchyData = JSON.parse(fs.readFileSync(hierarchyPath, 'utf8'));
+    await downloadAllImages(hierarchyData, OUTPUT_DIR);
+  }
+
+  // Force clean exit
+  process.exit(0);
+}).catch((error) => {
   console.error(`❌ Script failed: ${error.message}`);
   process.exit(1);
 });
