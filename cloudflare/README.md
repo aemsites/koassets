@@ -158,7 +158,7 @@ This is a workaround to view logs in Cloudflare for PR branches, before they are
    8. Click "Deploy"
    9. This will make sure all normal traffic still goes to the `main` version. But it now allows you to specifically call the other version and get logs for that.
 5. Copy the version number of the branch version => `<version>`
-6. Make test requests but with an extra header `Cloudflare-Workers-Version-Overrides: <version>`
+6. Make test requests but with an [extra header](https://developers.cloudflare.com/workers/configuration/versions-and-deployments/gradual-deployments/#version-overrides) `Cloudflare-Workers-Version-Overrides: <version>`
    - This targets your specific version
    - Set manually when using curl or postman
    - When using a browser, you need a setting or extension that allows to set/override custom headers for all requests, such as [ModHeader](https://chromewebstore.google.com/detail/modheader-modify-http-hea/idgpnmonknjnojddfkpgkljpfnnfcklj?hl=en) for Chrome.
