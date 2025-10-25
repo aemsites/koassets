@@ -77,17 +77,6 @@ To automatically fix linting errors and format files, run:
 npm run lint:fix
 ```
 
-### Tail production logs
-
-To see the logs for the production worker (or all deployed workers), run:
-
-```bash
-npm run tail
-```
-
-then make test requests to the worker.
-
-
 ## Deploying
 
 ### CI branch
@@ -133,6 +122,54 @@ Options:
 
 - `npm run deploy -- "my change"`: add custom message for the worker version in Cloudflare
 - `npm run deploy -- --tail`: tail logs after deployment (Note: seems to not work well for specific worker versions)
+
+## Logs
+
+### Local logs
+
+When running `npm run dev`, logs are shown in the console.
+
+* Set the `CLOUDFLARE_LOG_LEVEL` environment variable to control the log level.
+* Set the `CLOUDFLARE_REQUEST_LOGS` environment variable to `1` to show request logs.
+
+### Production logs
+
+Go to [koassets worker logs](https://dash.cloudflare.com/852dfa4ae1b0d579df29be65b986c101/workers/services/view/koassets/production/observability/logs) in the Cloudflare dashboard to see the production worker logs (`koassets.adobeaem.workers.dev`).
+
+You can also tail the logs locally using the `npm run tail` command.
+
+Note that you can **not see logs for versions or preview aliases** (PR/branch or preview URLs) directly. See below for a workaround.
+
+### Branch logs
+
+This is a workaround to view logs in Cloudflare for PR branches, before they are actually deployed and used in production.
+
+1. Create PR, wait for branch deployment
+2. Notify the team that they should not merge PRs while you are testing the logs
+3. Go to [deployments](https://dash.cloudflare.com/852dfa4ae1b0d579df29be65b986c101/workers/services/view/koassets/production/deployments) for the koassets worker in Cloudflare
+4. Manually create a [gradual deployment](https://developers.cloudflare.com/workers/configuration/versions-and-deployments/gradual-deployments/?utm_source=chatgpt.com) with 0%/100% traffic split
+   1. Click the "Deploy" button
+   2. Enable the Split deployment toggle
+   3. Keep the current active deployment (aka `main`)
+   4. Click "Add version"
+   5. Select the branch version you want to test and see logs for
+   6. Click "Add"
+   7. Set the current version at top to `100%`, and the new version to `0%`
+   8. Click "Deploy"
+   9. This will make sure all normal traffic still goes to the `main` version. But it now allows you to specifically call the other version and get logs for that.
+5. Copy the version number of the branch version => `<version>`
+6. Make test requests but with an extra header `Cloudflare-Workers-Version-Overrides: <version>`
+   - This targets your specific version
+   - Set manually when using curl or postman
+   - When using a browser, you need a setting or extension that allows to set/override custom headers for all requests, such as [ModHeader](https://chromewebstore.google.com/detail/modheader-modify-http-hea/idgpnmonknjnojddfkpgkljpfnnfcklj?hl=en) for Chrome.
+7. Go to [koassets worker logs](https://dash.cloudflare.com/852dfa4ae1b0d579df29be65b986c101/workers/services/view/koassets/production/observability/logs) and filter by `$workers.scriptVersion.id = <version>`
+   - Alternatively run `npx wrangler tail --version-id <version>` to tail locally
+8. Do your testing
+   - Every time you push changes to your branch, you will have to re-create the gradual deployment to the new worker version deployed by the CI
+9. When done make sure to remove the gradual deployment
+   - If PR changes are good, simply merge the PR. The auto-deployment on `main` will overwrite the gradual deployment to a single version deployment.
+   - Otherwise manually change the deployment in the Cloudflare dashboard back to just the previous `main` version.
+10. Notify the team you are done, so they know they can merge PRs again.
 
 
 ## Configuration
