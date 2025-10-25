@@ -10,6 +10,7 @@ const PATH_SEPARATOR = ' > ';
 // Extract last token from content path for consistent directory naming
 // Default CONTENT_PATH, can be overridden via first command line argument
 let CONTENT_PATH = '/content/share/us/en/all-content-stores';
+// let CONTENT_PATH = '/content/share/us/en/all-content-stores/global-coca-cola-uplift';
 
 // Override CONTENT_PATH if provided as first command line argument
 [, , CONTENT_PATH = CONTENT_PATH] = process.argv;
@@ -124,10 +125,29 @@ const findDeepestImageLevel = (items, currentDepth = 0) => {
 // Check if all items in a list are images
 const allItemsAreImages = (items) => items.every((item) => item.type === 'image');
 
+// Check if an item has any descendants at the target depth or deeper
+const hasContentAtTargetDepth = (item, targetDepth, currentDepth = 0) => {
+  if (currentDepth >= targetDepth) {
+    return true;
+  }
+  if (item.items && item.items.length > 0) {
+    return item.items.some((child) => hasContentAtTargetDepth(child, targetDepth, currentDepth + 1));
+  }
+  return false;
+};
+
 // Find deepest image level
 const deepestImageLevel = findDeepestImageLevel(hierarchyData);
 // 1-based: images at level (deepestImageLevel + 1), so 2 levels above = level (deepestImageLevel - 1) in 0-based
-const targetGenerateLevel = deepestImageLevel - 2;
+let targetGenerateLevel = deepestImageLevel - 2;
+
+// If no images found, generate all root-level items (depth 0)
+if (deepestImageLevel === 0) {
+  console.log('\n📍 No images found in hierarchy. Generating all root-level items.');
+  targetGenerateLevel = 0;
+} else {
+  console.log(`ℹ  Deepest image level: ${deepestImageLevel} (1-based: ${deepestImageLevel + 1}), generating for 1-based level 1 (0-based depth ${targetGenerateLevel})`);
+}
 
 // Recursively generate HTML for items at target level (1-based level 1, which is 2 levels above images)
 const processHierarchyByLevel = (items, currentDepth = 0, parentPath = '') => {
@@ -142,8 +162,21 @@ const processHierarchyByLevel = (items, currentDepth = 0, parentPath = '') => {
 
     // If this item has child items
     if (item.items && item.items.length > 0) {
-      // Only generate if current depth matches target level
-      if (currentDepth === targetGenerateLevel && !allItemsAreImages(item.items)) {
+      // Debug: show what we're evaluating
+      const notAllImages = !allItemsAreImages(item.items);
+      const hasContent = hasContentAtTargetDepth(item, targetGenerateLevel, currentDepth);
+      console.log(`\n  📋 Item: "${item.title}" | Depth: ${currentDepth} | Target: ${targetGenerateLevel} | HasContent@Target: ${hasContent} | HasNonImages: ${notAllImages}`);
+
+      // Generate only items at depth 0 that have children, skip items without content at target level
+      if (currentDepth === 0 && notAllImages) {
+        // At root level, generate all items with non-image children
+        console.log('    ✓ Generating root-level item');
+      } else if (currentDepth === targetGenerateLevel && notAllImages) {
+        // At target depth, also generate
+        console.log('    ✓ Generating at target depth');
+      }
+
+      if ((currentDepth === 0 && hasContent) || (currentDepth === targetGenerateLevel && notAllImages)) {
         // Detect indentation from fragment template
         const tabsDivMatch = fragmentTemplateContent.match(/^(\s*)<div class="tabs">/m);
         const baseIndent = tabsDivMatch ? tabsDivMatch[1] : '      ';
@@ -167,7 +200,7 @@ const processHierarchyByLevel = (items, currentDepth = 0, parentPath = '') => {
         const outputPath = path.join(outputDir, fileName);
         fs.writeFileSync(outputPath, outputHtml, 'utf8');
 
-        console.log(`✓ Generated: ${outputPath}`);
+        console.log(`    ✓ Generated: ${outputPath}`);
       }
 
       // Always recurse to process deeper levels
@@ -221,8 +254,6 @@ const processImagesForCardGeneration = (items, parentPath = '', parentHierarchy 
     processImagesForCardGeneration(item.items, currentPath, currentHierarchy);
   });
 };
-
-console.log(`ℹ  Deepest image level: ${deepestImageLevel} (1-based: ${deepestImageLevel + 1}), generating for 1-based level 1 (0-based depth ${targetGenerateLevel})`);
 
 // Generate main all-content-stores page
 const tabsDivMatch = mainTemplateContent.match(/^(\s*)<div class="tabs">/m);

@@ -9,7 +9,8 @@ const { URL } = require('url');
 const { sanitizeFileName, buildFileNameWithId } = require('./sanitize-utils.js');
 
 const AEM_AUTHOR = 'https://author-p64403-e544653.adobeaemcloud.com';
-let CONTENT_PATH = '/content/share/us/en/all-content-stores';
+// let CONTENT_PATH = '/content/share/us/en/all-content-stores';
+let CONTENT_PATH = '/content/share/us/en/all-content-stores/global-coca-cola-uplift';
 
 // Override CONTENT_PATH if provided as first command line argument
 [, , CONTENT_PATH = CONTENT_PATH] = process.argv;
@@ -31,13 +32,12 @@ try {
 // File paths
 const lastContentPathToken = CONTENT_PATH.split('/').pop();
 const OUTPUT_DIR = path.join(__dirname, lastContentPathToken, 'extracted-results');
-const INPUT_FILE = path.join(OUTPUT_DIR, 'parent-tabs.model.json');
 
 // Image URL configuration
 const BASE_URL = `${CONTENT_PATH}/`;
 
 // Dynamic paths - will be discovered at runtime
-let DISCOVERED_BASE_PATH = null;
+const DISCOVERED_BASE_PATH = null;
 
 // Function to download file from AEM
 function downloadFile(url, outputPath) {
@@ -85,8 +85,12 @@ function downloadFile(url, outputPath) {
       res.on('end', () => {
         if (res.statusCode === 200) {
           const data = Buffer.concat(chunks);
-          fs.writeFileSync(outputPath, data);
-          console.log(`✅ Downloaded: ${path.basename(outputPath)} (${data.length} bytes)`);
+          if (outputPath) {
+            fs.writeFileSync(outputPath, data);
+            console.log(`✅ Downloaded: ${path.basename(outputPath)} (${data.length} bytes)`);
+          } else {
+            console.log(`✅ Downloaded (skipped saving): ${path.basename(url)}`);
+          }
           resolve(data);
         } else {
           reject(new Error(`HTTP ${res.statusCode}: ${res.statusMessage}`));
@@ -106,70 +110,6 @@ function downloadFile(url, outputPath) {
     req.end();
   });
 }
-
-// Function to discover parent tabs path dynamically
-async function discoverParentTabsPath() {
-  console.log('🔍 Discovering parent tabs component path...');
-
-  // Find parent tabs path (similar to bash script logic)
-  function findTabsPath(obj, currentPath = '') {
-    const keys = Object.keys(obj);
-    for (let i = 0; i < keys.length; i += 1) {
-      const key = keys[i];
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        const item = obj[key];
-        const newPath = currentPath ? `${currentPath}/${key}` : key;
-
-        // Check if this is a tabs component
-        if (item && typeof item === 'object'
-                      && item['sling:resourceType'] === 'tccc-dam/components/tabs') {
-          // Check if this looks like a parent (not nested in item_*)
-          if (!newPath.includes('/item_')) {
-            return `/jcr:content/${newPath}`;
-          }
-        }
-
-        // Recursively search
-        if (item && typeof item === 'object') {
-          const found = findTabsPath(item, newPath);
-          if (found) return found;
-        }
-      }
-    }
-    return null;
-  }
-
-  // First, fetch the JCR content structure
-  const jcrUrl = `${AEM_AUTHOR}${CONTENT_PATH}/jcr:content.infinity.json`;
-  console.log(`📡 Fetching JCR structure from: ${jcrUrl}`);
-
-  try {
-    const jcrContent = await downloadFile(jcrUrl, path.join(OUTPUT_DIR, 'temp-jcr-content.json'));
-    const jcrData = JSON.parse(jcrContent);
-
-    const parentTabsPath = findTabsPath(jcrData);
-
-    if (parentTabsPath) {
-      console.log(`✅ Found parent tabs at: ${parentTabsPath}`);
-
-      // Extract the dynamic base path (everything except the final /tabs part)
-      // Also convert jcr:content to _jcr_content for URL usage
-      DISCOVERED_BASE_PATH = parentTabsPath.replace(/\/tabs$/, '').replace('/jcr:content', '_jcr_content');
-      console.log(`🔍 Discovered base path: ${DISCOVERED_BASE_PATH}`);
-
-      // Clean up temp file
-      fs.unlinkSync(path.join(OUTPUT_DIR, 'temp-jcr-content.json'));
-      return parentTabsPath;
-    }
-    throw new Error('No parent tabs component found');
-  } catch (error) {
-    console.error(`❌ Failed to discover parent tabs path: ${error.message}`);
-    return null;
-  }
-}
-
-// Function to get the right teaser path from the teaser path map during traversal
-// (This function is kept for potential future use, but currently unused)
 
 // Function to ensure images directory exists
 function ensureImagesDir() {
@@ -215,35 +155,130 @@ async function main() {
     console.log(`📁 Created directory: ${OUTPUT_DIR}`);
   }
 
-  // Check if file exists, if not download it
-  if (!fs.existsSync(INPUT_FILE)) {
-    console.log(`📥 File ${INPUT_FILE} not found, attempting to download...`);
+  console.log('📥 Downloading jcr:content.infinity.json from AEM...\n');
 
-    try {
-      // Discover parent tabs path dynamically
-      const parentTabsPath = await discoverParentTabsPath();
+  try {
+    // First find the tabs path by downloading jcr:content structure
+    const jcrUrl = `${AEM_AUTHOR}${CONTENT_PATH}/jcr:content.infinity.json`;
+    console.log(`📡 Fetching JCR structure: ${jcrUrl}\n`);
 
-      if (!parentTabsPath) {
-        console.error('❌ Could not find parent tabs component');
-        process.exit(1);
+    const jcrContent = await downloadFile(jcrUrl, path.join(OUTPUT_DIR, 'jcr-content.json'));
+    const jcrData = JSON.parse(jcrContent);
+
+    // Save jcr-content.json in pretty format
+    fs.writeFileSync(path.join(OUTPUT_DIR, 'jcr-content.json'), JSON.stringify(jcrData, null, 2));
+    console.log('✅ Saved jcr-content.json in pretty format\n');
+
+    // Find all tabs paths in the JCR
+    const tabsPaths = findAllTabsPaths(jcrData);
+    console.log(`\n📊 Found ${tabsPaths.length} tabs path(s):`);
+    tabsPaths.forEach((p) => console.log(`  - ${p}`));
+
+    // Download all tabs as models and combine
+    const allTabsData = [];
+    for (let i = 0; i < tabsPaths.length; i++) {
+      const tabsUrl = `${AEM_AUTHOR}${CONTENT_PATH}${tabsPaths[i]}.model.json`;
+      console.log(`\n📥 Downloading tabs ${i + 1}/${tabsPaths.length}: ${tabsUrl}`);
+      try {
+        const tabsContent = await downloadFile(tabsUrl, null); // Pass null for intermediate files
+        allTabsData.push(JSON.parse(tabsContent));
+      } catch (err) {
+        console.log(`  ⚠️  Failed to download this tabs: ${err.message}`);
       }
-
-      // Download parent-tabs.model.json
-      const parentTabsUrl = `${AEM_AUTHOR}${CONTENT_PATH}${parentTabsPath}.model.json`;
-      console.log(`📡 Downloading from: ${parentTabsUrl}`);
-
-      await downloadFile(parentTabsUrl, INPUT_FILE);
-    } catch (error) {
-      console.error(`❌ Failed to download file: ${error.message}`);
-      process.exit(1);
     }
-  } else {
-    console.log(`✅ Using existing file: ${INPUT_FILE}`);
-  }
 
-  // Continue with parsing...
-  // eslint-disable-next-line no-use-before-define
-  parseCompleteHierarchy();
+    if (allTabsData.length === 0) {
+      throw new Error('Could not download any tabs data');
+    }
+
+    console.log(`\n✅ Downloaded ${allTabsData.length} tabs model(s)`);
+
+    // Combine ALL tabs data to get complete hierarchy
+    const combinedTabsData = {
+      ':itemsOrder': [],
+      ':items': {},
+      ':type': 'tccc-dam/components/tabs',
+      id: 'combined-tabs',
+    };
+
+    // Merge all tabs intelligently
+    // Use a unique key for each item from each tabs to preserve all content
+    allTabsData.forEach((tabs, idx) => {
+      const itemsOrder = tabs[':itemsOrder'] || [];
+      const items = tabs[':items'] || {};
+
+      itemsOrder.forEach((key) => {
+        // Create a unique key combining original key and tabs index
+        // This ensures items with the same name from different tabs don't overwrite each other
+        const uniqueKey = `${key}__tabs${idx}`;
+
+        combinedTabsData[':itemsOrder'].push(uniqueKey);
+        combinedTabsData[':items'][uniqueKey] = items[key];
+      });
+    });
+
+    console.log(`📌 Combined all tabs into ${combinedTabsData[':itemsOrder'].length} items\n`);
+    const mainTabsData = combinedTabsData;
+
+    // Create a map of all titles to their sling:resourceType from JCR
+    const jcrTitleMap = {};
+    const jcrLinkUrlMap = {}; // Map of (title|parentKey) -> linkURL
+    const jcrButtonsWithoutLinkUrl = {}; // Track buttons that DON'T have linkURL
+    function indexJCRByTitle(obj, parentPath = '', parentKey = '') {
+      if (!obj || typeof obj !== 'object') return;
+      for (const key in obj) {
+        if (!key.startsWith(':') && typeof obj[key] === 'object') {
+          const rt = obj[key]['sling:resourceType'];
+          const title = obj[key]['cq:panelTitle'] || obj[key]['jcr:title'] || obj[key].title;
+          const { linkURL } = obj[key];
+
+          if (title && rt) {
+            jcrTitleMap[String(title).trim()] = rt;
+          }
+
+          // Capture linkURL for button items
+          if (title && rt && rt.includes('button')) {
+            const titleKey = String(title).trim();
+            const parentKeyContext = parentKey || 'root';
+            const contextKey = `${titleKey}|${parentKeyContext}`;
+
+            if (linkURL) {
+              // Store buttons WITH linkURL by context key AND title-only
+              jcrLinkUrlMap[contextKey] = linkURL;
+              jcrLinkUrlMap[titleKey] = linkURL;
+            }
+            // Note: Don't store buttons WITHOUT linkURL to avoid false positives
+            // Only store the ones WITH linkURLs
+          }
+
+          indexJCRByTitle(obj[key], `${parentPath}/${key}`, key);
+        }
+      }
+    }
+    indexJCRByTitle(jcrData.root);
+
+    // Apply resource types to tabs model by matching titles
+    function enrichByTitle(items) {
+      if (!items || typeof items !== 'object') return;
+      for (const key in items) {
+        if (!key.startsWith(':') && typeof items[key] === 'object') {
+          const title = items[key]['cq:panelTitle'] || items[key]['jcr:title'] || items[key].title;
+          if (title && jcrTitleMap[String(title).trim()]) {
+            items[key]['sling:resourceType'] = jcrTitleMap[String(title).trim()];
+          }
+          if (items[key][':items']) enrichByTitle(items[key][':items']);
+        }
+      }
+    }
+    enrichByTitle(mainTabsData[':items']);
+
+    // Continue with parsing
+    // eslint-disable-next-line no-use-before-define
+    parseHierarchyFromModel(mainTabsData, jcrTitleMap, jcrLinkUrlMap);
+  } catch (error) {
+    console.error(`❌ Failed: ${error.message}`);
+    process.exit(1);
+  }
 }
 
 // Function to build JSON structure
@@ -259,19 +294,22 @@ function buildJsonStructure(jsonData, teaserPathMap) {
 
     if (itemsOrder && itemsData) {
       itemsOrder.forEach((itemKey) => {
+        // Skip renamed duplicate items at root level (e.g., item_1_source1)
+        if (parentPath === '' && itemKey.match(/_source\d+$/)) {
+          return;
+        }
+
         const item = itemsData[itemKey];
         if (!item) return;
 
-        // Build current path for context
-        let currentPath = parentPath;
-
-        if (itemKey !== ':items' && itemKey !== ':itemsOrder') {
-          currentPath += `/${itemKey}`;
+        // Skip internal/structural keys
+        if (itemKey.startsWith(':')) {
+          return;
         }
 
         // Get title using fallback chain
         // eslint-disable-next-line no-use-before-define
-        const title = getTitle(item, itemKey);
+        const title = extractTitleFromItem(item, itemKey);
 
         // Build display path (hierarchy path for user viewing)
         const currentDisplayPath = displayPath ? `${displayPath} > ${title.trim()}` : title.trim();
@@ -286,24 +324,59 @@ function buildJsonStructure(jsonData, teaserPathMap) {
         const hasChildren = contentItems && contentItems[':items']
                                   && Object.keys(contentItems[':items']).length > 0;
 
+        // Build current path for context
+        let currentPath = parentPath;
+
+        if (itemKey !== ':items' && itemKey !== ':itemsOrder') {
+          currentPath += `/${itemKey}`;
+        }
+
         // Determine type
-        let itemType = 'tab'; // default
+        let itemType = 'item'; // default
         if (isTeaserWithImage) {
           itemType = 'image';
+        } else if (!hasChildren) {
+          // Items without children are links
+          itemType = 'link';
+        } else {
+          // Check if this has tab children (structure indicates tabs)
+          const childKeys = Object.keys(contentItems[':items'] || {});
+          const hasTabsChild = childKeys.some((k) => k === 'tabs' || k.match(/^tabs_.*$/));
+
+          if (hasTabsChild) {
+            itemType = 'tabs';
+          } else {
+            // Has children but no tabs component = dropdown or container
+            itemType = 'dropdown';
+          }
         }
 
         // Build the JSON item
         const jsonItem = {
           title,
           path: currentDisplayPath,
+          type: itemType,
         };
 
         // Add ID if different from title
-        if (title !== itemKey) {
+        if (title !== itemKey && item.id) {
           jsonItem.id = item.id;
         }
 
-        jsonItem.type = itemType;
+        // Add linkURL if available from item itself (Sling Model data only)
+        // Otherwise use ID-based matching (most accurate), then title-based
+        if (item.linkURL) {
+          jsonItem.linkURL = item.linkURL;
+        } else if (item.id && jcrLinkUrlMap[item.id]) {
+          // Try ID-based matching first (most accurate for duplicate titles)
+          jsonItem.linkURL = jcrLinkUrlMap[item.id];
+        } else {
+          // Use title-based matching (only items WITH linkURLs are in the map)
+          const linkURL = jcrLinkUrlMap[String(title).trim()];
+          if (linkURL) {
+            jsonItem.linkURL = linkURL;
+          }
+        }
 
         // Add image URL if it's a teaser with image
         if (isTeaserWithImage) {
@@ -326,9 +399,11 @@ function buildJsonStructure(jsonData, teaserPathMap) {
           }
         }
 
-        // Add children if they exist
-        if (hasChildren) {
-          const childItems = buildJsonItems(contentItems, currentPath, currentDisplayPath);
+        // Add children if they exist - PRESERVE ALL NESTING
+        if (hasChildren && contentItems[':items']) {
+          const childKeys = Object.keys(contentItems[':items']);
+          // Build items from the raw children to preserve all levels
+          const childItems = buildJsonItemsFromContainer(contentItems[':items'], currentPath, currentDisplayPath);
           if (childItems.length > 0) {
             jsonItem.items = childItems;
           }
@@ -337,6 +412,104 @@ function buildJsonStructure(jsonData, teaserPathMap) {
         result.push(jsonItem);
       });
     }
+
+    return result;
+  }
+
+  // Helper function to build items from a container, preserving all nesting
+  function buildJsonItemsFromContainer(itemsData, parentPath = '', displayPath = '') {
+    const result = [];
+    const itemsOrder = itemsData[':itemsOrder'] || Object.keys(itemsData);
+
+    itemsOrder.forEach((itemKey) => {
+      // Skip internal keys
+      if (itemKey.startsWith(':')) {
+        return;
+      }
+
+      const item = itemsData[itemKey];
+      if (!item) return;
+
+      // Get title
+      // eslint-disable-next-line no-use-before-define
+      const title = extractTitleFromItem(item, itemKey);
+
+      // Skip text-only items and instruction items
+      if (!title || title.includes('<p>') || title.includes('<') || itemKey.startsWith('text_')) {
+        return;
+      }
+
+      const currentDisplayPath = displayPath ? `${displayPath} > ${title.trim()}` : title.trim();
+      let currentPath = parentPath;
+
+      if (itemKey !== ':items' && itemKey !== ':itemsOrder') {
+        currentPath += `/${itemKey}`;
+      }
+
+      // Check for children
+      const hasChildren = item[':items'] && Object.keys(item[':items']).length > 0;
+
+      // Determine type
+      let itemType = 'item';
+      if (!hasChildren) {
+        itemType = 'link';
+      } else {
+        const childKeys = Object.keys(item[':items'] || {});
+        const hasTabsChild = childKeys.some((k) => k === 'tabs' || k.match(/^tabs_.*$/));
+        const hasAccordionChild = childKeys.some((k) => k === 'accordion' || k.match(/^accordion_.*$/));
+        const hasContainerChild = childKeys.some((k) => k === 'container' || k.match(/^container_.*$/));
+
+        if (itemKey.startsWith('accordion')) {
+          itemType = 'accordion';
+        } else if (itemKey.startsWith('teaser')) {
+          itemType = 'teaser';
+        } else if (hasTabsChild) {
+          itemType = 'tabs';
+        } else if (hasAccordionChild) {
+          itemType = 'accordion-container';
+        } else if (hasContainerChild) {
+          itemType = 'container';
+        } else {
+          itemType = 'dropdown';
+        }
+      }
+
+      const jsonItem = {
+        title,
+        path: currentDisplayPath,
+        type: itemType,
+      };
+
+      // Add ID if it exists
+      if (item.id && item.id !== itemKey) {
+        jsonItem.id = item.id;
+      }
+
+      // Add linkURL if available from item itself (Sling Model data only)
+      // Otherwise use ID-based matching (most accurate), then title-based
+      if (item.linkURL) {
+        jsonItem.linkURL = item.linkURL;
+      } else if (item.id && jcrLinkUrlMap[item.id]) {
+        // Try ID-based matching first (most accurate for duplicate titles)
+        jsonItem.linkURL = jcrLinkUrlMap[item.id];
+      } else {
+        // Use title-based matching (only items WITH linkURLs are in the map)
+        const linkURL = jcrLinkUrlMap[String(title).trim()];
+        if (linkURL) {
+          jsonItem.linkURL = linkURL;
+        }
+      }
+
+      // Recursively add children
+      if (hasChildren) {
+        const childItems = buildJsonItemsFromContainer(item[':items'], currentPath, currentDisplayPath);
+        if (childItems.length > 0) {
+          jsonItem.items = childItems;
+        }
+      }
+
+      result.push(jsonItem);
+    });
 
     return result;
   }
@@ -389,9 +562,10 @@ function getContentItems(items) {
     const onlyChild = children[childKeys[0]];
     const childKey = childKeys[0];
 
-    // Skip structural containers
+    // Skip structural containers and accordions
     if (childKey === 'tabs' || childKey.match(/^tabs_.*$/)
-            || childKey === 'container' || childKey.startsWith('container_')) {
+        || childKey === 'container' || childKey.match(/^container.*$/)
+        || childKey === 'accordion' || childKey.match(/^accordion.*$/)) {
       return getContentItems(onlyChild);
     }
   }
@@ -399,170 +573,383 @@ function getContentItems(items) {
   return items;
 }
 
-function parseCompleteHierarchy() {
-  console.log('📖 Extracting item titles and image URLs...');
-
-  // Read and parse JSON
-  let jsonData;
-  try {
-    const jsonContent = fs.readFileSync(INPUT_FILE, 'utf8');
-    jsonData = JSON.parse(jsonContent);
-  } catch (error) {
-    console.log(`❌ Error parsing JSON: ${error.message}`);
-    process.exit(1);
+// Function to extract meaningful titles from accordion/wrapper structures
+function extractTitleFromItem(item, itemKey) {
+  // If item has .text property, use it (best source for actual content)
+  if (item.text && typeof item.text === 'string') {
+    const textContent = item.text.trim();
+    // Skip if it's HTML markup or instruction text
+    if (textContent && textContent.length > 0
+        && !textContent.includes('<p>')
+        && !textContent.toLowerCase().includes('bold and underlined')) {
+      return textContent;
+    }
   }
 
-  // Helper function to find main container path
-  function findMainContainerPath(obj, basePath = '') {
-    const entries = Object.entries(obj);
-    for (let i = 0; i < entries.length; i += 1) {
-      const [key, value] = entries[i];
-      const currentPath = `${basePath}/${key}`;
+  // If item itself has a title, return it
+  const directTitle = item['cq:panelTitle'] || item.title;
+  if (directTitle && directTitle.trim()) {
+    return directTitle.trim();
+  }
 
-      if (key.startsWith('container_') && typeof value === 'object' && value[':items']) {
-        // Check if this container has tabs inside it
-        // eslint-disable-next-line no-use-before-define
-        const hasTabsInside = checkForTabsRecursively(value[':items']);
-        if (hasTabsInside) {
-          return `${currentPath}/container`;
+  // If this is a structural wrapper (accordion/container with single child), dig deeper
+  if (item[':items']) {
+    const childKeys = Object.keys(item[':items']);
+    if (childKeys.length === 1) {
+      const onlyChildKey = childKeys[0];
+      const onlyChild = item[':items'][onlyChildKey];
+
+      // If child has a good title, return it
+      if (onlyChild) {
+        const childTitle = onlyChild['cq:panelTitle'] || onlyChild.title;
+        if (childTitle && childTitle.trim()) {
+          return childTitle.trim();
+        }
+        // Recursively try to extract from deeper levels
+        return extractTitleFromItem(onlyChild, onlyChildKey);
+      }
+    }
+  }
+
+  // Fallback to key name
+  return itemKey;
+}
+
+// Helper function to determine item type from sling:resourceType
+function getItemTypeFromResourceType(item, itemKey = '') {
+  const resourceType = item['sling:resourceType'] || '';
+
+  // Map resource type to item type
+  if (resourceType.includes('tabs')) {
+    return 'tabs';
+  }
+  if (resourceType.includes('accordion')) {
+    return 'accordion';
+  }
+  if (resourceType.includes('container')) {
+    return 'container';
+  }
+  if (resourceType.includes('button')) {
+    return 'button';
+  }
+  if (resourceType.includes('text')) {
+    return 'text';
+  }
+  if (resourceType.includes('image')) {
+    return 'image';
+  }
+
+  // Fallback to checking key patterns
+  if (itemKey.startsWith('accordion')) {
+    return 'accordion';
+  }
+  if (itemKey.startsWith('teaser')) {
+    return 'teaser';
+  }
+  if (itemKey.startsWith('button')) {
+    return 'button';
+  }
+
+  return 'item';
+}
+
+function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap) {
+  console.log('📖 Parsing hierarchy from combined-tabs.model.json...\n');
+
+  // Function to recursively extract hierarchy from :items
+  function extractItemsHierarchy(itemsObj, parentKeyPath = '', displayPath = '') {
+    if (!itemsObj || typeof itemsObj !== 'object') {
+      return [];
+    }
+
+    const result = [];
+    const itemsOrder = itemsObj[':itemsOrder'] || Object.keys(itemsObj).filter((k) => !k.startsWith(':'));
+
+    itemsOrder.forEach((key) => {
+      if (key.startsWith(':')) {
+        return;
+      }
+
+      const item = itemsObj[key];
+      if (!item || typeof item !== 'object') {
+        return;
+      }
+
+      let title = item['cq:panelTitle'] || item.title || item['jcr:title'] || item.text || key;
+
+      if (!title || String(title).includes('<')) {
+        return;
+      }
+
+      title = String(title).trim();
+
+      let itemType = 'item';
+      const resourceType = item['sling:resourceType'] || '';
+
+      if (resourceType.includes('tabs')) {
+        itemType = 'tabs';
+      } else if (resourceType.includes('accordion')) {
+        itemType = 'accordion';
+      } else if (resourceType.includes('container')) {
+        itemType = 'container';
+      } else if (key.startsWith('teaser_')) {
+        itemType = 'teaser';
+      }
+
+      // Fallback: infer type from ID pattern if sling:resourceType is missing
+      if (itemType === 'item' && item.id) {
+        const idPrefix = item.id.split('-')[0];
+        if (idPrefix === 'button') itemType = 'button';
+        else if (idPrefix === 'accordion') itemType = 'accordion';
+        else if (idPrefix === 'tabs') itemType = 'tabs';
+        else if (idPrefix === 'container') itemType = 'container';
+      }
+
+      // Build display path only for output (for user viewing)
+      const currentDisplayPath = displayPath ? `${displayPath} > ${title}` : title;
+      // Build JCR key path for logic (context matching, hierarchy tracking)
+      const currentKeyPath = parentKeyPath ? `${parentKeyPath}/${key}` : key;
+
+      const hierarchyItem = {
+        title,
+        path: currentDisplayPath,
+        type: itemType,
+      };
+
+      if (item.id) {
+        hierarchyItem.id = item.id;
+      }
+
+      // Use context-aware matching based on JCR key path
+      // Extract the immediate parent key (e.g., "/Half Time/container" -> "container")
+      const keyPathParts = currentKeyPath.split('/').filter((p) => p);
+      const immediateParentKey = keyPathParts.length > 1 ? keyPathParts[keyPathParts.length - 2] : keyPathParts[0];
+      const contextKey = `${String(title).trim()}|${immediateParentKey}`;
+
+      // Look up linkURL using JCR context only - no fallback to title-only
+      const linkURL = jcrLinkUrlMap[contextKey];
+      if (linkURL) {
+        hierarchyItem.linkURL = linkURL;
+      }
+
+      if (item[':items']) {
+        const childrenItems = extractItemsHierarchy(item[':items'], currentKeyPath, currentDisplayPath);
+        if (childrenItems.length > 0) {
+          hierarchyItem.items = childrenItems;
         }
       }
 
-      if (typeof value === 'object' && value[':items']) {
-        const found = findMainContainerPath(value[':items'], currentPath);
-        if (found) return found;
-      }
-    }
-    return null;
+      result.push(hierarchyItem);
+    });
+
+    return result;
   }
 
-  // Helper function to check for tabs recursively
-  function checkForTabsRecursively(obj) {
-    if (!obj || typeof obj !== 'object') return false;
+  // Extract from root :items
+  let mainHierarchy = [];
+  if (modelData[':items']) {
+    const rawHierarchy = extractItemsHierarchy(modelData[':items']);
 
-    const entries = Object.entries(obj);
-    for (let i = 0; i < entries.length; i += 1) {
-      const [key, value] = entries[i];
-      if (key === 'tabs' || key.match(/^tabs_.*$/)) {
-        return true;
-      }
-      if (typeof value === 'object' && value[':items']) {
-        if (checkForTabsRecursively(value[':items'])) {
-          return true;
+    // Add tabs index tracking to top-level items based on unique keys
+    rawHierarchy.forEach((item) => {
+      // Extract tabs index from unique key (e.g., "item_1__tabs0" => 0)
+      // Find the first child with an id to check its structure
+      function findTabsIndexFromItem(obj) {
+        if (!obj) return null;
+        // Look for properties that indicate which tabs this came from
+        if (obj.id && obj.id.includes('__tabs')) {
+          const match = obj.id.match(/__tabs(\d+)/);
+          return match ? parseInt(match[1]) : null;
         }
-      }
-    }
-    return false;
-  }
-
-  // Ensure we have discovered the base path
-  if (!DISCOVERED_BASE_PATH) {
-    console.log('⚠️  Base path not discovered, trying to extract from existing file...');
-    // Try to infer from the existing content structure
-    if (jsonData && jsonData[':items']) {
-      // Look for the first container path pattern
-      const firstItemKey = Object.keys(jsonData[':items'])[0];
-      if (firstItemKey) {
-        // Assume pattern: /jcr:content/root/container/container_XXXX/container
-        DISCOVERED_BASE_PATH = '/jcr:content/root/container';
-
-        // Try to find the main container that contains tabs
-        const containerPath = findMainContainerPath(jsonData[':items'], '_jcr_content/root');
-        if (containerPath) {
-          DISCOVERED_BASE_PATH = containerPath;
-          console.log(`🔍 Inferred base path: ${DISCOVERED_BASE_PATH}`);
-        } else {
-          // Try a simpler approach - look for any container_ pattern in the JSON
-          console.log('🔍 Trying alternative container discovery...');
-          const jsonStr = JSON.stringify(jsonData);
-          const containerMatch = jsonStr.match(/container_\d+_\d+/);
-          if (containerMatch) {
-            DISCOVERED_BASE_PATH = `_jcr_content/root/container/${containerMatch[0]}/container`;
-            console.log(`🔍 Found container pattern: ${DISCOVERED_BASE_PATH}`);
-          } else {
-            console.log('⚠️  Could not determine container path, using minimal default');
-            DISCOVERED_BASE_PATH = '_jcr_content/root';
+        // Check children
+        if (obj.items && Array.isArray(obj.items)) {
+          for (const child of obj.items) {
+            const idx = findTabsIndexFromItem(child);
+            if (idx !== null) return idx;
           }
         }
+        return null;
       }
-    }
-  }
 
-  // First, find all teasers and their correct JCR paths
-  function findTeasersRecursively(items, currentJcrPath = '', teasers = []) {
-    if (!items || typeof items !== 'object') return teasers;
+      const tabsIndex = findTabsIndexFromItem(item);
+      if (tabsIndex !== null) {
+        item.__tabsIndex = tabsIndex;
+      }
+    });
 
-    const itemsOrder = items[':itemsOrder'] || Object.keys(items[':items'] || items);
-    const itemsData = items[':items'] || items;
+    // Function to unwrap structural containers that don't add semantic value
+    function unwrapStructuralContainers(items) {
+      if (!items || !Array.isArray(items)) return items;
 
-    if (itemsOrder && itemsData) {
-      itemsOrder.forEach((itemKey) => {
-        const item = itemsData[itemKey];
-        if (!item) return;
+      return items.map((item) => {
+        // If this is a container/item with a single child that's also a container/item, unwrap it
+        if (item.items && item.items.length === 1) {
+          const child = item.items[0];
 
-        // Build JCR path for this item
-        let newJcrPath = currentJcrPath;
-        if (itemKey.startsWith('item_')) {
-          newJcrPath += `/${itemKey}`;
-        } else if (itemKey === 'tabs' || itemKey.match(/^tabs_.*$/)) {
-          newJcrPath += `/${itemKey}`;
-        } else if (itemKey === 'container' || itemKey.startsWith('container_')) {
-          newJcrPath += `/${itemKey}`;
-        }
-
-        // If this is a teaser, add it to our list
-        if (isTeaser(item, itemKey)) {
-          teasers.push({
-            key: itemKey,
-            item,
-            jcrPath: `${DISCOVERED_BASE_PATH}/tabs${newJcrPath}`,
-            title: item.title,
-          });
+          // Only unwrap if:
+          // 1. Child is a generic structural container (name-like "container_*", "container", etc.)
+          // 2. AND child is NOT a semantic element like "tabs" or "accordion"
+          if ((child.type === 'item' || child.type === 'container')
+              && (child.title.startsWith('container') || child.title === 'container')
+              && child.type !== 'tabs' && child.type !== 'accordion') {
+            // Skip the wrapper and promote grandchildren directly to this level
+            if (child.items && child.items.length > 0) {
+              return {
+                ...item,
+                items: unwrapStructuralContainers(child.items),
+              };
+            }
+          }
         }
 
         // Recursively process children
-        if (item[':items']) {
-          findTeasersRecursively(item, newJcrPath, teasers);
+        if (item.items) {
+          item.items = unwrapStructuralContainers(item.items);
         }
+
+        return item;
       });
     }
 
-    return teasers;
+    const cleanedHierarchy = unwrapStructuralContainers(rawHierarchy);
+    mainHierarchy = groupHierarchyBySections(cleanedHierarchy);
   }
 
-  const allTeasers = findTeasersRecursively(jsonData);
-  const teaserPathMap = {};
-  allTeasers.forEach((teaser) => {
-    // Use composite key: item.id + key to uniquely identify each teaser
-    const compositeKey = `${teaser.item.id}:${teaser.key}`;
-    teaserPathMap[compositeKey] = {
-      key: teaser.key,
-      item: teaser.item,
-      jcrPath: teaser.jcrPath,
-      title: teaser.title,
+  // Function to group items into sections
+  function groupHierarchyBySections(items) {
+    const grouped = [];
+
+    // Define section mappings based on item titles and preferred tabs index
+    // tabsIndex helps when multiple tabs have items with the same title
+    const sections = {
+      'Toolkits & Internal Documents': { titles: ['Uplift Platform', 'Half Time', 'Be In The Moment'], preferredTabs: 0 },
+      Assets: { titles: ['VIS & Design', 'Static Content', 'Audiovisual', 'Transition Bundles'], preferredTabs: 1 },
+      'Local Adaptations': { titles: ['Half Time', 'Be In The Moment'], preferredTabs: 4 }, // Prefer tabs 4 (has market items)
     };
-  });
 
-  console.log('');
-  console.log('📍 Teaser Path Map Keys:');
-  Object.keys(teaserPathMap).slice(0, 5).forEach((key) => {
-    console.log(`  - ${key}`);
-  });
-  console.log(`  ... and ${Object.keys(teaserPathMap).length - 5} more`);
-  console.log('');
+    console.log('\n📋 Available top-level items:');
+    items.forEach((item) => console.log(`  - ${item.title}`));
+    console.log();
 
-  // Generate JSON structure
-  const jsonStructure = buildJsonStructure(jsonData, teaserPathMap);
+    // Create section groups
+    for (const [sectionTitle, sectionConfig] of Object.entries(sections)) {
+      const itemsInSection = [];
 
-  // Save JSON structure to file
+      sectionConfig.titles.forEach((itemTitle) => {
+        // Special handling for "Local Adaptations" - prefer items with market/region children
+        if (sectionTitle === 'Local Adaptations') {
+          // Look for items with market names like "INSWA", "Japan", "Market TBD", etc.
+          let matchingItem = items.find((item) => {
+            if (item.title !== itemTitle) return false;
+            // Check if this item has children with market/region names
+            if (item.items && item.items.length > 0) {
+              const childTitles = item.items.map((c) => c.title).join(' ');
+              const hasMarkets = /INSWA|Japan|Saudi|Korea|Vietnam|Market TBD/.test(childTitles);
+              return hasMarkets;
+            }
+            return false;
+          });
+
+          // If not found with market indicators, accept any matching title
+          if (!matchingItem) {
+            matchingItem = items.find((item) => item.title === itemTitle);
+          }
+
+          if (matchingItem) {
+            itemsInSection.push(matchingItem);
+          }
+        } else {
+          // For other sections, use tabs index preference
+          let matchingItem = items.find((item) => {
+            const titleMatches = item.title === itemTitle;
+            if (!titleMatches) return false;
+            // Check if this item is from the preferred tabs
+            const tabsMatch = item.__tabsIndex === sectionConfig.preferredTabs;
+            return tabsMatch;
+          });
+
+          // If not found with preferred tabs, accept any matching title
+          if (!matchingItem) {
+            matchingItem = items.find((item) => item.title === itemTitle);
+          }
+
+          if (matchingItem) {
+            itemsInSection.push(matchingItem);
+          }
+        }
+      });
+
+      if (itemsInSection.length > 0) {
+        grouped.push({
+          title: sectionTitle,
+          path: sectionTitle,
+          type: 'section',
+          items: itemsInSection,
+        });
+      }
+    }
+
+    return grouped;
+  }
+
+  // Save to file
   const jsonOutputPath = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
-  fs.writeFileSync(jsonOutputPath, JSON.stringify(jsonStructure, null, 2));
+  fs.writeFileSync(jsonOutputPath, JSON.stringify(mainHierarchy, null, 2));
+  console.log('✅ Hierarchy extracted successfully!');
   console.log(`💾 JSON structure saved to: ${jsonOutputPath}`);
 
-  console.log('');
-  console.log('📋 OUTPUTS SAVED');
+  console.log('\n📋 OUTPUTS SAVED');
   console.log('===============');
   console.log(`📋 JSON structure: ${jsonOutputPath}`);
+
+  // Display summary
+  function countItems(items) {
+    let count = items.length;
+    items.forEach((item) => {
+      if (item.items) {
+        count += countItems(item.items);
+      }
+    });
+    return count;
+  }
+
+  const totalItems = countItems(mainHierarchy);
+  console.log('\n📊 Hierarchy Summary:');
+  console.log(`  Total items (including nested): ${totalItems}`);
+  console.log(`  Root level items: ${mainHierarchy.length}`);
+  if (mainHierarchy.length > 0) {
+    console.log(`  First item: "${mainHierarchy[0].title}" (${mainHierarchy[0].type})`);
+  }
+}
+
+// Find all tabs paths in JCR recursively
+function findAllTabsPaths(node, currentPath = '', found = []) {
+  if (!node || typeof node !== 'object') {
+    return found;
+  }
+
+  const keys = Object.keys(node);
+
+  keys.forEach((key) => {
+    const item = node[key];
+    if (!item || typeof item !== 'object') {
+      return;
+    }
+
+    const resourceType = item['sling:resourceType'] || '';
+    const newPath = currentPath ? `${currentPath}/${key}` : key;
+
+    // Found a tabs component
+    if (resourceType.includes('tabs')) {
+      const fullPath = `/jcr:content/${newPath}`;
+      found.push(fullPath);
+    }
+
+    // Keep searching
+    findAllTabsPaths(item, newPath, found);
+  });
+
+  return found;
 }
 
 // Run the main function
