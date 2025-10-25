@@ -174,14 +174,93 @@ async function main() {
     console.log(`\n📊 Found ${tabsPaths.length} tabs path(s):`);
     tabsPaths.forEach((p) => console.log(`  - ${p}`));
 
+    // Filter out nested tabs (tabs inside tab items) - they should remain nested
+    // Nested tabs have '/tabs/' or '/tabs_' in their path (tabs inside tab items)
+    const topLevelTabsPaths = tabsPaths.filter(path => {
+      // Count how many times '/tabs' appears in the path after the first occurrence
+      const match = path.match(/\/tabs/g);
+      return !match || match.length === 1; // Keep only paths with exactly one /tabs
+    });
+
+    console.log(`📋 Using top-level tabs only: ${topLevelTabsPaths.length} path(s)\n`);
+
+    // Function to determine which JCR section a tab path belongs to
+    function getJCRSectionForTabPath(tabPath, jcrData) {
+      // tabPath is like: /jcr:content/root/container/container/container_732554625_/tabs
+      // or: /jcr:content/root/container/container_copy_copy_1873410646/container_732554625_/tabs
+      // We need to find which ROOT-level container this path traverses through
+      
+      const pathParts = tabPath.split('/').filter(p => p && p !== 'jcr:content' && p !== 'root');
+      if (pathParts.length === 0) return null;
+      
+      // Get all root-level container keys
+      const rootContainer = jcrData.root.container;
+      const rootKeys = Object.keys(rootContainer).filter(k => !k.startsWith(':'));
+      
+      // Find the longest matching root-level container key in the path
+      let matchedKey = null;
+      let maxMatchLength = 0;
+      
+      for (const key of rootKeys) {
+        // Check if this key appears anywhere in the path
+        if (pathParts.includes(key) && key.length > maxMatchLength) {
+          matchedKey = key;
+          maxMatchLength = key.length;
+        }
+      }
+      
+      if (!matchedKey) {
+        // Try matching by sequence - take all path parts until we find a root-level key
+        for (let i = 0; i < pathParts.length; i++) {
+          if (rootKeys.includes(pathParts[i])) {
+            matchedKey = pathParts[i];
+            break;
+          }
+        }
+      }
+      
+      if (!matchedKey) return null;
+      
+      const container = rootContainer[matchedKey];
+      if (!container || typeof container !== 'object') {
+        return null;
+      }
+      
+      // Recursively search for a title component within this container
+      function findTitleInSubtree(obj) {
+        for (const key in obj) {
+          if (!key.startsWith(':') && obj[key] && typeof obj[key] === 'object') {
+            const item = obj[key];
+            if (item['sling:resourceType'] === 'tccc-dam/components/title' && item['jcr:title']) {
+              return item['jcr:title'];
+            }
+            // Recurse into nested objects
+            const result = findTitleInSubtree(item);
+            if (result) return result;
+          }
+        }
+        return null;
+      }
+      
+      return findTitleInSubtree(container);
+    }
+
     // Download all tabs as models and combine
     const allTabsData = [];
-    for (let i = 0; i < tabsPaths.length; i++) {
-      const tabsUrl = `${AEM_AUTHOR}${CONTENT_PATH}${tabsPaths[i]}.model.json`;
-      console.log(`\n📥 Downloading tabs ${i + 1}/${tabsPaths.length}: ${tabsUrl}`);
+    for (let i = 0; i < topLevelTabsPaths.length; i++) {
+      const tabsUrl = `${AEM_AUTHOR}${CONTENT_PATH}${topLevelTabsPaths[i]}.model.json`;
+      console.log(`\n📥 Downloading tabs ${i + 1}/${topLevelTabsPaths.length}: ${tabsUrl}`);
       try {
         const tabsContent = await downloadFile(tabsUrl, null); // Pass null for intermediate files
-        allTabsData.push(JSON.parse(tabsContent));
+        const tabsData = JSON.parse(tabsContent);
+        
+        // Attach JCR section information
+        const jcrSection = getJCRSectionForTabPath(topLevelTabsPaths[i], jcrData);
+        if (jcrSection) {
+          tabsData.__jcrSection = jcrSection;
+        }
+        
+        allTabsData.push(tabsData);
       } catch (err) {
         console.log(`  ⚠️  Failed to download this tabs: ${err.message}`);
       }
@@ -213,7 +292,13 @@ async function main() {
         const uniqueKey = `${key}__tabs${idx}`;
 
         combinedTabsData[':itemsOrder'].push(uniqueKey);
-        combinedTabsData[':items'][uniqueKey] = items[key];
+        const item = items[key];
+        combinedTabsData[':items'][uniqueKey] = item;
+        
+        // Attach JCR section information from the tabs data
+        if (tabs.__jcrSection) {
+          item.__jcrSection = tabs.__jcrSection;
+        }
       });
     });
 
@@ -315,7 +400,7 @@ async function main() {
 
     // Continue with parsing
     // eslint-disable-next-line no-use-before-define
-    parseHierarchyFromModel(mainTabsData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap);
+    parseHierarchyFromModel(mainTabsData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrData);
   } catch (error) {
     console.error(`❌ Failed: ${error.message}`);
     process.exit(1);
@@ -694,7 +779,7 @@ function getItemTypeFromResourceType(item, itemKey = '') {
   return 'item';
 }
 
-function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap) {
+function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrData) {
   console.log('📖 Parsing hierarchy from combined-tabs.model.json...\n');
 
   // Function to recursively extract hierarchy from :items
@@ -759,6 +844,11 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
 
       if (item.id) {
         hierarchyItem.id = item.id;
+      }
+
+      // Preserve JCR section information if available
+      if (item.__jcrSection) {
+        hierarchyItem.__jcrSection = item.__jcrSection;
       }
 
       // Use context-aware matching based on JCR key path
@@ -879,127 +969,238 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
     }
 
     const cleanedHierarchy = unwrapStructuralContainers(rawHierarchy);
-    mainHierarchy = groupHierarchyBySections(cleanedHierarchy);
+    mainHierarchy = groupHierarchyBySections(cleanedHierarchy, jcrData);
   }
 
-  // Function to group items into sections
-  function groupHierarchyBySections(items) {
-    const grouped = [];
-
-    // Define section mappings based on item titles and preferred tabs index
-    // tabsIndex helps when multiple tabs have items with the same title
-    const sections = {
-      'Toolkits & Internal Documents': { titles: ['Uplift Platform', 'Half Time', 'Be In The Moment'], preferredTabs: 0 },
-      Assets: { titles: ['VIS & Design', 'Static Content', 'Audiovisual', 'Transition Bundles'], preferredTabs: 1 },
-      'Local Adaptations': { titles: ['Half Time', 'Be In The Moment'], preferredTabs: 4 }, // Prefer tabs 4 (has market items)
-    };
-
-    console.log('\n📋 Available top-level items:');
-    items.forEach((item) => console.log(`  - ${item.title}`));
-    console.log();
-
-    // Function to prepend parent path to all items recursively
-    function prependPathToItem(item, parentPath) {
-      const updatedItem = { ...item };
-
-      // For level 2 items, prepend the section path if not already present
-      if (!item.path.startsWith(parentPath)) {
-        updatedItem.path = `${parentPath} > ${item.path}`;
-      }
-
-      // Recursively update children
-      if (item.items && Array.isArray(item.items)) {
-        updatedItem.items = item.items.map((child) => {
-          const childCopy = { ...child };
-
-          // For children, we need to avoid duplicating the immediate parent title
-          // The child path might start with the parent item's title (e.g., "Half Time > container > ...")
-          // We want to prepend the full parent path but avoid duplication
-          const parentTitle = item.title;
-          if (childCopy.path && childCopy.path.startsWith(`${parentTitle} >`)) {
-            // Remove the parent title from the beginning since we're adding the full parent path
-            const pathWithoutParentTitle = childCopy.path.substring(`${parentTitle} > `.length);
-            childCopy.path = `${updatedItem.path} > ${pathWithoutParentTitle}`;
-          } else if (!childCopy.path.startsWith(updatedItem.path)) {
-            // Standard prepend if not already present
-            childCopy.path = `${updatedItem.path} > ${childCopy.path}`;
-          }
-
-          // Recursively process grandchildren with the updated child path
-          if (childCopy.items && Array.isArray(childCopy.items)) {
-            childCopy.items = childCopy.items.map((subchild) => prependPathToItem(subchild, childCopy.path));
-          }
-
-          return childCopy;
-        });
-      }
-
-      return updatedItem;
+  // Function to extract sections from JCR structure
+  function extractSectionsFromJCR(jcrData) {
+    const sections = [];
+    
+    if (!jcrData.root || !jcrData.root.container) {
+      return null;
     }
 
-    // Create section groups
-    for (const [sectionTitle, sectionConfig] of Object.entries(sections)) {
-      const itemsInSection = [];
+    // Recursively search for title components and the containers that follow them
+    function searchForTitles(obj, parentPath = '') {
+      const foundSections = [];
+      const itemsList = [];
 
-      sectionConfig.titles.forEach((itemTitle) => {
-        // Special handling for "Local Adaptations" - prefer items with market/region children
-        if (sectionTitle === 'Local Adaptations') {
-          // Look for items with market names like "INSWA", "Japan", "Market TBD", etc.
-          let matchingItem = items.find((item) => {
-            if (item.title !== itemTitle) return false;
-            // Check if this item has children with market/region names
-            if (item.items && item.items.length > 0) {
-              const childTitles = item.items.map((c) => c.title).join(' ');
-              const hasMarkets = /INSWA|Japan|Saudi|Korea|Vietnam|Market TBD/.test(childTitles);
-              return hasMarkets;
-            }
-            return false;
-          });
+      // First pass: collect all direct children in order
+      for (const key in obj) {
+        if (obj[key] && typeof obj[key] === 'object' && !key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
+          itemsList.push({ key, item: obj[key] });
+        }
+      }
 
-          // If not found with market indicators, accept any matching title
-          if (!matchingItem) {
-            matchingItem = items.find((item) => item.title === itemTitle);
+      // Second pass: identify title markers and group subsequent containers
+      let currentSection = null;
+      itemsList.forEach((entry, index) => {
+        const { key, item } = entry;
+
+        // Check if this is a title component (section marker)
+        if (item['sling:resourceType'] === 'tccc-dam/components/title' && item['jcr:title']) {
+          // Save previous section if exists
+          if (currentSection) {
+            foundSections.push(currentSection);
           }
+          // Start new section
+          currentSection = {
+            title: item['jcr:title'],
+            containerKeys: [],
+          };
+        } else if (currentSection && (item['sling:resourceType'] === 'tccc-dam/components/container' || item['sling:resourceType'] === 'tccc-dam/components/tabs')) {
+          // This container/tabs belongs to the current section
+          currentSection.containerKeys.push(key);
+        }
 
-          if (matchingItem) {
-            // Prepend section title to the item's path and all children
-            const updatedItem = prependPathToItem(matchingItem, sectionTitle);
-            itemsInSection.push(updatedItem);
-          }
-        } else {
-          // For other sections, use tabs index preference
-          let matchingItem = items.find((item) => {
-            const titleMatches = item.title === itemTitle;
-            if (!titleMatches) return false;
-            // Check if this item is from the preferred tabs
-            const tabsMatch = item.__tabsIndex === sectionConfig.preferredTabs;
-            return tabsMatch;
-          });
-
-          // If not found with preferred tabs, accept any matching title
-          if (!matchingItem) {
-            matchingItem = items.find((item) => item.title === itemTitle);
-          }
-
-          if (matchingItem) {
-            // Prepend section title to the item's path and all children
-            const updatedItem = prependPathToItem(matchingItem, sectionTitle);
-            itemsInSection.push(updatedItem);
-          }
+        // Recursively search nested items inside containers
+        if (item && typeof item === 'object' && item['sling:resourceType'] === 'tccc-dam/components/container') {
+          foundSections.push(...searchForTitles(item, parentPath + '/' + key));
         }
       });
 
-      if (itemsInSection.length > 0) {
-        grouped.push({
-          title: sectionTitle,
-          path: sectionTitle,
-          type: 'section',
-          items: itemsInSection,
-        });
+      if (currentSection) {
+        foundSections.push(currentSection);
+      }
+
+      return foundSections;
+    }
+
+    const foundSections = searchForTitles(jcrData.root.container);
+    
+    // Remove duplicates (keep first occurrence of each title)
+    const uniqueSections = [];
+    const seenTitles = new Set();
+    foundSections.forEach((section) => {
+      if (!seenTitles.has(section.title)) {
+        uniqueSections.push(section);
+        seenTitles.add(section.title);
+      }
+    });
+
+    return uniqueSections.length > 0 ? uniqueSections : null;
+  }
+
+  // Function to group items into sections - try JCR-based grouping first, then fallback
+  function groupHierarchyBySections(items, jcrData) {
+    // Try to extract sections from JCR structure
+    let jcrSections = null;
+    if (jcrData) {
+      jcrSections = extractSectionsFromJCR(jcrData);
+      if (jcrSections) {
+        console.log('\n🔍 JCR sections detected:', jcrSections.map(s => s.title).join(', '));
+      } else {
+        console.log('\n🔍 No JCR sections detected in structure');
       }
     }
 
+    if (jcrSections) {
+      const result = groupByJCRSections(items, jcrSections);
+      // Only use JCR grouping if it actually produced results
+      if (result.length > 0 && result.some(s => s.items.length > 0)) {
+        return result;
+      }
+    }
+
+    // Fallback: group by first-level path component
+    return groupByFirstPathComponent(items);
+  }
+
+  // Group items using JCR section structure
+  function groupByJCRSections(items, jcrSections) {
+    const grouped = [];
+
+    console.log('\n📋 Grouping by JCR section metadata:');
+
+    jcrSections.forEach((section) => {
+      // Find all items that belong to this section based on __jcrSection metadata
+      const itemsInSection = items.filter((item) => {
+        return item.__jcrSection === section.title;
+      });
+
+      if (itemsInSection.length > 0) {
+        const sectionObj = {
+          title: section.title,
+          path: section.title,
+          type: 'section',
+          items: itemsInSection.map((item) => {
+            const updatedItem = { ...item };
+            // Remove the internal metadata before output
+            delete updatedItem.__jcrSection;
+            
+            if (!item.path.startsWith(section.title)) {
+              updatedItem.path = `${section.title} > ${item.path}`;
+            }
+            if (item.items && Array.isArray(item.items)) {
+              updatedItem.items = item.items.map((child) => {
+                const childCopy = { ...child };
+                const parentTitle = item.title;
+                if (childCopy.path && childCopy.path.startsWith(`${parentTitle} >`)) {
+                  const pathWithoutParentTitle = childCopy.path.substring(`${parentTitle} > `.length);
+                  childCopy.path = `${updatedItem.path} > ${pathWithoutParentTitle}`;
+                } else if (!childCopy.path.startsWith(updatedItem.path)) {
+                  childCopy.path = `${updatedItem.path} > ${childCopy.path}`;
+                }
+                if (childCopy.items && Array.isArray(childCopy.items)) {
+                  childCopy.items = childCopy.items.map((subchild) => prependPathToItem(subchild, childCopy.path));
+                }
+                return childCopy;
+              });
+            }
+            return updatedItem;
+          }),
+        };
+        grouped.push(sectionObj);
+      }
+    });
+
+    console.log(`  - ${grouped.map((s) => `${s.title} (${s.items.length})`).join(', ')}\n`);
+
     return grouped;
+  }
+
+  // Helper function to prepend parent path to items recursively
+  function prependPathToItem(item, parentPath) {
+    const updatedItem = { ...item };
+
+    if (!item.path.startsWith(parentPath)) {
+      updatedItem.path = `${parentPath} > ${item.path}`;
+    }
+
+    if (item.items && Array.isArray(item.items)) {
+      updatedItem.items = item.items.map((child) => {
+        const childCopy = { ...child };
+        const parentTitle = item.title;
+        if (childCopy.path && childCopy.path.startsWith(`${parentTitle} >`)) {
+          const pathWithoutParentTitle = childCopy.path.substring(`${parentTitle} > `.length);
+          childCopy.path = `${updatedItem.path} > ${pathWithoutParentTitle}`;
+        } else if (!childCopy.path.startsWith(updatedItem.path)) {
+          childCopy.path = `${updatedItem.path} > ${childCopy.path}`;
+        }
+        if (childCopy.items && Array.isArray(childCopy.items)) {
+          childCopy.items = childCopy.items.map((subchild) => prependPathToItem(subchild, childCopy.path));
+        }
+        return childCopy;
+      });
+    }
+
+    return updatedItem;
+  }
+
+  // Fallback: group items by first-level path component (data-driven auto-detection)
+  function groupByFirstPathComponent(items) {
+    const sectionMap = new Map();
+
+    items.forEach((item) => {
+      let sectionKey = null;
+      let sectionTitle = null;
+
+      if (item.path) {
+        const pathParts = item.path.split(' > ');
+        if (pathParts.length > 1) {
+          sectionKey = pathParts[0];
+          sectionTitle = pathParts[0];
+        } else {
+          sectionKey = item.title;
+          sectionTitle = item.title;
+        }
+      } else {
+        sectionKey = item.title;
+        sectionTitle = item.title;
+      }
+
+      if (!sectionMap.has(sectionKey)) {
+        sectionMap.set(sectionKey, {
+          title: sectionTitle,
+          items: [],
+        });
+      }
+
+      sectionMap.get(sectionKey).items.push(item);
+    });
+
+    const grouped = Array.from(sectionMap.values()).map((section) => ({
+      title: section.title,
+      path: section.title,
+      type: 'section',
+      items: section.items,
+    }));
+
+    console.log('\n📋 Auto-detected sections (data-driven from path):');
+    grouped.forEach((section) => {
+      console.log(`  - ${section.title} (${section.items.length} items)`);
+    });
+    console.log();
+
+    return grouped.map((section) => ({
+      ...section,
+      items: section.items.map((item) => {
+        if (!item.path.startsWith(section.title)) {
+          return prependPathToItem(item, section.title);
+        }
+        return item;
+      }),
+    }));
   }
 
   // Save to file
