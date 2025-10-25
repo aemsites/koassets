@@ -9,11 +9,29 @@ export async function fetchHelixSheet(env, path, options) {
     url += `?${new URLSearchParams(options.params).toString()}`;
   }
 
-  const response = await fetch(url, {
-    // TODO: remove this once we have cache invalidation working
-    cache: 'no-store',
+  const pushInvalidation = env.HELIX_PUSH_INVALIDATION !== 'disabled';
+  if (pushInvalidation) {
+    headers['x-push-invalidation'] = 'enabled';
+  }
+
+  // console.log('>>>', req.method, req.url /*, req.headers*/);
+
+  const fetchOptions = {
     headers,
-  });
+  };
+
+  if (pushInvalidation) {
+    fetchOptions.cf = {
+      // cf doesn't cache html by default: need to override the default behavior
+      cacheEverything: true,
+    };
+  } else {
+    // disable caching if no push invalidation is happening
+    // e.g. when using workers.dev directly without a domain/zone
+    fetchOptions.cache = 'no-store';
+  }
+
+  const response = await fetch(url, fetchOptions);
 
   // TODO: remove after debugging in production (to understand caching headers)
   console.log('fetchHelixSheet response headers:', url, Object.fromEntries(response.headers.entries()));
