@@ -29,8 +29,8 @@ HELIX_ORIGIN = "https://main--koassets--aemsites.aem.live"
 DM_ORIGIN = "https://delivery-p64403-e544653.adobeaemcloud.com"
 FADEL_ORIGIN = "https://test.fadelarc.net"
 
-# keep disabled as long as we are using workers.dev directly without a domain/zone
-HELIX_PUSH_INVALIDATION = "disabled"
+# push invalidation is enabled
+# HELIX_PUSH_INVALIDATION = "disabled"
 
 # Microsoft Entra IDP (config)
 MICROSOFT_ENTRA_TENANT_ID = "548d26ab-8caa-49e1-97c2-a1b1a06cc39c"
