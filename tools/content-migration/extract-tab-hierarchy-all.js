@@ -9,8 +9,8 @@ const { URL } = require('url');
 const { sanitizeFileName, buildFileNameWithId } = require('./sanitize-utils.js');
 
 const AEM_AUTHOR = 'https://author-p64403-e544653.adobeaemcloud.com';
-// let CONTENT_PATH = '/content/share/us/en/all-content-stores';
-let CONTENT_PATH = '/content/share/us/en/all-content-stores/global-coca-cola-uplift';
+let CONTENT_PATH = '/content/share/us/en/all-content-stores';
+// let CONTENT_PATH = '/content/share/us/en/all-content-stores/global-coca-cola-uplift';
 
 // Override CONTENT_PATH if provided as first command line argument
 [, , CONTENT_PATH = CONTENT_PATH] = process.argv;
@@ -223,6 +223,7 @@ async function main() {
     // Create a map of all titles to their sling:resourceType from JCR
     const jcrTitleMap = {};
     const jcrLinkUrlMap = {}; // Map of (title|parentKey) -> linkURL
+    const jcrTextMap = {}; // Map of (title|parentKey) -> text content
     const jcrButtonsWithoutLinkUrl = {}; // Track buttons that DON'T have linkURL
     function indexJCRByTitle(obj, parentPath = '', parentKey = '') {
       if (!obj || typeof obj !== 'object') return;
@@ -251,6 +252,46 @@ async function main() {
             // Only store the ones WITH linkURLs
           }
 
+          // Capture text content from text_* properties OR direct text component items
+          if (title) {
+            const titleKey = String(title).trim();
+            const parentKeyContext = parentKey || 'root';
+            const contextKey = `${titleKey}|${parentKeyContext}`;
+
+            let textContent = null;
+
+            // First, check if this item itself is a text component with direct text field
+            if (rt && rt.includes('text') && obj[key].text) {
+              textContent = obj[key].text;
+            } else {
+              // Otherwise, look for properties starting with "text_" that contain a "text" field
+              for (const textKey in obj[key]) {
+                if (textKey.startsWith('text_') && obj[key][textKey].text) {
+                  textContent = obj[key][textKey].text;
+                  break; // Take the first text_* property found
+                }
+              }
+            }
+
+            if (textContent) {
+              // Store text by context key (title|parentKey) and title-only as fallback
+              jcrTextMap[contextKey] = textContent;
+              if (!jcrTextMap[titleKey]) { // Don't overwrite if title-only already has value
+                jcrTextMap[titleKey] = textContent;
+              }
+            }
+          } else if (rt && rt.includes('text') && obj[key].text) {
+            // For text components without a title, store by key context
+            const parentKeyContext = parentKey || 'root';
+            const contextKey = `${key}|${parentKeyContext}`;
+            const textContent = obj[key].text;
+            jcrTextMap[contextKey] = textContent;
+            // Also store by key only as fallback
+            if (!jcrTextMap[key]) {
+              jcrTextMap[key] = textContent;
+            }
+          }
+
           indexJCRByTitle(obj[key], `${parentPath}/${key}`, key);
         }
       }
@@ -274,7 +315,7 @@ async function main() {
 
     // Continue with parsing
     // eslint-disable-next-line no-use-before-define
-    parseHierarchyFromModel(mainTabsData, jcrTitleMap, jcrLinkUrlMap);
+    parseHierarchyFromModel(mainTabsData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap);
   } catch (error) {
     console.error(`❌ Failed: ${error.message}`);
     process.exit(1);
@@ -653,7 +694,7 @@ function getItemTypeFromResourceType(item, itemKey = '') {
   return 'item';
 }
 
-function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap) {
+function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap) {
   console.log('📖 Parsing hierarchy from combined-tabs.model.json...\n');
 
   // Function to recursively extract hierarchy from :items
@@ -730,6 +771,32 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap) {
       const linkURL = jcrLinkUrlMap[contextKey];
       if (linkURL) {
         hierarchyItem.linkURL = linkURL;
+      }
+
+      // Look up text content using JCR context only
+      const textContent = jcrTextMap[contextKey];
+      if (textContent) {
+        hierarchyItem.text = textContent;
+      } else {
+        // Fallback: check if text was stored by key (for text components without titles)
+        const textByKey = jcrTextMap[key];
+        if (textByKey) {
+          hierarchyItem.text = textByKey;
+        } else {
+          // Also try the key with parent context
+          const keyContextKey = `${key}|${immediateParentKey}`;
+          const textByKeyContext = jcrTextMap[keyContextKey];
+          if (textByKeyContext) {
+            hierarchyItem.text = textByKeyContext;
+          } else if ((itemType === 'container' || key.startsWith('container')) && (key.startsWith('container') || key === 'container')) {
+            // Last fallback: for structural containers, check if this key has orphaned text children
+            // e.g., "text_copy_copy_copy__1538611243|container_copy_copy_" when looking for "container_copy_copy_"
+            const childrenTextKey = Object.keys(jcrTextMap).find((k) => k.endsWith(`|${key}`));
+            if (childrenTextKey) {
+              hierarchyItem.text = jcrTextMap[childrenTextKey];
+            }
+          }
+        }
       }
 
       if (item[':items']) {
@@ -831,6 +898,45 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap) {
     items.forEach((item) => console.log(`  - ${item.title}`));
     console.log();
 
+    // Function to prepend parent path to all items recursively
+    function prependPathToItem(item, parentPath) {
+      const updatedItem = { ...item };
+
+      // For level 2 items, prepend the section path if not already present
+      if (!item.path.startsWith(parentPath)) {
+        updatedItem.path = `${parentPath} > ${item.path}`;
+      }
+
+      // Recursively update children
+      if (item.items && Array.isArray(item.items)) {
+        updatedItem.items = item.items.map((child) => {
+          const childCopy = { ...child };
+
+          // For children, we need to avoid duplicating the immediate parent title
+          // The child path might start with the parent item's title (e.g., "Half Time > container > ...")
+          // We want to prepend the full parent path but avoid duplication
+          const parentTitle = item.title;
+          if (childCopy.path && childCopy.path.startsWith(`${parentTitle} >`)) {
+            // Remove the parent title from the beginning since we're adding the full parent path
+            const pathWithoutParentTitle = childCopy.path.substring(`${parentTitle} > `.length);
+            childCopy.path = `${updatedItem.path} > ${pathWithoutParentTitle}`;
+          } else if (!childCopy.path.startsWith(updatedItem.path)) {
+            // Standard prepend if not already present
+            childCopy.path = `${updatedItem.path} > ${childCopy.path}`;
+          }
+
+          // Recursively process grandchildren with the updated child path
+          if (childCopy.items && Array.isArray(childCopy.items)) {
+            childCopy.items = childCopy.items.map((subchild) => prependPathToItem(subchild, childCopy.path));
+          }
+
+          return childCopy;
+        });
+      }
+
+      return updatedItem;
+    }
+
     // Create section groups
     for (const [sectionTitle, sectionConfig] of Object.entries(sections)) {
       const itemsInSection = [];
@@ -856,7 +962,9 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap) {
           }
 
           if (matchingItem) {
-            itemsInSection.push(matchingItem);
+            // Prepend section title to the item's path and all children
+            const updatedItem = prependPathToItem(matchingItem, sectionTitle);
+            itemsInSection.push(updatedItem);
           }
         } else {
           // For other sections, use tabs index preference
@@ -874,7 +982,9 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap) {
           }
 
           if (matchingItem) {
-            itemsInSection.push(matchingItem);
+            // Prepend section title to the item's path and all children
+            const updatedItem = prependPathToItem(matchingItem, sectionTitle);
+            itemsInSection.push(updatedItem);
           }
         }
       });
