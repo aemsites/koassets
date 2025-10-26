@@ -51,11 +51,15 @@ const generateTabBlocks = (items, baseIndent, contentIndent) => items
       .split('\n')
       .map((line) => (line.trim() ? contentIndent + line : line))
       .join('\n');
+
+    // Properly sanitize hierarchical path
+    const pathComponents = item.path.split(PATH_SEPARATOR).map((comp) => sanitize(comp.trim()));
+    const sanitizedPath = `${lastContentPathToken}/${pathComponents.join('/')}`;
     return indentedTemplate
-      .replace(/\$\{TITLE\}/g, item.title)
-      .replace(/\$\{SANITIZED_TITLE\}/g, sanitizedTitle)
       .replace(/\$\{DA_DEST\}/g, DA_DEST)
-      .replace(/\$\{PATH\}/g, sanitize(`${lastContentPathToken}/${item.path.replaceAll(PATH_SEPARATOR, '/')}`));
+      .replace(/\$\{PATH\}/g, sanitizedPath)
+      .replace(/\$\{SANITIZED_TITLE\}/g, sanitizedTitle)
+      .replace(/\$\{TITLE\}/g, item.title);
   })
   .join('\n');
 
@@ -65,9 +69,9 @@ const getImageName = (imageUrl) => {
   return match ? match[1] : '';
 };
 
-// Generate card blocks from image items
+// Generate card blocks from teaser items (items with images)
 const generateCardBlocks = (imageItems, parentTitle, parentHierarchy, baseIndent, contentIndent) => imageItems
-  .filter((item) => item.type === 'image')
+  .filter((item) => item.type === 'teaser')
   .map((item) => {
     const extractedImageName = getImageName(item.imageUrl || '');
     // Build filename with itemId prepended
@@ -80,9 +84,18 @@ const generateCardBlocks = (imageItems, parentTitle, parentHierarchy, baseIndent
         .split('\n')
         .map((line) => (line.trim() ? contentIndent + line : line))
         .join('\n');
+      // For card images, always use simple path structure with dot prefix (like .coca-cola)
+      // Brand-specific cards should NEVER include parent directory prefixes
+      const pathComponents = item.path.split(PATH_SEPARATOR).map((comp) => sanitize(comp.trim()));
+      const fullPath = pathComponents.join('/');
+      const pathTokens = fullPath.split('/');
+      const sanitizedParentIndex = pathTokens.findIndex((token) => token === sanitizedParentTitle);
+      const tokensAboveParent = sanitizedParentIndex > 0 ? pathTokens.slice(0, sanitizedParentIndex) : [];
+      const pathAboveParent = tokensAboveParent.join('/');
+      const sanitizedPath = pathAboveParent ? `${lastContentPathToken}/${pathAboveParent}` : lastContentPathToken;
       return indentedTemplate
         .replace(/\$\{DA_DEST\}/g, DA_DEST)
-        .replace(/\$\{PATH\}/g, sanitize(`${lastContentPathToken}/${parentHierarchy.replaceAll(PATH_SEPARATOR, '/')}`))
+        .replace(/\$\{PATH\}/g, sanitizedPath)
         .replace(/\$\{PARENT_TITLE\}/g, sanitizedParentTitle)
         .replace(/\$\{IMAGE_NAME\}/g, imageName)
         .replace(/\$\{TITLE\}/g, item.title);
@@ -106,12 +119,12 @@ const generateCardBlocks = (imageItems, parentTitle, parentHierarchy, baseIndent
   })
   .join('\n');
 
-// Find the deepest level containing "type": "image"
+// Find the deepest level containing "type": "teaser" (items with images)
 const findDeepestImageLevel = (items, currentDepth = 0) => {
   let maxDepth = currentDepth;
 
   items.forEach((item) => {
-    if (item.type === 'image') {
+    if (item.type === 'teaser') {
       maxDepth = Math.max(maxDepth, currentDepth);
     }
     if (item.items && item.items.length > 0) {
@@ -122,8 +135,8 @@ const findDeepestImageLevel = (items, currentDepth = 0) => {
   return maxDepth;
 };
 
-// Check if all items in a list are images
-const allItemsAreImages = (items) => items.every((item) => item.type === 'image');
+// Check if all items in a list are teasers (leaf items with images)
+const allItemsAreImages = (items) => items.every((item) => item.type === 'teaser');
 
 // Check if an item has any descendants at the target depth or deeper
 const hasContentAtTargetDepth = (item, targetDepth, currentDepth = 0) => {
@@ -152,8 +165,17 @@ if (deepestImageLevel === 0) {
 // Recursively generate HTML for items at target level (1-based level 1, which is 2 levels above images)
 const processHierarchyByLevel = (items, currentDepth = 0, parentPath = '') => {
   items.forEach((item) => {
-    // Skip items of type "image"
-    if (item.type === 'image') {
+    // Skip items of type "teaser" (these are leaf items with images)
+    if (item.type === 'teaser') {
+      return;
+    }
+
+    // Skip items of type "section" as requested by user
+    if (item.type === 'section') {
+      // Still recurse to process children, but don't generate files for sections
+      if (item.items && item.items.length > 0) {
+        processHierarchyByLevel(item.items, currentDepth, parentPath);
+      }
       return;
     }
 
@@ -176,35 +198,117 @@ const processHierarchyByLevel = (items, currentDepth = 0, parentPath = '') => {
         console.log('    ✓ Generating at target depth');
       }
 
-      if ((currentDepth === 0 && hasContent) || (currentDepth === targetGenerateLevel && notAllImages)) {
-        // Detect indentation from fragment template
-        const tabsDivMatch = fragmentTemplateContent.match(/^(\s*)<div class="tabs">/m);
-        const baseIndent = tabsDivMatch ? tabsDivMatch[1] : '      ';
-        const contentIndent = `${baseIndent}  `;
+      // Only generate at root level (depth 0) - no duplicate nested generation
+      const shouldGenerate = (currentDepth === 0 && hasContent);
 
-        // Generate tab blocks for child items
-        const generatedBlocks = generateTabBlocks(item.items, baseIndent, contentIndent);
+      if (shouldGenerate) {
+        // Check if this item has teaser children (direct or one level deeper)
+        const directTeaserChildren = item.items.filter((child) => child.type === 'teaser');
+        let hasDirectTeasers = directTeaserChildren.length > 0;
 
-        // Inject into fragment template
-        const outputHtml = fragmentTemplateContent.replace(
-          /<div class="tabs">\s*<\/div>/,
-          `<div class="tabs">\n${generatedBlocks}\n${baseIndent}</div>`,
-        );
+        // Check if this item has non-teaser children (containers/brands that need navigation)
+        const hasNonTeaserChildren = item.items.some((child) => child.type !== 'teaser');
 
-        // Create directory for this level
-        const outputDir = path.join(__dirname, lastContentPathToken, 'generated-documents', currentPath);
-        fs.mkdirSync(outputDir, { recursive: true });
+        // If no direct teasers, check one level deeper (for sections like Brands that have container > teasers structure)
+        if (!hasDirectTeasers && item.items.length > 0) {
+          const childrenWithTeasers = item.items.some((child) => child.items && child.items.some((grandchild) => grandchild.type === 'teaser'));
+          hasDirectTeasers = childrenWithTeasers;
+        }
 
-        // Write HTML file
-        const fileName = `${sanitizedParent}.html`;
-        const outputPath = path.join(outputDir, fileName);
-        fs.writeFileSync(outputPath, outputHtml, 'utf8');
+        console.log(`    📋 "${item.title}" has ${directTeaserChildren.length} direct teasers, ${item.items.length} total children, hasDirectTeasers: ${hasDirectTeasers}, hasNonTeaserChildren: ${hasNonTeaserChildren}`);
 
-        console.log(`    ✓ Generated: ${outputPath}`);
+        if (hasDirectTeasers && !hasNonTeaserChildren) {
+          // Generate cards template for sections with direct teaser children
+          const tabsDivMatch = fragmentCardsTemplateContent.match(/^(\s*)<div class="cards">/m);
+          const baseIndent = tabsDivMatch ? tabsDivMatch[1] : '      ';
+          const contentIndent = `${baseIndent}  `;
+
+          // Generate card blocks for teaser children (handle nested structure)
+          let allTeasers = [];
+          if (directTeaserChildren.length > 0) {
+            // Direct teasers
+            allTeasers = item.items;
+          } else {
+            // Teasers are nested one level deeper - flatten them
+            item.items.forEach((child) => {
+              if (child.items) {
+                allTeasers = allTeasers.concat(child.items);
+              }
+            });
+          }
+          const generatedCards = generateCardBlocks(allTeasers, item.title, null, baseIndent, contentIndent);
+
+          // Inject into fragment-cards template
+          const outputHtml = fragmentCardsTemplateContent.replace(
+            /<div class="cards">\s*<\/div>/,
+            `<div class="cards">\n${generatedCards}\n${baseIndent}</div>`,
+          );
+
+          // Create directory for this level
+          const outputDir = path.join(__dirname, lastContentPathToken, 'generated-documents', currentPath);
+          fs.mkdirSync(outputDir, { recursive: true });
+
+          // Write HTML file
+          const fileName = `${sanitizedParent}.html`;
+          const outputPath = path.join(outputDir, fileName);
+          fs.writeFileSync(outputPath, outputHtml, 'utf8');
+
+          console.log(`    ✓ Generated cards: ${outputPath}`);
+        } else if (hasNonTeaserChildren) {
+          // Generate tabs template for navigation sections
+          const tabsDivMatch = fragmentTemplateContent.match(/^(\s*)<div class="tabs">/m);
+          const baseIndent = tabsDivMatch ? tabsDivMatch[1] : '      ';
+          const contentIndent = `${baseIndent}  `;
+
+          // Generate tab blocks for child items
+          const generatedBlocks = generateTabBlocks(item.items, baseIndent, contentIndent);
+
+          // Inject into fragment template
+          const outputHtml = fragmentTemplateContent.replace(
+            /<div class="tabs">\s*<\/div>/,
+            `<div class="tabs">\n${generatedBlocks}\n${baseIndent}</div>`,
+          );
+
+          // Create directory for this level
+          const outputDir = path.join(__dirname, lastContentPathToken, 'generated-documents', currentPath);
+          fs.mkdirSync(outputDir, { recursive: true });
+
+          // Write HTML file
+          const fileName = `${sanitizedParent}.html`;
+          const outputPath = path.join(outputDir, fileName);
+          fs.writeFileSync(outputPath, outputHtml, 'utf8');
+
+          console.log(`    ✓ Generated tabs: ${outputPath}`);
+        }
       }
 
       // Always recurse to process deeper levels
       processHierarchyByLevel(item.items, currentDepth + 1, currentPath);
+
+      // Generate brand-specific card files for any depth that has teaser children (excluding depth 0)
+      if (currentDepth > 0 && item.items && item.items.length > 0) {
+        const teaserChildren = item.items.filter((child) => child.type === 'teaser');
+        if (teaserChildren.length > 0) {
+          // Generate cards template for this specific brand
+          const tabsDivMatch = fragmentCardsTemplateContent.match(/^(\s*)<div class="cards">/m);
+          const baseIndent = tabsDivMatch ? tabsDivMatch[1] : '      ';
+          const contentIndent = `${baseIndent}  `;
+
+          const generatedCards = generateCardBlocks(item.items, item.title, null, baseIndent, contentIndent);
+          const outputHtml = fragmentCardsTemplateContent.replace(
+            /<div class="cards">\s*<\/div>/,
+            `<div class="cards">\n${generatedCards}\n${baseIndent}</div>`,
+          );
+
+          const outputDir = path.join(__dirname, lastContentPathToken, 'generated-documents', currentPath);
+          fs.mkdirSync(outputDir, { recursive: true });
+          const fileName = `${sanitize(item.title)}.html`;
+          const outputPath = path.join(outputDir, fileName);
+          fs.writeFileSync(outputPath, outputHtml, 'utf8');
+
+          console.log(`    ✓ Generated brand cards: ${outputPath}`);
+        }
+      }
     }
   });
 };
@@ -220,8 +324,8 @@ const processImagesForCardGeneration = (items, parentPath = '', parentHierarchy 
     const currentPath = parentPath ? `${parentPath}/${sanitizedItem}` : sanitizedItem;
     const currentHierarchy = parentHierarchy ? `${parentHierarchy}${PATH_SEPARATOR}${item.title}` : item.title;
 
-    // Check if this item has image children
-    const imageChildren = item.items.filter((child) => child.type === 'image');
+    // Check if this item has teaser children (items with images)
+    const imageChildren = item.items.filter((child) => child.type === 'teaser');
 
     if (imageChildren.length > 0) {
       // Detect indentation from fragment-cards template
@@ -276,6 +380,6 @@ console.log(`✓ Generated: ${mainOutputPath}`);
 
 // Process nested levels
 processHierarchyByLevel(hierarchyData);
-processImagesForCardGeneration(hierarchyData);
+// Note: Card generation is now handled within processHierarchyByLevel, no separate call needed
 
 console.log('\n✓ All documents generated successfully!');
