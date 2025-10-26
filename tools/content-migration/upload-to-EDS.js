@@ -152,8 +152,8 @@ async function uploadAllGeneratedDocuments() {
         let daDestPath;
         if (depth === 0) {
           // Top-level files: remove '/fragments' from DA_DEST
-          const destWithoutFragments = DA_DEST.replace(/\/fragments$/, '');
-          daDestPath = `${DA_ORG}/${DA_REPO}/${destWithoutFragments}/${relativePath}${filename}`; // DON'T add lastContentPathToken
+          const destWithoutFragments = DA_DEST.replace(/\/?fragments$/, '');
+          daDestPath = destWithoutFragments ? `${DA_ORG}/${DA_REPO}/${destWithoutFragments}/${relativePath}${filename}` : `${DA_ORG}/${DA_REPO}/${relativePath}${filename}`; // DON'T add lastContentPathToken
         } else {
           // Nested files: use DA_DEST as-is
           daDestPath = `${DA_ORG}/${DA_REPO}/${DA_DEST}/${lastContentPathToken}/${relativePath}${filename}`;
@@ -178,7 +178,14 @@ async function uploadAllGeneratedDocuments() {
 // Run the upload
 // uploadAllGeneratedDocuments();
 
+// ========= DRAFTS =========
 // uploadToEDS('aemsites/koassets/drafts/tphan/all-content-stores.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/all-content-stores.html');
 // uploadToEDS('aemsites/koassets/drafts/tphan/fragments/all-content-stores/global-initiatives/global-initiatives.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/global-initiatives.html');
 // uploadToEDS('aemsites/koassets/drafts/tphan/fragments/all-content-stores/global-initiatives/coca-cola/coca-cola.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/coca-cola/coca-cola.html');
-uploadToEDS('aemsites/koassets/drafts/tphan/fragments/all-content-stores/global-initiatives/fanta/fanta.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/fanta/fanta.html');
+// uploadToEDS('aemsites/koassets/drafts/tphan/fragments/all-content-stores/global-initiatives/fanta/fanta.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/fanta/fanta.html');
+
+// ========= LIVE =========
+// uploadToEDS('aemsites/koassets/all-content-stores.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/all-content-stores.html');
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/global-initiatives.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/global-initiatives.html');
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/coca-cola/coca-cola.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/coca-cola/coca-cola.html');
+uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/fanta/fanta.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/fanta/fanta.html');

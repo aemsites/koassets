@@ -4,7 +4,7 @@
  */
 
 // Sanitize any string: lowercase and replace spaces with hyphens
-const sanitize = (str) => str.trim().toLowerCase().replace(/\s+/g, '-');
+const sanitize = (str) => str.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.-]/g, '_');
 
 // Sanitize filename while preserving extension
 const sanitizeFileName = (fileName) => {

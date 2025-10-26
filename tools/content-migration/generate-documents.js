@@ -53,8 +53,7 @@ const generateTabBlocks = (items, baseIndent, contentIndent) => items
       .join('\n');
 
     // Properly sanitize hierarchical path
-    const pathComponents = item.path.split(PATH_SEPARATOR).map((comp) => sanitize(comp.trim()));
-    const sanitizedPath = `${lastContentPathToken}/${pathComponents.join('/')}`;
+    const sanitizedPath = sanitize(`${lastContentPathToken}/${item.path.split(PATH_SEPARATOR).join('/')}`);
     return indentedTemplate
       .replace(/\$\{DA_DEST\}/g, DA_DEST)
       .replace(/\$\{PATH\}/g, sanitizedPath)
@@ -86,13 +85,12 @@ const generateCardBlocks = (imageItems, parentTitle, parentHierarchy, baseIndent
         .join('\n');
       // For card images, always use simple path structure with dot prefix (like .coca-cola)
       // Brand-specific cards should NEVER include parent directory prefixes
-      const pathComponents = item.path.split(PATH_SEPARATOR).map((comp) => sanitize(comp.trim()));
-      const fullPath = pathComponents.join('/');
+      const fullPath = item.path.split(PATH_SEPARATOR).join('/');
       const pathTokens = fullPath.split('/');
       const sanitizedParentIndex = pathTokens.findIndex((token) => token === sanitizedParentTitle);
       const tokensAboveParent = sanitizedParentIndex > 0 ? pathTokens.slice(0, sanitizedParentIndex) : [];
       const pathAboveParent = tokensAboveParent.join('/');
-      const sanitizedPath = pathAboveParent ? `${lastContentPathToken}/${pathAboveParent}` : lastContentPathToken;
+      const sanitizedPath = pathAboveParent ? sanitize(`${lastContentPathToken}/${pathAboveParent}`) : sanitize(lastContentPathToken);
       return indentedTemplate
         .replace(/\$\{DA_DEST\}/g, DA_DEST)
         .replace(/\$\{PATH\}/g, sanitizedPath)

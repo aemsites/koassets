@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const { URL } = require('url');
-const { sanitizeFileName, buildFileNameWithId } = require('./sanitize-utils.js');
+const { sanitize, sanitizeFileName, buildFileNameWithId } = require('./sanitize-utils.js');
 
 const AEM_AUTHOR = 'https://author-p64403-e544653.adobeaemcloud.com';
 let CONTENT_PATH = '/content/share/us/en/all-content-stores';
@@ -1493,7 +1493,7 @@ async function downloadAllImages(hierarchyData, outputDir) {
       // Extract filename from URL
       const urlParts = imageUrl.split('/');
       const filename = urlParts[urlParts.length - 1];
-      const safeFilename = `${index.toString().padStart(3, '0')}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const safeFilename = sanitize(filename);
       const filePath = path.join(imagesDir, safeFilename);
 
       // Skip if file already exists
