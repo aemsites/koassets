@@ -207,14 +207,18 @@ async function uploadAllGeneratedDocuments() {
 // Run the upload
 // uploadAllGeneratedDocuments();
 
-// ========= DRAFTS =========
+// ============================================ DRAFTS ============================================
 // uploadToEDS('aemsites/koassets/drafts/tphan/all-content-stores.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/all-content-stores.html');
 // uploadToEDS('aemsites/koassets/drafts/tphan/fragments/all-content-stores/global-initiatives/global-initiatives.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/global-initiatives.html');
 // uploadToEDS('aemsites/koassets/drafts/tphan/fragments/all-content-stores/global-initiatives/coca-cola/coca-cola.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/coca-cola/coca-cola.html');
 // uploadToEDS('aemsites/koassets/drafts/tphan/fragments/all-content-stores/global-initiatives/fanta/fanta.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/fanta/fanta.html');
 
-// ========= LIVE =========
+// ============================================ LIVE ============================================
+
+// ALL CONTENT STORES
 // uploadToEDS('aemsites/koassets/all-content-stores.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/all-content-stores.html');
+
+// GLOBAL INITIATIVES
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/global-initiatives.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/global-initiatives.html');
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/coca-cola/coca-cola.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/coca-cola/coca-cola.html');
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/fanta/fanta.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/fanta/fanta.html');
@@ -224,17 +228,24 @@ async function uploadAllGeneratedDocuments() {
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/schweppes/schweppes.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/schweppes/schweppes.html');
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/fuze-tea/fuze-tea.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/fuze-tea/fuze-tea.html');
 
+// REGIONAL INITIATIVES
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/regional-initiatives/regional-initiatives.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/regional-initiatives/regional-initiatives.html');
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/regional-initiatives/naou/naou.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/regional-initiatives/naou/naou.html');
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/regional-initiatives/europe/europe.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/regional-initiatives/europe/europe.html');
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/regional-initiatives/latam/latam.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/regional-initiatives/latam/latam.html');
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/regional-initiatives/australia/australia.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/regional-initiatives/australia/australia.html');
 
+// PAST INITIATIVES
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/past-initiatives/past-initiatives.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/past-initiatives/past-initiatives.html');
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/past-initiatives/coca-cola/coca-cola.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/past-initiatives/coca-cola/coca-cola.html');
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/past-initiatives/sprite/sprite.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/past-initiatives/sprite/sprite.html');
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/past-initiatives/fanta/fanta.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/past-initiatives/fanta/fanta.html');
 
+// BRANDS
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/brands/brands.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/brands/brands.html');
+
+// ESSENTIALS
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/essentials/essentials.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/essentials/essentials.html');
+
+// CUSTOMERS
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/customers/customers.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/customers/customers.html');

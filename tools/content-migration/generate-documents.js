@@ -23,7 +23,8 @@ const mainTemplatePath = path.join(__dirname, 'templates', `${lastContentPathTok
 const tabTemplatePath = path.join(__dirname, 'templates', 'tab-template.html');
 const fragmentTemplatePath = path.join(__dirname, 'templates', 'fragment-tabs-template.html');
 
-const hierarchyData = JSON.parse(fs.readFileSync(hierarchyPath, 'utf8'));
+const hierarchyStructure = JSON.parse(fs.readFileSync(hierarchyPath, 'utf8'));
+const hierarchyData = hierarchyStructure.items || [];
 let mainTemplateContent = fs.readFileSync(mainTemplatePath, 'utf8');
 let tabTemplateContent = fs.readFileSync(tabTemplatePath, 'utf8');
 let fragmentTemplateContent = fs.readFileSync(fragmentTemplatePath, 'utf8');

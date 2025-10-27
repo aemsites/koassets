@@ -6,9 +6,9 @@ const path = require('path');
 // Get content path from command line arguments
 const contentPath = process.argv[2];
 if (!contentPath) {
-  console.error('❌ Usage: node generate-hierarchy-html.js <content-path>');
-  console.error('   Example: node generate-hierarchy-html.js all-content-stores');
-  console.error('   Example: node generate-hierarchy-html.js global-coca-cola-uplift');
+  console.error('❌ Usage: node generate-hierarchy-html-for-debug.js <content-path>');
+  console.error('   Example: node generate-hierarchy-html-for-debug.js all-content-stores');
+  console.error('   Example: node generate-hierarchy-html-for-debug.js global-coca-cola-uplift');
   process.exit(1);
 }
 
@@ -26,8 +26,11 @@ function generateHTML() {
     process.exit(1);
   }
 
-  const hierarchyData = JSON.parse(fs.readFileSync(HIERARCHY_FILE, 'utf8'));
+  const hierarchyStructure = JSON.parse(fs.readFileSync(HIERARCHY_FILE, 'utf8'));
+  const hierarchyData = hierarchyStructure.items || [];
+  const bannerImages = hierarchyStructure.bannerImages || [];
   console.log(`✅ Loaded hierarchy with ${JSON.stringify(hierarchyData).length} characters`);
+  console.log(`✅ Found ${bannerImages.length} banner image(s)`);
 
   // Check images directory
   const imagesExist = fs.existsSync(IMAGES_DIR);
@@ -402,6 +405,101 @@ function generateHTML() {
             font-size: 1.1rem;
         }
 
+        .banner-section {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .banner-header {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .banner-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .banner-subtitle {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .banner-content {
+            padding: 20px;
+        }
+
+        .banner-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .banner-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .banner-item:hover {
+            border-color: #e74c3c;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+
+        .banner-image {
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 2px solid #e1e8ed;
+        }
+
+        .banner-image.placeholder {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #e1e8ed 0%, #f8f9fa 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            font-size: 1rem;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .banner-info h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+
+        .banner-meta {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+
+        .banner-url {
+            background: #e9ecef;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.75rem;
+            word-break: break-all;
+            margin-top: 10px;
+        }
+
         @media (max-width: 768px) {
             .items-grid {
                 grid-template-columns: 1fr;
@@ -437,6 +535,10 @@ function generateHTML() {
                     <span class="stat-number" id="total-images">0</span>
                     <span class="stat-label">Images</span>
                 </div>
+                <div class="stat">
+                    <span class="stat-number" id="total-banners">0</span>
+                    <span class="stat-label">Banners</span>
+                </div>
             </div>
         </div>
 
@@ -446,6 +548,19 @@ function generateHTML() {
             <div class="controls">
                 <button class="control-btn" id="expand-all" onclick="expandAll()">📂 Expand All</button>
                 <button class="control-btn" id="collapse-all" onclick="collapseAll()">📁 Collapse All</button>
+            </div>
+            
+            <!-- Banner Images Section -->
+            <div id="banner-section" class="banner-section" style="display: none;">
+                <div class="banner-header">
+                    <div class="banner-title">🖼️ Banner Images</div>
+                    <div class="banner-subtitle">Featured images extracted from the content structure</div>
+                </div>
+                <div class="banner-content">
+                    <div class="banner-grid" id="banner-grid">
+                        <!-- Banner content will be generated here -->
+                    </div>
+                </div>
             </div>
             
             <div class="hierarchy" id="hierarchy">
@@ -460,6 +575,7 @@ function generateHTML() {
 
     <script>
         const hierarchyData = ${JSON.stringify(hierarchyData, null, 2)};
+        const bannerImages = ${JSON.stringify(bannerImages, null, 2)};
         const imagesDir = '${imagesExist ? 'images/' : ''}';
         
         let totalItems = 0;
@@ -561,6 +677,29 @@ function generateHTML() {
             \`;
         }
 
+        function renderBannerItem(banner) {
+            const imagePath = getImagePath(banner.imageUrl);
+            
+            return \`
+                <div class="banner-item">
+                    \${imagePath ? 
+                        \`<img src="\${imagePath}" alt="\${banner.alt || banner.fileName}" class="banner-image" onerror="this.style.display='none'">\` :
+                        \`<div class="banner-image placeholder">Image not found<br><small>\${banner.fileName}</small></div>\`
+                    }
+                    <div class="banner-info">
+                        <h3>\${banner.fileName}</h3>
+                        \${banner.alt ? \`<p><strong>Alt Text:</strong> \${banner.alt}</p>\` : ''}
+                        <div class="banner-meta">
+                            <strong>Resource Type:</strong> \${banner.resourceType || 'N/A'}<br>
+                            <strong>Last Modified:</strong> \${banner.lastModified || 'N/A'}<br>
+                            <strong>Path:</strong> \${banner.path || 'N/A'}
+                        </div>
+                        <div class="banner-url">\${banner.imageUrl}</div>
+                    </div>
+                </div>
+            \`;
+        }
+
         function renderSection(section) {
             const itemCount = countItems(section.items || []);
             
@@ -646,6 +785,22 @@ function generateHTML() {
             });
         }
 
+        function initializeBannerImages() {
+            const bannerSection = document.getElementById('banner-section');
+            const bannerGrid = document.getElementById('banner-grid');
+            
+            if (bannerImages && bannerImages.length > 0) {
+                bannerGrid.innerHTML = bannerImages.map(banner => renderBannerItem(banner)).join('');
+                bannerSection.style.display = 'block';
+                
+                // Update banner stats
+                document.getElementById('total-banners').textContent = bannerImages.length;
+            } else {
+                bannerSection.style.display = 'none';
+                document.getElementById('total-banners').textContent = '0';
+            }
+        }
+
         function initializeHierarchy() {
             const hierarchyContainer = document.getElementById('hierarchy');
             
@@ -710,6 +865,7 @@ function generateHTML() {
 
         // Initialize
         totalItems = countItems(hierarchyData);
+        initializeBannerImages();
         initializeHierarchy();
 
         // Search functionality
@@ -724,7 +880,7 @@ function generateHTML() {
         }, 100);
 
         console.log('🎉 AEM Content Hierarchy Viewer loaded successfully!');
-        console.log(\`📊 Stats: \${hierarchyData.length} sections, \${totalItems} items, \${totalImages} images\`);
+        console.log(\`📊 Stats: \${hierarchyData.length} sections, \${totalItems} items, \${totalImages} images, \${bannerImages.length} banners\`);
     </script>
 </body>
 </html>`;

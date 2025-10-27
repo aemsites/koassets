@@ -1388,9 +1388,74 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
     }));
   }
 
+  // Extract banner image from JCR
+  function extractBannerImage(jcrData, contentPath) {
+    function findImageComponents(obj, path = '') {
+      const results = [];
+
+      for (const [key, value] of Object.entries(obj)) {
+        const currentPath = path ? `${path}/${key}` : key;
+
+        if (typeof value === 'object' && value !== null) {
+          // Check if this is an image component with fileName
+          if (value['sling:resourceType'] === 'tccc-dam/components/image' && value.fileName) {
+            const lastModified = value['jcr:lastModified'] || value.file?.['jcr:lastModified'] || value.file?.['jcr:created'];
+            const timestamp = lastModified ? new Date(lastModified).getTime() : null;
+
+            if (timestamp) {
+              // Fix path construction: ensure /root is included
+              const jcrPath = currentPath.replace(/^root/, '_jcr_content/root');
+
+              // Use correct image format for banner images (coreimg.png instead of coreimg.85.1600.png)
+              const imageFormat = 'coreimg.png';
+
+              // Sanitize filename using utility function
+              const sanitizedFileName = sanitizeFileName(value.fileName);
+
+              const imageUrl = `${contentPath}/${jcrPath}.${imageFormat}/${timestamp}/${sanitizedFileName}`;
+
+              results.push({
+                path: currentPath,
+                fileName: value.fileName,
+                imageUrl,
+                alt: value.alt,
+                resourceType: value['sling:resourceType'],
+                lastModified,
+                timestamp,
+              });
+            }
+          }
+
+          // Recurse into nested objects
+          results.push(...findImageComponents(value, currentPath));
+        }
+      }
+
+      return results;
+    }
+
+    return findImageComponents(jcrData);
+  }
+
+  // Find banner images
+  const bannerImages = extractBannerImage(jcrData, CONTENT_PATH);
+
   // Save to file
   const jsonOutputPath = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
-  fs.writeFileSync(jsonOutputPath, JSON.stringify(mainHierarchy, null, 2));
+  const hierarchyStructure = {
+    items: mainHierarchy,
+  };
+
+  // Add banner images to root level if any found
+  if (bannerImages.length > 0) {
+    hierarchyStructure.bannerImages = bannerImages;
+    console.log(`🖼️  Found ${bannerImages.length} banner image(s):`);
+    bannerImages.forEach((img, index) => {
+      console.log(`   ${index + 1}. ${img.fileName} (${img.alt || 'No alt text'})`);
+    });
+  }
+
+  fs.writeFileSync(jsonOutputPath, JSON.stringify(hierarchyStructure, null, 2));
   console.log('✅ Hierarchy extracted successfully!');
   console.log(`💾 JSON structure saved to: ${jsonOutputPath}`);
 
@@ -1515,7 +1580,59 @@ async function downloadAllImages(hierarchyData, outputDir) {
         // Clear timeout since we got a response
         request.setTimeout(0);
 
-        if (response.statusCode === 200) {
+        // Handle redirects (301, 302, 303, 307, 308)
+        if ([301, 302, 303, 307, 308].includes(response.statusCode) && response.headers.location) {
+          file.close();
+          fs.unlinkSync(filePath); // Delete empty file
+
+          let redirectUrl = response.headers.location;
+
+          // If redirect URL is relative, make it absolute
+          if (!redirectUrl.startsWith('http')) {
+            const urlObj = new URL(fullUrl);
+            redirectUrl = `https://${urlObj.hostname}${redirectUrl}`;
+          }
+
+          console.log(`🔄 Following redirect: ${fullUrl} -> ${redirectUrl}`);
+
+          // Follow the redirect
+          const redirectRequest = https.get(redirectUrl, {
+            headers: {
+              Cookie: AUTH_COOKIE,
+              'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+            },
+          }, (redirectResponse) => {
+            if (redirectResponse.statusCode === 200) {
+              const redirectFile = fs.createWriteStream(filePath);
+              redirectResponse.pipe(redirectFile);
+              redirectFile.on('finish', () => {
+                redirectFile.close();
+                downloaded++;
+                console.log(`✅ Downloaded ${redirectUrl} -> ${safeFilename}`);
+                resolve();
+              });
+            } else {
+              failed++;
+              failedUrls.push({ url: redirectUrl, reason: `HTTP ${redirectResponse.statusCode} (after redirect)`, filename: safeFilename });
+              console.log(`❌ Failed redirect ${redirectUrl} (HTTP ${redirectResponse.statusCode})`);
+              resolve();
+            }
+          }).on('error', (err) => {
+            failed++;
+            failedUrls.push({ url: redirectUrl, reason: `Network error on redirect: ${err.message}`, filename: safeFilename });
+            console.log(`❌ Network error on redirect ${redirectUrl}: ${err.message}`);
+            resolve();
+          });
+
+          // Set timeout for redirect request
+          redirectRequest.setTimeout(30000, () => {
+            redirectRequest.destroy();
+            failed++;
+            failedUrls.push({ url: redirectUrl, reason: 'Timeout on redirect (server not responding)', filename: safeFilename });
+            console.log(`❌ Timeout on redirect ${redirectUrl} (server not responding)`);
+            resolve();
+          });
+        } else if (response.statusCode === 200) {
           response.pipe(file);
           file.on('finish', () => {
             file.close();
@@ -1524,7 +1641,7 @@ async function downloadAllImages(hierarchyData, outputDir) {
             resolve();
           });
         } else {
-          // Immediately handle non-200 status codes (404, 403, etc.)
+          // Handle other non-200 status codes (404, 403, etc.)
           file.close();
           fs.unlinkSync(filePath); // Delete empty file
           failed++;
@@ -1589,14 +1706,6 @@ async function downloadAllImages(hierarchyData, outputDir) {
       console.log('');
     });
   }
-
-  // Force process exit to prevent hanging
-  console.log('🏁 Process completed - exiting...');
-
-  // Force immediate exit to bypass debugger
-  setTimeout(() => {
-    process.exit(0);
-  }, 100);
 }
 
 // Run the main function
@@ -1606,8 +1715,21 @@ main().then(async () => {
   const path = require('path');
   const hierarchyPath = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
   if (fs.existsSync(hierarchyPath)) {
-    const hierarchyData = JSON.parse(fs.readFileSync(hierarchyPath, 'utf8'));
-    await downloadAllImages(hierarchyData, OUTPUT_DIR);
+    const hierarchyStructure = JSON.parse(fs.readFileSync(hierarchyPath, 'utf8'));
+    const hierarchyData = hierarchyStructure.items || [];
+    const bannerImages = hierarchyStructure.bannerImages || [];
+
+    // Combine teaser images and banner images for download
+    const allImagesToDownload = [...hierarchyData];
+
+    // Add banner images to the download list (they already have imageUrl property)
+    if (bannerImages.length > 0) {
+      console.log(`\n🖼️  Found ${bannerImages.length} banner image(s) to download`);
+      allImagesToDownload.push(...bannerImages);
+    }
+
+    // Download all images (teasers + banners) using the existing function
+    await downloadAllImages(allImagesToDownload, OUTPUT_DIR);
   }
 
   // Force clean exit
