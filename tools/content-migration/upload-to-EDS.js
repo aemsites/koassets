@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const {
-  createSource, previewSource, DA_BRANCH,
+  createSource, previewSource, publishSource, DA_BRANCH, PUBLISH,
 } = require('./da-admin-client.js');
 const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client.js');
 
@@ -17,6 +17,16 @@ let CONTENT_PATH = '/content/share/us/en/all-content-stores';
 [, , CONTENT_PATH = CONTENT_PATH] = process.argv;
 
 const lastContentPathToken = CONTENT_PATH.split('/').pop();
+
+/**
+ * Sleep for specified milliseconds
+ * @param {number} ms - Milliseconds to sleep
+ */
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 /**
  * Upload file to EDS
@@ -45,6 +55,7 @@ async function uploadToEDS(daFullPath, localFilePath, skipPreview = false) {
     console.log(`   Destination path: ${daFullPath}`);
 
     const response = await createSource(daFullPath, localFilePath);
+    await sleep(1000); // Pause 1 second after create source
 
     console.log('✅ Successfully uploaded file');
     console.log(`   Status: ${response.statusCode}`);
@@ -61,11 +72,27 @@ async function uploadToEDS(daFullPath, localFilePath, skipPreview = false) {
       const destOnly = daFullPath.split('/').slice(2).join('/').replace(/\.[^/.]+$/, '');
       const fullPreviewPath = `${orgRepo}/${DA_BRANCH}/${destOnly}`;
       const previewResponse = await previewSource(fullPreviewPath);
+      await sleep(1000); // Pause 1 second after preview source
 
       console.log('✅ Preview source triggered');
       console.log(`   Status: ${previewResponse.statusCode}`);
       if (previewResponse.data) {
         console.log('   Response:', JSON.stringify(previewResponse.data, null, 2));
+      }
+
+      // Only publish if PUBLISH constant is true
+      if (PUBLISH) {
+        console.log('📋 Triggering publish source...');
+        const publishResponse = await publishSource(fullPreviewPath);
+        await sleep(1000); // Pause 1 second after publish source
+
+        console.log('✅ Publish source triggered');
+        console.log(`   Status: ${publishResponse.statusCode}`);
+        if (publishResponse.data) {
+          console.log('   Response:', JSON.stringify(publishResponse.data, null, 2));
+        }
+      } else {
+        console.log('ℹ️ Publish skipped (PUBLISH=false in config)');
       }
     }
   } catch (error) {
@@ -92,9 +119,11 @@ async function uploadImagesFromSrcset(htmlContent) {
     imagesToUpload.push({ imageName, srcsetUrl });
   });
 
-  // Process each unique image
+  // Process each unique image sequentially to avoid overwhelming the server
   const processedImages = new Set();
-  imagesToUpload.forEach(async ({ imageName, srcsetUrl }) => {
+  await imagesToUpload.reduce(async (promise, { imageName, srcsetUrl }) => {
+    await promise;
+
     if (processedImages.has(imageName)) {
       return;
     }
@@ -115,7 +144,7 @@ async function uploadImagesFromSrcset(htmlContent) {
     } else {
       console.log(`   ⚠ Image not found: ${imageName}`);
     }
-  });
+  }, Promise.resolve());
 }
 
 /**
@@ -188,4 +217,24 @@ async function uploadAllGeneratedDocuments() {
 // uploadToEDS('aemsites/koassets/all-content-stores.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/all-content-stores.html');
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/global-initiatives.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/global-initiatives.html');
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/coca-cola/coca-cola.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/coca-cola/coca-cola.html');
-uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/fanta/fanta.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/fanta/fanta.html');
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/fanta/fanta.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/fanta/fanta.html');
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/sprite/sprite.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/sprite/sprite.html');
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/powerade/powerade.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/powerade/powerade.html');
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/minute-maid/minute-maid.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/minute-maid/minute-maid.html');
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/schweppes/schweppes.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/schweppes/schweppes.html');
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/fuze-tea/fuze-tea.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/fuze-tea/fuze-tea.html');
+
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/regional-initiatives/regional-initiatives.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/regional-initiatives/regional-initiatives.html');
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/regional-initiatives/naou/naou.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/regional-initiatives/naou/naou.html');
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/regional-initiatives/europe/europe.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/regional-initiatives/europe/europe.html');
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/regional-initiatives/latam/latam.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/regional-initiatives/latam/latam.html');
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/regional-initiatives/australia/australia.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/regional-initiatives/australia/australia.html');
+
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/past-initiatives/past-initiatives.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/past-initiatives/past-initiatives.html');
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/past-initiatives/coca-cola/coca-cola.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/past-initiatives/coca-cola/coca-cola.html');
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/past-initiatives/sprite/sprite.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/past-initiatives/sprite/sprite.html');
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/past-initiatives/fanta/fanta.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/past-initiatives/fanta/fanta.html');
+
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/brands/brands.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/brands/brands.html');
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/essentials/essentials.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/essentials/essentials.html');
+// uploadToEDS('aemsites/koassets/fragments/all-content-stores/customers/customers.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/customers/customers.html');

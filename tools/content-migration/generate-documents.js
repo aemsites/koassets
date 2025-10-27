@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { sanitize } = require('./sanitize-utils.js');
+const { sanitize, sanitizeFileName } = require('./sanitize-utils.js');
 const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client.js');
 
 const PATH_SEPARATOR = ' > ';
@@ -53,7 +53,7 @@ const generateTabBlocks = (items, baseIndent, contentIndent) => items
       .join('\n');
 
     // Properly sanitize hierarchical path
-    const sanitizedPath = sanitize(`${lastContentPathToken}/${item.path.split(PATH_SEPARATOR).join('/')}`);
+    const sanitizedPath = `${lastContentPathToken}/${item.path.split(PATH_SEPARATOR).map(sanitize).join('/')}`;
     return indentedTemplate
       .replace(/\$\{DA_DEST\}/g, DA_DEST)
       .replace(/\$\{PATH\}/g, sanitizedPath)
@@ -74,7 +74,7 @@ const generateCardBlocks = (imageItems, parentTitle, parentHierarchy, baseIndent
   .map((item) => {
     const extractedImageName = getImageName(item.imageUrl || '');
     // Build filename with itemId prepended
-    const imageName = sanitize(extractedImageName);
+    const imageName = sanitizeFileName(extractedImageName);
     const sanitizedParentTitle = sanitize(parentTitle);
 
     if (item.imageUrl) {
@@ -85,12 +85,12 @@ const generateCardBlocks = (imageItems, parentTitle, parentHierarchy, baseIndent
         .join('\n');
       // For card images, always use simple path structure with dot prefix (like .coca-cola)
       // Brand-specific cards should NEVER include parent directory prefixes
-      const fullPath = item.path.split(PATH_SEPARATOR).join('/');
+      const fullPath = item.path.split(PATH_SEPARATOR).map(sanitize).join('/');
       const pathTokens = fullPath.split('/');
       const sanitizedParentIndex = pathTokens.findIndex((token) => token === sanitizedParentTitle);
       const tokensAboveParent = sanitizedParentIndex > 0 ? pathTokens.slice(0, sanitizedParentIndex) : [];
       const pathAboveParent = tokensAboveParent.join('/');
-      const sanitizedPath = pathAboveParent ? sanitize(`${lastContentPathToken}/${pathAboveParent}`) : sanitize(lastContentPathToken);
+      const sanitizedPath = pathAboveParent ? `${lastContentPathToken}/${pathAboveParent}` : lastContentPathToken;
       return indentedTemplate
         .replace(/\$\{DA_DEST\}/g, DA_DEST)
         .replace(/\$\{PATH\}/g, sanitizedPath)
@@ -308,52 +308,6 @@ const processHierarchyByLevel = (items, currentDepth = 0, parentPath = '') => {
         }
       }
     }
-  });
-};
-
-// Recursively process all items to find and generate cards for image parents
-const processImagesForCardGeneration = (items, parentPath = '', parentHierarchy = '') => {
-  items.forEach((item) => {
-    if (!item.items || item.items.length === 0) {
-      return;
-    }
-
-    const sanitizedItem = sanitize(item.title);
-    const currentPath = parentPath ? `${parentPath}/${sanitizedItem}` : sanitizedItem;
-    const currentHierarchy = parentHierarchy ? `${parentHierarchy}${PATH_SEPARATOR}${item.title}` : item.title;
-
-    // Check if this item has teaser children (items with images)
-    const imageChildren = item.items.filter((child) => child.type === 'teaser');
-
-    if (imageChildren.length > 0) {
-      // Detect indentation from fragment-cards template
-      const tabsDivMatch = fragmentCardsTemplateContent.match(/^(\s*)<div class="cards">/m);
-      const baseIndent = tabsDivMatch ? tabsDivMatch[1] : '      ';
-      const contentIndent = `${baseIndent}  `;
-
-      // Generate card blocks for image children
-      const generatedCards = generateCardBlocks(item.items, item.title, parentHierarchy, baseIndent, contentIndent);
-
-      // Inject into fragment-cards template
-      const outputHtml = fragmentCardsTemplateContent.replace(
-        /<div class="cards">\s*<\/div>/,
-        `<div class="cards">\n${generatedCards}\n${baseIndent}</div>`,
-      );
-
-      // Create output directory: grandparent/parent/
-      const outputDir = path.join(__dirname, lastContentPathToken, 'generated-documents', currentPath);
-      fs.mkdirSync(outputDir, { recursive: true });
-
-      // File name: parent's sanitized title
-      const fileName = `${sanitizedItem}.html`;
-      const outputPath = path.join(outputDir, fileName);
-      fs.writeFileSync(outputPath, outputHtml, 'utf8');
-
-      console.log(`✓ Generated cards: ${outputPath}`);
-    }
-
-    // Continue recursing to process deeper levels
-    processImagesForCardGeneration(item.items, currentPath, currentHierarchy);
   });
 };
 

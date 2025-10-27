@@ -3,34 +3,56 @@ const path = require('path');
 const https = require('https');
 const { URL } = require('url');
 
-// Load configuration from auth.config
-let DA_ORG; let DA_REPO; let DA_BRANCH; let DA_DEST; let
-  BEARER_TOKEN;
+/**
+ * Parse config value and remove inline comments
+ * @param {string|null} rawValue - Raw value from regex match
+ * @returns {string|null} Cleaned value or null
+ */
+function parseConfigValue(rawValue) {
+  if (rawValue === null || rawValue === undefined) return null;
+  // Remove inline comments (# or //)
+  const cleanValue = rawValue.split('#')[0].split('//')[0].trim();
+  return cleanValue; // Allow empty strings
+}
+
+// Load configuration from da.config
+let DA_ORG; let DA_REPO; let DA_BRANCH; let DA_DEST; let BEARER_TOKEN; let
+  PUBLISH;
 try {
-  const authConfig = fs.readFileSync(path.join(__dirname, 'auth.config'), 'utf8').trim();
+  const daConfig = fs.readFileSync(path.join(__dirname, 'da.config'), 'utf8').trim();
 
-  const daOrgMatch = authConfig.match(/DA_ORG=(.*)/);
-  DA_ORG = daOrgMatch ? daOrgMatch[1].trim() : null;
+  const daOrgMatch = daConfig.match(/DA_ORG=(.*)/);
+  DA_ORG = parseConfigValue(daOrgMatch ? daOrgMatch[1] : null);
 
-  const daRepoMatch = authConfig.match(/DA_REPO=(.*)/);
-  DA_REPO = daRepoMatch ? daRepoMatch[1].trim() : null;
+  const daRepoMatch = daConfig.match(/DA_REPO=(.*)/);
+  DA_REPO = parseConfigValue(daRepoMatch ? daRepoMatch[1] : null);
 
-  const daBranchMatch = authConfig.match(/DA_BRANCH=(.*)/);
-  DA_BRANCH = daBranchMatch ? daBranchMatch[1].trim() : null;
+  const daBranchMatch = daConfig.match(/DA_BRANCH=(.*)/);
+  DA_BRANCH = parseConfigValue(daBranchMatch ? daBranchMatch[1] : null);
 
-  const daDestMatch = authConfig.match(/DA_DEST=(.*)/);
-  DA_DEST = daDestMatch ? daDestMatch[1].trim() : null;
+  const daDestMatch = daConfig.match(/DA_DEST=(.*)/);
+  const daDestValue = parseConfigValue(daDestMatch ? daDestMatch[1] : null);
+  // Automatically postfix 'fragments' to DA_DEST
+  if (daDestValue !== null) {
+    DA_DEST = daDestValue === '' ? 'fragments' : `${daDestValue}${daDestValue.endsWith('/') ? 'fragments' : '/fragments'}`;
+  } else {
+    DA_DEST = null;
+  }
 
-  const tokenMatch = authConfig.match(/BEARER_TOKEN=(.*)/);
-  BEARER_TOKEN = tokenMatch ? tokenMatch[1].trim() : null;
+  const tokenMatch = daConfig.match(/BEARER_TOKEN=(.*)/);
+  BEARER_TOKEN = parseConfigValue(tokenMatch ? tokenMatch[1] : null);
 
-  if (!DA_ORG) throw new Error('DA_ORG not found in auth.config');
-  if (!DA_REPO) throw new Error('DA_REPO not found in auth.config');
-  if (!DA_BRANCH) throw new Error('DA_BRANCH not found in auth.config');
-  if (!DA_DEST) throw new Error('DA_DEST not found in auth.config');
-  if (!BEARER_TOKEN) throw new Error('BEARER_TOKEN not found in auth.config');
+  const publishMatch = daConfig.match(/PUBLISH=(.*)/);
+  const publishValue = parseConfigValue(publishMatch ? publishMatch[1] : null);
+  PUBLISH = publishValue ? publishValue.toLowerCase() === 'true' : false;
+
+  if (!DA_ORG) throw new Error('DA_ORG not found in da.config');
+  if (!DA_REPO) throw new Error('DA_REPO not found in da.config');
+  if (!DA_BRANCH) throw new Error('DA_BRANCH not found in da.config');
+  if (DA_DEST === null) throw new Error('DA_DEST not found in da.config');
+  if (!BEARER_TOKEN) throw new Error('BEARER_TOKEN not found in da.config');
 } catch (error) {
-  console.error(`❌ Error loading configuration from auth.config: ${error.message}`);
+  console.error(`❌ Error loading configuration from da.config: ${error.message}`);
   process.exit(1);
 }
 
@@ -141,15 +163,18 @@ async function createSource(daFullPath, localFilePath) {
 }
 
 /**
- * Preview a source in HLX by triggering a preview build
- * @param {string} fullPath - Full path including org/repo/branch, e.g. 'aemsites/koassets/main/drafts/tphan/all-content-stores'. SHOULD HAVE NO HTML EXTENSION.
- * @returns {Promise<Object>} Response from preview endpoint
+ * Make a HLX action request (preview or publish)
+ * @param {string} fullPath - Full path including org/repo/branch, e.g.
+ * 'aemsites/koassets/main/drafts/tphan/all-content-stores'. SHOULD HAVE NO HTML EXTENSION.
+ * @param {string} action - The action type ('preview' or 'live')
+ * @param {string} actionName - Human-readable action name for logging
+ * @returns {Promise<Object>} Response from HLX endpoint
  */
-async function previewSource(fullPath) {
+async function makeHlxRequest(fullPath, action, actionName) {
   return new Promise((resolve, reject) => {
     // Build URL - fullPath already includes org/repo/branch
-    const url = new URL(`${PREVIEW_BASE}/preview/${fullPath}`);
-    console.debug(`Previewing a source: ${url}`);
+    const url = new URL(`${PREVIEW_BASE}/${action}/${fullPath}`);
+    console.debug(`${actionName} a source: ${url}`);
 
     // Make request
     const options = {
@@ -180,7 +205,7 @@ async function previewSource(fullPath) {
             });
           }
         } else {
-          reject(new Error(`Preview request failed: ${res.statusCode} - ${data}`));
+          reject(new Error(`${actionName} request failed: ${res.statusCode} - ${data}`));
         }
       });
     });
@@ -190,11 +215,33 @@ async function previewSource(fullPath) {
   });
 }
 
+/**
+ * Preview a source in HLX by triggering a preview build
+ * @param {string} fullPath - Full path including org/repo/branch, e.g.
+ * 'aemsites/koassets/main/drafts/tphan/all-content-stores'. SHOULD HAVE NO HTML EXTENSION.
+ * @returns {Promise<Object>} Response from preview endpoint
+ */
+async function previewSource(fullPath) {
+  return makeHlxRequest(fullPath, 'preview', 'Previewing');
+}
+
+/**
+ * Publish a source in HLX by triggering a live build
+ * @param {string} fullPath - Full path including org/repo/branch, e.g.
+ * 'aemsites/koassets/main/drafts/tphan/all-content-stores'. SHOULD HAVE NO HTML EXTENSION.
+ * @returns {Promise<Object>} Response from publish endpoint
+ */
+async function publishSource(fullPath) {
+  return makeHlxRequest(fullPath, 'live', 'Publishing');
+}
+
 module.exports = {
   DA_ORG,
   DA_REPO,
   DA_BRANCH,
   DA_DEST,
+  PUBLISH,
   createSource,
   previewSource,
+  publishSource,
 };

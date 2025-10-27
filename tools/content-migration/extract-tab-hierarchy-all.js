@@ -18,14 +18,14 @@ let CONTENT_PATH = '/content/share/us/en/all-content-stores';
 // Load AUTH_COOKIE from config file
 let AUTH_COOKIE;
 try {
-  const authConfig = fs.readFileSync(path.join(__dirname, 'auth.config'), 'utf8').trim();
+  const authConfig = fs.readFileSync(path.join(__dirname, 'da.config'), 'utf8').trim();
   const [, cookieValue] = authConfig.match(/AUTH_COOKIE=(.*)/);
   AUTH_COOKIE = cookieValue;
   if (!AUTH_COOKIE) {
-    throw new Error('AUTH_COOKIE not found in auth.config');
+    throw new Error('AUTH_COOKIE not found in da.config');
   }
 } catch (error) {
-  console.error(`❌ Error loading AUTH_COOKIE from auth.config: ${error.message}`);
+  console.error(`❌ Error loading AUTH_COOKIE from da.config: ${error.message}`);
   process.exit(1);
 }
 
@@ -1493,7 +1493,7 @@ async function downloadAllImages(hierarchyData, outputDir) {
       // Extract filename from URL
       const urlParts = imageUrl.split('/');
       const filename = urlParts[urlParts.length - 1];
-      const safeFilename = sanitize(filename);
+      const safeFilename = sanitizeFileName(filename);
       const filePath = path.join(imagesDir, safeFilename);
 
       // Skip if file already exists
