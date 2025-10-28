@@ -52,8 +52,9 @@ function transformExcFacetsToHierarchyArray(excFacets: ExcFacets): string[] {
             // For non-tags types, append the entry key
             facetKeys.push(key);
         } else {
-            // For tags type, append 10 hierarchy level keys
-            for (let n = 0; n <= 9; n++) {
+            // For tags type, use maxHierarchyLevels if specified, otherwise default to 10
+            const maxLevels = facet.maxHierarchyLevels ?? 9;
+            for (let n = 0; n <= maxLevels; n++) {
                 facetKeys.push(`${key}.TCCC.#hierarchy.lvl${n}`);
             }
             facetKeys.push(`${key}.TCCC.#values`);
@@ -372,9 +373,10 @@ function MainApp(): React.JSX.Element {
             setCurrentPage(0);
         }
         setCurrentView(CURRENT_VIEW.images);
+        const facetArray = excFacets ? transformExcFacetsToHierarchyArray(excFacets) : [];
         dynamicMediaClient.searchAssets(query.trim(), {
             collectionId: selectedCollection?.collectionId,
-            facets: excFacets ? transformExcFacetsToHierarchyArray(excFacets) : [],
+            facets: facetArray,
             facetFilters: selectedFacetFilters,
             numericFilters: selectedNumericFilters,
             filters: presetFilters,

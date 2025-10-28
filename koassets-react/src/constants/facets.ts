@@ -8,6 +8,7 @@ export interface ExcFacet {
     type: 'tags' | 'string' | 'date';
     displayOrder: number;
     rootPaths?: Record<string, ExcFacetRootPath>;
+    maxHierarchyLevels?: number; // Maximum hierarchy levels to show for 'tags' type
 }
 
 export interface ExcFacets {
