@@ -168,6 +168,65 @@ async function uploadImagesFromSrcset(htmlContent) {
 }
 
 /**
+ * Upload all images from a local directory to DA
+ * @param {string} imagesPath - Relative path to directory containing images (relative to script directory)
+ * @param {string} daFullPath - DA destination path (e.g., 'aemsites/koassets/fragments/all-content-stores/.coca-cola/')
+ */
+async function uploadAllImages(imagesPath, daFullPath) {
+  // Resolve relative path to absolute path
+  const absoluteImagesPath = path.resolve(__dirname, imagesPath);
+
+  console.log(`\n📸 Uploading all images from: ${imagesPath} (${absoluteImagesPath})`);
+  console.log(`   Destination: ${daFullPath}`);
+
+  // Check if images directory exists
+  if (!fs.existsSync(absoluteImagesPath)) {
+    console.error(`❌ Images directory not found: ${absoluteImagesPath}`);
+    return;
+  }
+
+  // Get all files in the images directory
+  const files = fs.readdirSync(absoluteImagesPath, { withFileTypes: true });
+
+  // Filter for image files (common image extensions)
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.tiff'];
+  const imageFiles = files
+    .filter((file) => file.isFile())
+    .filter((file) => {
+      const ext = path.extname(file.name).toLowerCase();
+      return imageExtensions.includes(ext);
+    })
+    .map((file) => file.name);
+
+  if (imageFiles.length === 0) {
+    console.log('   ⚠️ No image files found in directory');
+    return;
+  }
+
+  console.log(`   Found ${imageFiles.length} image files to upload`);
+
+  // Upload images sequentially to avoid overwhelming the server
+  await imageFiles.reduce(async (promise, imageName) => {
+    await promise;
+
+    const localImagePath = path.join(absoluteImagesPath, imageName);
+    // Ensure daFullPath ends with / and construct full DA path for this image
+    const normalizedDaPath = daFullPath.endsWith('/') ? daFullPath : `${daFullPath}/`;
+    const daImagePath = `${normalizedDaPath}${imageName}`;
+
+    console.log(`   📤 Uploading: ${imageName}`);
+    try {
+      await uploadToEDS(daImagePath, localImagePath, true); // Skip preview for images
+      console.log(`   ✅ Uploaded: ${imageName}`);
+    } catch (error) {
+      console.error(`   ❌ Error uploading ${imageName}: ${error.message}`);
+    }
+  }, Promise.resolve());
+
+  console.log(`\n✅ Completed uploading ${imageFiles.length} images from ${imagesPath}`);
+}
+
+/**
  * Recursively upload all HTML files from generated-documents folder
  */
 async function uploadAllGeneratedDocuments() {
@@ -269,3 +328,13 @@ async function uploadAllGeneratedDocuments() {
 
 // CUSTOMERS
 // uploadToEDS('aemsites/koassets/fragments/all-content-stores/customers/customers.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/customers/customers.html');
+
+// ============================================ BULK IMAGE UPLOADS ============================================
+
+// Upload all images from extracted-results/images to a specific DA location
+uploadAllImages('all-content-stores/extracted-results/images', 'aemsites/koassets/fragments/.all-content-stores/');
+
+// Example: Upload images for specific brand folders (using hierarchicalDirName for dynamic paths)
+// uploadAllImages(`${hierarchicalDirName}/extracted-results/images`, 'aemsites/koassets/fragments/all-content-stores/.coca-cola/');
+// uploadAllImages(`${hierarchicalDirName}/extracted-results/images`, 'aemsites/koassets/fragments/all-content-stores/.fanta/');
+// uploadAllImages(`${hierarchicalDirName}/extracted-results/images`, 'aemsites/koassets/fragments/all-content-stores/.sprite/');

@@ -133,8 +133,8 @@
         function countItems(data) {
             if (!data || !data.items) return 0;
             return data.items.reduce((count, item) => {
-                // Skip accordion types (they won't be rendered in the viewer)
-                if (item.type === 'accordion') {
+                // Skip accordion items (title starts with 'accordion')
+                if (item.title && item.title.toLowerCase().startsWith('accordion')) {
                     // Count their children instead
                     return count + countItems(item);
                 }
@@ -156,8 +156,8 @@
         function renderTreeItem(item, depth) {
             if (!item) return '';
             
-            // Skip accordion types but render their children
-            if (item.type === 'accordion') {
+            // Skip accordion items (title starts with 'accordion') but render their children
+            if (item.title && item.title.toLowerCase().startsWith('accordion')) {
                 if (item.items && item.items.length > 0) {
                     return item.items.map(child => renderTreeItem(child, depth)).join('');
                 }
@@ -172,24 +172,11 @@
             const isExpanded = expandedNodes.has(item.path);
             const hasLink = item.linkURL && item.linkURL.trim() !== '';
             
-            // Use type-based icons instead of level-based for consistency
-            const typeIcons = {
-                section: '📁',
-                container: '📦', 
-                button: '🔘',
-                accordion: '📋',
-                item: '📄',
-                teaser: '📄'  // Teasers without images show as documents
-            };
-            
-            // Render image if imageUrl exists, otherwise use type-based icon
-            let iconHtml;
+            // Render image if imageUrl exists, otherwise show nothing (no icon)
+            let iconHtml = '';
             if (item.imageUrl) {
                 const fullImageUrl = `${AEM_CLOUD_URL}${item.imageUrl}`;
                 iconHtml = `<img src="${fullImageUrl}" alt="${item.title}" class="item-image" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; margin-right: 8px; background: chartreuse; font-size: small;">`;
-            } else {
-                const typeIcon = typeIcons[item.type] || '📄';
-                iconHtml = `<span class="type-icon">${typeIcon}</span>`;
             }
             
             let html = `<div class="tree-item"><div class="tree-node ${isExpanded ? 'expanded' : ''}" data-path="${item.path}" data-has-children="${hasExpandable}" data-has-text-list="${hasTextList}" data-link-url="${hasLink ? item.linkURL : ''}">

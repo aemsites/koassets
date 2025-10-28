@@ -145,13 +145,13 @@ function extractFilename(url) {
 }
 
 /**
- * Formats imageUrl by extracting filename and prepending with destination/fragments
+ * Formats imageUrl by extracting filename and prepending with full DA Live URL
  */
 function formatImageUrl(imageUrl, destPath, storeName) {
   if (!imageUrl) return '';
 
   const filename = extractFilename(imageUrl);
-  return `${destPath}/fragments/.${storeName}/${filename}`;
+  return `https://content.da.live/${destPath}/fragments/.${storeName}/${filename}`;
 }
 
 /**
@@ -177,7 +177,6 @@ function itemToRow(item, destPath, storeName) {
   return [
     escapeCsvField(formatPath(item.path || '')),
     escapeCsvField(item.title || ''),
-    escapeCsvField(item.type || ''),
     escapeCsvField(formatImageUrl(item.imageUrl || '', destPath, storeName)),
     escapeCsvField(item.linkURL || ''),
     escapeCsvField(item.text || ''),
@@ -230,7 +229,7 @@ function main() {
     // No sorting needed - maintain the original order
 
     // Create CSV content
-    const headers = ['path', 'title', 'type', 'imageUrl', 'linkURL', 'text'];
+    const headers = ['path', 'title', 'imageUrl', 'linkURL', 'text'];
     const csvLines = [headers.join(',')];
 
     items.forEach((item) => {

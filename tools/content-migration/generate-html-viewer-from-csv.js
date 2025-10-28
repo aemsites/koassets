@@ -175,13 +175,9 @@ function reconstructHierarchy(rows) {
 
         // If this is the last part, add all the data from CSV
         if (isLastPart) {
-          newItem.type = row.type || '';
           if (row.imageUrl) newItem.imageUrl = row.imageUrl;
           if (row.linkURL) newItem.linkURL = row.linkURL;
           if (row.text) newItem.text = row.text;
-        } else {
-          // Intermediate nodes are containers
-          newItem.type = 'container';
         }
 
         newItem.items = [];
@@ -190,7 +186,6 @@ function reconstructHierarchy(rows) {
       } else if (isLastPart) {
         // Update existing item with CSV data, including title
         existingItem.title = row.title;
-        existingItem.type = row.type || existingItem.type;
         if (row.imageUrl) existingItem.imageUrl = row.imageUrl;
         if (row.linkURL) existingItem.linkURL = row.linkURL;
         if (row.text) existingItem.text = row.text;
