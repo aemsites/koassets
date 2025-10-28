@@ -14,12 +14,12 @@
 const fs = require('fs');
 const path = require('path');
 
-// Input and output paths
-const INPUT_FILE = path.join(__dirname, './all-content-stores/extracted-results/hierarchy-structure.merged.json');
-const OUTPUT_FILE = path.join(__dirname, './all-content-stores/extracted-results/hierarchy-structure.merged.csv');
+// Input and output paths - read from and write to derived-results
+const INPUT_FILE = path.join(__dirname, './all-content-stores/derived-results/hierarchy-structure.merged.json');
+const OUTPUT_FILE = path.join(__dirname, './all-content-stores/derived-results/hierarchy-structure.merged.csv');
 const CONFIG_FILE = path.join(__dirname, './da.config');
 
-// Extract store name from INPUT_FILE (e.g., 'all-content-stores' from './all-content-stores/extracted-results/...')
+// Extract store name from INPUT_FILE (e.g., 'all-content-stores' from './all-content-stores/derived-results/...')
 const STORE_NAME = path.basename(path.dirname(path.dirname(INPUT_FILE)));
 
 /**

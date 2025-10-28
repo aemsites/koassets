@@ -134,8 +134,13 @@ if (!found) {
   process.exit(1);
 }
 
-// Write merged data to a new output file
-const outputPath = parentPath.replace('.json', '.merged.json');
+// Write merged data to derived-results folder
+const parentDir = path.dirname(path.dirname(parentPath)); // Go up to project root from extracted-results
+const outputDir = path.join(parentDir, 'derived-results');
+if (!fs.existsSync(outputDir)) {
+  fs.mkdirSync(outputDir, { recursive: true });
+}
+const outputPath = path.join(outputDir, 'hierarchy-structure.merged.json');
 console.log('\n📝 Writing merged data to output file...');
 fs.writeFileSync(outputPath, JSON.stringify(parentData, null, 2));
 console.log(`   ✓ Merged data written: ${outputPath}`);

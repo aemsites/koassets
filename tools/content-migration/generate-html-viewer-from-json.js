@@ -42,16 +42,16 @@ if (jsonFileArg) {
   }
   console.log(`📂 Using specified JSON file: ${path.relative(projectRoot, jsonFilePath)}`);
 } else {
-  // Try merged file first, fall back to regular file
-  const mergedPath = path.join(projectRoot, 'all-content-stores/extracted-results/hierarchy-structure.merged.json');
+  // Try merged file first (in derived-results), fall back to regular file (in extracted-results)
+  const mergedPath = path.join(projectRoot, 'all-content-stores/derived-results/hierarchy-structure.merged.json');
   const regularPath = path.join(projectRoot, 'all-content-stores/extracted-results/hierarchy-structure.json');
 
   if (fs.existsSync(mergedPath)) {
     jsonFilePath = mergedPath;
-    console.log('📂 Using merged JSON file (default)');
+    console.log('📂 Using merged JSON file from derived-results (default)');
   } else if (fs.existsSync(regularPath)) {
     jsonFilePath = regularPath;
-    console.log('📂 Using regular JSON file (merged file not found)');
+    console.log('📂 Using regular JSON file from extracted-results (merged file not found)');
   } else {
     console.error('❌ ERROR: No hierarchy JSON file found!');
     console.error('   Expected locations:');
@@ -62,8 +62,10 @@ if (jsonFileArg) {
 }
 
 // Output file in the same directory as the JSON file
+// Derive output filename from input filename and append 'from-json'
 const jsonDir = path.dirname(jsonFilePath);
-const outputPath = path.join(jsonDir, 'hierarchy-structure.merged.html');
+const jsonBaseName = path.basename(jsonFilePath, '.json');
+const outputPath = path.join(jsonDir, `${jsonBaseName}.from-json.html`);
 
 // Read JSON file
 console.log('\n📖 Reading hierarchy JSON...');
@@ -85,10 +87,12 @@ const newHtml = `${beforeData
 }let hierarchyData = ${JSON.stringify(hierarchyData, null, 0)};${
   afterData}`;
 
-// Determine title based on file name
+// Determine title based on file name - derive from actual filename
 const jsonFileName = path.basename(jsonFilePath, '.json');
-const isMerged = jsonFileName.includes('merged');
-const viewerTitle = isMerged ? 'All Content Stores (Merged)' : 'All Content Stores';
+// Convert filename to title: hierarchy-structure.merged -> Hierarchy Structure Merged
+const titleParts = jsonFileName.split(/[-_.]+/).map((part) => part.charAt(0).toUpperCase() + part.slice(1));
+const baseTitle = titleParts.join(' ');
+const viewerTitle = `${baseTitle} (from JSON)`;
 
 // Update title and header
 const finalHtml = newHtml
