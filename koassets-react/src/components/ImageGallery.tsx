@@ -226,7 +226,23 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     };
 
     const handleBulkShare = () => {
-        console.log('Bulk share:', Array.from(selectedCards));
+        // Get selected assets
+        const selectedAssets = visibleImages.filter(img => selectedCards.has(img.assetId || ''));
+
+        if (selectedAssets.length === 0) {
+            return;
+        }
+
+        // Dispatch the global share modal event with multiple assets
+        const event = new CustomEvent('openShareModal', {
+            detail: {
+                assets: selectedAssets // Pass array of assets for bulk operation
+            }
+        });
+        window.dispatchEvent(event);
+
+        // Clear selection after action
+        setSelectedCards(new Set());
     };
 
     const handleBulkAddToCollection = () => {
