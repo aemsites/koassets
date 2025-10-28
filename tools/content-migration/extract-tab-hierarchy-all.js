@@ -531,7 +531,7 @@ async function main() {
 
               // Also store linkURL if it exists in the model (it's in imageResource)
               if (item.imageResource.linkURL) {
-                jcrTeaserImageMap[matchingJcrKey].linkURL = item.imageResource.linkURL;
+                jcrTeaserImageMap[matchingJcrKey].linkURL = stripHostAndExtension(item.imageResource.linkURL);
               }
 
               // Also check for linkURL in item.linkURL (strip host and extension)
@@ -691,10 +691,10 @@ function buildJsonStructure(jsonData, teaserPathMap) {
           jsonItem.linkURL = stripHostAndExtension(item.link.url); // Strip for item.link.url
         } else if (item.id && jcrLinkUrlMap[item.id]) {
           // Try ID-based matching first (most accurate for duplicate titles)
-          jsonItem.linkURL = jcrLinkUrlMap[item.id];
+          jsonItem.linkURL = stripHostAndExtension(jcrLinkUrlMap[item.id]);
         } else {
           // Use title-based matching (only items WITH linkURLs are in the map)
-          const linkURL = jcrLinkUrlMap[String(title)];
+          const linkURL = stripHostAndExtension(jcrLinkUrlMap[String(title)]);
           if (linkURL) {
             jsonItem.linkURL = linkURL;
           }
@@ -816,10 +816,10 @@ function buildJsonStructure(jsonData, teaserPathMap) {
         jsonItem.linkURL = stripHostAndExtension(item.link.url); // Strip for item.link.url
       } else if (item.id && jcrLinkUrlMap[item.id]) {
         // Try ID-based matching first (most accurate for duplicate titles)
-        jsonItem.linkURL = jcrLinkUrlMap[item.id];
+        jsonItem.linkURL = stripHostAndExtension(jcrLinkUrlMap[item.id]);
       } else {
         // Use title-based matching (only items WITH linkURLs are in the map)
-        const linkURL = jcrLinkUrlMap[String(title)];
+        const linkURL = stripHostAndExtension(jcrLinkUrlMap[String(title)]);
         if (linkURL) {
           jsonItem.linkURL = linkURL;
         }
@@ -1067,7 +1067,26 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       }
 
       // Build display path only for output (for user viewing)
-      const currentDisplayPath = displayPath ? `${displayPath} > ${title}` : title;
+      // Avoid duplicates in the path and exclude structural JSON object keys
+      const structuralKeys = ['container', 'accordion', 'tabs'];
+      const isStructuralKey = structuralKeys.includes(title) || title.startsWith('container_') || title.startsWith('accordion_') || title.startsWith('tabs_');
+
+      let currentDisplayPath = title;
+      if (displayPath) {
+        const pathParts = displayPath.split(' > ');
+        // Only add the title if it's not already in the path AND is not a structural key
+        if (!pathParts.includes(title) && !isStructuralKey) {
+          currentDisplayPath = `${displayPath} > ${title}`;
+        } else {
+          // Skip adding duplicate title or structural segments to path
+          currentDisplayPath = displayPath;
+        }
+      } else {
+        // If this is the root level and is a structural key, use empty path
+        if (isStructuralKey) {
+          currentDisplayPath = '';
+        }
+      }
       // Build JCR key path for logic (context matching, hierarchy tracking)
       // Make sure it matches the format used in extractTimestampsFromModel
       const currentKeyPath = `${parentKeyPath}/${key}`;
@@ -1076,6 +1095,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         title,
         path: currentDisplayPath,
         type: itemType,
+        key: key.replace(/__tabs\d+$/, ''), // Remove __tabs suffix from key for cleaner output
       };
 
       if (item.id) {
@@ -1094,7 +1114,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       const contextKey = `${String(title)}|${immediateParentKey}`;
 
       // Look up linkURL using JCR context only - no fallback to title-only
-      const linkURL = jcrLinkUrlMap[contextKey];
+      const linkURL = stripHostAndExtension(jcrLinkUrlMap[contextKey]);
       if (linkURL) {
         hierarchyItem.linkURL = linkURL;
       }
@@ -1104,7 +1124,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         // Find JCR entry that has this model path stored and contains linkURL
         for (const [jcrPath, jcrData] of Object.entries(jcrTeaserImageMap)) {
           if (jcrData.modelPath === currentKeyPath && jcrData.linkURL) {
-            hierarchyItem.linkURL = jcrData.linkURL;
+            hierarchyItem.linkURL = stripHostAndExtension(jcrData.linkURL);
             break;
           }
         }
@@ -1221,6 +1241,76 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       }
     });
 
+    // Function to remove duplicate consecutive containers with the same title
+    function removeDuplicateContainers(items) {
+      if (!items || !Array.isArray(items)) return items;
+
+      return items.map((item) => {
+        // Recursively process children first
+        if (item.items) {
+          item.items = removeDuplicateContainers(item.items);
+        }
+
+        // Check if this item has a single child with the same title
+        if (item.items && item.items.length === 1) {
+          const child = item.items[0];
+
+          // If parent and child have the same title and both are containers/items, merge them
+          if (item.title === child.title
+              && (item.type === 'container' || item.type === 'item')
+              && (child.type === 'container' || child.type === 'item')) {
+            // Merge: keep the parent but use the child's children
+            return {
+              ...item,
+              items: child.items || [],
+              // Preserve any additional properties from child if they don't exist in parent
+              ...(child.id && !item.id ? { id: child.id } : {}),
+              ...(child.linkURL && !item.linkURL ? { linkURL: child.linkURL } : {}),
+              ...(child.imageUrl && !item.imageUrl ? { imageUrl: child.imageUrl } : {}),
+              ...(child.text && !item.text ? { text: child.text } : {}),
+            };
+          }
+        }
+
+        return item;
+      });
+    }
+
+    // Function to clean up duplicate path segments in the final hierarchy
+    function cleanupDuplicatePathSegments(items) {
+      if (!items || !Array.isArray(items)) return items;
+
+      return items.map((item) => {
+        const updatedItem = { ...item };
+
+        // Clean up duplicates and filter out structural JSON object keys in the path
+        if (updatedItem.path) {
+          const pathParts = updatedItem.path.split(' > ');
+          const uniqueParts = [];
+          const structuralKeys = ['container', 'accordion', 'tabs'];
+
+          for (const part of pathParts) {
+            // Check if this part is a structural key
+            const isStructuralKey = structuralKeys.includes(part) || part.startsWith('container_') || part.startsWith('accordion_') || part.startsWith('tabs_');
+
+            // Only add if it's not already in the unique parts array AND is not a structural key
+            if (!uniqueParts.includes(part) && !isStructuralKey) {
+              uniqueParts.push(part);
+            }
+          }
+
+          updatedItem.path = uniqueParts.join(' > ');
+        }
+
+        // Recursively clean up children
+        if (updatedItem.items) {
+          updatedItem.items = cleanupDuplicatePathSegments(updatedItem.items);
+        }
+
+        return updatedItem;
+      });
+    }
+
     // Function to unwrap structural containers that don't add semantic value
     function unwrapStructuralContainers(items) {
       if (!items || !Array.isArray(items)) return items;
@@ -1256,7 +1346,9 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
     }
 
     const cleanedHierarchy = unwrapStructuralContainers(rawHierarchy);
-    mainHierarchy = groupHierarchyBySections(cleanedHierarchy, jcrData);
+    const deduplicatedHierarchy = removeDuplicateContainers(cleanedHierarchy);
+    const groupedHierarchy = groupHierarchyBySections(deduplicatedHierarchy, jcrData);
+    mainHierarchy = cleanupDuplicatePathSegments(groupedHierarchy);
   }
 
   // Function to extract sections from JCR structure
@@ -1391,13 +1483,16 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
               if (item.items && Array.isArray(item.items)) {
                 updatedItem.items = item.items.map((child) => {
                   const childCopy = { ...child };
-                  const parentTitle = item.title;
-                  if (childCopy.path && childCopy.path.startsWith(`${parentTitle} >`)) {
-                    const pathWithoutParentTitle = childCopy.path.substring(`${parentTitle} > `.length);
-                    childCopy.path = `${updatedItem.path} > ${pathWithoutParentTitle}`;
-                  } else if (!childCopy.path.startsWith(updatedItem.path)) {
+
+                  // Check if child path already starts with the updated parent path
+                  if (childCopy.path && childCopy.path.startsWith(updatedItem.path)) {
+                    // Path already correct, no changes needed
+                    // Just keep the existing path
+                  } else if (childCopy.path) {
+                    // Child path needs to be updated to include the section prefix
                     childCopy.path = `${updatedItem.path} > ${childCopy.path}`;
                   }
+
                   if (childCopy.items && Array.isArray(childCopy.items)) {
                     childCopy.items = childCopy.items.map((subchild) => prependPathToItem(subchild, childCopy.path));
                   }
@@ -1429,13 +1524,15 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
     if (item.items && Array.isArray(item.items)) {
       updatedItem.items = item.items.map((child) => {
         const childCopy = { ...child };
-        const parentTitle = item.title;
-        if (childCopy.path && childCopy.path.startsWith(`${parentTitle} >`)) {
-          const pathWithoutParentTitle = childCopy.path.substring(`${parentTitle} > `.length);
-          childCopy.path = `${updatedItem.path} > ${pathWithoutParentTitle}`;
-        } else if (!childCopy.path.startsWith(updatedItem.path)) {
+
+        // Check if child path already starts with the updated parent path
+        if (childCopy.path && childCopy.path.startsWith(updatedItem.path)) {
+          // Path already correct, no changes needed
+        } else if (childCopy.path) {
+          // Child path needs to be updated to include the parent prefix
           childCopy.path = `${updatedItem.path} > ${childCopy.path}`;
         }
+
         if (childCopy.items && Array.isArray(childCopy.items)) {
           childCopy.items = childCopy.items.map((subchild) => prependPathToItem(subchild, childCopy.path));
         }

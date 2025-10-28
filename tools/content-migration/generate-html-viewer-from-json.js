@@ -61,7 +61,7 @@ if (jsonFileArg) {
   }
 }
 
-const outputPath = path.join(__dirname, 'temp/all-content-stores-viewer-output.html');
+const outputPath = path.join(__dirname, 'all-content-stores-viewer-tree-output.html');
 
 // Read JSON file
 console.log('\n📖 Reading hierarchy JSON...');

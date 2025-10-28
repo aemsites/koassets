@@ -896,6 +896,19 @@ function generateHTML() {
 if (require.main === module) {
   try {
     generateHTML();
+    // Open in Chrome
+    console.log('\n🌐 Opening viewer in Chrome...');
+    const { execSync } = require('child_process');
+
+    try {
+      execSync(`open -a "Google Chrome" "${OUTPUT_FILE}"`, { stdio: 'inherit' });
+      console.log('   ✓ Viewer opened in Chrome');
+    } catch (error) {
+      console.log('   ⚠ Could not open Chrome automatically');
+      console.log(`   Open manually: ${OUTPUT_FILE}`);
+    }
+
+    console.log('\n✅ Done!');
   } catch (error) {
     console.error('❌ Error generating HTML:', error.message);
     process.exit(1);
