@@ -74,6 +74,7 @@ export async function originHelix(request, env) {
   req.headers.set('user-agent', req.headers.get('user-agent'));
   req.headers.set('x-forwarded-host', req.headers.get('host'));
   req.headers.set('x-byo-cdn-type', 'cloudflare');
+  req.headers.delete('cookie');
   if (env.HELIX_ORIGIN_AUTHENTICATION) {
     req.headers.set('authorization', `token ${await env.HELIX_ORIGIN_AUTHENTICATION.get()}`);
   }
@@ -82,7 +83,7 @@ export async function originHelix(request, env) {
     req.headers.set('x-push-invalidation', 'enabled');
   }
 
-  // console.log('>>>', req.method, req.url /*, req.headers*/);
+  // console.log('>>>', req.method, req.url, req.headers);
 
   const options = {
     method: req.method,
@@ -101,7 +102,7 @@ export async function originHelix(request, env) {
 
   let resp = await fetch(req, options);
 
-  // console.log('<<<', resp.status, resp.headers);
+  // console.log('<<<', resp.status, req.method, req.url, resp.headers);
 
   resp = new Response(resp.body, resp);
   if (resp.status === 301 && savedSearch) {
