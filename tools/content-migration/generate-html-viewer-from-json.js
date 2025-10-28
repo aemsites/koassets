@@ -29,7 +29,7 @@ const jsonFileArg = args[0];
 
 // Paths
 const projectRoot = __dirname;
-const templatePath = path.join(__dirname, 'temp/all-content-stores-viewer.html');
+const templatePath = path.join(__dirname, 'templates/all-content-stores-viewer-tree-template.html');
 
 // Determine which JSON file to use
 let jsonFilePath;
