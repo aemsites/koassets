@@ -157,6 +157,7 @@ async function loadLazy(doc) {
 
   loadCSS(`${window.hlx.codeBasePath}/styles/lazy-styles.css`);
   loadCSS(`${window.hlx.codeBasePath}/styles/add-to-collection-modal.css`);
+  loadCSS(`${window.hlx.codeBasePath}/scripts/share/share-assets-modal.css`);
   loadFonts();
 
   // Lazy preload hover icons to prevent blink on first hover
@@ -170,6 +171,14 @@ async function loadLazy(doc) {
     console.log('Add to collection modal not available');
   });
 }
+
+// Initialize share assets modal functionality
+import('./share/share-assets-modal.js').then(async ({ initShareAssetsModal }) => {
+  await initShareAssetsModal();
+}).catch(() => {
+  // Fallback for environments where the module might not be available
+  console.log('Share assets modal not available');
+});
 
 /**
  * Loads everything that happens a lot later,
