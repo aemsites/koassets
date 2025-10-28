@@ -8,6 +8,31 @@ const https = require('https');
 const { URL } = require('url');
 const { sanitize, sanitizeFileName, buildFileNameWithId } = require('./sanitize-utils.js');
 
+// Function to strip host from URLs and remove file extensions
+function stripHostAndExtension(url) {
+  if (!url) return url;
+
+  let pathname; let search; let
+    hash;
+
+  try {
+    const urlObj = new URL(url);
+    pathname = urlObj.pathname;
+    search = urlObj.search;
+    hash = urlObj.hash;
+  } catch (e) {
+    // If it's not a valid URL (e.g., already a path), treat as pathname
+    pathname = url;
+    search = '';
+    hash = '';
+  }
+
+  // Strip file extension from pathname
+  pathname = pathname.replace(/\.[^/.]+$/, '');
+
+  return pathname + search + hash;
+}
+
 const AEM_AUTHOR = 'https://author-p64403-e544653.adobeaemcloud.com';
 let CONTENT_PATH = '/content/share/us/en/all-content-stores';
 // let CONTENT_PATH = '/content/share/us/en/all-content-stores/global-coca-cola-uplift';
@@ -508,6 +533,40 @@ async function main() {
               if (item.imageResource.linkURL) {
                 jcrTeaserImageMap[matchingJcrKey].linkURL = item.imageResource.linkURL;
               }
+
+              // Also check for linkURL in item.linkURL (strip host and extension)
+              if (item.linkURL) {
+                jcrTeaserImageMap[matchingJcrKey].linkURL = stripHostAndExtension(item.linkURL);
+              }
+
+              // Also check for linkURL in item.link.url (strip host and extension)
+              if (item.link && item.link.url) {
+                jcrTeaserImageMap[matchingJcrKey].linkURL = stripHostAndExtension(item.link.url);
+              }
+            }
+          }
+
+          // Extract linkURL from any item that has link.url or linkURL (not just teasers)
+          if (item.linkURL || (item.link && item.link.url)) {
+            // Create path-based unique key to match JCR indexing
+            const uniqueKey = `${newPath}`;
+
+            // Create a synthetic JCR key for linkURL storage
+            const linkUrlKey = `${newPath}_linkurl`;
+            jcrTeaserImageMap[linkUrlKey] = {
+              teaserKey: key,
+              hasImageResource: false,
+              modelPath: uniqueKey,
+            };
+
+            // Store linkURL from item.linkURL (strip host and extension)
+            if (item.linkURL) {
+              jcrTeaserImageMap[linkUrlKey].linkURL = stripHostAndExtension(item.linkURL);
+            }
+
+            // Store linkURL from item.link.url (strip host and extension)
+            if (item.link && item.link.url) {
+              jcrTeaserImageMap[linkUrlKey].linkURL = stripHostAndExtension(item.link.url);
             }
           }
 
@@ -520,10 +579,10 @@ async function main() {
     }
     extractTimestampsFromModel(mainTabsData[':items']);
 
-    // Remove teasers from jcrTeaserImageMap that don't have imageResource in model
+    // Remove teasers from jcrTeaserImageMap that don't have imageResource AND don't have linkURL
     const beforeCleanup = Object.keys(jcrTeaserImageMap).length;
     for (const uniqueKey in jcrTeaserImageMap) {
-      if (!jcrTeaserImageMap[uniqueKey].hasImageResource) {
+      if (!jcrTeaserImageMap[uniqueKey].hasImageResource && !jcrTeaserImageMap[uniqueKey].linkURL) {
         delete jcrTeaserImageMap[uniqueKey];
       }
     }
@@ -624,9 +683,12 @@ function buildJsonStructure(jsonData, teaserPathMap) {
         }
 
         // Add linkURL if available from item itself (Sling Model data only)
+        // Check multiple possible locations: item.linkURL, item.link.url
         // Otherwise use ID-based matching (most accurate), then title-based
         if (item.linkURL) {
-          jsonItem.linkURL = item.linkURL;
+          jsonItem.linkURL = stripHostAndExtension(item.linkURL); // Strip for item.linkURL
+        } else if (item.link && item.link.url) {
+          jsonItem.linkURL = stripHostAndExtension(item.link.url); // Strip for item.link.url
         } else if (item.id && jcrLinkUrlMap[item.id]) {
           // Try ID-based matching first (most accurate for duplicate titles)
           jsonItem.linkURL = jcrLinkUrlMap[item.id];
@@ -746,9 +808,12 @@ function buildJsonStructure(jsonData, teaserPathMap) {
       }
 
       // Add linkURL if available from item itself (Sling Model data only)
+      // Check multiple possible locations: item.linkURL, item.link.url
       // Otherwise use ID-based matching (most accurate), then title-based
       if (item.linkURL) {
-        jsonItem.linkURL = item.linkURL;
+        jsonItem.linkURL = stripHostAndExtension(item.linkURL); // Strip for item.linkURL
+      } else if (item.link && item.link.url) {
+        jsonItem.linkURL = stripHostAndExtension(item.link.url); // Strip for item.link.url
       } else if (item.id && jcrLinkUrlMap[item.id]) {
         // Try ID-based matching first (most accurate for duplicate titles)
         jsonItem.linkURL = jcrLinkUrlMap[item.id];
@@ -1034,8 +1099,8 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         hierarchyItem.linkURL = linkURL;
       }
 
-      // For teaser items, also check if linkURL is available from model data
-      if (!hierarchyItem.linkURL && (key.startsWith('teaser') || itemType === 'teaser')) {
+      // For any item, check if linkURL is available from model data
+      if (!hierarchyItem.linkURL) {
         // Find JCR entry that has this model path stored and contains linkURL
         for (const [jcrPath, jcrData] of Object.entries(jcrTeaserImageMap)) {
           if (jcrData.modelPath === currentKeyPath && jcrData.linkURL) {
@@ -1080,7 +1145,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
 
         // Find JCR entry that has this model path stored
         for (const [jcrPath, jcrData] of Object.entries(jcrTeaserImageMap)) {
-          if (jcrData.modelPath === currentKeyPath && jcrData.hasImageResource) {
+          if (jcrData.modelPath === currentKeyPath && (jcrData.hasImageResource || jcrData.linkURL)) {
             teaserImageInfo = jcrData;
             break;
           }

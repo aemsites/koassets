@@ -59,12 +59,15 @@ console.log(`   ✓ Child: ${childData.items.length} top-level items`);
 // Derive the content path from the child directory name
 // e.g., "all-content-stores__global-coca-cola-uplift" → "/content/share/us/en/all-content-stores/global-coca-cola-uplift"
 const contentPathFromDir = `/content/share/us/en/${childDirArg.replace(/__/g, '/')}`;
-console.log(`\n📍 Derived linkURL: ${contentPathFromDir}`);
+const contentPathWithHtml = `${contentPathFromDir}.html`;
+console.log('\n📍 Derived linkURL patterns:');
+console.log(`   - ${contentPathFromDir}`);
+console.log(`   - ${contentPathWithHtml}`);
 
 // Helper function to find and update item with matching linkURL
-function findAndMerge(items, targetLinkURL, childData, depth = 0) {
+function findAndMerge(items, targetLinkURL, targetLinkURLWithHtml, childData, depth = 0) {
   for (const item of items) {
-    if (item.linkURL === targetLinkURL) {
+    if (item.linkURL === targetLinkURL || item.linkURL === targetLinkURLWithHtml) {
       console.log('\n✅ Found matching item!');
       console.log(`   Path: ${item.path}`);
       console.log(`   Title: "${item.title}"`);
@@ -90,7 +93,7 @@ function findAndMerge(items, targetLinkURL, childData, depth = 0) {
 
     // Recursively search in children
     if (item.items && item.items.length > 0) {
-      if (findAndMerge(item.items, targetLinkURL, childData, depth + 1)) {
+      if (findAndMerge(item.items, targetLinkURL, targetLinkURLWithHtml, childData, depth + 1)) {
         return true;
       }
     }
@@ -100,7 +103,7 @@ function findAndMerge(items, targetLinkURL, childData, depth = 0) {
 
 // Find and merge
 console.log('\n🔍 Searching for matching item in parent hierarchy...');
-const found = findAndMerge(parentData.items, contentPathFromDir, childData);
+const found = findAndMerge(parentData.items, contentPathFromDir, contentPathWithHtml, childData);
 
 if (!found) {
   console.error(`\n❌ ERROR: No item found with linkURL matching "${contentPathFromDir}"!`);
