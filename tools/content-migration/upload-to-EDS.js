@@ -9,14 +9,34 @@ const {
 } = require('./da-admin-client.js');
 const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client.js');
 
-// Extract last token from content path for consistent directory naming
+// Create hierarchical directory name function
+function createHierarchicalDirName(contentPath) {
+  const pathParts = contentPath.split('/').filter((p) => p);
+  const contentName = pathParts[pathParts.length - 1];
+  const parentName = pathParts[pathParts.length - 2];
+
+  // Special case: if contentName is 'all-content-stores', always use just that name
+  if (contentName === 'all-content-stores') {
+    return contentName;
+  }
+
+  // If no parent, or parent is not 'all-content-stores', use just the content name
+  if (!parentName || parentName !== 'all-content-stores') {
+    return contentName;
+  }
+
+  // Use double underscore to show hierarchy: parent__child (only for all-content-stores children)
+  return `${parentName}__${contentName}`;
+}
+
 // Default CONTENT_PATH, can be overridden via first command line argument
 let CONTENT_PATH = '/content/share/us/en/all-content-stores';
 
 // Override CONTENT_PATH if provided as first command line argument
 [, , CONTENT_PATH = CONTENT_PATH] = process.argv;
 
-const lastContentPathToken = CONTENT_PATH.split('/').pop();
+const hierarchicalDirName = createHierarchicalDirName(CONTENT_PATH);
+const lastContentPathToken = CONTENT_PATH.split('/').pop(); // Keep for compatibility
 
 /**
  * Sleep for specified milliseconds
@@ -130,7 +150,7 @@ async function uploadImagesFromSrcset(htmlContent) {
     processedImages.add(imageName);
 
     // Check if image exists in extracted-results/images
-    const imagePath = path.join(__dirname, lastContentPathToken, 'extracted-results', 'images', imageName);
+    const imagePath = path.join(__dirname, hierarchicalDirName, 'extracted-results', 'images', imageName);
     if (fs.existsSync(imagePath)) {
       // Extract DA path from srcset URL (remove https://content.da.live/)
       const daPath = srcsetUrl.replace(/^https:\/\/content\.da\.live\//, '');
@@ -151,7 +171,7 @@ async function uploadImagesFromSrcset(htmlContent) {
  * Recursively upload all HTML files from generated-documents folder
  */
 async function uploadAllGeneratedDocuments() {
-  const generatedDocsDir = path.join(__dirname, lastContentPathToken, 'generated-documents');
+  const generatedDocsDir = path.join(__dirname, hierarchicalDirName, 'generated-documents');
 
   console.log('\n📁 Uploading all generated documents...\n');
 

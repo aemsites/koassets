@@ -7,7 +7,26 @@ const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client.js');
 
 const PATH_SEPARATOR = ' > ';
 
-// Extract last token from content path for consistent directory naming
+// Create hierarchical directory name function
+function createHierarchicalDirName(contentPath) {
+  const pathParts = contentPath.split('/').filter((p) => p);
+  const contentName = pathParts[pathParts.length - 1];
+  const parentName = pathParts[pathParts.length - 2];
+
+  // Special case: if contentName is 'all-content-stores', always use just that name
+  if (contentName === 'all-content-stores') {
+    return contentName;
+  }
+
+  // If no parent, or parent is not 'all-content-stores', use just the content name
+  if (!parentName || parentName !== 'all-content-stores') {
+    return contentName;
+  }
+
+  // Use double underscore to show hierarchy: parent__child (only for all-content-stores children)
+  return `${parentName}__${contentName}`;
+}
+
 // Default CONTENT_PATH, can be overridden via first command line argument
 let CONTENT_PATH = '/content/share/us/en/all-content-stores';
 // let CONTENT_PATH = '/content/share/us/en/all-content-stores/global-coca-cola-uplift';
@@ -15,10 +34,11 @@ let CONTENT_PATH = '/content/share/us/en/all-content-stores';
 // Override CONTENT_PATH if provided as first command line argument
 [, , CONTENT_PATH = CONTENT_PATH] = process.argv;
 
-const lastContentPathToken = CONTENT_PATH.split('/').pop();
+const hierarchicalDirName = createHierarchicalDirName(CONTENT_PATH);
+const lastContentPathToken = CONTENT_PATH.split('/').pop(); // Keep for template naming
 
 // Read the hierarchy JSON and templates
-const hierarchyPath = path.join(__dirname, lastContentPathToken, 'extracted-results', 'hierarchy-structure.json');
+const hierarchyPath = path.join(__dirname, hierarchicalDirName, 'extracted-results', 'hierarchy-structure.json');
 const mainTemplatePath = path.join(__dirname, 'templates', `${lastContentPathToken}-template.html`);
 const tabTemplatePath = path.join(__dirname, 'templates', 'tab-template.html');
 const fragmentTemplatePath = path.join(__dirname, 'templates', 'fragment-tabs-template.html');

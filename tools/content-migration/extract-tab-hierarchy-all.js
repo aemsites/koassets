@@ -29,9 +29,28 @@ try {
   process.exit(1);
 }
 
-// File paths
-const lastContentPathToken = CONTENT_PATH.split('/').pop();
-const OUTPUT_DIR = path.join(__dirname, lastContentPathToken, 'extracted-results');
+// File paths - Create hierarchical directory name
+function createHierarchicalDirName(contentPath) {
+  const pathParts = contentPath.split('/').filter((p) => p);
+  const contentName = pathParts[pathParts.length - 1];
+  const parentName = pathParts[pathParts.length - 2];
+
+  // Special case: if contentName is 'all-content-stores', always use just that name
+  if (contentName === 'all-content-stores') {
+    return contentName;
+  }
+
+  // If no parent, or parent is not 'all-content-stores', use just the content name
+  if (!parentName || parentName !== 'all-content-stores') {
+    return contentName;
+  }
+
+  // Use double underscore to show hierarchy: parent__child (only for all-content-stores children)
+  return `${parentName}__${contentName}`;
+}
+
+const hierarchicalDirName = createHierarchicalDirName(CONTENT_PATH);
+const OUTPUT_DIR = path.join(__dirname, hierarchicalDirName, 'extracted-results');
 
 // Image URL configuration
 const BASE_URL = `${CONTENT_PATH}/`;
@@ -484,6 +503,11 @@ async function main() {
               jcrTeaserImageMap[matchingJcrKey].lastModified = item.imageResource['jcr:lastModified'];
               jcrTeaserImageMap[matchingJcrKey].hasImageResource = true;
               jcrTeaserImageMap[matchingJcrKey].modelPath = uniqueKey; // Store model path for lookup
+
+              // Also store linkURL if it exists in the model (it's in imageResource)
+              if (item.imageResource.linkURL) {
+                jcrTeaserImageMap[matchingJcrKey].linkURL = item.imageResource.linkURL;
+              }
             }
           }
 
@@ -1010,6 +1034,17 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         hierarchyItem.linkURL = linkURL;
       }
 
+      // For teaser items, also check if linkURL is available from model data
+      if (!hierarchyItem.linkURL && (key.startsWith('teaser') || itemType === 'teaser')) {
+        // Find JCR entry that has this model path stored and contains linkURL
+        for (const [jcrPath, jcrData] of Object.entries(jcrTeaserImageMap)) {
+          if (jcrData.modelPath === currentKeyPath && jcrData.linkURL) {
+            hierarchyItem.linkURL = jcrData.linkURL;
+            break;
+          }
+        }
+      }
+
       // Look up text content using JCR context only
       const textContent = jcrTextMap[contextKey];
       if (textContent) {
@@ -1264,38 +1299,52 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       const itemsInSection = items.filter((item) => item.__jcrSection === section.title);
 
       if (itemsInSection.length > 0) {
-        const sectionObj = {
-          title: section.title,
-          path: section.title,
-          type: 'section',
-          items: itemsInSection.map((item) => {
-            const updatedItem = { ...item };
-            // Remove the internal metadata before output
-            delete updatedItem.__jcrSection;
+        // Check if section contains only one item with the same title (redundant nesting)
+        if (itemsInSection.length === 1
+            && itemsInSection[0].title
+            && itemsInSection[0].title.trim() === section.title.trim()) {
+          // Flatten: use the container directly as the section, but keep section type
+          const flattenedItem = { ...itemsInSection[0] };
+          delete flattenedItem.__jcrSection;
+          flattenedItem.type = 'section'; // Change type to section
+          grouped.push(flattenedItem);
+          console.log(`  - ${section.title} (${flattenedItem.items?.length || 0}) [flattened duplicate]`);
+        } else {
+          // Normal section with multiple items or different titles
+          const sectionObj = {
+            title: section.title,
+            path: section.title,
+            type: 'section',
+            items: itemsInSection.map((item) => {
+              const updatedItem = { ...item };
+              // Remove the internal metadata before output
+              delete updatedItem.__jcrSection;
 
-            if (!item.path.startsWith(section.title)) {
-              updatedItem.path = `${section.title} > ${item.path}`;
-            }
-            if (item.items && Array.isArray(item.items)) {
-              updatedItem.items = item.items.map((child) => {
-                const childCopy = { ...child };
-                const parentTitle = item.title;
-                if (childCopy.path && childCopy.path.startsWith(`${parentTitle} >`)) {
-                  const pathWithoutParentTitle = childCopy.path.substring(`${parentTitle} > `.length);
-                  childCopy.path = `${updatedItem.path} > ${pathWithoutParentTitle}`;
-                } else if (!childCopy.path.startsWith(updatedItem.path)) {
-                  childCopy.path = `${updatedItem.path} > ${childCopy.path}`;
-                }
-                if (childCopy.items && Array.isArray(childCopy.items)) {
-                  childCopy.items = childCopy.items.map((subchild) => prependPathToItem(subchild, childCopy.path));
-                }
-                return childCopy;
-              });
-            }
-            return updatedItem;
-          }),
-        };
-        grouped.push(sectionObj);
+              if (!item.path.startsWith(section.title)) {
+                updatedItem.path = `${section.title} > ${item.path}`;
+              }
+              if (item.items && Array.isArray(item.items)) {
+                updatedItem.items = item.items.map((child) => {
+                  const childCopy = { ...child };
+                  const parentTitle = item.title;
+                  if (childCopy.path && childCopy.path.startsWith(`${parentTitle} >`)) {
+                    const pathWithoutParentTitle = childCopy.path.substring(`${parentTitle} > `.length);
+                    childCopy.path = `${updatedItem.path} > ${pathWithoutParentTitle}`;
+                  } else if (!childCopy.path.startsWith(updatedItem.path)) {
+                    childCopy.path = `${updatedItem.path} > ${childCopy.path}`;
+                  }
+                  if (childCopy.items && Array.isArray(childCopy.items)) {
+                    childCopy.items = childCopy.items.map((subchild) => prependPathToItem(subchild, childCopy.path));
+                  }
+                  return childCopy;
+                });
+              }
+              return updatedItem;
+            }),
+          };
+          grouped.push(sectionObj);
+          console.log(`  - ${section.title} (${itemsInSection.length})`);
+        }
       }
     });
 
@@ -1364,28 +1413,50 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       sectionMap.get(sectionKey).items.push(item);
     });
 
-    const grouped = Array.from(sectionMap.values()).map((section) => ({
-      title: section.title,
-      path: section.title,
-      type: 'section',
-      items: section.items,
-    }));
+    const grouped = Array.from(sectionMap.values()).map((section) => {
+      // Check if section contains only one item with the same title (redundant nesting)
+      if (section.items.length === 1
+          && section.items[0].title
+          && section.items[0].title.trim() === section.title.trim()) {
+        // Flatten: use the container directly as the section, but keep section type
+        const flattenedItem = { ...section.items[0] };
+        flattenedItem.type = 'section'; // Change type to section
+        return flattenedItem;
+      }
+      // Normal section with multiple items or different titles
+      return {
+        title: section.title,
+        path: section.title,
+        type: 'section',
+        items: section.items,
+      };
+    });
 
     console.log('\n📋 Auto-detected sections (data-driven from path):');
     grouped.forEach((section) => {
-      console.log(`  - ${section.title} (${section.items.length} items)`);
+      const itemCount = section.items ? section.items.length : 0;
+      const flattened = !section.items ? ' [flattened duplicate]' : '';
+      console.log(`  - ${section.title} (${itemCount} items)${flattened}`);
     });
     console.log();
 
-    return grouped.map((section) => ({
-      ...section,
-      items: section.items.map((item) => {
-        if (!item.path.startsWith(section.title)) {
-          return prependPathToItem(item, section.title);
-        }
-        return item;
-      }),
-    }));
+    return grouped.map((section) => {
+      // If section was flattened (no items array), return as-is
+      if (!section.items) {
+        return section;
+      }
+
+      // Normal section processing
+      return {
+        ...section,
+        items: section.items.map((item) => {
+          if (!item.path.startsWith(section.title)) {
+            return prependPathToItem(item, section.title);
+          }
+          return item;
+        }),
+      };
+    });
   }
 
   // Extract banner image from JCR
@@ -1444,6 +1515,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
   const jsonOutputPath = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
   const hierarchyStructure = {
     items: mainHierarchy,
+    linkUrl: CONTENT_PATH,
   };
 
   // Add banner images to root level if any found

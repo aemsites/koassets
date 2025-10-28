@@ -3,19 +3,20 @@
 const fs = require('fs');
 const path = require('path');
 
-// Get content path from command line arguments
-const contentPath = process.argv[2];
-if (!contentPath) {
-  console.error('❌ Usage: node generate-hierarchy-html-for-debug.js <content-path>');
-  console.error('   Example: node generate-hierarchy-html-for-debug.js all-content-stores');
-  console.error('   Example: node generate-hierarchy-html-for-debug.js global-coca-cola-uplift');
+// Get JSON file path from command line arguments
+const HIERARCHY_FILE = process.argv[2];
+if (!HIERARCHY_FILE) {
+  console.error('❌ Usage: node generate-hierarchy-html-for-debug.js <hierarchy-json-file-path>');
+  console.error('   Example: node generate-hierarchy-html-for-debug.js all-content-stores/extracted-results/hierarchy-structure.json');
+  console.error('   Example: node generate-hierarchy-html-for-debug.js all-content-stores__global-coca-cola-uplift/extracted-results/hierarchy-structure.json');
+  console.error('   Example: node generate-hierarchy-html-for-debug.js ./all-content-stores/extracted-results/hierarchy-structure.json');
   process.exit(1);
 }
 
-// Configuration based on content path
-const HIERARCHY_FILE = `./${contentPath}/extracted-results/hierarchy-structure.json`;
-const IMAGES_DIR = `./${contentPath}/extracted-results/images`;
-const OUTPUT_FILE = `./${contentPath}/extracted-results/hierarchy-viewer.html`;
+// Derive paths from the HIERARCHY_FILE
+const hierarchyDir = path.dirname(HIERARCHY_FILE);
+const IMAGES_DIR = path.join(hierarchyDir, 'images');
+const OUTPUT_FILE = HIERARCHY_FILE.replace(/\.json$/, '.html');
 
 function generateHTML() {
   console.log('📋 Generating HTML hierarchy viewer...');
