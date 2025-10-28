@@ -13,6 +13,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { PATH_SEPARATOR } = require('./constants');
 
 // Input and output paths - read from and write to derived-results
 const INPUT_FILE = path.join(__dirname, './all-content-stores/derived-results/hierarchy-structure.merged.json');
@@ -117,7 +118,8 @@ function htmlToPlainText(html) {
 }
 
 /**
- * Formats path by replacing '>' with '/' and trimming spaces
+ * Formats path by trimming spaces around '>' separators
+ * Keep '>' as separator to avoid conflicts with '/' in titles
  */
 function formatPath(pathStr) {
   if (!pathStr) return '';
@@ -126,7 +128,7 @@ function formatPath(pathStr) {
     .split('>')
     .map((segment) => segment.trim())
     .filter((segment) => segment.length > 0)
-    .join('/');
+    .join(PATH_SEPARATOR);
 }
 
 /**
@@ -183,22 +185,21 @@ function itemToRow(item, destPath, storeName) {
 }
 
 /**
- * Traverses the hierarchy from bottom up (children first, then parent)
+ * Traverses the hierarchy in the same order as JSON (parent first, then children)
  * and collects all items, excluding accordion items but including their children
  */
-function traverseBottomUp(items, result = []) {
+function traverseInOrder(items, result = []) {
   if (!items || !Array.isArray(items)) return result;
 
   for (const item of items) {
-    // Process children first (bottom up)
-    if (item.items && Array.isArray(item.items)) {
-      traverseBottomUp(item.items, result);
-    }
-
-    // Add the current item only if it's not an accordion
-    // Accordion children are still processed above
+    // Add the current item first (unless it's an accordion)
     if (item.type !== 'accordion') {
       result.push(item);
+    }
+
+    // Then process children (maintaining JSON order)
+    if (item.items && Array.isArray(item.items)) {
+      traverseInOrder(item.items, result);
     }
   }
 
@@ -220,18 +221,13 @@ function main() {
     console.log('Reading input file:', INPUT_FILE);
     const jsonData = JSON.parse(fs.readFileSync(INPUT_FILE, 'utf8'));
 
-    console.log('Traversing hierarchy from bottom up...');
-    const items = traverseBottomUp(jsonData.items || []);
+    console.log('Traversing hierarchy in original order...');
+    const items = traverseInOrder(jsonData.items || []);
 
     console.log(`Found ${items.length} items`);
 
-    // Sort items by path
-    console.log('Sorting by path...');
-    items.sort((a, b) => {
-      const pathA = formatPath(a.path || '').toLowerCase();
-      const pathB = formatPath(b.path || '').toLowerCase();
-      return pathA.localeCompare(pathB);
-    });
+    // Items are already in the order from the JSON hierarchy (top-down traversal)
+    // No sorting needed - maintain the original order
 
     // Create CSV content
     const headers = ['path', 'title', 'type', 'imageUrl', 'linkURL', 'text'];
@@ -268,5 +264,5 @@ module.exports = {
   htmlToPlainText,
   formatPath,
   formatImageUrl,
-  traverseBottomUp,
+  traverseInOrder,
 };

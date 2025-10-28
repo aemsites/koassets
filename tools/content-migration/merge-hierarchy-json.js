@@ -17,6 +17,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { PATH_SEPARATOR } = require('./constants');
 
 console.log('🔀 Merging hierarchy JSON files...\n');
 
@@ -86,7 +87,7 @@ function findAndMerge(items, targetLinkURL, targetLinkURLWithHtml, childData, de
       function updatePaths(items, parentPath) {
         items.forEach((childItem) => {
           // Prepend parent path to child path (paths are already complete in child data)
-          childItem.path = `${parentPath} > ${childItem.path}`;
+          childItem.path = `${parentPath}${PATH_SEPARATOR}${childItem.path}`;
 
           // Recursively update nested children with the same parent path
           // (don't use updated path since child paths already have their hierarchy)

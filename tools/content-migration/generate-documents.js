@@ -4,8 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { sanitize, sanitizeFileName } = require('./sanitize-utils.js');
 const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client.js');
-
-const PATH_SEPARATOR = ' > ';
+const { PATH_SEPARATOR } = require('./constants');
 
 // Create hierarchical directory name function
 function createHierarchicalDirName(contentPath) {

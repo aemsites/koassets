@@ -7,6 +7,7 @@ const path = require('path');
 const https = require('https');
 const { URL } = require('url');
 const { sanitize, sanitizeFileName, buildFileNameWithId } = require('./sanitize-utils.js');
+const { PATH_SEPARATOR } = require('./constants');
 
 // Function to strip host from URLs and remove file extensions
 function stripHostAndExtension(url) {
@@ -631,7 +632,7 @@ function buildJsonStructure(jsonData, teaserPathMap) {
         const title = extractTitleFromItem(item, itemKey);
 
         // Build display path (hierarchy path for user viewing)
-        const currentDisplayPath = displayPath ? `${displayPath} > ${title.trim()}` : title.trim();
+        const currentDisplayPath = displayPath ? `${displayPath}${PATH_SEPARATOR}${title.trim()}` : title.trim();
 
         // Check if this is a teaser with image
         // eslint-disable-next-line no-use-before-define
@@ -761,7 +762,7 @@ function buildJsonStructure(jsonData, teaserPathMap) {
         return;
       }
 
-      const currentDisplayPath = displayPath ? `${displayPath} > ${title.trim()}` : title.trim();
+      const currentDisplayPath = displayPath ? `${displayPath}${PATH_SEPARATOR}${title.trim()}` : title.trim();
       let currentPath = parentPath;
 
       if (itemKey !== ':items' && itemKey !== ':itemsOrder') {
@@ -1073,10 +1074,10 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
 
       let currentDisplayPath = title;
       if (displayPath) {
-        const pathParts = displayPath.split(' > ');
+        const pathParts = displayPath.split(PATH_SEPARATOR);
         // Only add the title if it's not already in the path AND is not a structural key
         if (!pathParts.includes(title) && !isStructuralKey) {
-          currentDisplayPath = `${displayPath} > ${title}`;
+          currentDisplayPath = `${displayPath}${PATH_SEPARATOR}${title}`;
         } else {
           // Skip adding duplicate title or structural segments to path
           currentDisplayPath = displayPath;
@@ -1285,7 +1286,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
 
         // Clean up duplicates and filter out structural JSON object keys in the path
         if (updatedItem.path) {
-          const pathParts = updatedItem.path.split(' > ');
+          const pathParts = updatedItem.path.split(PATH_SEPARATOR);
           const uniqueParts = [];
           const structuralKeys = ['container', 'accordion', 'tabs'];
 
@@ -1299,7 +1300,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
             }
           }
 
-          updatedItem.path = uniqueParts.join(' > ');
+          updatedItem.path = uniqueParts.join(PATH_SEPARATOR);
         }
 
         // Recursively clean up children
@@ -1478,7 +1479,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
               delete updatedItem.__jcrSection;
 
               if (!item.path.startsWith(section.title)) {
-                updatedItem.path = `${section.title} > ${item.path}`;
+                updatedItem.path = `${section.title}${PATH_SEPARATOR}${item.path}`;
               }
               if (item.items && Array.isArray(item.items)) {
                 updatedItem.items = item.items.map((child) => {
@@ -1490,7 +1491,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
                     // Just keep the existing path
                   } else if (childCopy.path) {
                     // Child path needs to be updated to include the section prefix
-                    childCopy.path = `${updatedItem.path} > ${childCopy.path}`;
+                    childCopy.path = `${updatedItem.path}${PATH_SEPARATOR}${childCopy.path}`;
                   }
 
                   if (childCopy.items && Array.isArray(childCopy.items)) {
@@ -1518,7 +1519,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
     const updatedItem = { ...item };
 
     if (!item.path.startsWith(parentPath)) {
-      updatedItem.path = `${parentPath} > ${item.path}`;
+      updatedItem.path = `${parentPath}${PATH_SEPARATOR}${item.path}`;
     }
 
     if (item.items && Array.isArray(item.items)) {
@@ -1530,7 +1531,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
           // Path already correct, no changes needed
         } else if (childCopy.path) {
           // Child path needs to be updated to include the parent prefix
-          childCopy.path = `${updatedItem.path} > ${childCopy.path}`;
+          childCopy.path = `${updatedItem.path}${PATH_SEPARATOR}${childCopy.path}`;
         }
 
         if (childCopy.items && Array.isArray(childCopy.items)) {
@@ -1552,7 +1553,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       let sectionTitle = null;
 
       if (item.path) {
-        const pathParts = item.path.split(' > ');
+        const pathParts = item.path.split(PATH_SEPARATOR);
         if (pathParts.length > 1) {
           sectionKey = pathParts[0];
           sectionTitle = pathParts[0];
