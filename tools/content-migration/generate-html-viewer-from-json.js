@@ -61,26 +61,14 @@ if (jsonFileArg) {
   }
 }
 
-const outputPath = path.join(__dirname, 'all-content-stores-viewer-tree-output.html');
+// Output file in the same directory as the JSON file
+const jsonDir = path.dirname(jsonFilePath);
+const outputPath = path.join(jsonDir, 'hierarchy-structure.merged.html');
 
 // Read JSON file
 console.log('\n📖 Reading hierarchy JSON...');
 const hierarchyData = JSON.parse(fs.readFileSync(jsonFilePath, 'utf8'));
 console.log(`   ✓ Loaded: ${hierarchyData.items.length} top-level items`);
-
-// Count total items
-function countAllItems(items) {
-  let count = items.length;
-  for (const item of items) {
-    if (item.items && item.items.length > 0) {
-      count += countAllItems(item.items);
-    }
-  }
-  return count;
-}
-
-const totalItems = countAllItems(hierarchyData.items);
-console.log(`   ✓ Total items (including nested): ${totalItems}`);
 
 // Read template
 console.log('\n📝 Generating HTML viewer...');

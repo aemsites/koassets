@@ -81,8 +81,28 @@ function findAndMerge(items, targetLinkURL, targetLinkURLWithHtml, childData, de
         console.log('   These will be replaced with the child hierarchy data');
       }
 
+      // Update paths of child items to include parent path
+      console.log('\n🔗 Updating child paths to include parent path...');
+      function updatePaths(items, parentPath) {
+        items.forEach((childItem) => {
+          // Prepend parent path to child path (paths are already complete in child data)
+          childItem.path = `${parentPath} > ${childItem.path}`;
+
+          // Recursively update nested children with the same parent path
+          // (don't use updated path since child paths already have their hierarchy)
+          if (childItem.items && childItem.items.length > 0) {
+            updatePaths(childItem.items, parentPath);
+          }
+        });
+      }
+
+      // Create a deep copy to avoid modifying the original childData
+      const updatedChildItems = JSON.parse(JSON.stringify(childData.items));
+      updatePaths(updatedChildItems, item.path);
+
       // Merge child items
-      item.items = childData.items;
+      item.items = updatedChildItems;
+      console.log(`✓ Updated paths for ${childData.items.length} items and their children`);
       console.log(`\n✓ Merged ${childData.items.length} items into "${item.title}"`);
       childData.items.forEach((child, idx) => {
         console.log(`   ${idx + 1}. ${child.title} (${child.type})`);

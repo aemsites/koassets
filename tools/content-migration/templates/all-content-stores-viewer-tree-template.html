@@ -132,7 +132,15 @@
 
         function countItems(data) {
             if (!data || !data.items) return 0;
-            return data.items.reduce((count, item) => count + 1 + countItems(item), 0);
+            return data.items.reduce((count, item) => {
+                // Skip accordion types (they won't be rendered in the viewer)
+                if (item.type === 'accordion') {
+                    // Count their children instead
+                    return count + countItems(item);
+                }
+                // Count this item and its children
+                return count + 1 + countItems(item);
+            }, 0);
         }
 
         function renderTree() {
