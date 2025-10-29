@@ -8,6 +8,7 @@ import ActionButton from '../ActionButton';
 import { BUTTON_CONFIGS } from '../ActionButtonConfigs';
 import DownloadRenditionsModal from '../DownloadRenditionsModal';
 import Picture from '../Picture';
+import ShareAssetButton from '../ShareAssetButton.jsx';
 import './AssetDetails.css';
 import AssetDetailsDRM from './AssetDetailsDRM';
 import AssetDetailsGeneralInfo from './AssetDetailsGeneralInfo';
@@ -341,6 +342,9 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                         config={BUTTON_CONFIGS.download}
                                         hasLoadingState={true}
                                         onClick={handleDownloadPreview}
+                                    />
+                                    <ShareAssetButton
+                                        assetId={selectedImage?.assetId}
                                     />
                                 </div>
                                 <div className="right-buttons-wrapper">

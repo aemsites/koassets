@@ -7,6 +7,7 @@ import { formatCategory, getFileExtension } from '../utils/formatters';
 import { getAssetFieldDisplayFacetName } from '../utils/displayUtils';
 import ActionButton from './ActionButton';
 import { BUTTON_CONFIGS } from './ActionButtonConfigs';
+import ShareAssetButton from './ShareAssetButton.jsx';
 import Picture from './Picture';
 import './AssetCard.css';
 
@@ -234,6 +235,9 @@ const AssetCard: React.FC<AssetCardBaseProps> = ({
                         )}
                     </div>
                     <div className={secondButtonWrapper}>
+                        <ShareAssetButton
+                            assetId={image.assetId}
+                        />
                         {viewMode === 'grid' ? (
                             <ActionButton
                                 config={BUTTON_CONFIGS.download}
