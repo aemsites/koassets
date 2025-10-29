@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-/* eslint-disable no-console, max-len */
+/* eslint-disable no-console, max-len, no-await-in-loop */
 
 const fs = require('fs');
 const path = require('path');
@@ -224,7 +224,7 @@ async function uploadAllImages(imagesPath, daFullPath, concurrency = 1) {
   console.log(`   Processing ${imageBatches.length} batch(es) of up to ${concurrency} images each`);
 
   // Process each batch
-  for (let batchIndex = 0; batchIndex < imageBatches.length; batchIndex++) {
+  for (let batchIndex = 0; batchIndex < imageBatches.length; batchIndex += 1) {
     const batch = imageBatches[batchIndex];
     console.log(`\n   📦 Batch ${batchIndex + 1}/${imageBatches.length}: uploading ${batch.length} images...`);
 
@@ -269,6 +269,7 @@ async function uploadAllImages(imagesPath, daFullPath, concurrency = 1) {
 /**
  * Recursively upload all HTML files from generated-documents folder
  */
+/* eslint-disable-next-line no-unused-vars */
 async function uploadAllGeneratedDocuments() {
   const generatedDocsDir = path.join(__dirname, hierarchicalDirName, 'generated-documents');
 

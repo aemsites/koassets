@@ -9,4 +9,3 @@ const PATH_SEPARATOR = ' > ';
 module.exports = {
   PATH_SEPARATOR,
 };
-

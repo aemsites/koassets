@@ -85,8 +85,10 @@ function getMimeType(fileName) {
 
 /**
  * Create a source in DA admin by uploading a file
- * @param {string} daFullPath - Full DA path including org/repo, e.g. 'aemsites/koassets/drafts/tphan/all-content-stores.html'
- * @param {string} localFilePath - Path to the file to upload from local filesystem, e.g. './generated-documents/all-content-stores.html'
+ * @param {string} daFullPath - Full DA path including org/repo,
+ *   e.g. 'aemsites/koassets/drafts/tphan/all-content-stores.html'
+ * @param {string} localFilePath - Path to the file to upload from local filesystem,
+ *   e.g. './generated-documents/all-content-stores.html'
  * @returns {Promise<Object>} Response from DA admin
  */
 async function createSource(daFullPath, localFilePath) {

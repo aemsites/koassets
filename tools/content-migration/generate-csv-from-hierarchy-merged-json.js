@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-
+/* eslint-disable no-console, no-restricted-syntax, max-len */
 /**
  * Generate spreadsheet from hierarchy-structure.merged.json
  * Traverses the JSON from bottom up and creates a CSV with:
@@ -13,7 +13,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { PATH_SEPARATOR } = require('./constants');
+const { PATH_SEPARATOR } = require('./constants.js');
 const { sanitizeFileName } = require('./sanitize-utils.js');
 
 // Input and output paths - read from and write to derived-results

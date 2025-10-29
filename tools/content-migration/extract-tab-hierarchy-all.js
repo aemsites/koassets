@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
-/* eslint-disable no-console */
+/* eslint-disable no-console, no-shadow, no-restricted-syntax, no-inner-declarations, no-underscore-dangle, no-plusplus, no-await-in-loop, no-undef, no-unused-vars, global-require, no-lonely-if, prefer-destructuring, radix, max-len */
 
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const { URL } = require('url');
-const { sanitize, sanitizeFileName, buildFileNameWithId } = require('./sanitize-utils.js');
-const { PATH_SEPARATOR } = require('./constants');
+const { sanitizeFileName, buildFileNameWithId } = require('./sanitize-utils.js');
+const { PATH_SEPARATOR } = require('./constants.js');
 
 // Function to strip host from URLs and remove file extensions
 function stripHostAndExtension(url) {
@@ -82,7 +82,7 @@ const OUTPUT_DIR = path.join(__dirname, hierarchicalDirName, 'extracted-results'
 const BASE_URL = `${CONTENT_PATH}/`;
 
 // Dynamic paths - will be discovered at runtime
-const DISCOVERED_BASE_PATH = null;
+// const DISCOVERED_BASE_PATH = null;
 
 // Function to download file from AEM
 function downloadFile(url, outputPath) {

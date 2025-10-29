@@ -17,7 +17,7 @@ const {
   deriveViewerTitle,
   getOutputHtmlPath,
   loadHierarchyData,
-} = require('./html-viewer-utils');
+} = require('./html-viewer-utils.js');
 
 const projectRoot = __dirname;
 const templatePath = path.join(projectRoot, 'templates/all-content-stores-viewer-tree-template.html');

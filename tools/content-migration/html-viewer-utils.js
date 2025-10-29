@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { PATH_SEPARATOR } = require('./constants');
+const { PATH_SEPARATOR } = require('./constants.js');
 
 function splitPathSegments(pathStr) {
   if (!pathStr) return [];
@@ -56,12 +56,12 @@ function readCsv(filePath) {
       if (inQuotes && nextChar === '"') {
         currentField += '"';
         index += 2;
-        continue;
+        continue; // eslint-disable-line no-continue
       }
 
       inQuotes = !inQuotes;
       index += 1;
-      continue;
+      continue; // eslint-disable-line no-continue
     }
 
     if (!inQuotes) {
@@ -69,7 +69,7 @@ function readCsv(filePath) {
         fields.push(currentField);
         currentField = '';
         index += 1;
-        continue;
+        continue; // eslint-disable-line no-continue
       }
 
       if (char === '\n' || char === '\r') {
@@ -86,7 +86,7 @@ function readCsv(filePath) {
           index += 1;
         }
 
-        continue;
+        continue; // eslint-disable-line no-continue
       }
     }
 
@@ -132,7 +132,9 @@ function reconstructHierarchyFromRows(rows) {
       const isLastSegment = index === pathSegments.length - 1;
       const trimmedSegment = segment.trim();
 
-      let existingItem = currentLevel.items.find((item) => item.title && item.title.trim() === trimmedSegment);
+      let existingItem = currentLevel.items.find(
+        (item) => item.title && item.title.trim() === trimmedSegment,
+      );
 
       if (!existingItem) {
         const newItem = {
@@ -305,6 +307,7 @@ function getOutputHtmlPath(inputPath, sourceType, options = {}) {
 
 function normalizeEdsBaseName(rawBaseName) {
   const patterns = [/\.from-eds$/i, /\.eds$/i];
+  // eslint-disable-next-line no-restricted-syntax
   for (const pattern of patterns) {
     if (pattern.test(rawBaseName)) {
       return {

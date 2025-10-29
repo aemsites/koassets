@@ -54,7 +54,9 @@ function reconstructHierarchyFromRows(rows) {
       const isLastSegment = index === pathSegments.length - 1;
       const trimmedSegment = segment.trim();
 
-      let existingItem = currentLevel.items.find((item) => item.title && item.title.trim() === trimmedSegment);
+      let existingItem = currentLevel.items.find(
+        (item) => item.title && item.title.trim() === trimmedSegment,
+      );
 
       if (!existingItem) {
         const newItem = {
@@ -98,13 +100,12 @@ function reconstructHierarchyFromRows(rows) {
 
 function normalizeEdsBaseName(rawBaseName) {
   const patterns = [/\.from-eds$/i, /\.eds$/i];
-  for (const pattern of patterns) {
-    if (pattern.test(rawBaseName)) {
-      return {
-        baseName: rawBaseName.replace(pattern, ''),
-        isEds: true,
-      };
-    }
+  const matchedPattern = patterns.find((pattern) => pattern.test(rawBaseName));
+  if (matchedPattern) {
+    return {
+      baseName: rawBaseName.replace(matchedPattern, ''),
+      isEds: true,
+    };
   }
   return { baseName: rawBaseName, isEds: false };
 }
@@ -157,7 +158,7 @@ function countItems(data) {
   }, 0);
 }
 
-function createViewerElement(hierarchyData, viewerTitle, viewerDescription) {
+function createViewerElement(hierarchyData) {
   const root = document.createElement('div');
   root.className = 'content-stores';
 
@@ -231,7 +232,8 @@ function createViewerElement(hierarchyData, viewerTitle, viewerDescription) {
 
   function filterItem(item, searchTerm) {
     if (!item) return null;
-    const matchesSearch = !searchTerm || (item.title && item.title.toLowerCase().includes(searchTerm));
+    const matchesSearch = !searchTerm
+      || (item.title && item.title.toLowerCase().includes(searchTerm));
     const filteredChildren = item.items
       ? item.items.map((child) => filterItem(child, searchTerm)).filter(Boolean)
       : [];
@@ -461,7 +463,9 @@ export default async function decorate(block) {
   }
 
   const contentStores = await fetchSpreadsheetData(sheetPath, sheetName);
-  const contentStoresData = Array.isArray(contentStores?.data) ? contentStores.data.map((row) => normalizeRow(row)) : [];
+  const contentStoresData = Array.isArray(contentStores?.data)
+    ? contentStores.data.map((row) => normalizeRow(row))
+    : [];
 
   const hierarchyData = reconstructHierarchyFromRows(contentStoresData);
   const { viewerTitle, baseTitle } = deriveViewerMeta(sheetPath);

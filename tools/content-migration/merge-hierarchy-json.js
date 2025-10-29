@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable no-console, no-restricted-syntax, no-shadow, no-inner-declarations, max-len */
 /**
  * Merge child hierarchy-structure.json into parent hierarchy-structure.json
  *
@@ -17,7 +18,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { PATH_SEPARATOR } = require('./constants');
+const { PATH_SEPARATOR } = require('./constants.js');
 
 console.log('🔀 Merging hierarchy JSON files...\n');
 
