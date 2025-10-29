@@ -23,7 +23,8 @@ export async function getRestrictedBrands(env) {
   const restrictedBrands = {};
   for (const entry of index?.data || []) {
     const path = entry.path;
-    const brand = path?.replace('/config/access/restricted-brands/', '').replace('.json', '');
+    // get filename without json == brand name
+    const brand = path?.split('/').pop().replace('.json', '');
     restrictedBrands[brand] = path;
   }
   return restrictedBrands;
