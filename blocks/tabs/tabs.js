@@ -52,10 +52,16 @@ export default async function decorate(block) {
     button.setAttribute('role', 'tab');
     button.setAttribute('type', 'button');
     button.addEventListener('click', () => {
-      block.querySelectorAll('[role=tabpanel]').forEach((panel) => {
+      // Find the immediate tabs container to only affect tabs at this level
+      const tabsContainer = button.closest('.tabs');
+
+      // Only affect direct tabpanels within this tabs container (not nested ones)
+      tabsContainer.querySelectorAll(':scope > .tabs-panel').forEach((panel) => {
         panel.setAttribute('aria-hidden', true);
       });
-      tablist.querySelectorAll('button').forEach((btn) => {
+
+      // Only affect buttons in the immediate tablist (not nested ones)
+      tabsContainer.querySelector(':scope > .tabs-list').querySelectorAll('button').forEach((btn) => {
         btn.setAttribute('aria-selected', false);
       });
       tabpanel.setAttribute('aria-hidden', false);
