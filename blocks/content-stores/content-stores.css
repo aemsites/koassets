@@ -1,0 +1,185 @@
+.content-stores {
+  padding: 20px;
+  border-radius: 12px;
+}
+
+.content-stores .container {
+  max-width: 1400px;
+  margin: 0 auto;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.content-stores .controls {
+  padding: 2rem;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.content-stores .search-box {
+  flex: 1;
+  position: relative;
+  margin-right: 1rem;
+}
+
+.content-stores .search-box input {
+  width: 100%;
+  padding: 6px 0 6px 15px;
+  border: 2px solid #dddddd;
+  border-radius: 999px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.content-stores .search-box input:focus {
+  outline: none;
+}
+
+.content-stores .search-icon {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666666;
+}
+
+.content-stores .action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.content-stores .stats {
+  color: #666666;
+  font-size: 14px;
+}
+
+.content-stores .content {
+  padding: 2rem;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.content-stores .tree-item {
+  margin-bottom: 0.5rem;
+}
+
+.content-stores .tree-node {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.content-stores .tree-node:hover {
+  background: #f8f9fa;
+}
+
+.content-stores .tree-node.expanded {
+  background: #e3f2fd;
+}
+
+.content-stores .expand-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #666666;
+  transition: transform 0.2s ease;
+}
+
+.content-stores .expand-icon.expanded {
+  transform: rotate(90deg);
+}
+
+.content-stores .item-image {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-right: 8px;
+  font-size: small;
+}
+
+.content-stores .node-title {
+  flex: 1;
+  font-weight: 500;
+  color: #333333;
+}
+
+.content-stores .node-title.has-link {
+  color: #1976d2;
+  text-decoration: underline;
+}
+
+.content-stores .node-title.has-link:hover {
+  color: #0d47a1;
+}
+
+.content-stores .tree-children {
+  margin-left: 20px;
+  border-left: 2px solid #f0f0f0;
+  padding-left: 0;
+  display: none;
+}
+
+.content-stores .tree-children.expanded {
+  display: block;
+}
+
+.content-stores .rich-content {
+  margin: 8px 0 8px 20px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  border-left: 3px solid var(--primary-color);
+}
+
+.content-stores .rich-content a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.content-stores .rich-content a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .content-stores .header h1 {
+    font-size: 2rem;
+  }
+
+  .content-stores .content {
+    padding: 1rem;
+  }
+
+  .content-stores .controls {
+    padding: 1.5rem;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .content-stores .search-box {
+    max-width: none;
+  }
+
+  .content-stores .action-buttons {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+}

@@ -14,6 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 const { PATH_SEPARATOR } = require('./constants');
+const { sanitizeFileName } = require('./sanitize-utils.js');
 
 // Input and output paths - read from and write to derived-results
 const INPUT_FILE = path.join(__dirname, './all-content-stores/derived-results/hierarchy-structure.merged.json');
@@ -146,12 +147,21 @@ function extractFilename(url) {
 
 /**
  * Formats imageUrl by extracting filename and prepending with full DA Live URL
+ * Returns empty string if the sanitized file doesn't exist in extracted-results/images
  */
 function formatImageUrl(imageUrl, destPath, storeName) {
   if (!imageUrl) return '';
 
   const filename = extractFilename(imageUrl);
-  return `https://content.da.live/${destPath}/fragments/.${storeName}/${filename}`;
+  const sanitizedFilename = sanitizeFileName(filename);
+
+  // Check if the sanitized file exists in the images directory
+  const imagePath = path.join(__dirname, storeName, 'extracted-results', 'images', sanitizedFilename);
+  if (!fs.existsSync(imagePath)) {
+    return '';
+  }
+
+  return `https://content.da.live/${destPath}/fragments/.${storeName}/${sanitizedFilename}`;
 }
 
 /**

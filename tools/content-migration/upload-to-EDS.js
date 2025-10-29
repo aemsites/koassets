@@ -171,13 +171,15 @@ async function uploadImagesFromSrcset(htmlContent) {
  * Upload all images from a local directory to DA
  * @param {string} imagesPath - Relative path to directory containing images (relative to script directory)
  * @param {string} daFullPath - DA destination path (e.g., 'aemsites/koassets/fragments/all-content-stores/.coca-cola/')
+ * @param {number} [concurrency=1] - Number of concurrent uploads (1 = sequential, higher = more parallel)
  */
-async function uploadAllImages(imagesPath, daFullPath) {
+async function uploadAllImages(imagesPath, daFullPath, concurrency = 1) {
   // Resolve relative path to absolute path
   const absoluteImagesPath = path.resolve(__dirname, imagesPath);
 
   console.log(`\n📸 Uploading all images from: ${imagesPath} (${absoluteImagesPath})`);
   console.log(`   Destination: ${daFullPath}`);
+  console.log(`   Concurrency: ${concurrency} ${concurrency === 1 ? '(sequential)' : '(parallel)'}`);
 
   // Check if images directory exists
   if (!fs.existsSync(absoluteImagesPath)) {
@@ -205,25 +207,63 @@ async function uploadAllImages(imagesPath, daFullPath) {
 
   console.log(`   Found ${imageFiles.length} image files to upload`);
 
-  // Upload images sequentially to avoid overwhelming the server
-  await imageFiles.reduce(async (promise, imageName) => {
-    await promise;
-
-    const localImagePath = path.join(absoluteImagesPath, imageName);
-    // Ensure daFullPath ends with / and construct full DA path for this image
-    const normalizedDaPath = daFullPath.endsWith('/') ? daFullPath : `${daFullPath}/`;
-    const daImagePath = `${normalizedDaPath}${imageName}`;
-
-    console.log(`   📤 Uploading: ${imageName}`);
-    try {
-      await uploadToEDS(daImagePath, localImagePath, true); // Skip preview for images
-      console.log(`   ✅ Uploaded: ${imageName}`);
-    } catch (error) {
-      console.error(`   ❌ Error uploading ${imageName}: ${error.message}`);
+  // Helper function to split array into chunks
+  const chunkArray = (array, chunkSize) => {
+    const chunks = [];
+    for (let i = 0; i < array.length; i += chunkSize) {
+      chunks.push(array.slice(i, i + chunkSize));
     }
-  }, Promise.resolve());
+    return chunks;
+  };
 
-  console.log(`\n✅ Completed uploading ${imageFiles.length} images from ${imagesPath}`);
+  // Split images into batches based on concurrency
+  const imageBatches = chunkArray(imageFiles, concurrency);
+  let totalUploaded = 0;
+  let totalFailed = 0;
+
+  console.log(`   Processing ${imageBatches.length} batch(es) of up to ${concurrency} images each`);
+
+  // Process each batch
+  for (let batchIndex = 0; batchIndex < imageBatches.length; batchIndex++) {
+    const batch = imageBatches[batchIndex];
+    console.log(`\n   📦 Batch ${batchIndex + 1}/${imageBatches.length}: uploading ${batch.length} images...`);
+
+    // Upload all images in current batch concurrently
+    const batchPromises = batch.map(async (imageName) => {
+      const localImagePath = path.join(absoluteImagesPath, imageName);
+      // Ensure daFullPath ends with / and construct full DA path for this image
+      const normalizedDaPath = daFullPath.endsWith('/') ? daFullPath : `${daFullPath}/`;
+      const daImagePath = `${normalizedDaPath}${imageName}`;
+
+      console.log(`      📤 Uploading: ${imageName}`);
+      try {
+        await uploadToEDS(daImagePath, localImagePath, true); // Skip preview for images
+        console.log(`      ✅ Uploaded: ${imageName}`);
+        return { imageName, status: 'success' };
+      } catch (error) {
+        console.error(`      ❌ Error uploading ${imageName}: ${error.message}`);
+        return { imageName, status: 'error', error: error.message };
+      }
+    });
+
+    // Wait for all uploads in this batch to complete
+    const batchResults = await Promise.all(batchPromises);
+    const batchUploaded = batchResults.filter((r) => r.status === 'success').length;
+    const batchFailed = batchResults.filter((r) => r.status === 'error').length;
+
+    totalUploaded += batchUploaded;
+    totalFailed += batchFailed;
+
+    console.log(`   ✅ Batch ${batchIndex + 1} completed: ${batchUploaded} uploaded, ${batchFailed} failed`);
+
+    // Small pause between batches to avoid overwhelming server (except for last batch)
+    if (batchIndex < imageBatches.length - 1) {
+      console.log('   ⏸️  Pausing briefly before next batch...');
+      await sleep(500); // 0.5 second pause between batches
+    }
+  }
+
+  console.log(`\n✅ All uploads completed: ${totalUploaded} successful, ${totalFailed} failed out of ${imageFiles.length} total`);
 }
 
 /**
@@ -332,9 +372,9 @@ async function uploadAllGeneratedDocuments() {
 // ============================================ BULK IMAGE UPLOADS ============================================
 
 // Upload all images from extracted-results/images to a specific DA location
-uploadAllImages('all-content-stores/extracted-results/images', 'aemsites/koassets/fragments/.all-content-stores/');
+uploadAllImages('all-content-stores/extracted-results/images', 'aemsites/koassets/fragments/.all-content-stores/', 10); // 10 concurrent uploads
 
 // Example: Upload images for specific brand folders (using hierarchicalDirName for dynamic paths)
-// uploadAllImages(`${hierarchicalDirName}/extracted-results/images`, 'aemsites/koassets/fragments/all-content-stores/.coca-cola/');
-// uploadAllImages(`${hierarchicalDirName}/extracted-results/images`, 'aemsites/koassets/fragments/all-content-stores/.fanta/');
-// uploadAllImages(`${hierarchicalDirName}/extracted-results/images`, 'aemsites/koassets/fragments/all-content-stores/.sprite/');
+// uploadAllImages(`${hierarchicalDirName}/extracted-results/images`, 'aemsites/koassets/fragments/all-content-stores/.coca-cola/', 1); // Sequential (safe)
+// uploadAllImages(`${hierarchicalDirName}/extracted-results/images`, 'aemsites/koassets/fragments/all-content-stores/.fanta/', 5); // 5 concurrent (faster)
+// uploadAllImages(`${hierarchicalDirName}/extracted-results/images`, 'aemsites/koassets/fragments/all-content-stores/.sprite/', 2); // 2 concurrent (balanced)

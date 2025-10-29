@@ -1784,133 +1784,199 @@ async function downloadAllImages(hierarchyData, outputDir) {
   let failed = 0;
   const failedUrls = []; // Track failed URLs for final report
 
-  // Download function
+  // Download function with fallback mechanism
   function downloadImage(imageUrl, index) {
     return new Promise((resolve) => {
-      // Prepend AEM_AUTHOR to the imageUrl
-      const fullUrl = AEM_AUTHOR + imageUrl;
+      // Helper function to attempt download with a specific URL
+      function attemptDownload(urlToTry, isRetry = false) {
+        // Prepend AEM_AUTHOR to the imageUrl
+        const fullUrl = AEM_AUTHOR + urlToTry;
 
-      // Extract filename from URL
-      const urlParts = imageUrl.split('/');
-      const filename = urlParts[urlParts.length - 1];
-      const safeFilename = sanitizeFileName(filename);
-      const filePath = path.join(imagesDir, safeFilename);
+        // Extract filename from URL
+        const urlParts = urlToTry.split('/');
+        const filename = urlParts[urlParts.length - 1];
+        const safeFilename = sanitizeFileName(filename);
+        const filePath = path.join(imagesDir, safeFilename);
 
-      // Skip if file already exists
-      if (fs.existsSync(filePath)) {
-        console.log(`⏭️  Skipping ${safeFilename} (already exists)`);
-        downloaded++;
-        resolve();
-        return;
-      }
+        // Skip if file already exists
+        if (fs.existsSync(filePath)) {
+          console.log(`⏭️  Skipping ${safeFilename} (already exists)`);
+          downloaded++;
+          resolve();
+          return;
+        }
 
-      const file = fs.createWriteStream(filePath);
+        const file = fs.createWriteStream(filePath);
 
-      const request = https.get(fullUrl, {
-        headers: {
-          Cookie: AUTH_COOKIE,
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        },
-      }, (response) => {
+        const request = https.get(fullUrl, {
+          headers: {
+            Cookie: AUTH_COOKIE,
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+          },
+        }, (response) => {
         // Clear timeout since we got a response
-        request.setTimeout(0);
+          request.setTimeout(0);
 
-        // Handle redirects (301, 302, 303, 307, 308)
-        if ([301, 302, 303, 307, 308].includes(response.statusCode) && response.headers.location) {
+          // Handle redirects (301, 302, 303, 307, 308)
+          if ([301, 302, 303, 307, 308].includes(response.statusCode) && response.headers.location) {
+            file.close();
+            fs.unlinkSync(filePath); // Delete empty file
+
+            let redirectUrl = response.headers.location;
+
+            // If redirect URL is relative, make it absolute
+            if (!redirectUrl.startsWith('http')) {
+              const urlObj = new URL(fullUrl);
+              redirectUrl = `https://${urlObj.hostname}${redirectUrl}`;
+            }
+
+            console.log(`🔄 Following redirect: ${fullUrl} -> ${redirectUrl}`);
+
+            // Follow the redirect
+            const redirectRequest = https.get(redirectUrl, {
+              headers: {
+                Cookie: AUTH_COOKIE,
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+              },
+            }, (redirectResponse) => {
+              if (redirectResponse.statusCode === 200) {
+                const redirectFile = fs.createWriteStream(filePath);
+                redirectResponse.pipe(redirectFile);
+                redirectFile.on('finish', () => {
+                  redirectFile.close();
+                  downloaded++;
+                  console.log(`✅ Downloaded ${redirectUrl} -> ${safeFilename}`);
+                  resolve();
+                });
+              } else {
+                failed++;
+                failedUrls.push({ url: redirectUrl, reason: `HTTP ${redirectResponse.statusCode} (after redirect)`, filename: safeFilename });
+                console.log(`❌ Failed redirect ${redirectUrl} (HTTP ${redirectResponse.statusCode})`);
+                resolve();
+              }
+            }).on('error', (err) => {
+              failed++;
+              failedUrls.push({ url: redirectUrl, reason: `Network error on redirect: ${err.message}`, filename: safeFilename });
+              console.log(`❌ Network error on redirect ${redirectUrl}: ${err.message}`);
+              resolve();
+            });
+
+            // Set timeout for redirect request
+            redirectRequest.setTimeout(30000, () => {
+              redirectRequest.destroy();
+              failed++;
+              failedUrls.push({ url: redirectUrl, reason: 'Timeout on redirect (server not responding)', filename: safeFilename });
+              console.log(`❌ Timeout on redirect ${redirectUrl} (server not responding)`);
+              resolve();
+            });
+          } else if (response.statusCode === 200) {
+            response.pipe(file);
+            file.on('finish', () => {
+              file.close();
+              downloaded++;
+              console.log(`✅ Downloaded ${fullUrl} -> ${safeFilename}`);
+              resolve();
+            });
+          } else {
+          // Handle other non-200 status codes (404, 403, etc.)
+            file.close();
+            fs.unlinkSync(filePath); // Delete empty file
+
+            // If this is the first attempt and we got a 404, try fallback URL
+            if (!isRetry && response.statusCode === 404) {
+              console.log(`❌ Failed ${fullUrl} (HTTP ${response.statusCode}) - trying fallback...`);
+
+              // Create fallback URL by removing teaser-{id}- prefix from filename
+              const fallbackUrl = createFallbackUrl(urlToTry);
+              if (fallbackUrl && fallbackUrl !== urlToTry) {
+                console.log(`🔄 Trying fallback: ${fallbackUrl}`);
+                attemptDownload(fallbackUrl, true);
+                return;
+              }
+            }
+
+            failed++;
+            failedUrls.push({ url: fullUrl, reason: `HTTP ${response.statusCode}`, filename: safeFilename });
+            console.log(`❌ Failed ${fullUrl} (HTTP ${response.statusCode})`);
+            resolve();
+          }
+        }).on('error', (err) => {
+        // Clear timeout since we got an error response
+          request.setTimeout(0);
+
+          // Handle network errors (connection refused, DNS errors, etc.)
           file.close();
-          fs.unlinkSync(filePath); // Delete empty file
-
-          let redirectUrl = response.headers.location;
-
-          // If redirect URL is relative, make it absolute
-          if (!redirectUrl.startsWith('http')) {
-            const urlObj = new URL(fullUrl);
-            redirectUrl = `https://${urlObj.hostname}${redirectUrl}`;
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath); // Delete empty file
           }
 
-          console.log(`🔄 Following redirect: ${fullUrl} -> ${redirectUrl}`);
+          // If this is the first attempt, try fallback URL
+          if (!isRetry) {
+            console.log(`❌ Network error ${fullUrl}: ${err.message} - trying fallback...`);
 
-          // Follow the redirect
-          const redirectRequest = https.get(redirectUrl, {
-            headers: {
-              Cookie: AUTH_COOKIE,
-              'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-            },
-          }, (redirectResponse) => {
-            if (redirectResponse.statusCode === 200) {
-              const redirectFile = fs.createWriteStream(filePath);
-              redirectResponse.pipe(redirectFile);
-              redirectFile.on('finish', () => {
-                redirectFile.close();
-                downloaded++;
-                console.log(`✅ Downloaded ${redirectUrl} -> ${safeFilename}`);
-                resolve();
-              });
-            } else {
-              failed++;
-              failedUrls.push({ url: redirectUrl, reason: `HTTP ${redirectResponse.statusCode} (after redirect)`, filename: safeFilename });
-              console.log(`❌ Failed redirect ${redirectUrl} (HTTP ${redirectResponse.statusCode})`);
-              resolve();
+            // Create fallback URL by removing teaser-{id}- prefix from filename
+            const fallbackUrl = createFallbackUrl(urlToTry);
+            if (fallbackUrl && fallbackUrl !== urlToTry) {
+              console.log(`🔄 Trying fallback: ${fallbackUrl}`);
+              attemptDownload(fallbackUrl, true);
+              return;
             }
-          }).on('error', (err) => {
-            failed++;
-            failedUrls.push({ url: redirectUrl, reason: `Network error on redirect: ${err.message}`, filename: safeFilename });
-            console.log(`❌ Network error on redirect ${redirectUrl}: ${err.message}`);
-            resolve();
-          });
+          }
 
-          // Set timeout for redirect request
-          redirectRequest.setTimeout(30000, () => {
-            redirectRequest.destroy();
-            failed++;
-            failedUrls.push({ url: redirectUrl, reason: 'Timeout on redirect (server not responding)', filename: safeFilename });
-            console.log(`❌ Timeout on redirect ${redirectUrl} (server not responding)`);
-            resolve();
-          });
-        } else if (response.statusCode === 200) {
-          response.pipe(file);
-          file.on('finish', () => {
-            file.close();
-            downloaded++;
-            console.log(`✅ Downloaded ${fullUrl} -> ${safeFilename}`);
-            resolve();
-          });
-        } else {
-          // Handle other non-200 status codes (404, 403, etc.)
-          file.close();
-          fs.unlinkSync(filePath); // Delete empty file
           failed++;
-          failedUrls.push({ url: fullUrl, reason: `HTTP ${response.statusCode}`, filename: safeFilename });
-          console.log(`❌ Failed ${fullUrl} (HTTP ${response.statusCode})`);
+          failedUrls.push({ url: fullUrl, reason: `Network error: ${err.message}`, filename: safeFilename });
+          console.log(`❌ Network error ${fullUrl}: ${err.message}`);
           resolve();
-        }
-      }).on('error', (err) => {
-        // Clear timeout since we got an error response
-        request.setTimeout(0);
+        });
 
-        // Handle network errors (connection refused, DNS errors, etc.)
-        file.close();
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath); // Delete empty file
-        }
-        failed++;
-        failedUrls.push({ url: fullUrl, reason: `Network error: ${err.message}`, filename: safeFilename });
-        console.log(`❌ Network error ${fullUrl}: ${err.message}`);
-        resolve();
-      });
+        // Set timeout for network issues (server not responding)
+        request.setTimeout(30000, () => {
+          request.destroy();
+          file.close();
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
 
-      // Set timeout for network issues (server not responding)
-      request.setTimeout(30000, () => {
-        request.destroy();
-        file.close();
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
+          // If this is the first attempt, try fallback URL
+          if (!isRetry) {
+            console.log(`❌ Timeout ${fullUrl} (server not responding) - trying fallback...`);
+
+            // Create fallback URL by removing teaser-{id}- prefix from filename
+            const fallbackUrl = createFallbackUrl(urlToTry);
+            if (fallbackUrl && fallbackUrl !== urlToTry) {
+              console.log(`🔄 Trying fallback: ${fallbackUrl}`);
+              attemptDownload(fallbackUrl, true);
+              return;
+            }
+          }
+
+          failed++;
+          failedUrls.push({ url: fullUrl, reason: 'Timeout (server not responding)', filename: safeFilename });
+          console.log(`❌ Timeout ${fullUrl} (server not responding)`);
+          resolve();
+        });
+      }
+
+      // Helper function to create fallback URL by removing teaser-{id}- prefix
+      function createFallbackUrl(originalUrl) {
+        const urlParts = originalUrl.split('/');
+        const filename = urlParts[urlParts.length - 1];
+
+        // Check if filename has teaser-{id}- prefix pattern
+        const teaserMatch = filename.match(/^teaser-[a-f0-9]+-(.+)$/);
+        if (teaserMatch) {
+          // Replace the filename with the version without teaser prefix
+          const fallbackFilename = teaserMatch[1];
+          const fallbackUrlParts = [...urlParts];
+          fallbackUrlParts[fallbackUrlParts.length - 1] = fallbackFilename;
+          return fallbackUrlParts.join('/');
         }
-        failed++;
-        failedUrls.push({ url: fullUrl, reason: 'Timeout (server not responding)', filename: safeFilename });
-        console.log(`❌ Timeout ${fullUrl} (server not responding)`);
-        resolve();
-      });
+
+        return null; // No fallback possible
+      }
+
+      // Start with the original URL
+      attemptDownload(imageUrl);
     });
   }
 
