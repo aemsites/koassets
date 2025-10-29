@@ -1,49 +1,102 @@
 .content-stores {
   padding: 20px;
-  border-radius: 12px;
+  border-radius: 8px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background-color: var(--background-color);
+  font-family: var(--body-font-family);
 }
 
 .content-stores .container {
   max-width: 1400px;
+  width: 100%;
   margin: 0 auto;
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background-color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .content-stores .controls {
   padding: 2rem;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 2px solid var(--background-color);
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
   align-items: center;
+  background-color: white;
 }
 
 .content-stores .search-box {
   flex: 1;
   position: relative;
-  margin-right: 1rem;
 }
 
 .content-stores .search-box input {
   width: 100%;
-  padding: 6px 0 6px 15px;
-  border: 2px solid #dddddd;
-  border-radius: 999px;
-  font-size: 16px;
-  transition: all 0.3s ease;
+  padding: 8px 16px 8px 44px;
+  border: 1.5px solid #9a9a9a;
+  border-radius: 25px;
+  font-size: var(--body-font-size-xs);
+  font-family: var(--body-font-family);
+  color: var(--text-color);
+  transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 
 .content-stores .search-box input:focus {
   outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(237, 0, 0, 0.1);
 }
 
 .content-stores .search-icon {
   position: absolute;
-  right: 0;
+  left: 16px;
   top: 50%;
   transform: translateY(-50%);
-  color: #666666;
+  color: var(--dark-color);
+  font-size: 16px;
+  pointer-events: none;
+}
+
+.content-stores .search-icon::before {
+  content: '';
+  display: block;
+  width: 16px;
+  height: 16px;
+  background: url('/icons/search.svg') no-repeat center;
+  background-size: contain;
+  filter: brightness(0) saturate(100%) invert(54%) sepia(12%) saturate(0%);
+  opacity: 1;
+}
+
+.content-stores .search-clear-icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  background: url('/icons/close_grey.svg') no-repeat center;
+  background-size: contain;
+  cursor: pointer;
+  pointer-events: auto;
+  display: none;
+  transition: opacity 0.2s ease;
+}
+
+.content-stores .search-clear-icon.visible {
+  display: block;
+}
+
+.content-stores .search-clear-icon:hover {
+  opacity: 0.7;
 }
 
 .content-stores .action-buttons {
@@ -55,14 +108,16 @@
 }
 
 .content-stores .stats {
-  color: #666666;
-  font-size: 14px;
+  color: var(--dark-color);
+  font-size: var(--body-font-size-xs);
+  font-weight: 500;
 }
 
 .content-stores .content {
   padding: 2rem;
-  max-height: 70vh;
+  flex: 1;
   overflow-y: auto;
+  background-color: white;
 }
 
 .content-stores .tree-item {
@@ -72,65 +127,90 @@
 .content-stores .tree-node {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
+  padding: 12px 16px;
+  border-radius: 8px;
   transition: all 0.2s ease;
   user-select: text;
   -webkit-user-select: text;
+  border: 1px solid transparent;
 }
 
 .content-stores .tree-node:hover {
-  background: #f8f9fa;
+  background: var(--background-color);
+  border-color: rgba(237, 0, 0, 0.1);
 }
 
 .content-stores .tree-node.expanded {
-  background: #e3f2fd;
+  background: rgba(237, 0, 0, 0.05);
+  border-color: var(--primary-color);
 }
 
 .content-stores .expand-icon {
   width: 20px;
   height: 20px;
-  margin-right: 8px;
+  margin-right: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
-  color: #666666;
+  color: var(--primary-color);
   transition: transform 0.2s ease;
+  font-weight: bold;
 }
 
 .content-stores .expand-icon.expanded {
   transform: rotate(90deg);
+  color: var(--primary-color-hover);
 }
 
 .content-stores .item-image {
-  width: 50px;
-  height: 50px;
+  width: 100px;
+  height: 100px;
   object-fit: cover;
-  border-radius: 4px;
-  margin-right: 8px;
+  border-radius: 8px;
+  margin-right: 12px;
   font-size: small;
+  border: 1px solid var(--background-color);
 }
 
 .content-stores .node-title {
-  flex: 1;
   font-weight: 500;
-  color: #333333;
+  color: var(--text-color);
+  font-family: var(--body-font-family);
+  font-size: var(--body-font-size-s);
+}
+
+.content-stores .tree-node[data-has-children="false"] .node-title:not(.has-link) {
+  color: var(--dark-color);
+  opacity: 0.5;
+  cursor: default;
 }
 
 .content-stores .node-title.has-link {
-  color: #1976d2;
+  color: var(--link-color);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  cursor: pointer;
+}
+
+.content-stores .tree-node[data-has-children="false"] .node-title.has-link {
+  color: var(--link-color);
+  text-decoration: underline;
+}
+
+.content-stores .tree-node[data-has-children="false"] .node-title.has-link:hover {
+  color: var(--link-hover-color);
   text-decoration: underline;
 }
 
 .content-stores .node-title.has-link:hover {
-  color: #0d47a1;
+  color: var(--link-hover-color);
+  text-decoration: underline;
 }
 
 .content-stores .tree-children {
-  margin-left: 20px;
-  border-left: 2px solid #f0f0f0;
+  margin-left: 32px;
+  border-left: 2px solid var(--background-color);
   padding-left: 0;
   display: none;
 }
@@ -140,21 +220,25 @@
 }
 
 .content-stores .rich-content {
-  margin: 8px 0 8px 20px;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  font-size: 14px;
-  line-height: 1.5;
-  border-left: 3px solid var(--primary-color);
+  margin: 12px 0 12px 32px;
+  padding: 16px;
+  background: var(--background-color);
+  border-radius: 8px;
+  font-size: var(--body-font-size-xs);
+  line-height: 1.6;
+  border-left: 4px solid var(--primary-color);
+  font-family: var(--body-font-family);
+  color: var(--text-color);
 }
 
 .content-stores .rich-content a {
-  color: var(--primary-color);
+  color: var(--link-color);
   text-decoration: none;
+  transition: color 0.2s ease;
 }
 
 .content-stores .rich-content a:hover {
+  color: var(--link-hover-color);
   text-decoration: underline;
 }
 

@@ -1,4 +1,5 @@
 import { fetchSpreadsheetData } from '../../scripts/scripts.js';
+import { createOptimizedPicture } from '../../scripts/aem.js';
 
 const PATH_SEPARATOR = ' > ';
 
@@ -177,8 +178,13 @@ function createViewerElement(hierarchyData, viewerTitle, viewerDescription) {
 
   const searchIcon = document.createElement('span');
   searchIcon.className = 'search-icon';
-  searchIcon.textContent = '🔍';
+  searchIcon.textContent = '';
   searchBox.appendChild(searchIcon);
+
+  const searchClearIcon = document.createElement('span');
+  searchClearIcon.className = 'search-clear-icon';
+  searchClearIcon.setAttribute('aria-label', 'Clear search');
+  searchBox.appendChild(searchClearIcon);
 
   controls.appendChild(searchBox);
 
@@ -217,6 +223,7 @@ function createViewerElement(hierarchyData, viewerTitle, viewerDescription) {
   let filteredData = hierarchyData;
   const expandedNodes = new Set();
   let currentSearch = '';
+  let expandAllMode = false;
 
   function updateStats() {
     statsText.textContent = `${countItems(filteredData)} items found`;
@@ -244,6 +251,9 @@ function createViewerElement(hierarchyData, viewerTitle, viewerDescription) {
   function toggleNode(path, nodeElement) {
     const expandIcon = nodeElement.querySelector('.expand-icon');
     const willExpand = !expandedNodes.has(path);
+
+    // When manually toggling, exit expand-all mode
+    expandAllMode = false;
 
     if (willExpand) {
       expandedNodes.add(path);
@@ -273,7 +283,7 @@ function createViewerElement(hierarchyData, viewerTitle, viewerDescription) {
     const hasChildren = item.items && item.items.length > 0;
     const hasTextList = item.text && (item.text.includes('<a') || (item.text.match(/<p>/g) || []).length > 1);
     const hasExpandable = hasChildren || hasTextList;
-    const isExpanded = expandedNodes.has(item.path);
+    const isExpanded = expandAllMode ? hasExpandable : expandedNodes.has(item.path);
     const hasLink = item.linkURL && item.linkURL.trim() !== '';
 
     const treeNode = document.createElement('div');
@@ -294,11 +304,12 @@ function createViewerElement(hierarchyData, viewerTitle, viewerDescription) {
     treeNode.appendChild(expandIcon);
 
     if (item.imageUrl) {
-      const image = document.createElement('img');
-      image.className = 'item-image';
-      image.src = item.imageUrl;
-      image.alt = item.title || '';
-      treeNode.appendChild(image);
+      const picture = createOptimizedPicture(item.imageUrl, item.title || '', true, [{ width: '100' }], true);
+      const img = picture.querySelector('img');
+      if (img) {
+        img.className = 'item-image';
+      }
+      treeNode.appendChild(picture);
     }
 
     const nodeTitle = document.createElement('span');
@@ -387,10 +398,27 @@ function createViewerElement(hierarchyData, viewerTitle, viewerDescription) {
 
   searchInput.addEventListener('input', (event) => {
     currentSearch = event.target.value.toLowerCase();
+    if (currentSearch) {
+      searchClearIcon.classList.add('visible');
+    } else {
+      searchClearIcon.classList.remove('visible');
+    }
     filterAndRender();
   });
 
+  searchClearIcon.addEventListener('click', () => {
+    searchInput.value = '';
+    currentSearch = '';
+    searchClearIcon.classList.remove('visible');
+    // Reset to show all items
+    filteredData = hierarchyData;
+    updateStats();
+    renderTree();
+    searchInput.focus();
+  });
+
   expandAllBtn.addEventListener('click', () => {
+    expandAllMode = true;
     if (filteredData && filteredData.items) {
       expandAllItems(filteredData.items);
       renderTree();
@@ -398,6 +426,7 @@ function createViewerElement(hierarchyData, viewerTitle, viewerDescription) {
   });
 
   collapseAllBtn.addEventListener('click', () => {
+    expandAllMode = false;
     expandedNodes.clear();
     renderTree();
   });

@@ -289,6 +289,7 @@ function getMetadata(name, doc = document) {
  * @param {string} [alt] The image alternative text
  * @param {boolean} [eager] Set loading attribute to eager
  * @param {Array} [breakpoints] Breakpoints and corresponding params (eg. width)
+ * @param {boolean} [keepOriginalSrc] Keep the original src as pathname for image
  * @returns {Element} The picture element
  */
 function createOptimizedPicture(
@@ -296,10 +297,10 @@ function createOptimizedPicture(
   alt = '',
   eager = false,
   breakpoints = [{ media: '(min-width: 600px)', width: '2000' }, { width: '750' }],
+  keepOriginalSrc = false,
 ) {
-  const url = new URL(src, window.location.href);
   const picture = document.createElement('picture');
-  const { pathname } = url;
+  const { pathname } = keepOriginalSrc ? { pathname: src } : new URL(src, window.location.href);
   const ext = pathname.substring(pathname.lastIndexOf('.') + 1);
 
   // webp

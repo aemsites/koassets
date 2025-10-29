@@ -103,6 +103,13 @@ function findAndMerge(items, targetLinkURL, targetLinkURLWithHtml, childData, de
 
       // Merge child items
       item.items = updatedChildItems;
+
+      // Remove linkURL from parent node since it now has children
+      if (item.linkURL) {
+        console.log(`   ✓ Removing linkURL from parent: ${item.linkURL}`);
+        delete item.linkURL;
+      }
+
       console.log(`✓ Updated paths for ${childData.items.length} items and their children`);
       console.log(`\n✓ Merged ${childData.items.length} items into "${item.title}"`);
       childData.items.forEach((child, idx) => {
