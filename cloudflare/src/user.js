@@ -18,6 +18,17 @@ function pushUnique(array, items) {
   array.push(...items.filter(item => !array.includes(item)));
 }
 
+export async function getRestrictedBrands(env) {
+  const index = await fetchHelixSheet(env, '/config/access/restricted-brands-index.json', { params: { limit: 1000 } });
+  const restrictedBrands = {};
+  for (const entry of index?.data || []) {
+    const path = entry.path;
+    const brand = path?.replace('/config/access/restricted-brands/', '').replace('.json', '');
+    restrictedBrands[brand] = path;
+  }
+  return restrictedBrands;
+}
+
 async function getUserAttributes(env, user) {
   const email = user.email;
   const domain = user.domain;
@@ -90,10 +101,30 @@ async function getUserAttributes(env, user) {
   // make all country codes lowercase
   attributes.countries = attributes.countries.map(c => c.toLowerCase());
 
-  const restrictedBrands = await fetchHelixSheet(env, '/config/access/restricted-brands', { params: { limit: 20000 } });
-  for (const brand of restrictedBrands?.[':names'] || []) {
-    for (const item of restrictedBrands[brand].data) {
-      if (item.user === email || item.user === domain || item.user === '*') {
+  const restrictedBrands = await getRestrictedBrands(env);
+  for (const brand in restrictedBrands) {
+    const path = restrictedBrands[brand];
+    const brandSheet = await fetchHelixSheet(env, path, {
+      sheets: {
+        users:     { key: 'email' },
+        countries: { key: 'country' },
+        roles:     { key: 'role' },
+      },
+      params: {
+        limit: 20000
+      }
+    });
+
+    if (brandSheet.users[email] || brandSheet.users[domain] || brandSheet.users['*']) {
+      pushUnique(attributes.brands, brand);
+    }
+    for (const country of attributes.countries) {
+      if (brandSheet.countries[country]) {
+        pushUnique(attributes.brands, brand);
+      }
+    }
+    for (const role of attributes.roles) {
+      if (brandSheet.roles[role]) {
         pushUnique(attributes.brands, brand);
       }
     }
