@@ -19,7 +19,7 @@
   flex-direction: column;
   flex: 1;
   background-color: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
 }
 
 .content-stores .controls {
@@ -52,7 +52,7 @@
 .content-stores .search-box input:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(237, 0, 0, 0.1);
+  box-shadow: 0 0 0 2px rgb(237 0 0 / 10%);
 }
 
 .content-stores .search-icon {
@@ -131,17 +131,16 @@
   border-radius: 8px;
   transition: all 0.2s ease;
   user-select: text;
-  -webkit-user-select: text;
   border: 1px solid transparent;
 }
 
 .content-stores .tree-node:hover {
   background: var(--background-color);
-  border-color: rgba(237, 0, 0, 0.1);
+  border-color: rgb(237 0 0 / 10%);
 }
 
 .content-stores .tree-node.expanded {
-  background: rgba(237, 0, 0, 0.05);
+  background: rgb(237 0 0 / 5%);
   border-color: var(--primary-color);
 }
 
@@ -242,7 +241,7 @@
   text-decoration: underline;
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .content-stores .header h1 {
     font-size: 2rem;
   }
