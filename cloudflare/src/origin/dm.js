@@ -159,9 +159,16 @@ async function searchAuthorization(request, env, search) {
   // Algolia search request. Enforce a filter that ensures only authorized assets are returned
   // https://www.algolia.com/doc/api-reference/api-parameters/filters
 
-  // if user roles is empty, make the search return nothing
+  // if user has zero roles, make the search return nothing
   if (user.roles.length === 0) {
     search.requests = [];
+    console.log(`[${request.user.email}] authz filter: no roles => block search results`);
+    return;
+  }
+
+  if (user.roles.includes(ROLE.ADMIN)) {
+    // admins can see everything, no search constraint
+    console.log(`[${request.user.email}] authz filter: admin => show all search results`);
     return;
   }
 
@@ -172,12 +179,14 @@ async function searchAuthorization(request, env, search) {
   const brandCheck = `${deniedBrands.map(b => `NOT tccc-brand._tagIDs:'tccc:brand/${b}'`).join(' AND ')}`;
 
   // INTENDED BOTTLER COUNTRY CHECK
-  let bottlerCountryCheck = '';
-  // these users can see every bottler country
-  if (![ROLE.EMPLOYEE, ROLE.CONTINGENT_WORKER, ROLE.AGENCY].some(r => user.roles.includes(r))) {
-    const countries = user.bottlerCountries || [];
-    // bottlers can see content intended for all countries
+  let bottlerCountryCheck;
+  if ([ROLE.EMPLOYEE, ROLE.CONTINGENT_WORKER, ROLE.AGENCY].some(r => user.roles.includes(r))) {
+    // these roles can see every bottler country, no check
+    bottlerCountryCheck = '';
+  } else {
+    const countries = user.countries || [];
     if (user.roles.includes(ROLE.BOTTLER)) {
+      // bottlers can see content intended for all countries
       countries.push('all-countries');
     }
     if (countries.length > 0) {
