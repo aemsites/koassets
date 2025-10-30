@@ -8,26 +8,23 @@ echo "Extracting content hierarchies..."
 echo "=========================================="
 echo ""
 
-# Extract all-content-stores
-echo "📥 Extracting: all-content-stores"
+# Extract all-content-stores & stores
+echo "📥 Extracting: all-content-stores & stores"
 echo "-------------------------------------------"
-node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores'
-node generate-hierarchy-html-for-debug.js all-content-stores/extracted-results/hierarchy-structure.json 
-echo ""
-echo ""
-
-# Extract global-coca-cola-uplift
-echo "📥 Extracting: global-coca-cola-uplift"
-echo "-------------------------------------------"
+node extract-tab-hierarchy-all.js
 node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/global-coca-cola-uplift'
-node generate-hierarchy-html-for-debug.js all-content-stores__global-coca-cola-uplift/extracted-results/hierarchy-structure.json 
+node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/portfolio-get-together-2025'
+node extract-tab-hierarchy-all.js '/content/share/us/en/bottler-content-stores/coke-holiday-2025'
+###node generate-hierarchy-html-for-debug.js all-content-stores/extracted-results/hierarchy-structure.json 
+###node generate-hierarchy-html-for-debug.js all-content-stores__global-coca-cola-uplift/extracted-results/hierarchy-structure.json 
 echo ""
 echo ""
 
 # Merge hierarchies & Generate merged HTML viewer from JSON
 echo "🔀 Merging hierarchies... and 📊 Generating merged viewer..."
 echo "-------------------------------------------"
-node merge-hierarchy-json.js all-content-stores__global-coca-cola-uplift && node generate-html-viewer.js all-content-stores/derived-results/hierarchy-structure.merged.json
+node merge-hierarchy-json.js && node generate-html-viewer.js all-content-stores/derived-results/hierarchy-structure.merged.json
+#node merge-hierarchy-json.js all-content-stores__global-coca-cola-uplift && node generate-html-viewer.js all-content-stores/derived-results/hierarchy-structure.merged.json
 echo ""
 echo ""
 
@@ -48,7 +45,7 @@ echo ""
 # Generate HTML viewer from EDS
 echo "🌐 Generating HTML viewer from EDS..."
 echo "-------------------------------------------"
-node generate-html-viewer.js all-content-stores/derived-results/hierarchy-structure.merged.eds.json
+#node generate-html-viewer.js all-content-stores/derived-results/hierarchy-structure.merged.eds.json
 echo ""
 echo ""
 

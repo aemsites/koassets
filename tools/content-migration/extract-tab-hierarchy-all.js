@@ -9,6 +9,67 @@ const { URL } = require('url');
 const { sanitizeFileName, buildFileNameWithId } = require('./sanitize-utils.js');
 const { PATH_SEPARATOR } = require('./constants.js');
 
+// Help and usage information
+function showHelp() {
+  console.log(`
+📋 AEM Content Hierarchy Extractor
+==================================
+
+DESCRIPTION:
+  Extracts hierarchical content structure from AEM and downloads associated images.
+  Creates a clean JSON hierarchy with all teaser images and banner images downloaded.
+
+USAGE:
+  node extract-tab-hierarchy-all.js [CONTENT_PATH]
+
+EXAMPLES:
+  # Extract default content store (all-content-stores)
+  node extract-tab-hierarchy-all.js
+  
+  # Extract main content store (explicit)
+  node extract-tab-hierarchy-all.js /content/share/us/en/all-content-stores
+  
+  # Extract specific campaign
+  node extract-tab-hierarchy-all.js /content/share/us/en/all-content-stores/global-coca-cola-uplift
+
+OUTPUTS:
+  📁 {hierarchical-dir-name}/extracted-results/
+  ├── hierarchy-structure.json          # Main structured output
+  ├── jcr-content.json                 # Raw JCR data from AEM
+  ├── most-comprehensive-tabs.model.json # Raw Sling model data
+  └── images/                           # Downloaded teaser & banner images
+      ├── teaser-abc123-image1.png
+      └── banner-image.png
+
+  Note: {hierarchical-dir-name} follows this convention:
+  • all-content-stores                  # For main content stores
+  • *-content-stores                    # For other main content stores  
+  • all-content-stores__global-coca-cola-uplift    # For child campaigns (parent__child)
+  • *-content-stores__campaign-name     # For other child campaigns (parent__child)
+
+FEATURES:
+  ✅ Data-driven extraction (no hardcoded logic)
+  ✅ Auto-detects content sections and hierarchy
+  ✅ Downloads all associated images with fallback URLs
+  ✅ Parallel downloads for maximum speed
+  ✅ Clean key names (removes technical suffixes)
+  ✅ Extracts navigation links and metadata
+
+REQUIREMENTS:
+  - AEM authentication cookie in da.config file
+  - Network access to AEM author instance
+  - Write permissions to output directory
+
+For more information, see README.md
+`);
+}
+
+// Check for help flag or missing arguments
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  showHelp();
+  process.exit(0);
+}
+
 // Function to strip host from URLs and remove file extensions
 function stripHostAndExtension(url) {
   if (!url) return url;
@@ -35,11 +96,11 @@ function stripHostAndExtension(url) {
 }
 
 const AEM_AUTHOR = 'https://author-p64403-e544653.adobeaemcloud.com';
-let CONTENT_PATH = '/content/share/us/en/all-content-stores';
-// let CONTENT_PATH = '/content/share/us/en/all-content-stores/global-coca-cola-uplift';
+// Default content path
+const DEFAULT_CONTENT_PATH = '/content/share/us/en/all-content-stores';
 
-// Override CONTENT_PATH if provided as first command line argument
-[, , CONTENT_PATH = CONTENT_PATH] = process.argv;
+// Get content path from command line argument or use default
+const CONTENT_PATH = process.argv[2] || DEFAULT_CONTENT_PATH;
 
 // Load AUTH_COOKIE from config file
 let AUTH_COOKIE;
@@ -61,18 +122,29 @@ function createHierarchicalDirName(contentPath) {
   const contentName = pathParts[pathParts.length - 1];
   const parentName = pathParts[pathParts.length - 2];
 
-  // Special case: if contentName is 'all-content-stores', always use just that name
-  if (contentName === 'all-content-stores') {
+  // If no parent, use just the content name
+  if (!parentName) {
     return contentName;
   }
 
-  // If no parent, or parent is not 'all-content-stores', use just the content name
-  if (!parentName || parentName !== 'all-content-stores') {
+  // Check if parent looks like a content store (ends with '-content-stores' or is 'all-content-stores')
+  const isContentStoreParent = parentName === 'all-content-stores' || parentName.endsWith('-content-stores');
+
+  // Check if current name looks like a main content store
+  const isMainContentStore = contentName === 'all-content-stores' || contentName.endsWith('-content-stores');
+
+  // If this is a main content store, always use just that name
+  if (isMainContentStore) {
     return contentName;
   }
 
-  // Use double underscore to show hierarchy: parent__child (only for all-content-stores children)
-  return `${parentName}__${contentName}`;
+  // Use double underscore to show hierarchy: parent__child (for content store children)
+  if (isContentStoreParent) {
+    return `${parentName}__${contentName}`;
+  }
+
+  // For other cases, use just the content name
+  return contentName;
 }
 
 const hierarchicalDirName = createHierarchicalDirName(CONTENT_PATH);
@@ -192,6 +264,115 @@ console.log('📋 ALL ITEMS WITH IMAGE URLS');
 console.log('=============================');
 console.log('');
 
+// Function to extract and process linked content stores
+async function extractLinkedContentStores(hierarchyStructureFile) {
+  console.log('\n🔍 Analyzing linkURLs for other content stores...');
+
+  // Read and parse the hierarchy file
+  let hierarchyData;
+  try {
+    const fileContent = fs.readFileSync(hierarchyStructureFile, 'utf8');
+    hierarchyData = JSON.parse(fileContent);
+  } catch (error) {
+    console.log(`❌ Error reading hierarchy file: ${error.message}`);
+    return;
+  }
+
+  // Function to recursively extract all linkURLs from the hierarchy
+  function extractLinkURLs(obj, linkURLs = new Set()) {
+    if (Array.isArray(obj)) {
+      obj.forEach((item) => extractLinkURLs(item, linkURLs));
+    } else if (typeof obj === 'object' && obj !== null) {
+      if (obj.linkURL) {
+        linkURLs.add(obj.linkURL);
+      }
+      Object.values(obj).forEach((value) => extractLinkURLs(value, linkURLs));
+    }
+    return linkURLs;
+  }
+
+  // Extract all linkURLs
+  const allLinkURLs = extractLinkURLs(hierarchyData);
+  console.log(`📊 Found ${allLinkURLs.size} total linkURLs`);
+
+  // Extract unique content store base paths
+  const contentStorePaths = new Set();
+  const linkURLArray = Array.from(allLinkURLs);
+
+  linkURLArray.forEach((linkURL) => {
+    // Match pattern: /content/share/us/en/{content-store-name}/...
+    const match = linkURL.match(/^(\/content\/share\/us\/en\/[^\/]+)/);
+    if (match) {
+      const basePath = match[1];
+      const baseStoreName = basePath.split('/').pop();
+
+      // Skip the current content store (avoid circular extraction)
+      const currentStoreName = CONTENT_PATH.split('/').pop();
+      if (baseStoreName !== currentStoreName && baseStoreName.endsWith('-content-stores')) {
+        contentStorePaths.add(basePath);
+      }
+    }
+  });
+
+  if (contentStorePaths.size === 0) {
+    console.log('✅ No other content stores found to extract.');
+    return;
+  }
+
+  console.log(`🎯 Discovered ${contentStorePaths.size} other content store(s):`);
+  Array.from(contentStorePaths).sort().forEach((path, index) => {
+    console.log(`  ${index + 1}. ${path}`);
+  });
+
+  console.log('\n🚀 Starting extraction for discovered content stores...');
+
+  // Import child_process for running the script
+  const { execSync } = require('child_process');
+
+  let successCount = 0;
+  let failureCount = 0;
+
+  for (const contentPath of Array.from(contentStorePaths).sort()) {
+    console.log(`\n📋 Extracting: ${contentPath}`);
+    console.log('-'.repeat(50));
+
+    try {
+      // Run the extraction script recursively
+      const command = `node extract-tab-hierarchy-all.js "${contentPath}"`;
+      const output = execSync(command, {
+        cwd: __dirname,
+        encoding: 'utf8',
+        stdio: 'pipe',
+      });
+
+      console.log('✅ SUCCESS');
+      // Show the last few meaningful lines (summary section)
+      const lines = output.split('\n').filter((line) => line.trim());
+      const lastLines = lines.slice(-8); // Show last 8 non-empty lines
+      lastLines.forEach((line) => console.log(line));
+
+      successCount++;
+    } catch (error) {
+      console.log('❌ FAILED');
+      const errorOutput = error.stdout || error.message;
+
+      // Show meaningful error context - last few lines before failure
+      const lines = errorOutput.split('\n').filter((line) => line.trim());
+      const errorLines = lines.slice(-5); // Show last 5 non-empty lines
+      errorLines.forEach((line) => console.log(line));
+
+      failureCount++;
+    }
+  }
+
+  // Final summary for linked extractions
+  console.log('\n📊 LINKED CONTENT STORES SUMMARY');
+  console.log('='.repeat(50));
+  console.log(`✅ Successful extractions: ${successCount}`);
+  console.log(`❌ Failed extractions: ${failureCount}`);
+  console.log(`📁 Total linked stores processed: ${contentStorePaths.size}`);
+}
+
 // Main execution function
 async function main() {
   // Ensure output directory exists
@@ -218,6 +399,11 @@ async function main() {
     const tabsPaths = findAllTabsPaths(jcrData);
     console.log(`\n📊 Found ${tabsPaths.length} tabs path(s):`);
     tabsPaths.forEach((p) => console.log(`  - ${p}`));
+
+    // Find all button container paths in the JCR
+    const buttonContainerPaths = findAllButtonContainerPaths(jcrData);
+    console.log(`\n📊 Found ${buttonContainerPaths.length} button container path(s):`);
+    buttonContainerPaths.forEach((p) => console.log(`  - ${p}`));
 
     // Filter out nested tabs (tabs inside tab items) - they should remain nested
     // Nested tabs have '/tabs/' or '/tabs_' in their path (tabs inside tab items)
@@ -591,6 +777,113 @@ async function main() {
     if (beforeCleanup !== afterCleanup) {
       console.log(`🧹 Cleaned up ${beforeCleanup - afterCleanup} teasers without imageResource from model`);
     }
+
+    // Process button containers and add them to the tabs data
+    console.log(`\n📖 Processing ${buttonContainerPaths.length} button container(s)...`);
+
+    // Track button titles that are already processed in regular tabs to avoid duplication
+    const existingButtonTitles = new Set();
+
+    // First, collect all button titles from existing tabs (deep recursive search)
+    function collectExistingButtonTitles(obj, path = '') {
+      if (!obj || typeof obj !== 'object') return;
+
+      // Handle both arrays and objects
+      const items = Array.isArray(obj) ? obj : Object.values(obj);
+
+      items.forEach((item) => {
+        if (item && typeof item === 'object') {
+          const resourceType = item['sling:resourceType'] || '';
+          const title = item['jcr:title'] || item.title;
+
+          // Found a button component - add its title
+          if (resourceType === 'tccc-dam/components/button' && title) {
+            existingButtonTitles.add(title);
+            console.log(`    Found existing button: "${title}"`);
+          }
+
+          // Recursively search ALL nested properties
+          Object.keys(item).forEach((key) => {
+            if (typeof item[key] === 'object' && item[key] !== null) {
+              collectExistingButtonTitles(item[key], `${path}/${key}`);
+            }
+          });
+        }
+      });
+    }
+
+    // Collect existing button titles from JCR data (not Sling model data)
+    // Search ALL tabs paths (including nested ones) to find buttons that are already part of the regular tabs structure
+    tabsPaths.forEach((tabPath) => {
+      // Navigate to the tab in JCR data
+      const pathParts = tabPath.replace('/jcr:content/', '').split('/');
+      let current = jcrData;
+
+      for (const part of pathParts) {
+        if (current && current[part]) {
+          current = current[part];
+        } else {
+          current = null;
+          break;
+        }
+      }
+
+      if (current) {
+        collectExistingButtonTitles(current);
+      }
+    });
+
+    console.log(`    Found ${existingButtonTitles.size} existing button titles in tabs`);
+
+    buttonContainerPaths.forEach((containerPath, index) => {
+      console.log(`  Processing container ${index + 1}/${buttonContainerPaths.length}: ${containerPath}`);
+
+      // Extract buttons from this container
+      const buttons = extractButtonsFromContainer(jcrData, containerPath);
+      console.log(`    Found ${buttons.length} button(s)`);
+
+      // Filter out buttons that already exist in regular tabs
+      const newButtons = buttons.filter((button) => !existingButtonTitles.has(button.title));
+      console.log(`    After deduplication: ${newButtons.length} new button(s)`);
+
+      if (newButtons.length > 0) {
+        // Find the JCR section this container belongs to
+        const jcrSection = getJCRSectionForTabPath(containerPath, jcrData);
+        console.log(`    JCR Section: ${jcrSection || 'None'}`);
+
+        // Create a synthetic tabs item for the buttons
+        const buttonContainerKey = `button_container_${index}`;
+        const buttonTabsItem = {
+          ':type': 'tccc-dam/components/container',
+          ':itemsOrder': newButtons.map((_, btnIndex) => `button_${btnIndex}`),
+          ':items': {},
+        };
+
+        // Add buttons to the synthetic tabs item
+        newButtons.forEach((button, btnIndex) => {
+          const buttonKey = `button_${btnIndex}`;
+          buttonTabsItem[':items'][buttonKey] = {
+            ...button,
+            'sling:resourceType': 'tccc-dam/components/button',
+          };
+        });
+
+        // Add JCR section information if available
+        if (jcrSection) {
+          buttonTabsItem.__jcrSection = jcrSection;
+        }
+
+        // Add this container to the main tabs data
+        mainTabsData[':itemsOrder'].push(buttonContainerKey);
+        mainTabsData[':items'][buttonContainerKey] = buttonTabsItem;
+
+        console.log(`    ✅ Added button container as synthetic tabs item: ${buttonContainerKey}`);
+      } else {
+        console.log('    ⏭️  Skipped - all buttons already exist in regular tabs');
+      }
+    });
+
+    console.log(`📌 Combined tabs and button containers into ${mainTabsData[':itemsOrder'].length} total items\n`);
 
     // Continue with parsing
     // eslint-disable-next-line no-use-before-define
@@ -1042,6 +1335,27 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         return;
       }
 
+      // Check if this is a synthetic button container that should be flattened
+      if (key.startsWith('button_container_') && title === key) {
+        // This is a synthetic container - skip it but process its children
+        // Preserve the JCR section metadata from the synthetic container
+        if (item[':items']) {
+          const childrenItems = extractItemsHierarchy(item[':items'], `${parentKeyPath}/${key}`, displayPath, jcrPathMap, jcrTeaserImageMap);
+          if (childrenItems.length > 0) {
+            // Transfer the __jcrSection metadata from the synthetic container to its children
+            if (item.__jcrSection) {
+              childrenItems.forEach((child) => {
+                if (!child.__jcrSection) {
+                  child.__jcrSection = item.__jcrSection;
+                }
+              });
+            }
+            result.push(...childrenItems);
+          }
+        }
+        return;
+      }
+
       // Don't trim - preserve exact spacing from source data
       title = String(title);
 
@@ -1114,19 +1428,26 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       const immediateParentKey = keyPathParts.length > 1 ? keyPathParts[keyPathParts.length - 2] : keyPathParts[0];
       const contextKey = `${String(title)}|${immediateParentKey}`;
 
-      // Look up linkURL using JCR context only - no fallback to title-only
-      const linkURL = stripHostAndExtension(jcrLinkUrlMap[contextKey]);
-      if (linkURL) {
-        hierarchyItem.linkURL = linkURL;
-      }
+      // Check for linkURL directly in item data first (for synthetic button items)
+      if (item.linkURL) {
+        hierarchyItem.linkURL = stripHostAndExtension(item.linkURL);
+      } else if (item.link && item.link.url) {
+        hierarchyItem.linkURL = stripHostAndExtension(item.link.url);
+      } else {
+        // Look up linkURL using JCR context only - no fallback to title-only
+        const linkURL = stripHostAndExtension(jcrLinkUrlMap[contextKey]);
+        if (linkURL) {
+          hierarchyItem.linkURL = linkURL;
+        }
 
-      // For any item, check if linkURL is available from model data
-      if (!hierarchyItem.linkURL) {
-        // Find JCR entry that has this model path stored and contains linkURL
-        for (const [jcrPath, jcrData] of Object.entries(jcrTeaserImageMap)) {
-          if (jcrData.modelPath === currentKeyPath && jcrData.linkURL) {
-            hierarchyItem.linkURL = stripHostAndExtension(jcrData.linkURL);
-            break;
+        // For any item, check if linkURL is available from model data
+        if (!hierarchyItem.linkURL) {
+          // Find JCR entry that has this model path stored and contains linkURL
+          for (const [jcrPath, jcrData] of Object.entries(jcrTeaserImageMap)) {
+            if (jcrData.modelPath === currentKeyPath && jcrData.linkURL) {
+              hierarchyItem.linkURL = stripHostAndExtension(jcrData.linkURL);
+              break;
+            }
           }
         }
       }
@@ -1748,6 +2069,98 @@ function findAllTabsPaths(node, currentPath = '', found = []) {
   return found;
 }
 
+// Function to find containers that contain button components (for sections like "Toolkits & Internal Documents")
+function findAllButtonContainerPaths(node, currentPath = '', found = []) {
+  if (!node || typeof node !== 'object') {
+    return found;
+  }
+
+  const keys = Object.keys(node);
+
+  keys.forEach((key) => {
+    const item = node[key];
+    if (!item || typeof item !== 'object') {
+      return;
+    }
+
+    const resourceType = item['sling:resourceType'] || '';
+    const newPath = currentPath ? `${currentPath}/${key}` : key;
+
+    // Found a container component - check if it contains buttons
+    if (resourceType === 'tccc-dam/components/container') {
+      const hasButtons = Object.values(item).some((child) => child && typeof child === 'object'
+        && child['sling:resourceType'] === 'tccc-dam/components/button');
+
+      if (hasButtons) {
+        const fullPath = `/jcr:content/${newPath}`;
+        found.push(fullPath);
+      }
+    }
+
+    // Keep searching
+    findAllButtonContainerPaths(item, newPath, found);
+  });
+
+  return found;
+}
+
+// Function to extract button components from JCR containers
+function extractButtonsFromContainer(jcrData, containerPath) {
+  // Navigate to the container in JCR data
+  const pathParts = containerPath.replace('/jcr:content/', '').split('/');
+  let current = jcrData;
+
+  for (const part of pathParts) {
+    if (current && current[part]) {
+      current = current[part];
+    } else {
+      return [];
+    }
+  }
+
+  if (!current || typeof current !== 'object') {
+    return [];
+  }
+
+  // Extract all button components from this container
+  const buttons = [];
+
+  function extractButtonsRecursively(obj, currentPath = '') {
+    if (!obj || typeof obj !== 'object') return;
+
+    Object.keys(obj).forEach((key) => {
+      const item = obj[key];
+      if (!item || typeof item !== 'object') return;
+
+      const resourceType = item['sling:resourceType'] || '';
+      const newPath = currentPath ? `${currentPath}/${key}` : key;
+
+      // Found a button component
+      if (resourceType === 'tccc-dam/components/button') {
+        const button = {
+          id: `button-${Math.random().toString(36).substr(2, 10)}`,
+          title: item['jcr:title'] || key,
+          type: 'button',
+          key,
+        };
+
+        // Add linkURL if present
+        if (item.linkURL) {
+          button.linkURL = stripHostAndExtension(item.linkURL);
+        }
+
+        buttons.push(button);
+      }
+
+      // Recurse into nested objects
+      extractButtonsRecursively(item, newPath);
+    });
+  }
+
+  extractButtonsRecursively(current);
+  return buttons;
+}
+
 // Function to download all imageUrls
 async function downloadAllImages(hierarchyData, outputDir) {
   const fs = require('fs');
@@ -2032,6 +2445,10 @@ main().then(async () => {
     // Download all images (teasers + banners) using the existing function
     await downloadAllImages(allImagesToDownload, OUTPUT_DIR);
   }
+
+  // After successful extraction, check for linked content stores
+  const hierarchyFile = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
+  await extractLinkedContentStores(hierarchyFile);
 
   // Force clean exit
   process.exit(0);
