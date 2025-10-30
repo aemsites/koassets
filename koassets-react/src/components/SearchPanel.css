@@ -21,6 +21,9 @@
     padding: 8px 16px;
     cursor: pointer;
     background: #fff;
+    color: var(--text-color);
+    font-family: 'TCCC UnityText Medium', sans-serif;
+    font-size: 14px;
     border: 1px solid #9a9a9a;
     border-radius: 40px;
     margin: 0;

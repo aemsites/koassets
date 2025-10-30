@@ -1,61 +1,32 @@
-import './ShareAssetButton.css';
+import { useRef, useEffect } from 'react';
+import '../../../scripts/share/share-asset-button.css';
 import '../../../scripts/toast/toast.css';
-import showToast from '../../../scripts/toast/toast.js';
+import { createShareAssetButton } from '../../../scripts/share/share-asset-button.js';
 
+/**
+ * React wrapper for the pure JS ShareAssetButton
+ */
 export default function ShareAssetButton({ assetId, disabled = false }) {
-  const handleShare = async (e) => {
-    console.debug('[ShareButton] handleShare called with assetId:', assetId); // TEMP: Verify this runs
-    e.stopPropagation();
-    
-    if (!assetId) {
-      console.warn('No assetId provided for sharing');
-      return;
-    }
+  const containerRef = useRef(null);
 
-    // Build the share URL
-    const shareUrl = `${window.location.protocol}//${window.location.host}/asset-details?assetid=${assetId}`;
-    
-    try {
-      // Copy to clipboard
-      await navigator.clipboard.writeText(shareUrl);
-      console.debug('Share link copied to clipboard:', shareUrl);
-      showToast('Asset link copied to clipboard', 'success');
-    } catch (error) {
-      console.error('Failed to copy share link to clipboard:', error);
-      // Fallback for older browsers
-      fallbackCopyToClipboard(shareUrl);
-    }
-  };
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return undefined;
 
-  const fallbackCopyToClipboard = (text) => {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-999999px';
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    
-    try {
-      document.execCommand('copy');
-      console.debug('Share link copied to clipboard (fallback):', text);
-      showToast('Asset link copied to clipboard', 'success');
-    } catch (err) {
-      console.error('Fallback: Could not copy text:', err);
-      showToast('Failed to copy link to clipboard', 'error');
-    }
-    
-    document.body.removeChild(textArea);
-  };
+    // Create the pure JS button
+    const button = createShareAssetButton({ assetId, disabled });
 
-  return (
-    <button
-      className="share-asset-button"
-      onClick={handleShare}
-      disabled={disabled}
-      aria-label="Share Asset"
-      title="Share Asset"
-    />
-  );
+    // Append it to the container
+    container.appendChild(button);
+
+    // Cleanup: remove the button when component unmounts or props change
+    return () => {
+      if (button.parentNode === container) {
+        container.removeChild(button);
+      }
+    };
+  }, [assetId, disabled]);
+
+  return <div ref={containerRef} style={{ display: 'contents' }} />;
 }
 

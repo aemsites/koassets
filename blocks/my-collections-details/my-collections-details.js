@@ -2,6 +2,7 @@
 import { DynamicMediaCollectionsClient } from '../../scripts/collections/collections-api-client.js';
 import { populateAssetFromHit, saveCartItems } from '../../scripts/asset-transformers.js';
 import showToast from '../../scripts/toast/toast.js';
+import { createShareAssetButton } from '../../scripts/share/share-asset-button.js';
 
 // Check if we're in cookie auth mode (same logic as main app)
 function isCookieAuth() {
@@ -472,26 +473,10 @@ function createAssetCard(asset, collectionId) {
   removeBtn.setAttribute('aria-label', 'Remove from Collection');
   removeBtn.onclick = () => handleRemoveFromCollection(asset, collectionId);
 
-  const shareBtn = document.createElement('button');
-  shareBtn.className = 'share-asset-button';
-  shareBtn.title = 'Share Asset';
-  shareBtn.setAttribute('aria-label', 'Share Asset');
-  shareBtn.onclick = async (e) => {
-    e.stopPropagation();
-    const assetId = asset.assetId || asset.id;
-    if (!assetId) {
-      console.warn('No assetId available for sharing');
-      return;
-    }
-    const shareUrl = `${window.location.protocol}//${window.location.host}/asset-details?assetid=${assetId}`;
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      showToast('Asset link copied to clipboard', 'success');
-    } catch (error) {
-      console.error('Failed to copy share link:', error);
-      showToast('Failed to copy link to clipboard', 'error');
-    }
-  };
+  const shareBtn = createShareAssetButton({
+    assetId: asset.assetId || asset.id,
+    disabled: false,
+  });
 
   const addToCartBtn = document.createElement('button');
   addToCartBtn.className = 'asset-action-btn add-to-cart-btn';

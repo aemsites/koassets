@@ -234,11 +234,16 @@ function createViewerElement(hierarchyData) {
     if (!item) return null;
     const matchesSearch = !searchTerm
       || (item.title && item.title.toLowerCase().includes(searchTerm));
+    const hadChildren = item.items && item.items.length > 0;
     const filteredChildren = item.items
       ? item.items.map((child) => filterItem(child, searchTerm)).filter(Boolean)
       : [];
-    if (matchesSearch) return { ...item, items: filteredChildren };
-    if (filteredChildren.length > 0) return { ...item, items: filteredChildren };
+    if (matchesSearch) {
+      return { ...item, items: filteredChildren, hadChildren };
+    }
+    if (filteredChildren.length > 0) {
+      return { ...item, items: filteredChildren, hadChildren };
+    }
     return null;
   }
 
@@ -284,7 +289,9 @@ function createViewerElement(hierarchyData) {
 
     const hasChildren = item.items && item.items.length > 0;
     const hasTextList = item.text && (item.text.includes('<a') || (item.text.match(/<p>/g) || []).length > 1);
-    const hasExpandable = hasChildren || hasTextList;
+    // Use hadChildren to preserve original parent status even when filtered
+    const wasParent = item.hadChildren || false;
+    const hasExpandable = hasChildren || hasTextList || wasParent;
     const isExpanded = expandAllMode ? hasExpandable : expandedNodes.has(item.path);
     const hasLink = item.linkURL && item.linkURL.trim() !== '';
 
