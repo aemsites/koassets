@@ -2,12 +2,14 @@
     background-color: transparent;
     height: 34px;
     width: 34px;
+    min-width: 34px;
     padding: 0;
     border: 1px solid #9a9a9a;
     border-radius: 50px;
     cursor: pointer;
     transition: all 0.2s ease;
     position: relative;
+    flex-shrink: 0;
 }
 
 .share-asset-button::before {
