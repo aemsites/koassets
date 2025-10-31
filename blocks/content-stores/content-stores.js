@@ -1,7 +1,7 @@
 import { fetchSpreadsheetData } from '../../scripts/scripts.js';
 import { createOptimizedPicture } from '../../scripts/aem.js';
 
-const PATH_SEPARATOR = ' > ';
+const PATH_SEPARATOR = ' >>> ';
 
 function splitPathSegments(pathStr) {
   if (!pathStr) return [];

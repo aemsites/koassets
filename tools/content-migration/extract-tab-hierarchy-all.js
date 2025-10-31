@@ -70,6 +70,22 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
   process.exit(0);
 }
 
+// Function to create deterministic ID from a string (simple hash)
+function createDeterministicId(input) {
+  let hash = 0;
+  if (input.length === 0) return '0000000000';
+
+  for (let i = 0; i < input.length; i++) {
+    const char = input.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash &= hash; // Convert to 32-bit integer
+  }
+
+  // Convert to positive number and then to base36 string
+  const positiveHash = Math.abs(hash);
+  return positiveHash.toString(36).padStart(10, '0').substring(0, 10);
+}
+
 // Function to strip host from URLs and remove file extensions
 function stripHostAndExtension(url) {
   if (!url) return url;
@@ -400,10 +416,8 @@ async function main() {
     console.log(`\n📊 Found ${tabsPaths.length} tabs path(s):`);
     tabsPaths.forEach((p) => console.log(`  - ${p}`));
 
-    // Find all button container paths in the JCR
-    const buttonContainerPaths = findAllButtonContainerPaths(jcrData);
-    console.log(`\n📊 Found ${buttonContainerPaths.length} button container path(s):`);
-    buttonContainerPaths.forEach((p) => console.log(`  - ${p}`));
+    // Button container extraction disabled - buttons are already part of regular tabs structure
+    const buttonContainerPaths = [];
 
     // Filter out nested tabs (tabs inside tab items) - they should remain nested
     // Nested tabs have '/tabs/' or '/tabs_' in their path (tabs inside tab items)
@@ -612,7 +626,14 @@ async function main() {
             const contextKey = `${titleKey}|${parentKeyContext}`;
 
             if (linkURL) {
-              // Store buttons WITH linkURL by context key AND title-only
+              // Store buttons WITH linkURL by:
+              // 1. Full JCR path (most specific - handles duplicate keys in different containers)
+              // 2. Button key (may have collisions if same key in different containers)
+              // 3. Context key (title|parentKey)
+              // 4. Title-only (fallback, but may have collisions)
+              const fullPath = `${parentPath}/${key}`;
+              jcrLinkUrlMap[fullPath] = linkURL;
+              jcrLinkUrlMap[key] = linkURL;
               jcrLinkUrlMap[contextKey] = linkURL;
               jcrLinkUrlMap[titleKey] = linkURL;
             }
@@ -642,9 +663,13 @@ async function main() {
             }
 
             if (textContent) {
-              // Store text by context key (title|parentKey) and title-only as fallback
+              // Store text by context key (title|parentKey) with path for uniqueness
+              const uniqueContextKey = `${titleKey}|${parentKeyContext}|${parentPath}`;
+              jcrTextMap[uniqueContextKey] = textContent;
               jcrTextMap[contextKey] = textContent;
-              if (!jcrTextMap[titleKey]) { // Don't overwrite if title-only already has value
+
+              // Store by title-only as fallback, but don't overwrite existing content
+              if (!jcrTextMap[titleKey]) {
                 jcrTextMap[titleKey] = textContent;
               }
             }
@@ -778,112 +803,8 @@ async function main() {
       console.log(`🧹 Cleaned up ${beforeCleanup - afterCleanup} teasers without imageResource from model`);
     }
 
-    // Process button containers and add them to the tabs data
-    console.log(`\n📖 Processing ${buttonContainerPaths.length} button container(s)...`);
-
-    // Track button titles that are already processed in regular tabs to avoid duplication
-    const existingButtonTitles = new Set();
-
-    // First, collect all button titles from existing tabs (deep recursive search)
-    function collectExistingButtonTitles(obj, path = '') {
-      if (!obj || typeof obj !== 'object') return;
-
-      // Handle both arrays and objects
-      const items = Array.isArray(obj) ? obj : Object.values(obj);
-
-      items.forEach((item) => {
-        if (item && typeof item === 'object') {
-          const resourceType = item['sling:resourceType'] || '';
-          const title = item['jcr:title'] || item.title;
-
-          // Found a button component - add its title
-          if (resourceType === 'tccc-dam/components/button' && title) {
-            existingButtonTitles.add(title);
-            console.log(`    Found existing button: "${title}"`);
-          }
-
-          // Recursively search ALL nested properties
-          Object.keys(item).forEach((key) => {
-            if (typeof item[key] === 'object' && item[key] !== null) {
-              collectExistingButtonTitles(item[key], `${path}/${key}`);
-            }
-          });
-        }
-      });
-    }
-
-    // Collect existing button titles from JCR data (not Sling model data)
-    // Search ALL tabs paths (including nested ones) to find buttons that are already part of the regular tabs structure
-    tabsPaths.forEach((tabPath) => {
-      // Navigate to the tab in JCR data
-      const pathParts = tabPath.replace('/jcr:content/', '').split('/');
-      let current = jcrData;
-
-      for (const part of pathParts) {
-        if (current && current[part]) {
-          current = current[part];
-        } else {
-          current = null;
-          break;
-        }
-      }
-
-      if (current) {
-        collectExistingButtonTitles(current);
-      }
-    });
-
-    console.log(`    Found ${existingButtonTitles.size} existing button titles in tabs`);
-
-    buttonContainerPaths.forEach((containerPath, index) => {
-      console.log(`  Processing container ${index + 1}/${buttonContainerPaths.length}: ${containerPath}`);
-
-      // Extract buttons from this container
-      const buttons = extractButtonsFromContainer(jcrData, containerPath);
-      console.log(`    Found ${buttons.length} button(s)`);
-
-      // Filter out buttons that already exist in regular tabs
-      const newButtons = buttons.filter((button) => !existingButtonTitles.has(button.title));
-      console.log(`    After deduplication: ${newButtons.length} new button(s)`);
-
-      if (newButtons.length > 0) {
-        // Find the JCR section this container belongs to
-        const jcrSection = getJCRSectionForTabPath(containerPath, jcrData);
-        console.log(`    JCR Section: ${jcrSection || 'None'}`);
-
-        // Create a synthetic tabs item for the buttons
-        const buttonContainerKey = `button_container_${index}`;
-        const buttonTabsItem = {
-          ':type': 'tccc-dam/components/container',
-          ':itemsOrder': newButtons.map((_, btnIndex) => `button_${btnIndex}`),
-          ':items': {},
-        };
-
-        // Add buttons to the synthetic tabs item
-        newButtons.forEach((button, btnIndex) => {
-          const buttonKey = `button_${btnIndex}`;
-          buttonTabsItem[':items'][buttonKey] = {
-            ...button,
-            'sling:resourceType': 'tccc-dam/components/button',
-          };
-        });
-
-        // Add JCR section information if available
-        if (jcrSection) {
-          buttonTabsItem.__jcrSection = jcrSection;
-        }
-
-        // Add this container to the main tabs data
-        mainTabsData[':itemsOrder'].push(buttonContainerKey);
-        mainTabsData[':items'][buttonContainerKey] = buttonTabsItem;
-
-        console.log(`    ✅ Added button container as synthetic tabs item: ${buttonContainerKey}`);
-      } else {
-        console.log('    ⏭️  Skipped - all buttons already exist in regular tabs');
-      }
-    });
-
-    console.log(`📌 Combined tabs and button containers into ${mainTabsData[':itemsOrder'].length} total items\n`);
+    // Button container processing disabled - buttons are already part of regular tabs structure
+    console.log(`📌 Using ${mainTabsData[':itemsOrder'].length} tabs items\n`);
 
     // Continue with parsing
     // eslint-disable-next-line no-use-before-define
@@ -1331,8 +1252,28 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         title = key;
       }
 
-      if (!title || String(title).includes('<')) {
+      // For text components with HTML content, try to extract a clean title
+      if (!title) {
         return;
+      }
+
+      if (String(title).includes('<')) {
+        // If this is a text component with HTML content, try to extract clean text
+        const resourceType = item['sling:resourceType'] || item[':type'] || '';
+        if (resourceType.includes('text') && title) {
+          // Extract text content from HTML (simple approach - remove tags)
+          const cleanTitle = String(title).replace(/<[^>]*>/g, '').trim();
+
+          if (cleanTitle && cleanTitle.length > 0 && cleanTitle.length < 200) {
+            title = cleanTitle;
+          } else {
+            // If we can't extract clean text, use the component key as title
+            title = key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+          }
+        } else {
+          // For non-text components with HTML, skip them
+          return;
+        }
       }
 
       // Check if this is a synthetic button container that should be flattened
@@ -1360,7 +1301,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       title = String(title);
 
       let itemType = 'item';
-      const resourceType = item['sling:resourceType'] || '';
+      const resourceType = item['sling:resourceType'] || item[':type'] || '';
 
       if (resourceType.includes('tabs')) {
         itemType = 'tabs';
@@ -1368,6 +1309,8 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         itemType = 'accordion';
       } else if (resourceType.includes('container')) {
         itemType = 'container';
+      } else if (resourceType.includes('text')) {
+        itemType = 'text';
       } else if (key.startsWith('teaser_')) {
         itemType = 'teaser';
       }
@@ -1379,6 +1322,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         else if (idPrefix === 'accordion') itemType = 'accordion';
         else if (idPrefix === 'tabs') itemType = 'tabs';
         else if (idPrefix === 'container') itemType = 'container';
+        else if (idPrefix === 'text') itemType = 'text';
       }
 
       // Build display path only for output (for user viewing)
@@ -1430,14 +1374,56 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
 
       // Check for linkURL directly in item data first (for synthetic button items)
       if (item.linkURL) {
-        hierarchyItem.linkURL = stripHostAndExtension(item.linkURL);
+        // Don't double-process URLs that are already processed (start with /)
+        if (item.linkURL.startsWith('/')) {
+          hierarchyItem.linkURL = item.linkURL;
+        } else {
+          hierarchyItem.linkURL = stripHostAndExtension(item.linkURL);
+        }
+      } else if (item.buttonLink && item.buttonLink.url) {
+        // Handle buttonLink.url (used in Sling model for buttons)
+        hierarchyItem.linkURL = stripHostAndExtension(item.buttonLink.url);
       } else if (item.link && item.link.url) {
         hierarchyItem.linkURL = stripHostAndExtension(item.link.url);
       } else {
-        // Look up linkURL using JCR context only - no fallback to title-only
-        const linkURL = stripHostAndExtension(jcrLinkUrlMap[contextKey]);
+        // Look up linkURL using JCR data with priority:
+        // 1. By full JCR path (most specific - handles duplicate keys in different containers)
+        // 2. By button key (may have collisions)
+        // 3. By context (title|parentKey)
+        // 4. By title only (fallback)
+        let linkURL = null;
+
+        // Try to find matching JCR path from current model path
+        // Model path: "/item_1__tabs1/container_732554625_/tabs/item_1/container_copy_44108/button_copy_18032137_1192318243"
+        // JCR path:   "/container/container_copy_copy_/container_732554625_/tabs/item_1/container_732554625_/tabs/item_1/container_copy_44108/button_copy_18032137_1192318243"
+        // Strategy: Find JCR path that ends with the same suffix as model path (starting from container_732554625_)
+
+        // Extract the meaningful part of model path (skip the first item_X__tabsY part)
+        const modelPathParts = currentKeyPath.split('/').filter((p) => p);
+        // Find the first part that starts with 'container' or 'tabs' (not item_)
+        const firstContainerIndex = modelPathParts.findIndex((p) => !p.startsWith('item_'));
+        if (firstContainerIndex >= 0) {
+          const modelSuffix = `/${modelPathParts.slice(firstContainerIndex).join('/')}`;
+
+          // Find JCR path that ends with this suffix
+          const matchingJcrPath = Object.keys(jcrLinkUrlMap).find((jcrPath) => jcrPath.endsWith(modelSuffix));
+
+          if (matchingJcrPath) {
+            linkURL = jcrLinkUrlMap[matchingJcrPath];
+          }
+        }
+
+        if (!linkURL) {
+          linkURL = jcrLinkUrlMap[key];
+        }
+        if (!linkURL) {
+          linkURL = jcrLinkUrlMap[contextKey];
+        }
+        if (!linkURL) {
+          linkURL = jcrLinkUrlMap[String(title)];
+        }
         if (linkURL) {
-          hierarchyItem.linkURL = linkURL;
+          hierarchyItem.linkURL = stripHostAndExtension(linkURL);
         }
 
         // For any item, check if linkURL is available from model data
@@ -1452,27 +1438,34 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         }
       }
 
-      // Look up text content using JCR context only
-      const textContent = jcrTextMap[contextKey];
-      if (textContent) {
-        hierarchyItem.text = textContent;
+      // First, check if text content exists directly in the model item
+      if (item.text && itemType === 'text') {
+        hierarchyItem.text = item.text;
       } else {
-        // Fallback: check if text was stored by key (for text components without titles)
-        const textByKey = jcrTextMap[key];
-        if (textByKey) {
-          hierarchyItem.text = textByKey;
+        // Look up text content using JCR context with multiple fallback strategies
+        const uniqueContextKey = `${String(title)}|${immediateParentKey}|${currentKeyPath}`;
+        const textContent = jcrTextMap[uniqueContextKey] || jcrTextMap[contextKey];
+
+        if (textContent) {
+          hierarchyItem.text = textContent;
         } else {
+        // Fallback: check if text was stored by key (for text components without titles)
+          const textByKey = jcrTextMap[key];
+          if (textByKey) {
+            hierarchyItem.text = textByKey;
+          } else {
           // Also try the key with parent context
-          const keyContextKey = `${key}|${immediateParentKey}`;
-          const textByKeyContext = jcrTextMap[keyContextKey];
-          if (textByKeyContext) {
-            hierarchyItem.text = textByKeyContext;
-          } else if ((itemType === 'container' || key.startsWith('container')) && (key.startsWith('container') || key === 'container')) {
+            const keyContextKey = `${key}|${immediateParentKey}`;
+            const textByKeyContext = jcrTextMap[keyContextKey];
+            if (textByKeyContext) {
+              hierarchyItem.text = textByKeyContext;
+            } else if ((itemType === 'container' || key.startsWith('container')) && (key.startsWith('container') || key === 'container')) {
             // Last fallback: for structural containers, check if this key has orphaned text children
             // e.g., "text_copy_copy_copy__1538611243|container_copy_copy_" when looking for "container_copy_copy_"
-            const childrenTextKey = Object.keys(jcrTextMap).find((k) => k.endsWith(`|${key}`));
-            if (childrenTextKey) {
-              hierarchyItem.text = jcrTextMap[childrenTextKey];
+              const childrenTextKey = Object.keys(jcrTextMap).find((k) => k.endsWith(`|${key}`));
+              if (childrenTextKey) {
+                hierarchyItem.text = jcrTextMap[childrenTextKey];
+              }
             }
           }
         }
@@ -1519,7 +1512,18 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       }
 
       if (item[':items']) {
-        const childrenItems = extractItemsHierarchy(item[':items'], currentKeyPath, currentDisplayPath, jcrPathMap, jcrTeaserImageMap);
+        // Check if there are text or text_copy children and extract their text content to parent
+        const textChild = item[':items'].text || item[':items'].text_copy;
+        if (textChild && textChild.text && !hierarchyItem.text) {
+          hierarchyItem.text = textChild.text;
+        }
+
+        // Filter out text and text_copy children to avoid duplication (text content is now on parent)
+        const filteredItems = { ...item[':items'] };
+        delete filteredItems.text_copy;
+        delete filteredItems.text;
+
+        const childrenItems = extractItemsHierarchy(filteredItems, currentKeyPath, currentDisplayPath, jcrPathMap, jcrTeaserImageMap);
         if (childrenItems.length > 0) {
           hierarchyItem.items = childrenItems;
         }
@@ -2137,9 +2141,14 @@ function extractButtonsFromContainer(jcrData, containerPath) {
 
       // Found a button component
       if (resourceType === 'tccc-dam/components/button') {
+        // Create deterministic ID based on button properties
+        const title = item['jcr:title'] || key;
+        const idSource = `${title}-${key}-${containerPath}`;
+        const deterministicId = createDeterministicId(idSource);
+
         const button = {
-          id: `button-${Math.random().toString(36).substr(2, 10)}`,
-          title: item['jcr:title'] || key,
+          id: `button-${deterministicId}`,
+          title,
           type: 'button',
           key,
         };

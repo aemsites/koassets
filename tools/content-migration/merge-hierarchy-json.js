@@ -24,25 +24,29 @@ USAGE:
 OPTIONS:
   --help, -h          Show this help message
 
-ARGUMENTS:
-  CHILD-DIR-NAME      Optional. Specific child directory to merge.
-                      If omitted, all directories matching "all-content-stores__*"
-                      will be merged.
+ ARGUMENTS:
+   CHILD-DIR-NAME      Optional. Specific child directory to merge.
+                       If omitted, all directories matching "all-content-stores__*"
+                       or "bottler-content-stores__*" will be merged.
 
-EXAMPLES:
+ EXAMPLES:
 
-  1. Merge a single child directory:
-     $ node merge-hierarchy-json.js all-content-stores__global-coca-cola-uplift
+   1. Merge a single child directory:
+      $ node merge-hierarchy-json.js all-content-stores__global-coca-cola-uplift
 
-  2. Merge ALL child directories (auto-discover):
-     $ node merge-hierarchy-json.js
+   2. Merge a bottler content store:
+      $ node merge-hierarchy-json.js bottler-content-stores__north-america
 
-  3. Show help:
-     $ node merge-hierarchy-json.js --help
+   3. Merge ALL child directories (auto-discover):
+      $ node merge-hierarchy-json.js
 
-INPUT FILES:
-  • Parent:   all-content-stores/extracted-results/hierarchy-structure.json
-  • Children: all-content-stores__*/extracted-results/hierarchy-structure.json
+   4. Show help:
+      $ node merge-hierarchy-json.js --help
+
+ INPUT FILES:
+   • Parent:   all-content-stores/extracted-results/hierarchy-structure.json
+   • Children: all-content-stores__*/extracted-results/hierarchy-structure.json
+               bottler-content-stores__*/extracted-results/hierarchy-structure.json
 
 OUTPUT FILES:
   • Merged:   all-content-stores/derived-results/hierarchy-structure.merged.json
@@ -103,16 +107,17 @@ if (childDirArg) {
   childDirs = [childDirArg];
   console.log(`📂 Processing single directory: ${childDirArg}\n`);
 } else {
-  // Find all directories matching "all-content-stores__*"
-  console.log('📂 No directory specified, searching for all-content-stores__* directories...\n');
+  // Find all directories matching "all-content-stores__*" or "bottler-content-stores__*"
+  console.log('📂 No directory specified, searching for content store directories...\n');
   const allEntries = fs.readdirSync(projectRoot, { withFileTypes: true });
   childDirs = allEntries
-    .filter((entry) => entry.isDirectory() && entry.name.startsWith('all-content-stores__'))
+    .filter((entry) => entry.isDirectory()
+      && (entry.name.startsWith('all-content-stores__') || entry.name.startsWith('bottler-content-stores__')))
     .map((entry) => entry.name)
     .sort();
 
   if (childDirs.length === 0) {
-    console.error('❌ ERROR: No directories matching "all-content-stores__*" found!');
+    console.error('❌ ERROR: No directories matching "all-content-stores__*" or "bottler-content-stores__*" found!');
     process.exit(1);
   }
 
