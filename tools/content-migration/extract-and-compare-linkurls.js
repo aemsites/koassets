@@ -340,6 +340,52 @@ function processContentStore(storeName) {
     });
   }
 
+  // Count validation - check that hierarchy count matches at least one source
+  console.log('\n🔢 COUNT VALIDATION');
+  console.log('===================');
+
+  const countMismatches = [];
+  hierarchyLinks.forEach((url) => {
+    const jcrCount = jcrContentCounts.get(url) || 0;
+    const tabsCount = tabsModelCounts.get(url) || 0;
+    const hierarchyCount = hierarchyCounts.get(url) || 0;
+
+    // Hierarchy count should match either JCR count or Tabs count
+    const matchesJcr = hierarchyCount === jcrCount && jcrCount > 0;
+    const matchesTabs = hierarchyCount === tabsCount && tabsCount > 0;
+
+    if (!matchesJcr && !matchesTabs) {
+      countMismatches.push({
+        url,
+        jcrCount,
+        tabsCount,
+        hierarchyCount,
+      });
+    }
+  });
+
+  if (countMismatches.length === 0) {
+    console.log('✅ All hierarchy URL counts match at least one source!');
+  } else {
+    console.log(`⚠️  Found ${countMismatches.length} URL(s) where hierarchy count doesn't match any source:\n`);
+    const urlsToShow = showAll ? countMismatches : countMismatches.slice(0, 10);
+    urlsToShow.forEach((mismatch, index) => {
+      const originalUrl = hierarchyOriginalUrls.get(mismatch.url) || mismatch.url;
+      console.log(`   ${index + 1}. ${originalUrl}`);
+      console.log(`      ${jcrContentFile}: ${mismatch.jcrCount}`);
+      console.log(`      ${tabsModelFile}: ${mismatch.tabsCount}`);
+      console.log(`      ${hierarchyFile}: ${mismatch.hierarchyCount} ❌`);
+    });
+    if (!showAll && countMismatches.length > 10) {
+      console.log(`      ... and ${countMismatches.length - 10} more (use --all to see all)`);
+    }
+
+    // Fail immediately on count mismatches
+    console.log(`\n❌ VALIDATION FAILED: ${countMismatches.length} URL(s) have invalid counts in hierarchy`);
+    console.log('❌ Exiting with code 1 due to count mismatches');
+    return false;
+  }
+
   // Summary statistics
   console.log('\n📈 SUMMARY STATISTICS');
   console.log('====================');
@@ -350,11 +396,12 @@ function processContentStore(storeName) {
   console.log(`URL match overlap: ${overlapPercentage.toFixed(1)}%`);
 
   const hasMissingUrls = missingInHierarchy.length > 0 || extraInHierarchy.length > 0;
+  const hasCountMismatches = countMismatches.length > 0;
 
   const minLength = Math.min(sortedCombinedLinks.length, sortedHierarchyLinks.length);
-  const isPerfectMatch = commonUrls.length === minLength && !hasMissingUrls;
+  const isPerfectMatch = commonUrls.length === minLength && !hasMissingUrls && !hasCountMismatches;
   if (isPerfectMatch) {
-    console.log('✅ Perfect match! All linkURLs are functionally equivalent.');
+    console.log('✅ Perfect match! All linkURLs are functionally equivalent with valid counts.');
   } else {
     if (missingInHierarchy.length > 0) {
       // Count missing URLs by source file
@@ -372,13 +419,16 @@ function processContentStore(storeName) {
     if (extraInHierarchy.length > 0) {
       console.log(`🆕 ${extraInHierarchy.length} linkURL(s) from ${hierarchyFile} are MISSING FROM ${jcrContentFile} + ${tabsModelFile}`);
     }
+    if (hasCountMismatches) {
+      console.log(`🔢 ${countMismatches.length} linkURL(s) in ${hierarchyFile} have INVALID COUNTS (don't match any source)`);
+    }
   }
 
   console.log('\n✨ Analysis complete!');
 
-  // Return status based on missing URLs
-  if (hasMissingUrls) {
-    console.log('❌ Found missing URLs');
+  // Return status based on missing URLs or count mismatches
+  if (hasMissingUrls || hasCountMismatches) {
+    console.log('❌ Found issues (missing URLs or count mismatches)');
     return false;
   }
   console.log('✅ Perfect match');
@@ -395,38 +445,27 @@ function main() {
     const success = processContentStore(storeName);
     results.push({ storeName, success });
 
+    // Exit immediately on failure
+    if (!success) {
+      console.log(`\n❌ Stopping due to failure in: ${storeName}`);
+      process.exit(1);
+    }
+
     // Add separator between content stores if processing multiple
     if (contentStoreNames.length > 1) {
       console.log(['', '='.repeat(80), ''].join('\n'));
     }
   });
 
-  // Summary if processing multiple stores
+  // Summary if processing multiple stores (only reached if all succeed)
   if (contentStoreNames.length > 1) {
     console.log('📊 OVERALL SUMMARY');
     console.log('==================');
-    const successCount = results.filter((r) => r.success).length;
-    const failureCount = results.filter((r) => !r.success).length;
-
-    console.log(`✅ Successful: ${successCount}`);
-    console.log(`❌ Failed: ${failureCount}`);
-
-    if (failureCount > 0) {
-      console.log('\n❌ Failed content stores:');
-      results.filter((r) => !r.success).forEach((r, index) => {
-        console.log(`   ${index + 1}. ${r.storeName}`);
-      });
-    }
-
+    console.log(`✅ All ${contentStoreNames.length} content store(s) processed successfully`);
     console.log('');
   }
 
-  // Exit with appropriate code
-  const anyFailures = results.some((r) => !r.success);
-  if (anyFailures) {
-    console.log('❌ Exiting with code 1 due to failures');
-    process.exit(1);
-  }
+  // Exit with success code (only reached if all succeed)
   console.log('✅ Exiting with code 0 - all content stores processed successfully');
   process.exit(0);
 }
