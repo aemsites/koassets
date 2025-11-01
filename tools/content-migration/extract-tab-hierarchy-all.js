@@ -23,7 +23,7 @@ USAGE:
   node extract-tab-hierarchy-all.js [CONTENT_PATH]
 
 EXAMPLES:
-  # Extract default content store (all-content-stores)
+  # Extract default content store (/content/share/us/en/all-content-stores)
   node extract-tab-hierarchy-all.js
   
   # Extract main content store (explicit)
@@ -50,10 +50,35 @@ OUTPUTS:
 FEATURES:
   ✅ Data-driven extraction (no hardcoded logic)
   ✅ Auto-detects content sections and hierarchy
+  ✅ Automatic discovery and recursive extraction of linked content stores
   ✅ Downloads all associated images with fallback URLs
   ✅ Parallel downloads for maximum speed
   ✅ Clean key names (removes technical suffixes)
   ✅ Extracts navigation links and metadata
+  ✅ Filters out duplicate text components (text/text_copy)
+
+AUTOMATIC DISCOVERY:
+  The script automatically discovers and extracts OTHER base content stores:
+  
+  1. Extracts the specified content path (e.g., /content/share/us/en/all-content-stores)
+  2. Analyzes all linkURLs in the extracted hierarchy
+  3. Identifies linkURLs pointing to DIFFERENT base content stores
+     (must end with '-content-stores' and be different from current store)
+  4. Recursively extracts each discovered base content store
+  
+  Example:
+    Running: node extract-tab-hierarchy-all.js /content/share/us/en/all-content-stores
+    
+    Will extract:
+    • all-content-stores/                          (main extraction - specified)
+    
+    May also discover and extract (if linkURLs point to them):
+    • bottler-content-stores/                      (different base store)
+    • regional-content-stores/                     (different base store)
+    
+  Note: Child campaigns (e.g., global-coca-cola-uplift) are NOT automatically
+        extracted. You must manually run the script for each child campaign:
+        node extract-tab-hierarchy-all.js /content/share/us/en/all-content-stores/global-coca-cola-uplift
 
 REQUIREMENTS:
   - AEM authentication cookie in da.config file
@@ -87,6 +112,23 @@ function createDeterministicId(input) {
 }
 
 // Function to strip host from URLs and remove file extensions
+// Validate if a linkURL is valid (not just random text like "hh")
+function isValidLinkURL(url) {
+  if (!url || typeof url !== 'string') return false;
+
+  // Must start with http://, https://, or /
+  if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/')) {
+    return false;
+  }
+
+  // If it starts with /, it must have more than just a few characters
+  if (url.startsWith('/') && url.length < 5) {
+    return false;
+  }
+
+  return true;
+}
+
 function stripHostAndExtension(url) {
   if (!url) return url;
 
@@ -105,8 +147,11 @@ function stripHostAndExtension(url) {
     hash = '';
   }
 
-  // Strip file extension from pathname
-  pathname = pathname.replace(/\.[^/.]+$/, '');
+  // Only strip file extension if the entire URL ends with an extension
+  // (i.e., no query params or hash after the pathname)
+  if (!search && !hash) {
+    pathname = pathname.replace(/\.[^/.]+$/, '');
+  }
 
   return pathname + search + hash;
 }
@@ -370,12 +415,35 @@ async function extractLinkedContentStores(hierarchyStructureFile) {
       successCount++;
     } catch (error) {
       console.log('❌ FAILED');
-      const errorOutput = error.stdout || error.message;
+
+      // Collect all available error information
+      const errorParts = [];
+
+      if (error.stdout) {
+        errorParts.push(error.stdout);
+      }
+      if (error.stderr) {
+        errorParts.push(error.stderr);
+      }
+      if (error.message && !error.stdout && !error.stderr) {
+        errorParts.push(error.message);
+      }
+
+      const errorOutput = errorParts.join('\n');
 
       // Show meaningful error context - last few lines before failure
       const lines = errorOutput.split('\n').filter((line) => line.trim());
-      const errorLines = lines.slice(-5); // Show last 5 non-empty lines
-      errorLines.forEach((line) => console.log(line));
+      const errorLines = lines.slice(-10); // Show last 10 non-empty lines for better context
+
+      if (errorLines.length > 0) {
+        console.log('Error details:');
+        errorLines.forEach((line) => console.log(`  ${line}`));
+      } else {
+        console.log(`Error: ${error.message || 'Unknown error'}`);
+        if (error.code) {
+          console.log(`Exit code: ${error.code}`);
+        }
+      }
 
       failureCount++;
     }
@@ -664,7 +732,9 @@ async function main() {
 
             if (textContent) {
               // Store text by context key (title|parentKey) with path for uniqueness
-              const uniqueContextKey = `${titleKey}|${parentKeyContext}|${parentPath}`;
+              // Use current item's path (parentPath/key) not parent's path
+              const currentItemPath = `${parentPath}/${key}`;
+              const uniqueContextKey = `${titleKey}|${parentKeyContext}|${currentItemPath}`;
               jcrTextMap[uniqueContextKey] = textContent;
               jcrTextMap[contextKey] = textContent;
 
@@ -1373,67 +1443,26 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       const contextKey = `${String(title)}|${immediateParentKey}`;
 
       // Check for linkURL directly in item data first (for synthetic button items)
-      if (item.linkURL) {
+      if (item.linkURL && isValidLinkURL(item.linkURL)) {
         // Don't double-process URLs that are already processed (start with /)
         if (item.linkURL.startsWith('/')) {
           hierarchyItem.linkURL = item.linkURL;
         } else {
           hierarchyItem.linkURL = stripHostAndExtension(item.linkURL);
         }
-      } else if (item.buttonLink && item.buttonLink.url) {
+      } else if (item.buttonLink && item.buttonLink.url && isValidLinkURL(item.buttonLink.url)) {
         // Handle buttonLink.url (used in Sling model for buttons)
         hierarchyItem.linkURL = stripHostAndExtension(item.buttonLink.url);
-      } else if (item.link && item.link.url) {
+      } else if (item.link && item.link.url && isValidLinkURL(item.link.url)) {
         hierarchyItem.linkURL = stripHostAndExtension(item.link.url);
       } else {
-        // Look up linkURL using JCR data with priority:
-        // 1. By full JCR path (most specific - handles duplicate keys in different containers)
-        // 2. By button key (may have collisions)
-        // 3. By context (title|parentKey)
-        // 4. By title only (fallback)
-        let linkURL = null;
-
-        // Try to find matching JCR path from current model path
-        // Model path: "/item_1__tabs1/container_732554625_/tabs/item_1/container_copy_44108/button_copy_18032137_1192318243"
-        // JCR path:   "/container/container_copy_copy_/container_732554625_/tabs/item_1/container_732554625_/tabs/item_1/container_copy_44108/button_copy_18032137_1192318243"
-        // Strategy: Find JCR path that ends with the same suffix as model path (starting from container_732554625_)
-
-        // Extract the meaningful part of model path (skip the first item_X__tabsY part)
-        const modelPathParts = currentKeyPath.split('/').filter((p) => p);
-        // Find the first part that starts with 'container' or 'tabs' (not item_)
-        const firstContainerIndex = modelPathParts.findIndex((p) => !p.startsWith('item_'));
-        if (firstContainerIndex >= 0) {
-          const modelSuffix = `/${modelPathParts.slice(firstContainerIndex).join('/')}`;
-
-          // Find JCR path that ends with this suffix
-          const matchingJcrPath = Object.keys(jcrLinkUrlMap).find((jcrPath) => jcrPath.endsWith(modelSuffix));
-
-          if (matchingJcrPath) {
-            linkURL = jcrLinkUrlMap[matchingJcrPath];
-          }
-        }
-
-        if (!linkURL) {
-          linkURL = jcrLinkUrlMap[key];
-        }
-        if (!linkURL) {
-          linkURL = jcrLinkUrlMap[contextKey];
-        }
-        if (!linkURL) {
-          linkURL = jcrLinkUrlMap[String(title)];
-        }
-        if (linkURL) {
-          hierarchyItem.linkURL = stripHostAndExtension(linkURL);
-        }
-
-        // For any item, check if linkURL is available from model data
-        if (!hierarchyItem.linkURL) {
-          // Find JCR entry that has this model path stored and contains linkURL
-          for (const [jcrPath, jcrData] of Object.entries(jcrTeaserImageMap)) {
-            if (jcrData.modelPath === currentKeyPath && jcrData.linkURL) {
-              hierarchyItem.linkURL = stripHostAndExtension(jcrData.linkURL);
-              break;
-            }
+        // Only use jcrTeaserImageMap lookup which is indexed by model path (most reliable)
+        // Don't use jcrLinkUrlMap fallbacks as they cause false matches when multiple items
+        // have the same key (e.g., "button_copy") or title (e.g., "KVs", "Coming Soon")
+        for (const [jcrPath, jcrData] of Object.entries(jcrTeaserImageMap)) {
+          if (jcrData.modelPath === currentKeyPath && jcrData.linkURL && isValidLinkURL(jcrData.linkURL)) {
+            hierarchyItem.linkURL = stripHostAndExtension(jcrData.linkURL);
+            break;
           }
         }
       }
@@ -1443,8 +1472,47 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         hierarchyItem.text = item.text;
       } else {
         // Look up text content using JCR context with multiple fallback strategies
+        let textContent = null;
         const uniqueContextKey = `${String(title)}|${immediateParentKey}|${currentKeyPath}`;
-        const textContent = jcrTextMap[uniqueContextKey] || jcrTextMap[contextKey];
+
+        // For accordion panel items, ONLY use path-based keys (don't use contextKey which may be overwritten)
+        if (itemType === 'container' && immediateParentKey && immediateParentKey.startsWith('accordion') && key === 'item_1' && currentKeyPath) {
+          // Search for ALL path-based keys with this parent+title
+          const parentContextPattern = `|${immediateParentKey}|`;
+          const currentTitle = String(title);
+          const pathBasedKeys = Object.keys(jcrTextMap).filter((k) => {
+            if (!k.startsWith(`${currentTitle}|`)) return false;
+            if (!k.includes(parentContextPattern)) return false;
+            const afterParent = k.split(parentContextPattern)[1];
+            return afterParent && afterParent.includes('/');
+          });
+
+          if (pathBasedKeys.length > 0) {
+            // If there are multiple matches, try to find the best match based on path similarity
+            if (pathBasedKeys.length > 1) {
+              // Extract path segments from currentKeyPath to use for matching
+              const pathSegments = currentKeyPath.split('/').filter((s) => s);
+
+              // Score each JCR key based on how many path segments it contains
+              const scoredKeys = pathBasedKeys.map((k) => {
+                const jcrPath = k.split(parentContextPattern)[1] || '';
+                const score = pathSegments.filter((seg) => jcrPath.includes(`/${seg}/`) || jcrPath.includes(`/${seg}`)).length;
+                return { key: k, score };
+              });
+
+              // Sort by score (descending) and use the best match
+              scoredKeys.sort((a, b) => b.score - a.score);
+              textContent = jcrTextMap[scoredKeys[0].key];
+            } else {
+              // Only one match, use it
+              textContent = jcrTextMap[pathBasedKeys[0]];
+            }
+          }
+          // Don't fall back to contextKey for accordion items - it's unreliable when there are duplicates
+        } else {
+          // For non-accordion items, use the regular lookup
+          textContent = jcrTextMap[uniqueContextKey] || jcrTextMap[contextKey];
+        }
 
         if (textContent) {
           hierarchyItem.text = textContent;
@@ -1518,10 +1586,17 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
           hierarchyItem.text = textChild.text;
         }
 
-        // Filter out text and text_copy children to avoid duplication (text content is now on parent)
+        // Filter out ALL text children (text, text_copy, text_copy_copy, etc.) to avoid duplication
+        // Text content is now on parent, so we don't need separate text children
         const filteredItems = { ...item[':items'] };
-        delete filteredItems.text_copy;
-        delete filteredItems.text;
+        Object.keys(filteredItems).forEach((childKey) => {
+          const childItem = filteredItems[childKey];
+          // Remove any child that is a text component
+          if (childItem && (childItem['sling:resourceType'] === 'tccc-dam/components/text'
+            || childKey === 'text' || childKey.startsWith('text_'))) {
+            delete filteredItems[childKey];
+          }
+        });
 
         const childrenItems = extractItemsHierarchy(filteredItems, currentKeyPath, currentDisplayPath, jcrPathMap, jcrTeaserImageMap);
         if (childrenItems.length > 0) {
@@ -1529,7 +1604,15 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         }
       }
 
-      result.push(hierarchyItem);
+      // Skip containers with titles starting with "container_" but still process their children
+      if (itemType === 'container' && title && String(title).startsWith('container_')) {
+      // Don't add this container to result, but add its children directly
+        if (hierarchyItem.items && hierarchyItem.items.length > 0) {
+          result.push(...hierarchyItem.items);
+        }
+      } else {
+        result.push(hierarchyItem);
+      }
     });
 
     return result;
@@ -1996,6 +2079,120 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
     return findImageComponents(jcrData);
   }
 
+  // Extract content from JCR containers outside tabs (e.g., standalone sections with buttons)
+  function extractNonTabsContent(jcrData) {
+    const sections = [];
+
+    if (!jcrData.root || !jcrData.root.container) {
+      return sections;
+    }
+
+    // Scan all containers at root/container level
+    const rootContainer = jcrData.root.container;
+
+    for (const containerKey in rootContainer) {
+      const container = rootContainer[containerKey];
+
+      // Skip if not an object or is a tabs component
+      if (!container || typeof container !== 'object') continue;
+      if (container['sling:resourceType'] === 'tccc-dam/components/tabs') continue;
+      if (containerKey.startsWith('jcr:') || containerKey.startsWith('cq:') || containerKey.startsWith('sling:')) continue;
+
+      // Look for title components and their associated content
+      const titleComponent = findTitleComponent(container);
+      if (titleComponent) {
+        // Found a title component - this marks a section
+        const sectionTitle = titleComponent['jcr:title'];
+        const sectionItems = [];
+
+        // Extract buttons and other components from this container
+        extractComponentsFromContainer(container, sectionItems, sectionTitle);
+
+        if (sectionItems.length > 0) {
+          sections.push({
+            title: sectionTitle,
+            path: sectionTitle,
+            type: 'section',
+            items: sectionItems,
+          });
+        }
+      }
+    }
+
+    return sections;
+  }
+
+  // Helper to find a title component in a container (searches recursively)
+  function findTitleComponent(obj, depth = 0, maxDepth = 3) {
+    if (depth > maxDepth) return null;
+
+    for (const key in obj) {
+      if (key.startsWith('jcr:') || key.startsWith('cq:') || key.startsWith('sling:')) continue;
+
+      const item = obj[key];
+      if (item && typeof item === 'object') {
+        // Check if this is a title component
+        if (item['sling:resourceType'] === 'tccc-dam/components/title' && item['jcr:title']) {
+          return item;
+        }
+
+        // Recursively search in nested containers
+        if (item['sling:resourceType'] === 'tccc-dam/components/container') {
+          const found = findTitleComponent(item, depth + 1, maxDepth);
+          if (found) return found;
+        }
+      }
+    }
+    return null;
+  }
+
+  // Helper to extract components (buttons, etc.) from a container
+  function extractComponentsFromContainer(container, items, sectionTitle) {
+    for (const key in container) {
+      if (key.startsWith('jcr:') || key.startsWith('cq:') || key.startsWith('sling:')) continue;
+
+      const component = container[key];
+      if (!component || typeof component !== 'object') continue;
+
+      const resourceType = component['sling:resourceType'];
+
+      // Extract buttons
+      if (resourceType === 'tccc-dam/components/button') {
+        const buttonTitle = component['jcr:title'] || key;
+        const buttonItem = {
+          title: buttonTitle,
+          path: `${sectionTitle}${PATH_SEPARATOR}${buttonTitle}`,
+          type: 'button',
+          key,
+          id: `button-${createDeterministicId(buttonTitle + key)}`,
+        };
+
+        // Extract linkURL
+        if (component.linkURL) {
+          buttonItem.linkURL = stripHostAndExtension(component.linkURL);
+        }
+
+        items.push(buttonItem);
+      }
+
+      // Recursively search nested containers
+      if (resourceType === 'tccc-dam/components/container') {
+        extractComponentsFromContainer(component, items, sectionTitle);
+      }
+    }
+  }
+
+  // Extract non-tabs content and merge with main hierarchy
+  const nonTabsSections = extractNonTabsContent(jcrData);
+  if (nonTabsSections.length > 0) {
+    console.log(`\n📦 Found ${nonTabsSections.length} section(s) outside tabs:`);
+    nonTabsSections.forEach((section) => {
+      console.log(`   - ${section.title} (${section.items.length} items)`);
+    });
+    // Prepend non-tabs sections to the beginning of the hierarchy
+    mainHierarchy = [...nonTabsSections, ...mainHierarchy];
+  }
+
   // Find banner images
   const bannerImages = extractBannerImage(jcrData, CONTENT_PATH);
 
@@ -2153,8 +2350,8 @@ function extractButtonsFromContainer(jcrData, containerPath) {
           key,
         };
 
-        // Add linkURL if present
-        if (item.linkURL) {
+        // Add linkURL if present and valid
+        if (item.linkURL && isValidLinkURL(item.linkURL)) {
           button.linkURL = stripHostAndExtension(item.linkURL);
         }
 

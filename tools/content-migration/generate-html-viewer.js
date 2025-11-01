@@ -1,13 +1,4 @@
 #!/usr/bin/env node
-/**
- * Generate HTML viewer(s) for content hierarchy data (JSON or CSV).
- *
- * Usage:
- *   node generate-html-viewer.js [input-path ...] [--no-open]
- *
- * When no input paths are provided, the script searches common locations
- * (merged JSON, merged CSV, extracted JSON) in that order.
- */
 
 const fs = require('fs');
 const path = require('path');
@@ -22,12 +13,71 @@ const {
 const projectRoot = __dirname;
 const templatePath = path.join(projectRoot, 'templates/all-content-stores-viewer-tree-template.html');
 
+function showHelp() {
+  console.log(`
+Generate HTML viewer(s) for content hierarchy data (JSON or CSV).
+
+USAGE:
+  node generate-html-viewer.js [input-path ...] [options]
+
+ARGUMENTS:
+  input-path              Path(s) to hierarchy data file(s) (JSON or CSV).
+                          Can specify multiple files to generate multiple viewers.
+                          If omitted, searches for default files (see below).
+
+OPTIONS:
+  -h, --help             Show this help message and exit
+  --no-open              Generate viewer(s) without opening in browser
+
+DEFAULT FILE SEARCH:
+  When no input paths are provided, the script automatically searches for:
+  1. Any preferredDefaults passed programmatically
+  2. All directories matching pattern: *-content-stores*/extracted-results/hierarchy-structure.json
+
+  Files are processed in the order found, with preferredDefaults taking priority.
+
+EXAMPLES:
+  # Generate viewer for a specific JSON file
+  node generate-html-viewer.js all-content-stores/extracted-results/hierarchy-structure.json
+
+  # Generate viewers for multiple files
+  node generate-html-viewer.js file1.json file2.csv
+
+  # Generate viewer without opening in browser
+  node generate-html-viewer.js --no-open
+
+  # Use default file search (processes all *-content-stores* directories)
+  node generate-html-viewer.js
+
+OUTPUT:
+  HTML viewer files are generated with naming pattern: {basename}.from-{source}.html
+
+  Output location rules:
+  - If input is from extracted-results/, output goes to derived-results/
+    (the derived-results/ directory is created automatically if needed)
+  - Otherwise, output is placed in the same directory as the input
+
+  The viewer provides an interactive tree view of the content hierarchy with:
+  - Expandable/collapsible sections
+  - Search functionality
+  - Copy-to-clipboard for paths
+  - Metadata display for each item
+`);
+}
+
 function getDefaultCandidates(preferredDefaults = []) {
-  const baseDefaults = [
-    'all-content-stores/derived-results/hierarchy-structure.merged.json',
-    'all-content-stores/derived-results/hierarchy-structure.merged.csv',
-    'all-content-stores/extracted-results/hierarchy-structure.json',
-  ];
+  // Dynamically find all *-content-stores* directories
+  let baseDefaults = [];
+  try {
+    const entries = fs.readdirSync(projectRoot, { withFileTypes: true });
+    baseDefaults = entries
+      .filter((entry) => entry.isDirectory() && entry.name.includes('-content-stores'))
+      .map((entry) => entry.name)
+      .sort()
+      .map((dir) => `${dir}/extracted-results/hierarchy-structure.json`);
+  } catch (error) {
+    console.warn('⚠️  Could not scan for content-stores directories:', error.message);
+  }
 
   const combined = [...preferredDefaults, ...baseDefaults];
   const seen = new Set();
@@ -79,10 +129,20 @@ function processInputPath(inputPath, { openViewer }) {
     baseNameOverride: meta.baseNameOverride,
     sourceLabelOverride: meta.sourceLabelOverride,
   });
-  const outputPath = getOutputHtmlPath(inputPath, renderVariant, {
+
+  let outputPath = getOutputHtmlPath(inputPath, renderVariant, {
     baseNameOverride: meta.baseNameOverride,
     sourceTypeOverride: meta.outputVariant,
   });
+
+  // If input is from extracted-results, output to derived-results
+  if (inputPath.includes('/extracted-results/')) {
+    outputPath = outputPath.replace('/extracted-results/', '/derived-results/');
+    const outputDir = path.dirname(outputPath);
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+  }
 
   console.log('\n📝 Generating HTML viewer...');
   let finalHtml;
@@ -113,10 +173,15 @@ function processInputPath(inputPath, { openViewer }) {
 }
 
 function runCli({ argv = process.argv.slice(2), preferredDefaults } = {}) {
-  console.log('🚀 Generating content hierarchy viewer...\n');
+  const positionalArgs = argv.filter((arg) => !arg.startsWith('--') && !arg.startsWith('-'));
+  const flagSet = new Set(argv.filter((arg) => arg.startsWith('--') || arg.startsWith('-')));
 
-  const positionalArgs = argv.filter((arg) => !arg.startsWith('--'));
-  const flagSet = new Set(argv.filter((arg) => arg.startsWith('--')));
+  if (flagSet.has('-h') || flagSet.has('--help')) {
+    showHelp();
+    process.exit(0);
+  }
+
+  console.log('🚀 Generating content hierarchy viewer...\n');
 
   const openViewer = !flagSet.has('--no-open');
 
@@ -164,7 +229,7 @@ function runCli({ argv = process.argv.slice(2), preferredDefaults } = {}) {
   return outputs;
 }
 
-module.exports = { runCli };
+module.exports = { runCli, showHelp };
 
 if (require.main === module) {
   runCli();

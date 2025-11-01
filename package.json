@@ -22,5 +22,8 @@
     "husky": "9.1.7",
     "stylelint": "16.19.1",
     "stylelint-config-standard": "38.0.0"
+  },
+  "dependencies": {
+    "glob": "^11.0.3"
   }
 }

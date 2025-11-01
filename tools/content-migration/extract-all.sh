@@ -11,7 +11,7 @@ echo ""
 # Extract all-content-stores & stores
 echo "📥 Extracting: all-content-stores & stores"
 echo "-------------------------------------------"
-node extract-tab-hierarchy-all.js
+node extract-tab-hierarchy-all.js ### ==> will fetch '/content/share/us/en/*-content-stores'
 node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/global-coca-cola-uplift'
 node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/portfolio-get-together-2025'
 node extract-tab-hierarchy-all.js '/content/share/us/en/bottler-content-stores/coke-holiday-2025'
@@ -20,25 +20,25 @@ node extract-tab-hierarchy-all.js '/content/share/us/en/bottler-content-stores/c
 echo ""
 echo ""
 
-# Merge hierarchies & Generate merged HTML viewer from JSON
-echo "🔀 Merging hierarchies... and 📊 Generating merged viewer..."
-echo "-------------------------------------------"
-node merge-hierarchy-json.js && node generate-html-viewer.js all-content-stores/derived-results/hierarchy-structure.merged.json
-	###node merge-hierarchy-json.js all-content-stores__global-coca-cola-uplift && node generate-html-viewer.js all-content-stores/derived-results/hierarchy-structure.merged.json
-echo ""
-echo ""
+	## Merge hierarchies & Generate merged HTML viewer from JSON
+	#echo "🔀 Merging hierarchies... and 📊 Generating merged viewer..."
+	#echo "-------------------------------------------"
+	####node merge-hierarchy-json.js && node generate-html-viewer.js all-content-stores/derived-results/hierarchy-structure.merged.json
+	####node merge-hierarchy-json.js all-content-stores__global-coca-cola-uplift && node generate-html-viewer.js all-content-stores/derived-results/hierarchy-structure.merged.json
+	#echo ""
+	#echo ""
 
 ## Generate CSV from merged hierarchy
 #echo "📋 Generating CSV from merged hierarchy..."
 #echo "-------------------------------------------"
-node generate-csv-from-hierarchy-merged-json.js
+node generate-csv-from-hierarchy-json.js ### ==> will generate csv from '*-content-stores*/extracted-results/hierarchy-structure.json'
 #echo ""
 #echo ""
 
 # Generate HTML viewer from CSV
 echo "🌐 Generating HTML viewer from CSV..."
 echo "-------------------------------------------"
-node generate-html-viewer.js all-content-stores/derived-results/hierarchy-structure.merged.csv
+node generate-html-viewer.js ### ==> will generate HTML from '*-content-stores*/extracted-results/hierarchy-structure.json'
 echo ""
 echo ""
 
