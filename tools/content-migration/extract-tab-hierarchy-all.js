@@ -37,6 +37,9 @@ OUTPUTS:
   ├── hierarchy-structure.json          # Main structured output
   ├── jcr-content.json                 # Raw JCR data from AEM
   ├── most-comprehensive-tabs.model.json # Raw Sling model data
+  ├── caches/                           # Downloaded file cache (delete to force re-download)
+  │   ├── jcr-content-a1b2c3d4.infinity.json  # Cached JCR content (pretty JSON)
+  │   └── tabs-e5f6g7h8.model.json      # Cached Sling model files (pretty JSON)
   └── images/                           # Downloaded teaser & banner images
       ├── teaser-abc123-image1.png
       └── banner-image.png
@@ -210,6 +213,59 @@ function createHierarchicalDirName(contentPath) {
 
 const hierarchicalDirName = createHierarchicalDirName(CONTENT_PATH);
 const OUTPUT_DIR = path.join(__dirname, hierarchicalDirName, 'extracted-results');
+const CACHE_DIR = path.join(OUTPUT_DIR, 'caches');
+
+// Helper function to get cache file path
+function getCacheFilePath(url) {
+  // Use MD5 hash of the full URL to ensure uniqueness
+  // This prevents collisions when multiple files have the same name but different paths
+  const crypto = require('crypto');
+  const urlHash = crypto.createHash('md5').update(url).digest('hex');
+
+  // Extract the original filename for readability
+  const urlObj = new URL(url);
+  const pathname = urlObj.pathname;
+  let baseFilename = pathname.split('/').pop();
+
+  // Replace special characters with dashes
+  baseFilename = baseFilename.replace(/:/g, '-');
+
+  // Get file extension
+  const ext = baseFilename.includes('.') ? baseFilename.substring(baseFilename.lastIndexOf('.')) : '';
+  const nameWithoutExt = baseFilename.includes('.') ? baseFilename.substring(0, baseFilename.lastIndexOf('.')) : baseFilename;
+
+  // Create filename: basename-hash.ext (e.g., tabs-a1b2c3d4.model.json)
+  const filename = `${nameWithoutExt}-${urlHash.substring(0, 8)}${ext}`;
+
+  return path.join(CACHE_DIR, filename);
+}
+
+// Helper function to check if cache exists
+function getCachedFile(url) {
+  const cachePath = getCacheFilePath(url);
+  if (fs.existsSync(cachePath)) {
+    console.log(`📦 Using cached: ${path.basename(url)}`);
+    return fs.readFileSync(cachePath, 'utf8');
+  }
+  return null;
+}
+
+// Helper function to save to cache
+function saveToCacheFile(url, data) {
+  if (!fs.existsSync(CACHE_DIR)) {
+    fs.mkdirSync(CACHE_DIR, { recursive: true });
+  }
+  const cachePath = getCacheFilePath(url);
+
+  // Try to parse and save as pretty JSON
+  try {
+    const jsonData = JSON.parse(data);
+    fs.writeFileSync(cachePath, JSON.stringify(jsonData, null, 2));
+  } catch (e) {
+    // If not JSON, save as-is
+    fs.writeFileSync(cachePath, data);
+  }
+}
 
 // Image URL configuration
 const BASE_URL = `${CONTENT_PATH}/`;
@@ -219,6 +275,15 @@ const BASE_URL = `${CONTENT_PATH}/`;
 
 // Function to download file from AEM
 function downloadFile(url, outputPath) {
+  // Check cache first
+  const cached = getCachedFile(url);
+  if (cached) {
+    if (outputPath) {
+      fs.writeFileSync(outputPath, cached);
+    }
+    return Promise.resolve(cached);
+  }
+
   return new Promise((resolve, reject) => {
     let urlObj;
     try {
@@ -263,13 +328,18 @@ function downloadFile(url, outputPath) {
       res.on('end', () => {
         if (res.statusCode === 200) {
           const data = Buffer.concat(chunks);
+          const dataStr = data.toString('utf8');
+
+          // Save to cache
+          saveToCacheFile(url, dataStr);
+
           if (outputPath) {
             fs.writeFileSync(outputPath, data);
             console.log(`✅ Downloaded: ${path.basename(outputPath)} (${data.length} bytes)`);
           } else {
             console.log(`✅ Downloaded (skipped saving): ${path.basename(url)}`);
           }
-          resolve(data);
+          resolve(dataStr);
         } else {
           reject(new Error(`HTTP ${res.statusCode}: ${res.statusMessage}`));
         }
@@ -477,7 +547,8 @@ async function main() {
 
     // Save jcr-content.json in pretty format
     fs.writeFileSync(path.join(OUTPUT_DIR, 'jcr-content.json'), JSON.stringify(jcrData, null, 2));
-    console.log('✅ Saved jcr-content.json in pretty format\n');
+    console.log('✅ Saved jcr-content.json in pretty format');
+    console.log(`💡 Tip: Delete ${CACHE_DIR} to force re-download from AEM\n`);
 
     // Find all tabs paths in the JCR
     const tabsPaths = findAllTabsPaths(jcrData);
