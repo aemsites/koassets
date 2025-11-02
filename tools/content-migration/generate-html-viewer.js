@@ -32,21 +32,21 @@ OPTIONS:
 DEFAULT FILE SEARCH:
   When no input paths are provided, the script automatically searches for:
   1. Any preferredDefaults passed programmatically
-  2. All directories matching pattern: *-content-stores*/extracted-results/hierarchy-structure.json
+  2. All directories matching pattern: *-content-stores*/derived-results/hierarchy-structure.csv
 
   Files are processed in the order found, with preferredDefaults taking priority.
 
 EXAMPLES:
-  # Generate viewer for a specific JSON file
-  node generate-html-viewer.js all-content-stores/extracted-results/hierarchy-structure.json
+  # Generate viewer for a specific CSV file
+  node generate-html-viewer.js all-content-stores/derived-results/hierarchy-structure.csv
 
   # Generate viewers for multiple files
-  node generate-html-viewer.js file1.json file2.csv
+  node generate-html-viewer.js file1.csv file2.json
 
   # Generate viewer without opening in browser
   node generate-html-viewer.js --no-open
 
-  # Use default file search (processes all *-content-stores* directories)
+  # Use default file search (processes all *-content-stores*/derived-results/*.csv)
   node generate-html-viewer.js
 
 OUTPUT:
@@ -74,7 +74,7 @@ function getDefaultCandidates(preferredDefaults = []) {
       .filter((entry) => entry.isDirectory() && entry.name.includes('-content-stores'))
       .map((entry) => entry.name)
       .sort()
-      .map((dir) => `${dir}/extracted-results/hierarchy-structure.json`);
+      .map((dir) => `${dir}/derived-results/hierarchy-structure.csv`);
   } catch (error) {
     console.warn('⚠️  Could not scan for content-stores directories:', error.message);
   }

@@ -132,6 +132,7 @@ function isValidLinkURL(url) {
   return true;
 }
 
+// Strip host from URL but keep extension (for backward compatibility)
 function stripHostAndExtension(url) {
   if (!url) return url;
 
@@ -154,6 +155,27 @@ function stripHostAndExtension(url) {
   // (i.e., no query params or hash after the pathname)
   if (!search && !hash) {
     pathname = pathname.replace(/\.[^/.]+$/, '');
+  }
+
+  return pathname + search + hash;
+}
+
+// Strip host from URL but KEEP extension (for migration)
+function stripHostOnly(url) {
+  if (!url) return url;
+
+  let pathname; let search; let hash;
+
+  try {
+    const urlObj = new URL(url);
+    pathname = urlObj.pathname;
+    search = urlObj.search;
+    hash = urlObj.hash;
+  } catch (e) {
+    // If it's not a valid URL (e.g., already a path), treat as pathname
+    pathname = url;
+    search = '';
+    hash = '';
   }
 
   return pathname + search + hash;
@@ -882,19 +904,40 @@ async function main() {
               jcrTeaserImageMap[matchingJcrKey].hasImageResource = true;
               jcrTeaserImageMap[matchingJcrKey].modelPath = uniqueKey; // Store model path for lookup
 
-              // Also store linkURL if it exists in the model (it's in imageResource)
-              if (item.imageResource.linkURL) {
-                jcrTeaserImageMap[matchingJcrKey].linkURL = stripHostAndExtension(item.imageResource.linkURL);
-              }
+              // Store all three URL sources for comparison (keep extensions)
+              const linkSources = {};
 
-              // Also check for linkURL in item.linkURL (strip host and extension)
-              if (item.linkURL) {
-                jcrTeaserImageMap[matchingJcrKey].linkURL = stripHostAndExtension(item.linkURL);
-              }
+              // Check if this is a button component (prioritize :type from Sling Model)
+              const isButtonComponent = (item[':type'] || item['sling:resourceType']) === 'tccc-dam/components/button';
 
-              // Also check for linkURL in item.link.url (strip host and extension)
+              // link.url - the actual clickable link in the UI
               if (item.link && item.link.url) {
-                jcrTeaserImageMap[matchingJcrKey].linkURL = stripHostAndExtension(item.link.url);
+                linkSources.clickableUrl = stripHostOnly(item.link.url);
+              }
+              // linkURL - raw storage format from JCR
+              // For button components, linkURL should be treated as clickableUrl
+              if (item.linkURL) {
+                const processedURL = stripHostOnly(item.linkURL);
+                if (isButtonComponent) {
+                  if (!linkSources.clickableUrl) {
+                    linkSources.clickableUrl = processedURL;
+                  }
+                } else {
+                  linkSources.storageUrl = processedURL;
+                }
+              }
+              // xdm:linkURL - analytics/data layer tracking URL
+              if (item.dataLayer && item.id && item.dataLayer[item.id] && item.dataLayer[item.id]['xdm:linkURL']) {
+                linkSources.analyticsUrl = stripHostOnly(item.dataLayer[item.id]['xdm:linkURL']);
+              }
+              // imageResource.linkURL - link from image metadata
+              if (item.imageResource.linkURL) {
+                linkSources.imageResourceUrl = stripHostOnly(item.imageResource.linkURL);
+              }
+
+              // Store all URL sources if any exist
+              if (Object.keys(linkSources).length > 0) {
+                jcrTeaserImageMap[matchingJcrKey].linkSources = linkSources;
               }
             }
           }
@@ -906,21 +949,43 @@ async function main() {
 
             // Create a synthetic JCR key for linkURL storage
             const linkUrlKey = `${newPath}_linkurl`;
-            jcrTeaserImageMap[linkUrlKey] = {
+
+            // Store all three URL sources for comparison (keep extensions)
+            const linkSources = {};
+
+            // Check if this is a button component (prioritize :type from Sling Model)
+            const isButtonComponent = (item[':type'] || item['sling:resourceType']) === 'tccc-dam/components/button';
+
+            // link.url - the actual clickable link in the UI
+            if (item.link && item.link.url) {
+              linkSources.clickableUrl = stripHostOnly(item.link.url);
+            }
+            // linkURL - raw storage format from JCR
+            // For button components, linkURL should be treated as clickableUrl
+            if (item.linkURL) {
+              const processedURL = stripHostOnly(item.linkURL);
+              if (isButtonComponent) {
+                if (!linkSources.clickableUrl) {
+                  linkSources.clickableUrl = processedURL;
+                }
+              } else {
+                linkSources.storageUrl = processedURL;
+              }
+            }
+            // xdm:linkURL - analytics/data layer tracking URL
+            if (item.dataLayer && item.id && item.dataLayer[item.id] && item.dataLayer[item.id]['xdm:linkURL']) {
+              linkSources.analyticsUrl = stripHostOnly(item.dataLayer[item.id]['xdm:linkURL']);
+            }
+
+            // Store all URL sources
+            const mapEntry = {
               teaserKey: key,
               hasImageResource: false,
               modelPath: uniqueKey,
+              linkSources,
             };
 
-            // Store linkURL from item.linkURL (strip host and extension)
-            if (item.linkURL) {
-              jcrTeaserImageMap[linkUrlKey].linkURL = stripHostAndExtension(item.linkURL);
-            }
-
-            // Store linkURL from item.link.url (strip host and extension)
-            if (item.link && item.link.url) {
-              jcrTeaserImageMap[linkUrlKey].linkURL = stripHostAndExtension(item.link.url);
-            }
+            jcrTeaserImageMap[linkUrlKey] = mapEntry;
           }
 
           // Recurse into nested items
@@ -932,10 +997,10 @@ async function main() {
     }
     extractTimestampsFromModel(mainTabsData[':items']);
 
-    // Remove teasers from jcrTeaserImageMap that don't have imageResource AND don't have linkURL
+    // Remove teasers from jcrTeaserImageMap that don't have imageResource AND don't have linkSources
     const beforeCleanup = Object.keys(jcrTeaserImageMap).length;
     for (const uniqueKey in jcrTeaserImageMap) {
-      if (!jcrTeaserImageMap[uniqueKey].hasImageResource && !jcrTeaserImageMap[uniqueKey].linkURL) {
+      if (!jcrTeaserImageMap[uniqueKey].hasImageResource && !jcrTeaserImageMap[uniqueKey].linkSources) {
         delete jcrTeaserImageMap[uniqueKey];
       }
     }
@@ -1376,7 +1441,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
 
       let title = item['cq:panelTitle'] || item.title || item['jcr:title'] || item.text;
 
-      // Skip tabs/tabs_copy components without a custom title - they're just structural
+      // Skip tabs/tabs_ components without a custom title - they're just structural
       if (!title && (key === 'tabs' || key.startsWith('tabs_'))) {
         // But still recurse into their nested items, including the structural component in the path
         if (item[':items']) {
@@ -1442,7 +1507,8 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       title = String(title);
 
       let itemType = 'item';
-      const resourceType = item['sling:resourceType'] || item[':type'] || '';
+      // Prioritize :type from Sling Model over sling:resourceType from JCR
+      const resourceType = item[':type'] || item['sling:resourceType'] || '';
 
       if (resourceType.includes('tabs')) {
         itemType = 'tabs';
@@ -1513,29 +1579,68 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       const immediateParentKey = keyPathParts.length > 1 ? keyPathParts[keyPathParts.length - 2] : keyPathParts[0];
       const contextKey = `${String(title)}|${immediateParentKey}`;
 
-      // Check for linkURL directly in item data first (for synthetic button items)
+      // Collect all three URL sources for comparison (keep extensions)
+      const itemLinkSources = {};
+
+      // Check if this is a button component (prioritize :type from Sling Model)
+      const isButtonComponent = (item[':type'] || item['sling:resourceType']) === 'tccc-dam/components/button';
+
+      // link.url - the actual clickable link in the UI
+      if (item.link && item.link.url && isValidLinkURL(item.link.url)) {
+        itemLinkSources.clickableUrl = stripHostOnly(item.link.url);
+      }
+
+      // linkURL - raw storage format from JCR
+      // For button components, linkURL should be treated as clickableUrl
       if (item.linkURL && isValidLinkURL(item.linkURL)) {
-        // Don't double-process URLs that are already processed (start with /)
-        if (item.linkURL.startsWith('/')) {
-          hierarchyItem.linkURL = item.linkURL;
-        } else {
-          hierarchyItem.linkURL = stripHostAndExtension(item.linkURL);
-        }
-      } else if (item.buttonLink && item.buttonLink.url && isValidLinkURL(item.buttonLink.url)) {
-        // Handle buttonLink.url (used in Sling model for buttons)
-        hierarchyItem.linkURL = stripHostAndExtension(item.buttonLink.url);
-      } else if (item.link && item.link.url && isValidLinkURL(item.link.url)) {
-        hierarchyItem.linkURL = stripHostAndExtension(item.link.url);
-      } else {
-        // Only use jcrTeaserImageMap lookup which is indexed by model path (most reliable)
-        // Don't use jcrLinkUrlMap fallbacks as they cause false matches when multiple items
-        // have the same key (e.g., "button_copy") or title (e.g., "KVs", "Coming Soon")
-        for (const [jcrPath, jcrData] of Object.entries(jcrTeaserImageMap)) {
-          if (jcrData.modelPath === currentKeyPath && jcrData.linkURL && isValidLinkURL(jcrData.linkURL)) {
-            hierarchyItem.linkURL = stripHostAndExtension(jcrData.linkURL);
-            break;
+        const processedURL = item.linkURL.startsWith('/') ? item.linkURL : stripHostOnly(item.linkURL);
+        if (isButtonComponent) {
+          // For button components, linkURL is the clickable URL
+          if (!itemLinkSources.clickableUrl) {
+            itemLinkSources.clickableUrl = processedURL;
           }
+        } else {
+          itemLinkSources.storageUrl = processedURL;
         }
+      }
+
+      // xdm:linkURL - analytics/data layer tracking URL
+      if (item.dataLayer && item.id && item.dataLayer[item.id] && item.dataLayer[item.id]['xdm:linkURL']) {
+        itemLinkSources.analyticsUrl = stripHostOnly(item.dataLayer[item.id]['xdm:linkURL']);
+      }
+
+      // buttonLink.url - for button components, assign to clickableUrl
+      if (item.buttonLink && item.buttonLink.url && isValidLinkURL(item.buttonLink.url)) {
+        // For button components, buttonLink.url is the clickable URL
+        if (!itemLinkSources.clickableUrl) {
+          itemLinkSources.clickableUrl = stripHostOnly(item.buttonLink.url);
+        }
+      }
+
+      // Always check jcrTeaserImageMap for imageResourceUrl (don't overwrite if already exists)
+      for (const [jcrPath, jcrData] of Object.entries(jcrTeaserImageMap)) {
+        if (jcrData.modelPath === currentKeyPath && jcrData.linkSources) {
+          // Merge imageResourceUrl if it exists and we don't already have it
+          if (jcrData.linkSources.imageResourceUrl && !itemLinkSources.imageResourceUrl) {
+            itemLinkSources.imageResourceUrl = jcrData.linkSources.imageResourceUrl;
+          }
+          // Only use jcrTeaserImageMap as fallback for other fields if not found yet
+          if (!itemLinkSources.clickableUrl && jcrData.linkSources.clickableUrl) {
+            itemLinkSources.clickableUrl = jcrData.linkSources.clickableUrl;
+          }
+          if (!itemLinkSources.analyticsUrl && jcrData.linkSources.analyticsUrl) {
+            itemLinkSources.analyticsUrl = jcrData.linkSources.analyticsUrl;
+          }
+          if (!itemLinkSources.storageUrl && jcrData.linkSources.storageUrl) {
+            itemLinkSources.storageUrl = jcrData.linkSources.storageUrl;
+          }
+          break;
+        }
+      }
+
+      // Add linkSources object if any URL sources exist
+      if (Object.keys(itemLinkSources).length > 0) {
+        hierarchyItem.linkSources = itemLinkSources;
       }
 
       // First, check if text content exists directly in the model item
@@ -1619,7 +1724,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
 
         // Find JCR entry that has this model path stored
         for (const [jcrPath, jcrData] of Object.entries(jcrTeaserImageMap)) {
-          if (jcrData.modelPath === currentKeyPath && (jcrData.hasImageResource || jcrData.linkURL)) {
+          if (jcrData.modelPath === currentKeyPath && (jcrData.hasImageResource || jcrData.linkSources)) {
             teaserImageInfo = jcrData;
             break;
           }
@@ -1720,6 +1825,25 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         item.__tabsIndex = tabsIndex;
       }
     });
+
+    // Function to replace "container" types with nearest non-container ancestor's type
+    function replaceContainerTypes(items, parentType = null) {
+      if (!items || !Array.isArray(items)) return items;
+
+      return items.map((item) => {
+        // If this item is a container and has a parent, inherit parent's type
+        if (item.type === 'container' && parentType && parentType !== 'container') {
+          item.type = parentType;
+        }
+
+        // Recursively process children, passing down this item's type
+        if (item.items) {
+          item.items = replaceContainerTypes(item.items, item.type);
+        }
+
+        return item;
+      });
+    }
 
     // Function to remove duplicate consecutive containers with the same title
     function removeDuplicateContainers(items) {
@@ -1828,7 +1952,9 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
     const cleanedHierarchy = unwrapStructuralContainers(rawHierarchy);
     const deduplicatedHierarchy = removeDuplicateContainers(cleanedHierarchy);
     const groupedHierarchy = groupHierarchyBySections(deduplicatedHierarchy, jcrData);
-    mainHierarchy = cleanupDuplicatePathSegments(groupedHierarchy);
+    // Replace containers with parent types (AFTER grouping creates them)
+    const containerReplacedHierarchy = replaceContainerTypes(groupedHierarchy);
+    mainHierarchy = cleanupDuplicatePathSegments(containerReplacedHierarchy);
   }
 
   // Function to extract sections from JCR structure
@@ -2238,9 +2364,12 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
           id: `button-${createDeterministicId(buttonTitle + key)}`,
         };
 
-        // Extract linkURL
+        // Extract URL sources
+        // For button components, linkURL should be treated as clickableUrl
         if (component.linkURL) {
-          buttonItem.linkURL = stripHostAndExtension(component.linkURL);
+          buttonItem.linkSources = {
+            clickableUrl: stripHostOnly(component.linkURL),
+          };
         }
 
         items.push(buttonItem);
@@ -2267,10 +2396,39 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
   // Find banner images
   const bannerImages = extractBannerImage(jcrData, CONTENT_PATH);
 
+  // Unwrap accordion items but keep their children
+  function unwrapAccordionItems(items) {
+    if (!items || !Array.isArray(items)) return items;
+
+    const result = [];
+
+    items.forEach((item) => {
+      // If item title starts with 'accordion_' or equals 'accordion', skip it but keep its children
+      if (item.title && (item.title.startsWith('accordion_') || item.title === 'accordion')) {
+        if (item.items && item.items.length > 0) {
+          // Recursively unwrap children and add them directly
+          const unwrappedChildren = unwrapAccordionItems(item.items);
+          result.push(...unwrappedChildren);
+        }
+        // Skip the accordion item itself
+      } else {
+        // Keep the item and recursively process its children
+        if (item.items) {
+          item.items = unwrapAccordionItems(item.items);
+        }
+        result.push(item);
+      }
+    });
+
+    return result;
+  }
+
+  const unwrappedHierarchy = unwrapAccordionItems(mainHierarchy);
+
   // Save to file
   const jsonOutputPath = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
   const hierarchyStructure = {
-    items: mainHierarchy,
+    items: unwrappedHierarchy,
     linkUrl: CONTENT_PATH,
   };
 
@@ -2421,9 +2579,12 @@ function extractButtonsFromContainer(jcrData, containerPath) {
           key,
         };
 
-        // Add linkURL if present and valid
+        // Add URL sources if present and valid
+        // For button components, linkURL should be treated as clickableUrl
         if (item.linkURL && isValidLinkURL(item.linkURL)) {
-          button.linkURL = stripHostAndExtension(item.linkURL);
+          button.linkSources = {
+            clickableUrl: stripHostOnly(item.linkURL),
+          };
         }
 
         buttons.push(button);

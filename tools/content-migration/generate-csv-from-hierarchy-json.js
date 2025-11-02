@@ -20,6 +20,41 @@ const { sanitizeFileName } = require('./sanitize-utils.js');
 const CONFIG_FILE = path.join(__dirname, './da.config');
 
 /**
+ * Extracts link URL and type from item, supporting both old and new formats
+ * Type priority:
+ * 1. item.type if it's 'button' or 'accordion'
+ * 2. item.linkSources.clickableUrl (type: 'link')
+ * 3. item.linkURL or item.linkUrl (type: '')
+ * @returns {Object} { url: string, type: string }
+ */
+function extractLinkUrl(item) {
+  let url = '';
+  let type = '';
+
+  // Determine type - prioritize item.type if it's 'button' or 'accordion'
+  if (item.type === 'button' || item.type === 'accordion') {
+    type = item.type;
+  } else if (item.linkSources && typeof item.linkSources === 'object') {
+    if (item.linkSources.clickableUrl) {
+      type = 'link';
+    }
+  }
+
+  // Determine URL
+  if (item.linkSources && typeof item.linkSources === 'object') {
+    if (item.linkSources.clickableUrl) {
+      url = item.linkSources.clickableUrl;
+    }
+  }
+
+  if (!url) {
+    url = item.linkURL ?? item.linkUrl ?? '';
+  }
+
+  return { url, type };
+}
+
+/**
  * Displays help information
  */
 function showHelp() {
@@ -67,6 +102,7 @@ OUTPUT:
   - title: Item title
   - imageUrl: DA Live URL for the image
   - linkURL: Link URL if present
+  - type: Item/Link type ('accordion', 'button', 'link', or '' for legacy)
   - text: Plain text content (HTML stripped)
 
 CONFIGURATION:
@@ -237,27 +273,27 @@ function escapeCsvField(value) {
  * Converts an item to a CSV row
  */
 function itemToRow(item, destPath, storeName) {
+  const linkData = extractLinkUrl(item);
   return [
     escapeCsvField(formatPath(item.path || '')),
     escapeCsvField(item.title || ''),
     escapeCsvField(formatImageUrl(item.imageUrl || '', destPath, storeName)),
-    escapeCsvField(item.linkURL || ''),
+    escapeCsvField(linkData.url),
+    escapeCsvField(item.type || ''),
     escapeCsvField(item.text || ''),
   ].join(',');
 }
 
 /**
  * Traverses the hierarchy in the same order as JSON (parent first, then children)
- * and collects all items, excluding accordion items but including their children
+ * and collects all items, including accordions and their children
  */
 function traverseInOrder(items, result = []) {
   if (!items || !Array.isArray(items)) return result;
 
   for (const item of items) {
-    // Add the current item first (unless it's an accordion)
-    if (item.type !== 'accordion') {
-      result.push(item);
-    }
+    // Add the current item first (including accordions)
+    result.push(item);
 
     // Then process children (maintaining JSON order)
     if (item.items && Array.isArray(item.items)) {
@@ -294,7 +330,7 @@ function processFile(inputFile, outputFile) {
   // No sorting needed - maintain the original order
 
   // Create CSV content
-  const headers = ['path', 'title', 'imageUrl', 'linkURL', 'text'];
+  const headers = ['path', 'title', 'imageUrl', 'linkURL', 'type', 'text'];
   const csvLines = [headers.join(',')];
 
   items.forEach((item) => {

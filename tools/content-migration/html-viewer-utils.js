@@ -18,6 +18,17 @@ function splitPathSegments(pathStr) {
     .filter((segment) => segment.length > 0);
 }
 
+function extractLinkUrl(item) {
+  // Support both old format (linkURL/linkUrl) and new format (linkSources)
+  if (item.linkSources && typeof item.linkSources === 'object') {
+    // Use clickableUrl for all types (buttons, teasers, links, etc.)
+    if (item.linkSources.clickableUrl) {
+      return item.linkSources.clickableUrl;
+    }
+  }
+  return item.linkURL ?? item.linkUrl ?? '';
+}
+
 function normalizeFlatRow(row) {
   if (!row || typeof row !== 'object') {
     return {
@@ -29,7 +40,9 @@ function normalizeFlatRow(row) {
     };
   }
 
-  const linkValue = row.linkURL ?? row.linkUrl ?? '';
+  // For CSV rows, linkURL is already a plain string
+  // For JSON items with linkSources, extractLinkUrl will extract the URL
+  const linkValue = extractLinkUrl(row);
 
   return {
     path: typeof row.path === 'string' ? row.path : '',
@@ -37,7 +50,34 @@ function normalizeFlatRow(row) {
     imageUrl: typeof row.imageUrl === 'string' ? row.imageUrl : '',
     linkURL: typeof linkValue === 'string' ? linkValue : '',
     text: typeof row.text === 'string' ? row.text : '',
+    // Preserve type if present (from CSV with type column)
+    ...(row.type && { type: row.type }),
   };
+}
+
+function normalizeHierarchyItems(items) {
+  if (!Array.isArray(items)) return items;
+
+  return items.map((item) => {
+    const normalized = { ...item };
+
+    // Convert linkSources.clickableUrl to linkURL for template compatibility
+    const linkUrl = extractLinkUrl(item);
+    if (linkUrl) {
+      normalized.linkURL = linkUrl;
+    }
+    // Clean up old linkSources property to avoid confusion
+    if (normalized.linkSources) {
+      delete normalized.linkSources;
+    }
+
+    // Recursively normalize nested items
+    if (Array.isArray(normalized.items)) {
+      normalized.items = normalizeHierarchyItems(normalized.items);
+    }
+
+    return normalized;
+  });
 }
 
 function readCsv(filePath) {
@@ -147,6 +187,7 @@ function reconstructHierarchyFromRows(rows) {
           if (row.imageUrl) newItem.imageUrl = row.imageUrl;
           if (row.linkURL) newItem.linkURL = row.linkURL;
           if (row.text) newItem.text = row.text;
+          if (row.type) newItem.type = row.type;
         }
 
         currentLevel.items.push(newItem);
@@ -156,6 +197,7 @@ function reconstructHierarchyFromRows(rows) {
         if (row.imageUrl) existingItem.imageUrl = row.imageUrl;
         if (row.linkURL) existingItem.linkURL = row.linkURL;
         if (row.text) existingItem.text = row.text;
+        if (row.type) existingItem.type = row.type;
       }
 
       if (!existingItem.items) {
@@ -213,11 +255,16 @@ function loadHierarchyData(inputPath) {
 
     if (rawData && typeof rawData === 'object') {
       if (Array.isArray(rawData.items)) {
+        // Normalize the hierarchy to convert linkSources.clickableUrl to linkURL
+        const normalizedData = {
+          ...rawData,
+          items: normalizeHierarchyItems(rawData.items),
+        };
         return {
-          hierarchyData: rawData,
+          hierarchyData: normalizedData,
           sourceType: 'json',
           meta: {
-            itemCount: rawData.items.length,
+            itemCount: normalizedData.items.length,
           },
         };
       }
