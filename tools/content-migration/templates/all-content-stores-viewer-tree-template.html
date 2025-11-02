@@ -178,11 +178,15 @@
             // Add type badge for buttons, accordions, and sections
             let typeBadge = '';
             if (item.type === 'button') {
-                typeBadge = `<span class="type-badge type-button" title="Button">🔘</span>`;
+                typeBadge = `<span class="type-badge type-button" title="Button"><b>[BUTTON] </b></span>`;
             } else if (item.type === 'accordion') {
-                typeBadge = `<span class="type-badge type-accordion" title="Accordion">📋</span>`;
+                typeBadge = `<span class="type-badge type-accordion" title="Accordion"><b>[ACCORDION] </b></span>`;
             } else if (item.type === 'section') {
-                typeBadge = `<span class="type-badge type-section" title="Section"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="14" height="14" style="vertical-align: middle;"><style type="text/css">.st0{fill-rule:evenodd;clip-rule:evenodd;fill:currentColor;}</style><g><path class="st0" d="M460.8,433.03c0,13.41-9.8,18.02-23.88,18.02h-230.4c-14.08,0-27.31-4.61-27.31-18.02V377.9h168.12c21.2,0,36.68-10.02,36.68-30.21V182.86h52.92c14.13,0,23.88,17.29,23.88,30.74V433.03z M78.51,329.14c-14.08,0-27.31-4.61-27.31-18.02V91.7c0-13.46,13.16-30.74,27.31-30.74h230.4c14.13,0,23.88,17.29,23.88,30.74v219.43c0,13.41-9.8,18.02-23.88,18.02H78.51z M475.32,134.1H384V55.12c0-20.19-15.49-42.93-36.68-42.93H40.12C19,12.19,0,35.01,0,55.12V347.7c0,20.11,19,30.21,40.12,30.21H128v91.7c0,20.11,19,30.21,40.12,30.21h307.2c21.2,0,36.68-10.02,36.68-30.21V177.03C512,156.84,496.51,134.1,475.32,134.1z"/></g></svg></span>`;
+                typeBadge = `<span class="type-badge type-section" title="Section"><b>[SECTION] </b></span>`;
+            } else if (item.type === 'title') {
+                typeBadge = `<span class="type-badge type-title" title="Title"><b>[TITLE] </b></span>`;
+            } else if (item.type === 'tab') {
+                typeBadge = `<span class="type-badge type-tab" title="Tab"><b>[TAB] </b></span>`;
             }
             
             let titleHtml = hasLink 
@@ -252,15 +256,7 @@
             }
         }
 
-        // Set subtitle from URL path
-        document.addEventListener('DOMContentLoaded', () => {
-            const pathname = window.location.pathname;
-            const lastPart = pathname.split('/').filter(p => p).pop();
-            if (lastPart) {
-                document.getElementById('viewer-subtitle').textContent = lastPart;
-            }
-            initializeViewer();
-        });
+        document.addEventListener('DOMContentLoaded', initializeViewer);
     </script>
 </body>
 </html>

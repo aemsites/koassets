@@ -325,7 +325,7 @@ function deriveViewerTitle(inputPath, sourceType, options = {}) {
   return `${baseTitle} (from ${sourceLabel})`;
 }
 
-function buildViewerHtml(templatePath, hierarchyData, viewerTitle) {
+function buildViewerHtml(templatePath, hierarchyData, viewerTitle, dirName = '') {
   const template = fs.readFileSync(templatePath, 'utf8');
   const dataStart = template.indexOf('let hierarchyData = ');
 
@@ -341,7 +341,8 @@ function buildViewerHtml(templatePath, hierarchyData, viewerTitle) {
 
   return newHtml
     .replace(/<title>.*?<\/title>/, `<title>${viewerTitle}</title>`)
-    .replace(/<h1>.*?<\/h1>/, `<h1>🗂️ ${viewerTitle}</h1>`);
+    .replace(/<h1>.*?<\/h1>/, `<h1>🗂️ ${viewerTitle}</h1>`)
+    .replace(/<p id="viewer-subtitle">.*?<\/p>/, `<p id="viewer-subtitle">${dirName}</p>`);
 }
 
 function getOutputHtmlPath(inputPath, sourceType, options = {}) {

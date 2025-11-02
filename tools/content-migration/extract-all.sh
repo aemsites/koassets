@@ -13,6 +13,8 @@ node extract-tab-hierarchy-all.js ### ==> will fetch '/content/share/us/en/*-con
 node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/global-coca-cola-uplift'
 node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/portfolio-get-together-2025'
 node extract-tab-hierarchy-all.js '/content/share/us/en/bottler-content-stores/coke-holiday-2025'
+node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/ramadan-2025'
+node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/fifa-club-wc-2025'
 	###node generate-hierarchy-html-for-debug.js all-content-stores/extracted-results/hierarchy-structure.json 
 	###node generate-hierarchy-html-for-debug.js all-content-stores__global-coca-cola-uplift/extracted-results/hierarchy-structure.json 
 echo ""

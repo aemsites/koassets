@@ -1390,17 +1390,26 @@ function getItemTypeFromResourceType(item, itemKey = '') {
   if (resourceType.includes('accordion')) {
     return 'accordion';
   }
+  if (resourceType.includes('teaser')) {
+    return 'teaser';
+  }
   if (resourceType.includes('container')) {
     return 'container';
   }
   if (resourceType.includes('button')) {
     return 'button';
   }
+  if (resourceType.includes('title')) {
+    return 'title';
+  }
   if (resourceType.includes('text')) {
     return 'text';
   }
   if (resourceType.includes('image')) {
     return 'image';
+  }
+  if (resourceType.includes('carousel')) {
+    return 'carousel';
   }
 
   // Fallback to checking key patterns
@@ -1827,23 +1836,24 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
     });
 
     // Function to replace "container" types with nearest non-container ancestor's type
-    function replaceContainerTypes(items, parentType = null) {
-      if (!items || !Array.isArray(items)) return items;
-
-      return items.map((item) => {
-        // If this item is a container and has a parent, inherit parent's type
-        if (item.type === 'container' && parentType && parentType !== 'container') {
-          item.type = parentType;
-        }
-
-        // Recursively process children, passing down this item's type
-        if (item.items) {
-          item.items = replaceContainerTypes(item.items, item.type);
-        }
-
-        return item;
-      });
-    }
+    // COMMENTED OUT per user request
+    // function replaceContainerTypes(items, parentType = null) {
+    //   if (!items || !Array.isArray(items)) return items;
+    //
+    //   return items.map((item) => {
+    //     // If this item is a container and has a parent, inherit parent's type
+    //     if (item.type === 'container' && parentType && parentType !== 'container') {
+    //       item.type = parentType;
+    //     }
+    //
+    //     // Recursively process children, passing down this item's type
+    //     if (item.items) {
+    //       item.items = replaceContainerTypes(item.items, item.type);
+    //     }
+    //
+    //     return item;
+    //   });
+    // }
 
     // Function to remove duplicate consecutive containers with the same title
     function removeDuplicateContainers(items) {
@@ -1953,8 +1963,10 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
     const deduplicatedHierarchy = removeDuplicateContainers(cleanedHierarchy);
     const groupedHierarchy = groupHierarchyBySections(deduplicatedHierarchy, jcrData);
     // Replace containers with parent types (AFTER grouping creates them)
-    const containerReplacedHierarchy = replaceContainerTypes(groupedHierarchy);
-    mainHierarchy = cleanupDuplicatePathSegments(containerReplacedHierarchy);
+    // COMMENTED OUT per user request
+    // const containerReplacedHierarchy = replaceContainerTypes(groupedHierarchy);
+    // mainHierarchy = cleanupDuplicatePathSegments(containerReplacedHierarchy);
+    mainHierarchy = cleanupDuplicatePathSegments(groupedHierarchy);
   }
 
   // Function to extract sections from JCR structure
@@ -1988,9 +2000,10 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
           if (currentSection) {
             foundSections.push(currentSection);
           }
-          // Start new section
+          // Start new section with original type
           currentSection = {
             title: item['jcr:title'],
+            type: getItemTypeFromResourceType(item, key),
             containerKeys: [],
           };
         } else if (currentSection && (item['sling:resourceType'] === 'tccc-dam/components/container' || item['sling:resourceType'] === 'tccc-dam/components/tabs')) {
@@ -2066,10 +2079,10 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         if (itemsInSection.length === 1
             && itemsInSection[0].title
             && itemsInSection[0].title.trim() === section.title.trim()) {
-          // Flatten: use the container directly as the section, but keep section type
+          // Flatten: use the container directly as the section, but use original type from JCR
           const flattenedItem = { ...itemsInSection[0] };
           delete flattenedItem.__jcrSection;
-          flattenedItem.type = 'section'; // Change type to section
+          flattenedItem.type = section.type || 'section'; // Use original type from JCR
           grouped.push(flattenedItem);
           console.log(`  - ${section.title} (${flattenedItem.items?.length || 0}) [flattened duplicate]`);
         } else {
@@ -2077,7 +2090,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
           const sectionObj = {
             title: section.title,
             path: section.title,
-            type: 'section',
+            type: section.type || 'section', // Use original type from JCR
             items: itemsInSection.map((item) => {
               const updatedItem = { ...item };
               // Remove the internal metadata before output
@@ -2186,9 +2199,9 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       if (section.items.length === 1
           && section.items[0].title
           && section.items[0].title.trim() === section.title.trim()) {
-        // Flatten: use the container directly as the section, but keep section type
+        // Flatten: use the container directly, preserving its original type
         const flattenedItem = { ...section.items[0] };
-        flattenedItem.type = 'section'; // Change type to section
+        // Keep the original type instead of forcing 'section'
         return flattenedItem;
       }
       // Normal section with multiple items or different titles
@@ -2298,8 +2311,9 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       // Look for title components and their associated content
       const titleComponent = findTitleComponent(container);
       if (titleComponent) {
-        // Found a title component - this marks a section
+        // Found a title component - extract its type from JCR
         const sectionTitle = titleComponent['jcr:title'];
+        const sectionType = getItemTypeFromResourceType(titleComponent);
         const sectionItems = [];
 
         // Extract buttons and other components from this container
@@ -2309,7 +2323,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
           sections.push({
             title: sectionTitle,
             path: sectionTitle,
-            type: 'section',
+            type: sectionType,
             items: sectionItems,
           });
         }
@@ -2423,12 +2437,104 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
     return result;
   }
 
+  // Function to detect and convert accordion items (containers with only text content)
+  function convertAccordionContainers(items) {
+    if (!items || !Array.isArray(items)) return items;
+
+    return items.map((item) => {
+      const updatedItem = { ...item };
+
+      // Pattern detection: Convert container to accordion if:
+      // 1. Type is "container"
+      // 2. Has text content
+      // 3. Key matches accordion item patterns (item_1, item_copy, etc.)
+      // 4. No nested items or only text items
+      if (
+        updatedItem.type === 'container'
+        && updatedItem.text
+        && updatedItem.key
+        && (updatedItem.key.match(/^item_\d+$/) || updatedItem.key.match(/^item_copy/))
+        && (!updatedItem.items || updatedItem.items.length === 0)
+      ) {
+        updatedItem.type = 'accordion';
+      }
+
+      // Recursively process children
+      if (updatedItem.items) {
+        updatedItem.items = convertAccordionContainers(updatedItem.items);
+      }
+
+      return updatedItem;
+    });
+  }
+
+  // Function to detect and convert tab panel items (containers with nested items)
+  function convertTabContainers(items) {
+    if (!items || !Array.isArray(items)) return items;
+
+    return items.map((item) => {
+      const updatedItem = { ...item };
+
+      // Pattern detection: Convert container to tab if:
+      // 1. Type is "container"
+      // 2. Has nested items (structural grouping)
+      // 3. Has children (not a leaf node)
+      // Note: No key pattern restriction - any container with nested items is a structural tab
+      if (
+        updatedItem.type === 'container'
+        && updatedItem.items
+        && updatedItem.items.length > 0
+      ) {
+        updatedItem.type = 'tab';
+      }
+
+      // Recursively process children
+      if (updatedItem.items) {
+        updatedItem.items = convertTabContainers(updatedItem.items);
+      }
+
+      return updatedItem;
+    });
+  }
+
+  // Function to filter out empty containers (no items, no text, no meaningful content)
+  function filterEmptyContainers(items) {
+    if (!items || !Array.isArray(items)) return items;
+
+    return items
+      .filter((item) => {
+        // Keep if not a container
+        if (item.type !== 'container') return true;
+
+        // Filter out empty containers (no items, no text)
+        if (
+          (!item.items || item.items.length === 0)
+          && !item.text
+        ) {
+          console.log(`⚠️  Filtering out empty container: "${item.title}" (key: ${item.key})`);
+          return false;
+        }
+
+        return true;
+      })
+      .map((item) => {
+        // Recursively filter children
+        if (item.items) {
+          return { ...item, items: filterEmptyContainers(item.items) };
+        }
+        return item;
+      });
+  }
+
   const unwrappedHierarchy = unwrapAccordionItems(mainHierarchy);
+  const accordionConverted = convertAccordionContainers(unwrappedHierarchy);
+  const tabConverted = convertTabContainers(accordionConverted);
+  const convertedHierarchy = filterEmptyContainers(tabConverted);
 
   // Save to file
   const jsonOutputPath = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
   const hierarchyStructure = {
-    items: unwrappedHierarchy,
+    items: convertedHierarchy,
     linkUrl: CONTENT_PATH,
   };
 

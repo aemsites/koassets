@@ -307,11 +307,9 @@ function processContentStore(storeName) {
 
   // Check other cache files first if there are URLs in hierarchy but not in tabs
   let extraNotInAnyCache = extraInHierarchy;
-  let foundInOtherCaches = [];
 
   if (extraInHierarchy.length > 0 && otherCacheFiles.length > 0) {
-    // Check which extra hierarchy URLs are in other cache files
-    foundInOtherCaches = extraInHierarchy.filter((url) => otherCacheUrlKeys.has(url));
+    // Filter out URLs that are found in other cache files
     extraNotInAnyCache = extraInHierarchy.filter((url) => !otherCacheUrlKeys.has(url));
   }
 
@@ -354,22 +352,6 @@ function processContentStore(storeName) {
       if (!showAll && extraNotInAnyCache.length > 3) {
         console.log(`      ... and ${extraNotInAnyCache.length - 3} more (use --all to see all)`);
       }
-    }
-  }
-
-  // Show informational message about URLs found in other cache files
-  if (foundInOtherCaches.length > 0) {
-    console.log(`\nℹ️  ${foundInOtherCaches.length} URL(s) from ${hierarchyFile} found in other cache files (not tabs*.json):`);
-    const urlsToShow = showAll ? foundInOtherCaches : foundInOtherCaches.slice(0, 3);
-    urlsToShow.forEach((url, index) => {
-      const originalUrl = hierarchyOriginalUrls.get(url) || url;
-      console.log(`   ${index + 1}. ${url}`);
-      if (originalUrl !== url) {
-        console.log(`       (original: ${originalUrl})`);
-      }
-    });
-    if (!showAll && foundInOtherCaches.length > 3) {
-      console.log(`      ... and ${foundInOtherCaches.length - 3} more (use --all to see all)`);
     }
   }
 
@@ -459,9 +441,6 @@ function processContentStore(storeName) {
     }
     if (extraNotInAnyCache.length > 0) {
       console.log(`🆕 ${extraNotInAnyCache.length} linkURL(s) from ${hierarchyFile} are MISSING FROM all cache files`);
-    }
-    if (foundInOtherCaches.length > 0) {
-      console.log(`ℹ️  ${foundInOtherCaches.length} linkURL(s) from ${hierarchyFile} are in other cache files (not tabs*.json)`);
     }
     if (hasCountMismatches) {
       console.log(`🔢 ${countMismatches.length} linkURL(s) in ${hierarchyFile} have INVALID COUNTS (don't match any source)`);

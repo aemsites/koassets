@@ -147,7 +147,12 @@ function processInputPath(inputPath, { openViewer }) {
   console.log('\n📝 Generating HTML viewer...');
   let finalHtml;
   try {
-    finalHtml = buildViewerHtml(templatePath, hierarchyData, viewerTitle);
+    // Extract directory name from inputPath for subtitle
+    const inputDir = path.dirname(inputPath);
+    const dirName = path.basename(inputDir.includes('/derived-results') || inputDir.includes('/extracted-results')
+      ? path.dirname(inputDir)
+      : inputDir);
+    finalHtml = buildViewerHtml(templatePath, hierarchyData, viewerTitle, dirName);
   } catch (error) {
     console.error('❌ ERROR: Failed to build HTML viewer');
     console.error(`   ${error.message}`);
