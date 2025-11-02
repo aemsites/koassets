@@ -105,7 +105,9 @@ function createDeterministicId(input) {
 
   for (let i = 0; i < input.length; i++) {
     const char = input.charCodeAt(i);
+    // eslint-disable-next-line no-bitwise
     hash = ((hash << 5) - hash) + char;
+    // eslint-disable-next-line no-bitwise
     hash &= hash; // Convert to 32-bit integer
   }
 
@@ -454,7 +456,7 @@ async function extractLinkedContentStores(hierarchyStructureFile) {
 
   linkURLArray.forEach((linkURL) => {
     // Match pattern: /content/share/us/en/{content-store-name}/...
-    const match = linkURL.match(/^(\/content\/share\/us\/en\/[^\/]+)/);
+    const match = linkURL.match(/^(\/content\/share\/us\/en\/[^/]+)/);
     if (match) {
       const basePath = match[1];
       const baseStoreName = basePath.split('/').pop();
@@ -2301,31 +2303,38 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
     const rootContainer = jcrData.root.container;
 
     for (const containerKey in rootContainer) {
-      const container = rootContainer[containerKey];
+      if (Object.prototype.hasOwnProperty.call(rootContainer, containerKey)) {
+        const container = rootContainer[containerKey];
 
-      // Skip if not an object or is a tabs component
-      if (!container || typeof container !== 'object') continue;
-      if (container['sling:resourceType'] === 'tccc-dam/components/tabs') continue;
-      if (containerKey.startsWith('jcr:') || containerKey.startsWith('cq:') || containerKey.startsWith('sling:')) continue;
+        // Skip if not an object or is a tabs component
+        const shouldSkip = !container
+          || typeof container !== 'object'
+          || container['sling:resourceType'] === 'tccc-dam/components/tabs'
+          || containerKey.startsWith('jcr:')
+          || containerKey.startsWith('cq:')
+          || containerKey.startsWith('sling:');
 
-      // Look for title components and their associated content
-      const titleComponent = findTitleComponent(container);
-      if (titleComponent) {
-        // Found a title component - extract its type from JCR
-        const sectionTitle = titleComponent['jcr:title'];
-        const sectionType = getItemTypeFromResourceType(titleComponent);
-        const sectionItems = [];
+        if (!shouldSkip) {
+          // Look for title components and their associated content
+          const titleComponent = findTitleComponent(container);
+          if (titleComponent) {
+            // Found a title component - extract its type from JCR
+            const sectionTitle = titleComponent['jcr:title'];
+            const sectionType = getItemTypeFromResourceType(titleComponent);
+            const sectionItems = [];
 
-        // Extract buttons and other components from this container
-        extractComponentsFromContainer(container, sectionItems, sectionTitle);
+            // Extract buttons and other components from this container
+            extractComponentsFromContainer(container, sectionItems, sectionTitle);
 
-        if (sectionItems.length > 0) {
-          sections.push({
-            title: sectionTitle,
-            path: sectionTitle,
-            type: sectionType,
-            items: sectionItems,
-          });
+            if (sectionItems.length > 0) {
+              sections.push({
+                title: sectionTitle,
+                path: sectionTitle,
+                type: sectionType,
+                items: sectionItems,
+              });
+            }
+          }
         }
       }
     }
@@ -2338,19 +2347,19 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
     if (depth > maxDepth) return null;
 
     for (const key in obj) {
-      if (key.startsWith('jcr:') || key.startsWith('cq:') || key.startsWith('sling:')) continue;
+      if (!key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
+        const item = obj[key];
+        if (item && typeof item === 'object') {
+          // Check if this is a title component
+          if (item['sling:resourceType'] === 'tccc-dam/components/title' && item['jcr:title']) {
+            return item;
+          }
 
-      const item = obj[key];
-      if (item && typeof item === 'object') {
-        // Check if this is a title component
-        if (item['sling:resourceType'] === 'tccc-dam/components/title' && item['jcr:title']) {
-          return item;
-        }
-
-        // Recursively search in nested containers
-        if (item['sling:resourceType'] === 'tccc-dam/components/container') {
-          const found = findTitleComponent(item, depth + 1, maxDepth);
-          if (found) return found;
+          // Recursively search in nested containers
+          if (item['sling:resourceType'] === 'tccc-dam/components/container') {
+            const found = findTitleComponent(item, depth + 1, maxDepth);
+            if (found) return found;
+          }
         }
       }
     }
@@ -2360,38 +2369,38 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
   // Helper to extract components (buttons, etc.) from a container
   function extractComponentsFromContainer(container, items, sectionTitle) {
     for (const key in container) {
-      if (key.startsWith('jcr:') || key.startsWith('cq:') || key.startsWith('sling:')) continue;
+      if (!key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
+        const component = container[key];
+        if (component && typeof component === 'object') {
+          const resourceType = component['sling:resourceType'];
 
-      const component = container[key];
-      if (!component || typeof component !== 'object') continue;
+          // Extract buttons
+          if (resourceType === 'tccc-dam/components/button') {
+            const buttonTitle = component['jcr:title'] || key;
+            const buttonItem = {
+              title: buttonTitle,
+              path: `${sectionTitle}${PATH_SEPARATOR}${buttonTitle}`,
+              type: 'button',
+              key,
+              id: `button-${createDeterministicId(buttonTitle + key)}`,
+            };
 
-      const resourceType = component['sling:resourceType'];
+            // Extract URL sources
+            // For button components, linkURL should be treated as clickableUrl
+            if (component.linkURL) {
+              buttonItem.linkSources = {
+                clickableUrl: stripHostOnly(component.linkURL),
+              };
+            }
 
-      // Extract buttons
-      if (resourceType === 'tccc-dam/components/button') {
-        const buttonTitle = component['jcr:title'] || key;
-        const buttonItem = {
-          title: buttonTitle,
-          path: `${sectionTitle}${PATH_SEPARATOR}${buttonTitle}`,
-          type: 'button',
-          key,
-          id: `button-${createDeterministicId(buttonTitle + key)}`,
-        };
+            items.push(buttonItem);
+          }
 
-        // Extract URL sources
-        // For button components, linkURL should be treated as clickableUrl
-        if (component.linkURL) {
-          buttonItem.linkSources = {
-            clickableUrl: stripHostOnly(component.linkURL),
-          };
+          // Recursively search nested containers
+          if (resourceType === 'tccc-dam/components/container') {
+            extractComponentsFromContainer(component, items, sectionTitle);
+          }
         }
-
-        items.push(buttonItem);
-      }
-
-      // Recursively search nested containers
-      if (resourceType === 'tccc-dam/components/container') {
-        extractComponentsFromContainer(component, items, sectionTitle);
       }
     }
   }
