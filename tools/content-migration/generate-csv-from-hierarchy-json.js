@@ -20,6 +20,57 @@ const { sanitizeFileName } = require('./sanitize-utils.js');
 const CONFIG_FILE = path.join(__dirname, './da.config');
 
 /**
+ * Transforms search-assets.html URLs to new search format
+ * Extracts 'fulltext' parameter, decodes it, and creates new URL
+ * @param {string} url - The original URL
+ * @returns {string} - Transformed URL or original if not a search-assets.html URL
+ */
+function transformSearchUrl(url) {
+  if (!url || !url.includes('search-assets.html')) {
+    return url;
+  }
+
+  try {
+    // Parse the URL to extract query parameters
+    const urlObj = new URL(url, 'https://dummy.com'); // Need base URL for relative URLs
+    const fulltext = urlObj.searchParams.get('fulltext');
+
+    if (fulltext) {
+      // URL decode the fulltext parameter (handle &amp; in HTML)
+      const decodedFullText = decodeURIComponent(fulltext.replace(/&amp;/g, '&'));
+      return `/search/all?query=${encodeURIComponent(decodedFullText)}`;
+    }
+  } catch (error) {
+    // If URL parsing fails, return original URL
+    console.warn(`Failed to parse URL: ${url}`);
+  }
+
+  return url;
+}
+
+/**
+ * Transforms all search-assets.html URLs within text/HTML content
+ * @param {string} text - The text or HTML content
+ * @returns {string} - Text with transformed URLs
+ */
+function transformSearchUrlsInText(text) {
+  if (!text || !text.includes('search-assets.html')) {
+    return text;
+  }
+
+  // Match URLs in href attributes and standalone URLs
+  // Pattern matches: href="URL" or href='URL' or standalone https://...search-assets.html...
+  const urlPattern = /((?:href=["'])?)([^"'\s]*search-assets\.html[^"'\s]*)(["']?)/gi;
+
+  return text.replace(urlPattern, (match, prefix, url, suffix) => {
+    // Decode HTML entities in URL
+    const decodedUrl = url.replace(/&amp;/g, '&');
+    const transformedUrl = transformSearchUrl(decodedUrl);
+    return prefix + transformedUrl + suffix;
+  });
+}
+
+/**
  * Extracts link URL and type from item, supporting both old and new formats
  * Type priority:
  * 1. item.type if it's 'button' or 'accordion'
@@ -50,6 +101,9 @@ function extractLinkUrl(item) {
   if (!url) {
     url = item.linkURL ?? item.linkUrl ?? '';
   }
+
+  // Transform search-assets.html URLs to new format
+  url = transformSearchUrl(url);
 
   return { url, type };
 }
@@ -274,13 +328,15 @@ function escapeCsvField(value) {
  */
 function itemToRow(item, destPath, storeName) {
   const linkData = extractLinkUrl(item);
+  // Transform search URLs in text content
+  const transformedText = transformSearchUrlsInText(item.text || '');
   return [
     escapeCsvField(formatPath(item.path || '')),
     escapeCsvField(item.title || ''),
     escapeCsvField(formatImageUrl(item.imageUrl || '', destPath, storeName)),
     escapeCsvField(linkData.url),
     escapeCsvField(item.type || ''),
-    escapeCsvField(item.text || ''),
+    escapeCsvField(transformedText),
   ].join(',');
 }
 
