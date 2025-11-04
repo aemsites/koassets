@@ -229,54 +229,6 @@
   margin-top: 8px;
 }
 
-.profile-modal .notifications-section {
-  padding: 0 24px;
-  margin-bottom: 32px;
-}
-
-.profile-modal .notifications-section h2 {
-  font-family: var(--heading-font-family);
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0 0 20px;
-  color: #1e1e1e;
-}
-
-.profile-modal .notification-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.profile-modal .notification-item:last-child {
-  border-bottom: none;
-}
-
-.profile-modal .notification-item span {
-  font-size: 16px;
-  color: #1e1e1e;
-}
-
-.profile-modal .profile-actions {
-  padding: 0 24px 24px;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.profile-modal .save-button {
-  background-color: #ccc;
-  border: none;
-  border-radius: 24px;
-  padding: 12px 24px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  color: #666;
-  transition: background-color 0.3s ease;
-}
-
 .profile-modal .save-button:hover {
   background-color: #bbb;
 }
@@ -291,7 +243,6 @@
 
   .profile-modal .profile-header,
   .profile-modal .profile-info,
-  .profile-modal .notifications-section,
   .profile-modal .profile-actions {
     padding-left: 16px;
     padding-right: 16px;
