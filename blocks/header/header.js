@@ -378,7 +378,8 @@ async function createHeaderBar() {
     myAccountMenu.innerHTML = `
       <ul>
         <li><a href="#" id="my-profile-link">My Profile</a></li>
-        <li><a href="#">My Rights Requests</a></li>
+        <li><a href="/my-rights-requests">My Rights Requests</a></li>
+        <li><a href="/my-rights-reviews">My Rights Reviews</a></li>
         <li><a href="#">My Saved Templates</a></li>
         <li><a href="#">My Print Jobs</a></li>
         <li><a href="/my-collections">My Collections</a></li>

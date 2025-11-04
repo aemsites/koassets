@@ -44,6 +44,30 @@
   /* button color */
   --primary-color: #ed0000;
   --primary-color-hover: #d11700;
+
+  /* status badge colors */
+  --status-not-started: #6ac9ce;
+  --status-not-started-bg: rgb(106 201 206 / 12%);
+  --status-in-progress: #f79900;
+  --status-in-progress-bg: rgb(247 153 0 / 12%);
+  --status-completed: #6ace7f;
+  --status-completed-bg: rgb(106 206 127 / 12%);
+  --status-cancelled: #c9372c;
+  --status-cancelled-bg: rgb(201 55 44 / 12%);
+
+  /* clearance colors */
+  --clearance-available: #6ace7f;
+  --clearance-not-available: #c9372c;
+  --clearance-exceptions: #f79900;
+  --clearance-partial: #ffd700;
+
+  /* action button colors */
+  --button-primary: #e60012;
+  --button-primary-hover: #c10511;
+
+  /* label colors */
+  --label-color: #555;
+  --label-secondary: #888;
 }
 
 /* fallback fonts */

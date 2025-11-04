@@ -1,0 +1,765 @@
+.my-rights-reviews {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  min-height: 100vh;
+  height: auto;
+}
+
+.my-rights-reviews .reviews-container {
+  width: 100%;
+}
+
+/* Header */
+.my-rights-reviews .reviews-header {
+  margin-bottom: 1rem;
+}
+
+.my-rights-reviews .title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.my-rights-reviews .reviews-title {
+  font-size: 2.5rem;
+  font-weight: 400;
+  color: #333;
+  margin: 0;
+  padding-bottom: 0.5rem;
+  display: inline-block;
+}
+
+/* Tabs */
+.my-rights-reviews .reviews-tabs {
+  display: flex;
+  gap: 0;
+  margin-top: 1.5rem;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.my-rights-reviews .tab-button {
+  padding: 1rem 2rem;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: -2px;
+}
+
+.my-rights-reviews .tab-button:hover {
+  color: #333;
+  background-color: #f5f5f5;
+}
+
+.my-rights-reviews .tab-button.active {
+  color: #e60012;
+  border-bottom-color: #e60012;
+  font-weight: 600;
+}
+
+/* Controls */
+.my-rights-reviews .reviews-controls {
+  display: flex !important;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  margin-top: 2rem;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.my-rights-reviews .showing-text {
+  font-size: 1rem;
+  font-weight: 400;
+  color: #666;
+}
+
+.my-rights-reviews .showing-text strong {
+  color: #e60012;
+}
+
+.my-rights-reviews .filter-container {
+  display: flex !important;
+  align-items: center;
+  gap: 1rem;
+  visibility: visible !important;
+}
+
+.my-rights-reviews .filter-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Multi-select Filter Dropdown */
+.my-rights-reviews .filter-dropdown {
+  position: relative;
+  min-width: 200px;
+  display: block !important;
+  visibility: visible !important;
+}
+
+.my-rights-reviews .filter-button {
+  padding: 0.5rem 2rem 0.5rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  background-color: white;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23666' d='M1.41 0L6 4.58 10.59 0 12 1.41l-6 6-6-6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  color: #333;
+  display: block !important;
+  visibility: visible !important;
+}
+
+.my-rights-reviews .filter-button:hover {
+  border-color: #999;
+}
+
+.my-rights-reviews .filter-button:focus {
+  outline: none;
+  border-color: #e60012;
+}
+
+.my-rights-reviews .filter-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-top: 0.25rem;
+  padding: 0.5rem 0;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 10%);
+  display: none;
+  z-index: 100;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.my-rights-reviews .filter-menu.open {
+  display: block !important;
+}
+
+.my-rights-reviews .filter-option {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.my-rights-reviews .filter-option:hover {
+  background-color: #f5f5f5;
+}
+
+.my-rights-reviews .filter-option input[type="checkbox"] {
+  margin-right: 0.75rem;
+  cursor: pointer;
+}
+
+.my-rights-reviews .filter-option span {
+  font-size: 0.9rem;
+  color: #333;
+}
+
+/* Table Layout */
+.my-rights-reviews .reviews-list-container {
+  width: 100%;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.my-rights-reviews .reviews-table-header {
+  display: grid;
+  grid-template-columns: 50px 150px 1fr 150px 200px;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: #f8f8f8;
+  border-bottom: 2px solid #ddd;
+  font-weight: 600;
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.my-rights-reviews .header-cell {
+  display: flex;
+  align-items: center;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Review Rows */
+.my-rights-reviews .review-row {
+  display: grid;
+  grid-template-columns: 50px 150px 1fr 150px 200px;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+  align-items: center;
+  transition: background-color 0.2s ease;
+}
+
+.my-rights-reviews .review-row:hover {
+  background-color: #f9f9f9;
+}
+
+.my-rights-reviews .review-row[data-expanded="true"] {
+  background-color: #f5f9ff;
+}
+
+.my-rights-reviews .row-cell {
+  display: flex;
+  align-items: center;
+}
+
+/* Toggle Button */
+.my-rights-reviews .cell-toggle {
+  justify-content: center;
+}
+
+.my-rights-reviews .expand-toggle-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+.my-rights-reviews .expand-toggle-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 6px 0 6px 10px;
+  border-color: transparent transparent transparent #666;
+  transition: transform 0.2s ease;
+}
+
+.my-rights-reviews .review-row[data-expanded="true"] .expand-toggle-btn::before {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+/* Preview */
+.my-rights-reviews .cell-preview {
+  position: relative;
+  width: 130px;
+  height: 80px;
+  flex-shrink: 0;
+}
+
+.my-rights-reviews .preview-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+}
+
+.my-rights-reviews .preview-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.my-rights-reviews .asset-count-badge {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background-color: rgb(0 0 0 / 70%);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+}
+
+/* Name */
+.my-rights-reviews .cell-name {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.my-rights-reviews .request-id {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+}
+
+.my-rights-reviews .submitted-by {
+  font-size: 0.8125rem;
+  color: #888;
+  font-style: italic;
+}
+
+.my-rights-reviews .request-date {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.my-rights-reviews .request-date::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 0.375rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%23666' d='M11 2V1h-1v1H6V1H5v1H1v13h14V2h-4zm3 12H2V6h12v8zm0-9H2V3h3v1h1V3h4v1h1V3h3v2z'/%3E%3C/svg%3E");
+  background-size: contain;
+  vertical-align: middle;
+}
+
+/* Status */
+.my-rights-reviews .cell-status {
+  justify-content: flex-start;
+}
+
+.my-rights-reviews .status-badge {
+  padding: 0.375rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  color: #1e1e1e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Not Started - Teal */
+.my-rights-reviews .status-badge.status-not-started {
+  border: 1px solid var(--status-not-started);
+  background-color: var(--status-not-started-bg);
+}
+
+/* In Progress, Quote Pending, Release Pending - Orange */
+.my-rights-reviews .status-badge.status-in-progress,
+.my-rights-reviews .status-badge.status-quote-pending,
+.my-rights-reviews .status-badge.status-release-pending {
+  border: 1px solid var(--status-in-progress);
+  background-color: var(--status-in-progress-bg);
+}
+
+/* Done - Green */
+.my-rights-reviews .status-badge.status-done {
+  border: 1px solid var(--status-completed);
+  background-color: var(--status-completed-bg);
+}
+
+/* User Canceled, RM Canceled - Red */
+.my-rights-reviews .status-badge.status-user-canceled,
+.my-rights-reviews .status-badge.status-rm-canceled {
+  border: 1px solid var(--status-cancelled);
+  background-color: var(--status-cancelled-bg);
+}
+
+/* Action Column */
+.my-rights-reviews .cell-action {
+  flex-direction: column;
+  gap: 0.5rem;
+  justify-content: center;
+  align-items: center;
+  padding: 0 0.5rem;
+}
+
+.my-rights-reviews .action-button {
+  padding: 0.5rem 1.25rem;
+  border-radius: 25px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  text-align: center;
+  min-width: 110px;
+  max-width: 150px;
+}
+
+.my-rights-reviews .assign-button {
+  background-color: var(--button-primary);
+  color: #fff;
+  border: none;
+}
+
+.my-rights-reviews .assign-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.my-rights-reviews .assign-button:hover:not(:disabled) {
+  background-color: var(--button-primary-hover);
+}
+
+.my-rights-reviews .status-button {
+  background-color: var(--button-primary);
+  color: #fff;
+  border: 1px solid var(--button-primary);
+}
+
+.my-rights-reviews .status-button:hover {
+  background-color: var(--button-primary-hover);
+  color: #fff;
+}
+
+.my-rights-reviews .view-button {
+  background-color: #fff;
+  color: var(--button-primary);
+  border: 1px solid var(--button-primary);
+}
+
+.my-rights-reviews .view-button:hover {
+  background-color: var(--button-primary);
+  color: #fff;
+}
+
+.my-rights-reviews .view-button:active,
+.my-rights-reviews .view-button:focus,
+.my-rights-reviews .view-button:focus-visible,
+.my-rights-reviews .view-button:visited {
+  background-color: #fff !important;
+  color: var(--button-primary) !important;
+  border: 1px solid var(--button-primary) !important;
+  outline: none !important;
+}
+
+/* Detail Row (Expanded Content) */
+.my-rights-reviews .detail-row {
+  grid-column: 1 / -1;
+  display: none;
+  padding: 1rem;
+  background-color: #f9f9f9;
+  border-top: 1px solid #e0e0e0;
+  margin-top: 1rem;
+}
+
+.my-rights-reviews .review-row[data-expanded="true"] .detail-row {
+  display: block;
+}
+
+.my-rights-reviews .review-details-expanded {
+  padding: 1rem;
+  background-color: white;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+}
+
+.my-rights-reviews .review-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.my-rights-reviews .summary-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.my-rights-reviews .summary-cell {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.my-rights-reviews .summary-cell strong {
+  color: #333;
+  font-weight: 600;
+  display: inline-block;
+  min-width: 120px;
+}
+
+/* Loading & Error States */
+.my-rights-reviews .loading-state,
+.my-rights-reviews .error-state,
+.my-rights-reviews .empty-state {
+  padding: 3rem;
+  text-align: center;
+  color: #666;
+  font-size: 1.125rem;
+}
+
+.my-rights-reviews .error-state {
+  color: #e60012;
+}
+
+/* Status Change Modal */
+.status-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgb(0 0 0 / 50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.status-modal {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgb(0 0 0 / 20%);
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.status-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.status-modal-header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.status-modal-close {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  line-height: 1;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.status-modal-close:hover {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.status-modal-body {
+  padding: 1.5rem;
+}
+
+.status-modal-info {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  color: #666;
+}
+
+.status-modal-info strong {
+  color: #333;
+  font-weight: 600;
+}
+
+.status-modal-label {
+  display: block;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.status-modal-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  color: #333;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+  appearance: auto;
+  min-height: 44px;
+  display: block;
+  box-sizing: border-box;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+.status-modal-select option {
+  padding: 0.5rem;
+  font-size: 1rem;
+  color: #333;
+  background-color: white;
+}
+
+.status-modal-select:focus {
+  outline: none;
+  border-color: #e60012;
+  box-shadow: 0 0 0 3px rgb(230 0 18 / 10%);
+}
+
+.status-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.status-modal-button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.status-modal-button.cancel-button {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.status-modal-button.cancel-button:hover {
+  background-color: #e0e0e0;
+}
+
+.status-modal-button.confirm-button {
+  background-color: var(--button-primary);
+  color: white;
+}
+
+.status-modal-button.confirm-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.status-modal-button.confirm-button:hover:not(:disabled) {
+  background-color: var(--button-primary-hover);
+}
+
+/* Responsive Design */
+@media (width <= 1200px) {
+  .my-rights-reviews .reviews-table-header,
+  .my-rights-reviews .review-row {
+    grid-template-columns: 40px 120px 1fr 120px 180px;
+    gap: 0.75rem;
+  }
+}
+
+@media (width <= 992px) {
+  .my-rights-reviews .reviews-table-header,
+  .my-rights-reviews .review-row {
+    grid-template-columns: 40px 100px 1fr 100px;
+    gap: 0.5rem;
+  }
+
+  .my-rights-reviews .header-cell.header-action,
+  .my-rights-reviews .cell-action .view-button {
+    display: none;
+  }
+
+  .my-rights-reviews .cell-action {
+    justify-content: center;
+  }
+}
+
+@media (width <= 768px) {
+  .my-rights-reviews {
+    padding: 1rem;
+  }
+
+  .my-rights-reviews .reviews-title {
+    font-size: 1.75rem;
+  }
+
+  .my-rights-reviews .tab-button {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .my-rights-reviews .reviews-controls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .my-rights-reviews .filter-container {
+    width: 100%;
+  }
+
+  .my-rights-reviews .filter-dropdown {
+    width: 100%;
+  }
+
+  .my-rights-reviews .reviews-table-header {
+    display: none;
+  }
+
+  .my-rights-reviews .review-row {
+    grid-template-columns: 40px 1fr;
+    gap: 0.75rem;
+    padding: 1rem 0.5rem;
+  }
+
+  .my-rights-reviews .cell-preview {
+    grid-column: 2 / 3;
+    grid-row: 1 / 2;
+    width: 100%;
+    height: 120px;
+  }
+
+  .my-rights-reviews .cell-name {
+    grid-column: 2 / 3;
+    grid-row: 2 / 3;
+  }
+
+  .my-rights-reviews .cell-status {
+    grid-column: 2 / 3;
+    grid-row: 3 / 4;
+  }
+
+  .my-rights-reviews .cell-action {
+    grid-column: 2 / 3;
+    grid-row: 4 / 5;
+    flex-direction: column;
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .my-rights-reviews .action-button {
+    width: 100%;
+  }
+
+  .my-rights-reviews .cell-action .view-button {
+    display: block;
+  }
+
+  .my-rights-reviews .summary-row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}

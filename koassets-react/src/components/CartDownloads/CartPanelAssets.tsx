@@ -22,6 +22,7 @@ import CartRightsCheck from './CartRightsCheck';
 import EmptyCartDownloadContent from './EmptyCartDownloadContent';
 import { WorkflowProgress } from './WorkflowProgress';
 import { EAGER_LOAD_IMAGE_COUNT } from '../../constants/images';
+import { calendarDateToISO } from '../../utils/dateConverters';
 
 // Component for rendering individual cart item row
 interface CartAssetItemRowProps {
@@ -93,7 +94,7 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
             const detail = { assets: cartAssetItems } as unknown as Record<string, unknown>;
             window.dispatchEvent(new CustomEvent('openCollectionModal', { detail }));
         } catch (err) {
-            console.warn('Failed to open Add to Collection modal from cart:', err);
+            console.trace('Failed to open Add to Collection modal from cart:', err);
         }
     };
 
@@ -104,7 +105,7 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
             const detail = { assets: cartAssetItems } as unknown as Record<string, unknown>;
             window.dispatchEvent(new CustomEvent('openShareModal', { detail }));
         } catch (err) {
-            console.warn('Failed to open Share modal from cart:', err);
+            console.trace('Failed to open Share modal from cart:', err);
         }
     };
 
@@ -234,7 +235,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
 
     // Handler for opening rights check with intended use data
     const handleOpenRightsCheck = useCallback((requestDownloadData: RequestDownloadStepData): void => {
-        console.log('Opening rights check with request download data:', requestDownloadData);
+        console.trace('Opening rights check with request download data:', requestDownloadData);
 
         // Initialize the rights check form data with default values
         setRightsCheckFormData({
@@ -288,7 +289,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     }, [rightsCheckFormData]);
 
     // Handler for sending rights extension request
-    const handleSendRightsExtensionRequest = useCallback((rightsExtensionData: RequestRightsExtensionStepData): void => {
+    const handleSendRightsExtensionRequest = useCallback(async (rightsExtensionData: RequestRightsExtensionStepData): Promise<void> => {
         // Update the form data state
         setRightsExtensionFormData(rightsExtensionData);
 
@@ -298,8 +299,37 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             rightsExtension: rightsExtensionData
         }));
 
-        // TODO: Implement API call to submit rights extension request
-        console.log('Rights extension request sent:', rightsExtensionData);
+        try {
+            // Merge requestDownload data (air/pull dates, markets, media) with rightsExtension data
+            const payload = {
+                ...rightsExtensionData,
+                airDate: calendarDateToISO(stepData.requestDownload?.airDate),
+                pullDate: calendarDateToISO(stepData.requestDownload?.pullDate),
+                materialsRequiredDate: calendarDateToISO(rightsExtensionData.materialsRequiredDate),
+                selectedMarkets: Array.from(stepData.requestDownload?.selectedMarkets || []),
+                selectedMediaChannels: Array.from(stepData.requestDownload?.selectedMediaChannels || [])
+            };
+
+            const response = await fetch('/api/rightsrequests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to submit rights request: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            console.trace('Rights extension request submitted successfully:', result);
+
+            // Show success message to user (optional - could add toast notification)
+
+        } catch (error) {
+            console.error('Error submitting rights extension request:', error); // Keep as error
+            // Show error message to user (optional - could add toast notification)
+        }
 
         // Remove restricted assets from cart
         if (rightsExtensionData.restrictedAssets && rightsExtensionData.restrictedAssets.length > 0) {
@@ -316,7 +346,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             }
             // If no items left, the auto-close useEffect will handle closing the cart
         }
-    }, [cartAssetItems, setCartAssetItems]);
+    }, [cartAssetItems, setCartAssetItems, stepData.requestDownload]);
 
     const handleOpenDownload = useCallback(async (): Promise<void> => {
         setStepStatus(prev => ({ ...prev, [WorkflowStep.CART]: stepStatus[WorkflowStep.CART] === StepStatus.INIT ? StepStatus.SUCCESS : stepStatus[WorkflowStep.CART] }));
@@ -325,7 +355,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
 
         // Get ready-to-use items for download
         const readyToUseItems = filteredItems[FilteredItemsType.READY_TO_USE] || [];
-        console.log('Ready to use items for download:', readyToUseItems);
+        console.trace('Ready to use items for download:', readyToUseItems);
 
         // Show download content with ready-to-use items
         if (readyToUseItems.length > 0) {
@@ -352,7 +382,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         if (success) {
             setStepStatus(prev => ({ ...prev, [WorkflowStep.DOWNLOAD]: StepStatus.SUCCESS }));
             setActiveStep(WorkflowStep.CLOSE_DOWNLOAD);
-            console.log('Download completed successfully for assets:', successfulAssets);
+            console.trace('Download completed successfully for assets:', successfulAssets);
 
             // Remove successfully downloaded assets from cart
             if (successfulAssets && successfulAssets.length > 0) {
