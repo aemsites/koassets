@@ -18,6 +18,7 @@ import { originFadel } from './origin/fadel';
 import { cors } from './util/itty';
 import { apiUser } from './user';
 import { savedSearchesApi } from './api/savedsearches';
+import { rightsRequestsApi } from './api/rightsrequests';
 
 // Shared CORS origins
 const allowedOrigins = [
@@ -108,6 +109,9 @@ router
 
   // Saved Searches API (with extended CORS for DELETE/PUT)
   .all('/api/savedsearches/*', savedSearchesApi)
+
+  // Rights Requests API
+  .all('/api/rightsrequests/*', rightsRequestsApi)
 
   // future API routes
   .all('/api/*', () => error(404))
