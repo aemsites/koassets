@@ -1,30 +1,32 @@
+/* stylelint-disable no-descending-specificity */
+
 .content-stores {
-  padding: 20px;
-  border-radius: 8px;
+  padding: 0;
+  border-radius: 0;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  width: 100%;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
   background-color: var(--background-color);
   font-family: var(--body-font-family);
 }
 
 .content-stores .container {
-  max-width: 1400px;
+  max-width: none;
   width: 100%;
-  margin: 0 auto;
-  border-radius: 8px;
+  margin: 0;
+  border-radius: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   flex: 1;
   background-color: white;
-  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
+  box-shadow: none;
 }
 
 .content-stores .controls {
-  padding: 2rem;
-  border-bottom: 2px solid var(--background-color);
+  padding: 30px 150px;
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
@@ -114,34 +116,83 @@
 }
 
 .content-stores .content {
-  padding: 2rem;
+  padding: 0;
   flex: 1;
   overflow-y: auto;
   background-color: white;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
 }
 
 .content-stores .tree-item {
   margin-bottom: 0.5rem;
 }
 
+/* Make leaf items (no children) display inline */
+.content-stores .tree-item.leaf-item {
+  display: inline-block;
+  margin-right: 0.5rem;
+  margin-bottom: 0.5rem;
+  vertical-align: top;
+}
+
+/* Button items in grid layout - fill whole cell width */
+.content-stores .tree-item.button-item {
+  display: block;
+  width: 100%;
+}
+
 .content-stores .tree-node {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  padding: 10px 16px;
   border-radius: 8px;
   transition: all 0.2s ease;
   user-select: text;
-  border: 1px solid transparent;
+  border: 1px solid var(--primary-color);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .content-stores .tree-node:hover {
-  background: var(--background-color);
-  border-color: rgb(237 0 0 / 10%);
+  background: var(--primary-color);
+  color: white;
 }
 
-.content-stores .tree-node.expanded {
-  background: rgb(237 0 0 / 5%);
-  border-color: var(--primary-color);
+.content-stores .tree-node:hover .node-title {
+  color: white;
+}
+
+.content-stores .tree-node:hover .expand-icon {
+  color: white;
+}
+
+.content-stores .tree-item.button-item .tree-node {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Narrower styling for leaf nodes */
+.content-stores .tree-item.leaf-item .tree-node {
+  padding: 0 20px;
+  min-width: auto;
+  width: auto;
+  display: inline-flex;
+}
+
+.content-stores .tree-node.expanded:not(.type-button, .type-title) {
+  background-color: #ED0000;
+  border-color: #ED0000;
+  color: white;
+  padding: 10px;
+}
+
+.content-stores .tree-node.expanded:not(.type-button, .type-title) .node-title {
+  color: white;
+}
+
+.content-stores .tree-node.expanded:not(.type-button, .type-title) .expand-icon {
+  color: white;
 }
 
 .content-stores .expand-icon {
@@ -175,31 +226,261 @@
 .content-stores .node-title {
   font-weight: 500;
   color: var(--text-color);
-  font-family: var(--body-font-family);
-  font-size: var(--body-font-size-s);
+  font-family: "TCCC UnityText Medium", roboto-condensed-fallback, sans-serif;
+  font-size: 14px;
 }
 
-.content-stores .tree-node[data-has-children="false"] .node-title:not(.has-link) {
-  color: var(--dark-color);
-  opacity: 0.5;
+/* Smaller font for leaf items */
+.content-stores .tree-item.leaf-item .node-title {
+  font-size: var(--body-font-size-xs);
+}
+
+/* Button type styling (matching cmp-button exactly) */
+.content-stores .tree-node.type-button {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  border-radius: 30px;
+  border: 1px solid var(--primary-color);
+  background-color: rgb(255 255 255);
+  position: relative;
+  min-height: 44px;
+  width: 100%;
+  box-sizing: inherit;
+  font-family: var(--heading-font-family);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 140%;
+  color: rgb(32 32 32);
+  cursor: pointer;
+  transition: background-color 0.5s;
+  text-decoration: none;
+}
+
+.content-stores .tree-node.type-button .node-title {
+  flex: 1;
+  line-height: 1.4;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  text-align: left;
+  text-decoration: none;
+  font-family: "TCCC UnityText Medium", roboto-condensed-fallback, sans-serif;
+}
+
+/* Ensure no underline on button titles even when they have links */
+.content-stores .tree-node.type-button .node-title.has-link {
+  text-decoration: none;
+}
+
+.content-stores .tree-node.type-button:hover .node-title.has-link {
+  text-decoration: none;
+}
+
+.content-stores .tree-node.type-button::after {
+  content: '›';
+  font-size: 20px;
+  font-weight: bold;
+  color: rgb(32 32 32);
+  margin-left: auto;
+  padding-left: 8px;
+  transition: color 0.5s;
+}
+
+/* Button default state */
+.content-stores .tree-node.type-button:not(.disabled) {
+  background-color: white;
+  color: #333;
+  border-color: #ED0000;
+}
+
+.content-stores .tree-node.type-button:not(.disabled)::after {
+  color: #333;
+}
+
+/* Button hover state (matching search-buttons) */
+.content-stores .tree-node.type-button:not(.disabled):hover,
+.content-stores .tree-node.type-button:not(.disabled):focus {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.content-stores .tree-node.type-button:not(.disabled):hover .node-title,
+.content-stores .tree-node.type-button:not(.disabled):focus .node-title {
+  color: white;
+}
+
+.content-stores .tree-node.type-button:not(.disabled):hover::after,
+.content-stores .tree-node.type-button:not(.disabled):focus::after {
+  color: white;
+}
+
+/* Disabled button styling */
+.content-stores .tree-node.type-button.disabled {
+  background-color: #f5f5f5;
+  border-color: #ccc;
+  cursor: not-allowed;
+}
+
+.content-stores .tree-node.type-button.disabled .node-title {
+  color: #666;
+  margin-left: 24px;
+}
+
+.content-stores .tree-node.type-button.disabled::after {
+  color: #666;
+}
+
+.content-stores .tree-node.type-button.disabled::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  background-image: url('/icons/eye-slash-icon.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.6;
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Teaser hover - only change text color to primary */
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node {
+  cursor: pointer;
+  padding: 0;
+  height: 120px;
+  width: 100%;
+  border: none;
+  box-shadow: 0 0 0 2px rgb(237 0 0 / 10%);
+}
+
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node .node-title {
+  padding-left: 10px;
+}
+
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node .item-image,
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node picture,
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node img {
+  height: 100%;
+  width: auto;
+  object-fit: cover;
+}
+
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:hover {
+  background-color: transparent !important;
+  color: inherit;
+}
+
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:hover .node-title {
+  color: var(--primary-color) !important;
+}
+
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:hover .expand-icon {
+  color: var(--primary-color) !important;
+}
+
+.content-stores .tree-item[data-item-type="title"] {
+  padding: 24px 150px;
+}
+
+/* Alternating background colors for sections with title items */
+.content-stores .content > .tree-item[data-item-type="title"]:nth-of-type(even) {
+  background-color: rgb(245 245 245);
+}
+
+.content-stores .content > .tree-item[data-item-type="title"]:nth-of-type(odd) {
+  background-color: rgb(255 255 255);
+}
+
+/* Top-level items styling (direct children of .content) */
+.content-stores .content > .tree-item:not([data-item-type="title"]) {
+  padding: 0 150px;
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+/* First non-title top-level item */
+.content-stores .content > .tree-item:not([data-item-type="title"]):first-child {
+  margin-top: 20px;
+}
+
+.content-stores .tree-node.type-title {
+  background: none;
+  border: none;
+  padding: 0;
   cursor: default;
 }
 
-.content-stores .node-title.has-link {
+.content-stores .tree-node.type-title h2.node-title {
+  display: inline;
+  font-family: "TCCC UnityHeadline", roboto-condensed-fallback, sans-serif;
+  font-size: 29px;
+  font-weight: 900;
+  line-height: 1;
+  height: auto;
+  color: rgb(30 30 30);
+  margin: 0;
+  padding: 0;
+  scroll-margin: 40px;
+  unicode-bidi: isolate;
+  width: auto;
+  vertical-align: bottom;
+}
+
+.content-stores .tree-node.type-title h2.node-title strong {
+  display: inline;
+  font-family: "TCCC UnityHeadline", roboto-condensed-fallback, sans-serif;
+  font-size: 29px;
+  font-weight: 900;
+  line-height: 1;
+  height: auto;
+  color: rgb(30 30 30);
+  padding: 0;
+  border: 0;
+  margin: 0;
+  width: auto;
+}
+
+.content-stores .tree-node.type-title h2.node-title::after {
+  display: block;
+  content: "";
+  background-color: rgb(255 0 0);
+  color: rgb(30 30 30);
+  font-family: "TCCC UnityHeadline", roboto-condensed-fallback, sans-serif;
+  font-size: 29px;
+  font-weight: 600;
+  height: 3px;
+  line-height: 36.25px;
+  margin: 10px 0 30px;
+  padding: 0;
+  border: 0;
+  width: 96px;
+}
+
+.content-stores .tree-node.type-title:hover {
+  background: none;
+  border: none;
+}
+
+/* Remove left margin for children of title items */
+.content-stores .tree-node.type-title ~ .tree-children {
+  margin-left: 0;
+}
+
+.content-stores .tree-item .tree-node.type-title + .tree-children {
+  margin-left: 0;
+}
+
+/* Link styling for node titles (excluding buttons) */
+.content-stores .tree-node:not(.type-button) .node-title.has-link {
   color: var(--link-color);
   text-decoration: none;
   transition: color 0.2s ease;
   cursor: pointer;
-}
-
-.content-stores .tree-node[data-has-children="false"] .node-title.has-link {
-  color: var(--link-color);
-  text-decoration: underline;
-}
-
-.content-stores .tree-node[data-has-children="false"] .node-title.has-link:hover {
-  color: var(--link-hover-color);
-  text-decoration: underline;
 }
 
 .content-stores .node-title.has-link:hover {
@@ -207,15 +488,97 @@
   text-decoration: underline;
 }
 
+/* Disabled styling for leaf nodes without links (excluding buttons) */
+.content-stores .tree-node:not(.type-button)[data-has-children="false"] .node-title:not(.has-link) {
+  color: var(--dark-color);
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Underline links in leaf nodes (excluding buttons) */
+.content-stores .tree-node:not(.type-button)[data-has-children="false"] .node-title.has-link {
+  color: var(--link-color);
+  text-decoration: underline;
+}
+
+.content-stores .tree-node:not(.type-button)[data-has-children="false"] .node-title.has-link:hover {
+  color: var(--link-hover-color);
+  text-decoration: underline;
+}
+
 .content-stores .tree-children {
   margin-left: 32px;
-  border-left: 2px solid var(--background-color);
   padding-left: 0;
   display: none;
 }
 
 .content-stores .tree-children.expanded {
   display: block;
+}
+
+.content-stores .tree-children.expanded:not(.has-grid) {
+  margin-top: 10px;
+}
+
+/* Grid container for leaf items - fill parent width */
+.content-stores .tree-children.has-grid {
+  display: none;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  padding: 20px 0 0;
+  border: none;
+  box-sizing: border-box;
+}
+
+.content-stores .tree-children.has-grid.expanded {
+  display: grid;
+}
+
+/* Item wrapper in grid - fill grid cell */
+.content-stores .tree-children.has-grid .tree-item {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* Override inline styles for items in grid */
+.content-stores .tree-children.has-grid .tree-item .tree-node {
+  width: 100%;
+  display: flex;
+  box-sizing: border-box;
+}
+
+/* Button-specific styling in grid */
+.content-stores .tree-children.has-grid .tree-item.button-item {
+  font-family: var(--heading-font-family);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+/* Show all children button */
+.content-stores .show-all-children {
+  margin-top: 12px;
+  padding: 8px 16px;
+  background-color: rgb(245 245 245);
+  border: 1px solid var(--primary-color);
+  border-radius: 8px;
+  color: var(--primary-color);
+  font-size: var(--body-font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  user-select: none;
+}
+
+.content-stores .show-all-children:hover {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.content-stores .show-all-children:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
 }
 
 .content-stores .rich-content {
@@ -241,6 +604,13 @@
   text-decoration: underline;
 }
 
+/* Responsive grid for leaf items */
+@media (width < 1200px) {
+  .content-stores .tree-children.has-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (width <= 768px) {
   .content-stores .header h1 {
     font-size: 2rem;
@@ -264,5 +634,9 @@
     width: 100%;
     margin-left: 0;
     justify-content: flex-start;
+  }
+
+  .content-stores .tree-children.has-grid {
+    grid-template-columns: 1fr;
   }
 }

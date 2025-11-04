@@ -283,6 +283,55 @@ export function getBlockKeyValues(block) {
 }
 
 /**
+ * Escapes a CSV field value by wrapping in quotes if needed and escaping internal quotes
+ * @param {string} value - The value to escape
+ * @returns {string} The escaped CSV field
+ */
+function escapeCsvField(value) {
+  if (value == null || value === '') return '';
+
+  const stringValue = String(value);
+
+  // Check if field needs quoting (contains comma, newline, or quote)
+  if (stringValue.includes(',') || stringValue.includes('\n') || stringValue.includes('"')) {
+    // Escape double quotes by doubling them
+    const escaped = stringValue.replace(/"/g, '""');
+    return `"${escaped}"`;
+  }
+
+  return stringValue;
+}
+
+/**
+ * Converts an array of data objects into CSV-like text
+ * @param {Array} dataArray - Array of objects with consistent keys
+ * @param {Array<string>} headers - Array of header names (column order)
+ * @returns {string} CSV-formatted text with headers and data rows
+ */
+export function convertDataArrayToCsv(dataArray, headers = null) {
+  if (!Array.isArray(dataArray) || dataArray.length === 0) {
+    if (headers && Array.isArray(headers)) {
+      return headers.join(',');
+    }
+    return '';
+  }
+
+  // If no headers provided, extract from first object
+  const csvHeaders = headers || Object.keys(dataArray[0]);
+  const csvLines = [csvHeaders.join(',')];
+
+  dataArray.forEach((row) => {
+    const fields = csvHeaders.map((header) => {
+      const value = row[header];
+      return escapeCsvField(value);
+    });
+    csvLines.push(fields.join(','));
+  });
+
+  return csvLines.join('\n');
+}
+
+/**
 * Fetches spreadsheet data from EDS with automatic pagination.
 * Automatically fetches all pages if response.total > response.limit.
 * @param {string} sheetPath Path to the spreadsheet JSON endpoint
@@ -332,6 +381,18 @@ export async function fetchSpreadsheetData(sheetPath, sheetName = '') {
     console.warn(`Failed to load spreadsheet from ${sheetPath}:`, error);
     return { data: [] };
   }
+}
+
+/**
+ * Fetches spreadsheet data and converts it to CSV format
+ * @param {string} sheetPath Path to the spreadsheet JSON endpoint
+ * @param {string} sheetName Optional sheet name filter
+ * @param {Array<string>} headers Optional array of header names for column order
+ * @returns {Promise<string>} CSV-formatted text
+ */
+export async function fetchSpreadsheetDataAsCsv(sheetPath, sheetName = '', headers = null) {
+  const data = await fetchSpreadsheetData(sheetPath, sheetName);
+  return convertDataArrayToCsv(data.data || [], headers);
 }
 
 /**
