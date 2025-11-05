@@ -755,6 +755,13 @@ function MainApp(): React.JSX.Element {
                         onCloseDeepLinkModal={() => {
                             setDeepLinkAsset(null);
                         }}
+                        query={query}
+                        facetCheckedState={facetCheckedState}
+                        selectedNumericFilters={selectedNumericFilters}
+                        rightsStartDate={rightsStartDate}
+                        rightsEndDate={rightsEndDate}
+                        selectedMarkets={selectedMarkets}
+                        selectedMediaChannels={selectedMediaChannels}
                     />
                 </Suspense>
             ) : (
