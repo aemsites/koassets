@@ -33,8 +33,8 @@ echo "📋 Generating CSV from merged hierarchy..."
 echo "=========================================="
 echo ""
 node generate-csv-from-hierarchy-json.js ### ==> will generate csv from '*-content-stores*/extracted-results/hierarchy-structure.json'
-#echo ""
-#echo ""
+echo ""
+echo ""
 
 
 echo "=========================================="

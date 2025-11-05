@@ -6,7 +6,7 @@
  * - path (replace '>' with '/', trim spaces)
  * - title
  * - type
- * - imageUrl (filename only, prepended with DA destination path from da.config)
+ * - imageUrl (filename only, prepended with DA destination path from da-admin-client)
  * - linkURL
  * - text
  */
@@ -16,8 +16,7 @@ const path = require('path');
 const { globSync } = require('glob');
 const { PATH_SEPARATOR } = require('./constants.js');
 const { sanitizeFileName } = require('./sanitize-utils.js');
-
-const CONFIG_FILE = path.join(__dirname, './da.config');
+const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client.js');
 
 /**
  * Transforms search-assets.html URLs to new search format
@@ -43,6 +42,31 @@ function transformSearchUrl(url) {
   } catch (error) {
     // If URL parsing fails, return original URL
     console.warn(`Failed to parse URL: ${url}`);
+  }
+
+  return url;
+}
+
+/**
+ * Transforms content store URLs from old format to new format
+ * /content/share/us/en/bottler-content-stores/coke-holiday-2025.html → ${DA_DEST}/content-stores/bottler-content-stores-coke-holiday-2025
+ * @param {string} url - The original URL
+ * @returns {string} - Transformed URL or original if not a content store URL
+ */
+function transformContentStoreUrl(url) {
+  if (!url) return url;
+
+  // Match /content/share/us/en/*-content-stores/*.html
+  const contentStorePattern = /^\/content\/share\/us\/en\/((?:all|bottler)-content-stores\/[^.]+)\.html$/;
+  const match = url.match(contentStorePattern);
+
+  if (match) {
+    // Replace slashes with hyphens in the store path
+    const storePath = match[1].replace(/\//g, '-');
+
+    // Add DA_DEST prefix with leading slash if it exists
+    const prefix = DA_DEST && DA_DEST.trim() ? `/${DA_DEST}` : '';
+    return `${prefix}/content-stores/${storePath}`;
   }
 
   return url;
@@ -105,6 +129,9 @@ function extractLinkUrl(item) {
   // Transform search-assets.html URLs to new format
   url = transformSearchUrl(url);
 
+  // Transform content store URLs to new format
+  url = transformContentStoreUrl(url);
+
   return { url, type };
 }
 
@@ -160,50 +187,17 @@ OUTPUT:
   - text: Plain text content (HTML stripped)
 
 CONFIGURATION:
-  Reads configuration from: ./da.config
-  - DA_ORG: DA organization (default: aemsites)
-  - DA_REPO: DA repository (default: koassets)
+  Imports configuration from: ./da-admin-client.js
+  - DA_ORG: DA organization
+  - DA_REPO: DA repository
   - DA_DEST: DA destination path prefix
 `);
 }
 
 /**
- * Reads and parses the da.config file
- * Returns an object with DA_ORG, DA_REPO, DA_DEST values
- */
-function readDaConfig(configPath) {
-  try {
-    const content = fs.readFileSync(configPath, 'utf8');
-    const config = {};
-
-    content.split('\n').forEach((line) => {
-      // Skip comments and empty lines
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) return;
-
-      // Parse KEY=VALUE format
-      const match = trimmed.match(/^([A-Z_]+)=(.*)$/);
-      if (match) {
-        const [, key, value] = match;
-        // Remove inline comments
-        const cleanValue = value.split('#')[0].trim();
-        config[key] = cleanValue;
-      }
-    });
-
-    return config;
-  } catch (error) {
-    console.warn('⚠️  Could not read da.config, using default values');
-    return { DA_ORG: 'aemsites', DA_REPO: 'koassets', DA_DEST: '' };
-  }
-}
-
-/**
  * Constructs the full destination path from DA config
  */
-function getDestinationPath(config) {
-  const { DA_ORG = 'aemsites', DA_REPO = 'koassets', DA_DEST = '' } = config;
-
+function getDestinationPath() {
   // Build base path: org/repo
   let destPath = `${DA_ORG}/${DA_REPO}`;
 
@@ -367,9 +361,8 @@ function processFile(inputFile, outputFile) {
   // Extract store name from inputFile (e.g., 'all-content-stores' from './all-content-stores/extracted-results/...')
   const storeName = path.basename(path.dirname(path.dirname(inputFile)));
 
-  // Read DA configuration
-  const config = readDaConfig(CONFIG_FILE);
-  const destPath = getDestinationPath(config);
+  // Get DA destination path
+  const destPath = getDestinationPath();
 
   console.log(`\n📄 Processing: ${inputFile}`);
   console.log(`   Store name: ${storeName}`);
@@ -500,7 +493,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-  readDaConfig,
   getDestinationPath,
   htmlToPlainText,
   formatPath,

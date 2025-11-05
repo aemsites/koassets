@@ -190,17 +190,17 @@ const DEFAULT_CONTENT_PATH = '/content/share/us/en/all-content-stores';
 // Get content path from command line argument or use default
 const CONTENT_PATH = process.argv[2] || DEFAULT_CONTENT_PATH;
 
-// Load AUTH_COOKIE from config file
-let AUTH_COOKIE;
+// Load AUTHOR_AUTH_COOKIE from config file
+let AUTHOR_AUTH_COOKIE;
 try {
   const authConfig = fs.readFileSync(path.join(__dirname, 'da.config'), 'utf8').trim();
-  const [, cookieValue] = authConfig.match(/AUTH_COOKIE=(.*)/);
-  AUTH_COOKIE = cookieValue;
-  if (!AUTH_COOKIE) {
-    throw new Error('AUTH_COOKIE not found in da.config');
+  const [, cookieValue] = authConfig.match(/AUTHOR_AUTH_COOKIE=(.*)/);
+  AUTHOR_AUTH_COOKIE = cookieValue;
+  if (!AUTHOR_AUTH_COOKIE) {
+    throw new Error('AUTHOR_AUTH_COOKIE not found in da.config');
   }
 } catch (error) {
-  console.error(`❌ Error loading AUTH_COOKIE from da.config: ${error.message}`);
+  console.error(`❌ Error loading AUTHOR_AUTH_COOKIE from da.config: ${error.message}`);
   process.exit(1);
 }
 
@@ -228,7 +228,7 @@ function createHierarchicalDirName(contentPath) {
 
   // Use double underscore to show hierarchy: parent__child (for content store children)
   if (isContentStoreParent) {
-    return `${parentName}__${contentName}`;
+    return `${parentName}-${contentName}`;
   }
 
   // For other cases, use just the content name
@@ -323,7 +323,7 @@ function downloadFile(url, outputPath) {
       path: urlObj.pathname + urlObj.search,
       method: 'GET',
       headers: {
-        Cookie: AUTH_COOKIE,
+        Cookie: AUTHOR_AUTH_COOKIE,
         'User-Agent': 'Node.js AEM Content Extractor',
       },
     };
@@ -2776,7 +2776,7 @@ async function downloadAllImages(hierarchyData, outputDir) {
 
         const request = https.get(fullUrl, {
           headers: {
-            Cookie: AUTH_COOKIE,
+            Cookie: AUTHOR_AUTH_COOKIE,
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
           },
         }, (response) => {
@@ -2801,7 +2801,7 @@ async function downloadAllImages(hierarchyData, outputDir) {
             // Follow the redirect
             const redirectRequest = https.get(redirectUrl, {
               headers: {
-                Cookie: AUTH_COOKIE,
+                Cookie: AUTHOR_AUTH_COOKIE,
                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
               },
             }, (redirectResponse) => {

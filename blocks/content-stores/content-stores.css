@@ -352,7 +352,7 @@
 .content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node {
   cursor: pointer;
   padding: 0;
-  height: 120px;
+  height: 110px;
   width: 100%;
   border: none;
   box-shadow: 0 0 0 2px rgb(237 0 0 / 10%);
@@ -366,7 +366,7 @@
 .content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node picture,
 .content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node img {
   height: 100%;
-  width: auto;
+  width: 110px;
   object-fit: cover;
 }
 

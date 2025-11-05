@@ -16,7 +16,7 @@ function parseConfigValue(rawValue) {
 }
 
 // Load configuration from da.config
-let DA_ORG; let DA_REPO; let DA_BRANCH; let DA_DEST; let BEARER_TOKEN; let
+let DA_ORG; let DA_REPO; let DA_BRANCH; let DA_DEST; let DA_BEARER_TOKEN; let
   PUBLISH;
 try {
   const daConfig = fs.readFileSync(path.join(__dirname, 'da.config'), 'utf8').trim();
@@ -32,15 +32,11 @@ try {
 
   const daDestMatch = daConfig.match(/DA_DEST=(.*)/);
   const daDestValue = parseConfigValue(daDestMatch ? daDestMatch[1] : null);
-  // Automatically postfix 'fragments' to DA_DEST
-  if (daDestValue !== null) {
-    DA_DEST = daDestValue === '' ? 'fragments' : `${daDestValue}${daDestValue.endsWith('/') ? 'fragments' : '/fragments'}`;
-  } else {
-    DA_DEST = null;
-  }
+  // Strip trailing slash if exists
+  DA_DEST = daDestValue && daDestValue !== '' ? daDestValue.replace(/\/$/, '') : daDestValue;
 
-  const tokenMatch = daConfig.match(/BEARER_TOKEN=(.*)/);
-  BEARER_TOKEN = parseConfigValue(tokenMatch ? tokenMatch[1] : null);
+  const tokenMatch = daConfig.match(/DA_BEARER_TOKEN=(.*)/);
+  DA_BEARER_TOKEN = parseConfigValue(tokenMatch ? tokenMatch[1] : null);
 
   const publishMatch = daConfig.match(/PUBLISH=(.*)/);
   const publishValue = parseConfigValue(publishMatch ? publishMatch[1] : null);
@@ -50,7 +46,7 @@ try {
   if (!DA_REPO) throw new Error('DA_REPO not found in da.config');
   if (!DA_BRANCH) throw new Error('DA_BRANCH not found in da.config');
   if (DA_DEST === null) throw new Error('DA_DEST not found in da.config');
-  if (!BEARER_TOKEN) throw new Error('BEARER_TOKEN not found in da.config');
+  if (!DA_BEARER_TOKEN) throw new Error('DA_BEARER_TOKEN not found in da.config');
 } catch (error) {
   console.error(`❌ Error loading configuration from da.config: ${error.message}`);
   process.exit(1);
@@ -126,7 +122,7 @@ async function createSource(daFullPath, localFilePath) {
     const options = {
       method: 'POST',
       headers: {
-        Authorization: BEARER_TOKEN,
+        Authorization: DA_BEARER_TOKEN,
         'Content-Type': `multipart/form-data; boundary=${boundary}`,
         'Content-Length': body.length,
       },
@@ -182,7 +178,7 @@ async function makeHlxRequest(fullPath, action, actionName) {
     const options = {
       method: 'POST',
       headers: {
-        Authorization: BEARER_TOKEN,
+        Authorization: DA_BEARER_TOKEN,
       },
     };
 
