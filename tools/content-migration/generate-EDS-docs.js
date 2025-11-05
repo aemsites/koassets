@@ -175,7 +175,7 @@ function generateEDSDocs(inputFile) {
 
     // Get input filename without extension
     const inputFileName = path.basename(inputFile, path.extname(inputFile));
-    const sheetPath = `${daDest}/${inputFileName}`;
+    const sheetPath = daDest ? `${daDest}/${inputFileName}` : inputFileName;
 
     // Read templates
     const blockTemplate = fs.readFileSync(

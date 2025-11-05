@@ -26,7 +26,7 @@
 }
 
 .content-stores .controls {
-  padding: 30px 150px;
+  padding: 30px 300px;
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
@@ -384,7 +384,7 @@
 }
 
 .content-stores .tree-item[data-item-type="title"] {
-  padding: 24px 150px;
+  padding: 24px 300px;
 }
 
 /* Alternating background colors for sections with title items */
@@ -398,7 +398,7 @@
 
 /* Top-level items styling (direct children of .content) */
 .content-stores .content > .tree-item:not([data-item-type="title"]) {
-  padding: 0 150px;
+  padding: 0 300px;
   border-radius: 0;
   box-sizing: border-box;
 }
