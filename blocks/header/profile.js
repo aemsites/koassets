@@ -106,33 +106,6 @@ function createProfileModal() {
          </div>
          ` : ''}
       </div>
-      <div class="notifications-section">
-        <h2>Notifications</h2>
-        <div class="notification-item">
-          <span>Collection Notification</span>
-          <label class="switch">
-            <input type="checkbox" checked="">
-            <span class="slider round"></span>
-          </label>
-        </div>
-        <div class="notification-item">
-          <span>Print Job Notification</span>
-          <label class="switch">
-            <input type="checkbox" checked="">
-            <span class="slider round"></span>
-          </label>
-        </div>
-        <div class="notification-item">
-          <span>Rights Request Notification</span>
-          <label class="switch">
-            <input type="checkbox" checked="">
-            <span class="slider round"></span>
-          </label>
-        </div>
-      </div>
-      <div class="profile-actions">
-        <button class="save-button" type="button">Save</button>
-      </div>
     </div>
   `;
 

@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { ToastQueue } from '@react-spectrum/toast';
 import { AuthorizationStatus } from '../clients/fadel-client';
 import { DEFAULT_ACCORDION_CONFIG } from '../constants/accordion';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type { Asset, ImageGalleryProps } from '../types';
 import { populateAssetFromHit } from '../utils/assetTransformers';
+import { calendarDateToEpoch } from '../utils/formatters';
+import buildSavedSearchUrl from '../../../scripts/saved-searches/saved-search-utils.js';
 import AssetCard from './AssetCard';
 import AssetDetails from './AssetDetails/';
 import AssetPreview from './AssetPreview';
@@ -42,7 +45,14 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     onFacetCheckbox,
     onClearAllFacets,
     deepLinkAsset,
-    onCloseDeepLinkModal
+    onCloseDeepLinkModal,
+    query = '',
+    facetCheckedState = {},
+    selectedNumericFilters = [],
+    rightsStartDate,
+    rightsEndDate,
+    selectedMarkets,
+    selectedMediaChannels
 }: ImageGalleryProps) => {
     // Get external params and dynamic media client from context
     const { externalParams } = useAppConfig();
@@ -265,6 +275,61 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         setSelectedCards(new Set());
     };
 
+    // Handle share search - copy current search URL to clipboard
+    const handleShareSearch = () => {
+        // Build rights filters object if applicable
+        const rightsFilters: Record<string, unknown> = {};
+        if (isRightsSearch) {
+            if (rightsStartDate) {
+                rightsFilters.startDate = calendarDateToEpoch(rightsStartDate);
+            }
+            if (rightsEndDate) {
+                rightsFilters.endDate = calendarDateToEpoch(rightsEndDate);
+            }
+            if (selectedMarkets && selectedMarkets.size > 0) {
+                rightsFilters.markets = Array.from(selectedMarkets);
+            }
+            if (selectedMediaChannels && selectedMediaChannels.size > 0) {
+                rightsFilters.mediaChannels = Array.from(selectedMediaChannels);
+            }
+        }
+
+        // Get current search type path from URL
+        const currentPath = window.location.pathname;
+        let searchType = '/search/all';
+        if (currentPath.includes('/search/assets')) {
+            searchType = '/search/assets';
+        } else if (currentPath.includes('/search/products')) {
+            searchType = '/search/products';
+        }
+
+        // Build search object
+        const searchObject = {
+            searchTerm: query,
+            facetFilters: facetCheckedState,
+            numericFilters: selectedNumericFilters,
+            rightsFilters: Object.keys(rightsFilters).length > 0 ? rightsFilters : undefined,
+            searchType
+        };
+
+        // Build URL using shared utility
+        const searchUrl = buildSavedSearchUrl(searchObject);
+
+        // Copy to clipboard
+        navigator.clipboard.writeText(searchUrl).then(() => {
+            ToastQueue.positive('SEARCH LINK COPIED TO CLIPBOARD', { timeout: 3000 });
+        }).catch(() => {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = searchUrl;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            ToastQueue.positive('SEARCH LINK COPIED TO CLIPBOARD', { timeout: 3000 });
+        });
+    };
+
     // Handle title expansion toggle
     const handleTitleToggle = () => {
         setIsTitleExpanded(!isTitleExpanded);
@@ -328,6 +393,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 selectAuthorized={selectAuthorized}
                 onSelectAuthorized={handleSelectAuthorized}
                 isRightsSearch={isRightsSearch}
+                onShareSearch={handleShareSearch}
             />
 
             <div className="image-grid-wrapper">

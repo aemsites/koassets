@@ -1,0 +1,263 @@
+/* My Rights Review Details - Read-only detail view */
+
+.my-rights-review-details {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+  font-family: var(--body-font-family);
+  color: var(--text-color);
+}
+
+/* Loading and Error States */
+.my-rights-review-details .loading-state,
+.my-rights-review-details .error-state {
+  text-align: center;
+  padding: 3rem;
+  font-size: 1.1rem;
+}
+
+.my-rights-review-details .error-state {
+  color: var(--error-color);
+}
+
+.my-rights-review-details .error-state h2 {
+  color: var(--error-color);
+  margin-bottom: 1rem;
+}
+
+/* Main Container */
+.my-rights-review-details .details-container {
+  background-color: var(--background-color);
+}
+
+/* Header Section */
+.my-rights-review-details .detail-header {
+  background-color: var(--background-light);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.my-rights-review-details .title-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.my-rights-review-details .title-group h1 {
+  font-size: 2rem;
+  margin: 0;
+  color: var(--text-color-heading);
+  flex-grow: 1;
+}
+
+.my-rights-review-details .status-badge {
+  display: inline-flex;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #1e1e1e;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Not Started - Teal */
+.my-rights-review-details .status-badge.status-not-started {
+  border: 1px solid var(--status-not-started);
+  background-color: var(--status-not-started-bg);
+}
+
+/* In Progress, Quote Pending, Release Pending - Orange */
+.my-rights-review-details .status-badge.status-in-progress,
+.my-rights-review-details .status-badge.status-quote-pending,
+.my-rights-review-details .status-badge.status-release-pending {
+  border: 1px solid var(--status-in-progress);
+  background-color: var(--status-in-progress-bg);
+}
+
+/* Done/Completed/Approved - Green */
+.my-rights-review-details .status-badge.status-done,
+.my-rights-review-details .status-badge.status-completed,
+.my-rights-review-details .status-badge.status-approved {
+  border: 1px solid var(--status-completed);
+  background-color: var(--status-completed-bg);
+}
+
+/* User Canceled, RM Canceled, Rejected - Red */
+.my-rights-review-details .status-badge.status-user-canceled,
+.my-rights-review-details .status-badge.status-rm-canceled,
+.my-rights-review-details .status-badge.status-rejected {
+  border: 1px solid var(--status-cancelled);
+  background-color: var(--status-cancelled-bg);
+}
+
+.my-rights-review-details .metadata {
+  display: flex;
+  gap: 2rem;
+  font-size: 0.95rem;
+  color: var(--text-color-secondary);
+  flex-wrap: wrap;
+}
+
+.my-rights-review-details .metadata span {
+  white-space: nowrap;
+}
+
+/* Detail Sections */
+.my-rights-review-details .detail-section {
+  background-color: var(--background-light);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.my-rights-review-details .detail-section h2 {
+  font-size: 1.5rem;
+  margin: 0 0 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--border-color);
+  color: var(--text-color-heading);
+}
+
+/* Fields Grid */
+.my-rights-review-details .fields-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.my-rights-review-details .detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.my-rights-review-details .detail-field.full-width {
+  grid-column: 1 / -1;
+}
+
+.my-rights-review-details .detail-label {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--label-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.my-rights-review-details .detail-value {
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--text-color);
+  line-height: 1.5;
+  overflow-wrap: break-word;
+}
+
+/* Side-by-side sections container */
+.my-rights-review-details .two-column-sections {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.my-rights-review-details .two-column-sections .detail-section {
+  margin-bottom: 0;
+}
+
+/* Assets Gallery */
+.my-rights-review-details .assets-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.my-rights-review-details .asset-card {
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.my-rights-review-details .asset-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+}
+
+.my-rights-review-details .asset-card img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  display: block;
+}
+
+.my-rights-review-details .asset-card .asset-name {
+  padding: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-color);
+  text-align: center;
+  overflow-wrap: break-word;
+}
+
+/* Responsive Design */
+@media (width <= 768px) {
+  .my-rights-review-details {
+    padding: 1rem;
+  }
+
+  .my-rights-review-details .title-group {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .my-rights-review-details .title-group h1 {
+    font-size: 1.5rem;
+  }
+
+  .my-rights-review-details .metadata {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .my-rights-review-details .fields-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .my-rights-review-details .two-column-sections {
+    grid-template-columns: 1fr;
+  }
+
+  .my-rights-review-details .assets-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+  }
+
+  .my-rights-review-details .detail-section {
+    padding: 1.5rem;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .my-rights-review-details {
+    padding: 0;
+  }
+
+  .my-rights-review-details .detail-section {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .my-rights-review-details .asset-card {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}
+

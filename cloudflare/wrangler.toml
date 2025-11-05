@@ -78,3 +78,11 @@ id = "975809e56a7a425aa006e156671bbecf"
 [[kv_namespaces]]
 binding = "SAVED_SEARCHES"
 id = "644c2de1a4744becb55ee2050ab01486"
+
+[[kv_namespaces]]
+binding = "RIGHTS_REQUESTS"
+id = "dfd9efa380bb4362895d749ede96bdc9"
+
+[[kv_namespaces]]
+binding = "RIGHTS_REQUEST_REVIEWS"
+id = "e2e9c282bd144d489a6ff9c248fed51e"
