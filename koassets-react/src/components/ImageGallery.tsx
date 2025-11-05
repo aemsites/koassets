@@ -36,7 +36,12 @@ function sanitizeHTML(html: string): string {
         // Remove event handler attributes
         temp.querySelectorAll('*').forEach(el => {
             Array.from(el.attributes).forEach(attr => {
-                if (attr.name.startsWith('on') || attr.name === 'href' && attr.value.startsWith('javascript:')) {
+                if (
+                    attr.name.startsWith('on') ||
+                    (attr.name === 'href' && (
+                        /^(\s*)(javascript:|data:|vbscript:)/i.test(attr.value)
+                    ))
+                ) {
                     el.removeAttribute(attr.name);
                 }
             });
