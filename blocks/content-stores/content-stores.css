@@ -520,10 +520,10 @@
   margin-top: 10px;
 }
 
-/* Grid container for leaf items - fill parent width */
+/* Grid container for leaf items - responsive to parent width */
 .content-stores .tree-children.has-grid {
   display: none;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
   gap: 20px;
   padding: 20px 0 0;
   border: none;
