@@ -5,38 +5,45 @@
 const fs = require('fs');
 const path = require('path');
 const {
-  createSource, previewSource, publishSource, DA_BRANCH, PUBLISH,
+  createSource, previewSource, publishSource, DA_BRANCH, // eslint-disable-line no-unused-vars
 } = require('./da-admin-client.js');
 const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client.js');
 
-// Create hierarchical directory name function
-function createHierarchicalDirName(contentPath) {
-  const pathParts = contentPath.split('/').filter((p) => p);
-  const contentName = pathParts[pathParts.length - 1];
-  const parentName = pathParts[pathParts.length - 2];
+// Parse command line arguments
+// Usage: ./upload-to-EDS.js <localPath> [daFullPath] [--preview] [--publish] [--debug]
+// Example: ./upload-to-EDS.js 'all-content-stores-sheet.json' 'aemsites/koassets/drafts/tphan/all-content-stores-sheet.json' --preview --publish
+const args = process.argv.slice(2);
+let localPath;
+let daFullPath;
+let previewFlag = false;
+let publishFlag = false;
+let debugFlag = false;
 
-  // Special case: if contentName is 'all-content-stores', always use just that name
-  if (contentName === 'all-content-stores') {
-    return contentName;
+// Parse arguments
+for (let i = 0; i < args.length; i += 1) {
+  const arg = args[i];
+
+  if (arg === '--preview' || arg === '-pr') {
+    previewFlag = true;
+  } else if (arg === '--publish' || arg === '-pb') {
+    publishFlag = true;
+  } else if (arg === '--debug' || arg === '-db') {
+    debugFlag = true;
+  } else if (arg === '--path' || arg === '-p') {
+    localPath = args[i + 1];
+    i += 1; // Skip next argument since we consumed it
+  } else if (arg === '--daFullPath' || arg === '-d') {
+    daFullPath = args[i + 1];
+    i += 1; // Skip next argument since we consumed it
+  } else if (!arg.startsWith('-') && !localPath) {
+    // First positional argument is localPath
+    localPath = arg;
+  } else if (!arg.startsWith('-') && !daFullPath && localPath) {
+    // Second positional argument is daFullPath
+    daFullPath = arg;
   }
-
-  // If no parent, or parent is not 'all-content-stores', use just the content name
-  if (!parentName || parentName !== 'all-content-stores') {
-    return contentName;
-  }
-
-  // Use double underscore to show hierarchy: parent__child (only for all-content-stores children)
-  return `${parentName}__${contentName}`;
+  // --help and -h flags are handled separately below
 }
-
-// Default CONTENT_PATH, can be overridden via first command line argument
-let CONTENT_PATH = '/content/share/us/en/all-content-stores';
-
-// Override CONTENT_PATH if provided as first command line argument
-[, , CONTENT_PATH = CONTENT_PATH] = process.argv;
-
-const hierarchicalDirName = createHierarchicalDirName(CONTENT_PATH);
-const lastContentPathToken = CONTENT_PATH.split('/').pop(); // Keep for compatibility
 
 /**
  * Sleep for specified milliseconds
@@ -49,61 +56,136 @@ function sleep(ms) {
 }
 
 /**
- * Upload file to EDS
- * @param {string} daFullPath - Full DA path including org/repo, e.g. 'aemsites/koassets/drafts/tphan/all-content-stores.html'
- * @param {string} localFilePath - Path to the file to upload from local filesystem, e.g. './generated-documents/all-content-stores.html'
- * @param {boolean} [skipPreview=false] - Skip preview trigger (for images)
+ * Upload file or directory to EDS
+ * @param {string} localPath - Path to the file or directory to upload from local filesystem, e.g. './generated-documents/all-content-stores.html'
+ * @param {string} [daFullPath] - Optional: Full DA path including org/repo, e.g. 'aemsites/koassets/drafts/tphan/all-content-stores.html'
+ *                                If not provided, constructed as: {DA_ORG}/{DA_REPO}/{DA_DEST}/{filename}
+ * @param {boolean} [previewFlag=false] - Trigger preview after upload
+ * @param {boolean} [publishFlag=false] - Trigger publish after preview
  */
-async function uploadToEDS(daFullPath, localFilePath, skipPreview = false) {
-  // Check if file exists
-  if (!fs.existsSync(localFilePath)) {
-    console.error(`❌ File not found: ${localFilePath}`);
+// eslint-disable-next-line no-shadow
+async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFlag = false) {
+  // Check if path exists
+  if (!fs.existsSync(localPath)) {
+    console.error(`❌ Path not found: ${localPath}`);
     process.exit(1);
   }
 
+  // Check if localPath is a directory
+  const stats = fs.statSync(localPath);
+  if (stats.isDirectory()) {
+    console.log(`\n📁 Processing directory: ${localPath}`);
+
+    // If daFullPath not provided, construct base path from DA config (without directory name)
+    let baseDaPath = daFullPath;
+    if (!baseDaPath) {
+      if (DA_DEST) {
+        // Remove leading slash from DA_DEST if present
+        const normalizedDest = DA_DEST.startsWith('/') ? DA_DEST.substring(1) : DA_DEST;
+        baseDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}`;
+      } else {
+        baseDaPath = `${DA_ORG}/${DA_REPO}`;
+      }
+    }
+
+    // Read all files and subdirectories
+    const entries = fs.readdirSync(localPath, { withFileTypes: true });
+
+    // Process each entry sequentially
+    await entries.reduce(async (promise, entry) => {
+      await promise;
+
+      const entryPath = path.join(localPath, entry.name);
+
+      if (entry.isDirectory()) {
+        // Recursively process subdirectory
+        const subDaPath = `${baseDaPath}/${entry.name}`;
+        await uploadToEDS(entryPath, subDaPath, previewFlag, publishFlag);
+      } else {
+        // Process file
+        const fileDaPath = `${baseDaPath}/${entry.name}`;
+        await uploadToEDS(entryPath, fileDaPath, previewFlag, publishFlag);
+      }
+    }, Promise.resolve());
+
+    console.log(`✅ Completed processing directory: ${localPath}`);
+    return;
+  }
+
+  // If localPath is a file, construct path with filename if not provided
+  let targetDaPath = daFullPath;
+  if (!targetDaPath) {
+    const basename = path.basename(localPath);
+    if (DA_DEST) {
+      // Remove leading slash from DA_DEST if present
+      const normalizedDest = DA_DEST.startsWith('/') ? DA_DEST.substring(1) : DA_DEST;
+      targetDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/${basename}`;
+    } else {
+      targetDaPath = `${DA_ORG}/${DA_REPO}/${basename}`;
+    }
+  }
+
+  // If localPath is a file, proceed with upload
+  const localFilePath = localPath;
+
   try {
-    // Step 1: Check if the file contains srcset references and upload images first
-    const fileContent = fs.readFileSync(localFilePath, 'utf8');
-    if (fileContent.includes('srcset')) {
-      // eslint-disable-next-line no-use-before-define
-      await uploadImagesFromSrcset(fileContent);
-    }
-
-    // Step 2: Upload the file
-    console.log('📤 Uploading file to DA...');
+    // Step 1: Upload the file
+    console.log('\n\n📤 Uploading file to DA...');
     console.log(`   File: ${localFilePath}`);
-    console.log(`   Destination path: ${daFullPath}`);
+    console.log(`   Destination path: ${targetDaPath}`);
+    const previewArg = previewFlag ? ' --preview' : '';
+    const publishArg = publishFlag ? ' --publish' : '';
+    const debugArg = debugFlag ? ' --debug' : '';
+    console.log(`   Command: node upload-to-EDS.js '${localFilePath}' '${targetDaPath}'${previewArg}${publishArg}${debugArg}`);
 
-    const response = await createSource(daFullPath, localFilePath);
-    await sleep(1000); // Pause 1 second after create source
+    if (debugFlag) {
+      console.log('🐛 Debug mode: Skipping actual DA operations (upload/preview/publish)');
+    } else {
+      const response = await createSource(targetDaPath, localFilePath);
+      await sleep(1000); // Pause 1 second after create source
 
-    console.log('✅ Successfully uploaded file');
-    console.log(`   Status: ${response.statusCode}`);
-    if (response.data) {
-      console.log('   Response:', JSON.stringify(response.data, null, 2));
-    }
-
-    // Step 3: Only trigger preview for HTML files, skip for images
-    if (!skipPreview) {
-      console.log('📋 Triggering preview source...');
-      // Build full path with branch for preview: org/repo/branch/dest
-      // daFullPath is: org/repo/dest, so extract the dest part and reconstruct
-      const orgRepo = daFullPath.split('/').slice(0, 2).join('/');
-      const destOnly = daFullPath.split('/').slice(2).join('/').replace(/\.[^/.]+$/, '');
-      const fullPreviewPath = `${orgRepo}/${DA_BRANCH}/${destOnly}`;
-      const previewResponse = await previewSource(fullPreviewPath);
-      await sleep(1000); // Pause 1 second after preview source
-
-      console.log('✅ Preview source triggered');
-      console.log(`   Status: ${previewResponse.statusCode}`);
-      if (previewResponse.data) {
-        console.log('   Response:', JSON.stringify(previewResponse.data, null, 2));
+      console.log('✅ Successfully uploaded file');
+      console.log(`   Status: ${response.statusCode}`);
+      if (response.data) {
+        console.log('   Response:', JSON.stringify(response.data, null, 2));
       }
 
-      // Only publish if PUBLISH constant is true
-      if (PUBLISH) {
+      // Step 2: Trigger preview if requested
+      if (previewFlag) {
+        console.log('📋 Triggering preview source...');
+        // Build full path with branch for preview: org/repo/branch/dest
+        // targetDaPath is: org/repo/dest, so extract the dest part and reconstruct
+        const orgRepo = targetDaPath.split('/').slice(0, 2).join('/');
+        let destOnly = targetDaPath.split('/').slice(2).join('/');
+        // Only strip extension for HTML files
+        if (destOnly.match(/\.html?$/i)) {
+          destOnly = destOnly.replace(/\.[^/.]+$/, '');
+        }
+        const fullPreviewPath = `${orgRepo}/${DA_BRANCH}/${destOnly}`;
+        console.log(`   Full preview path: ${fullPreviewPath}`);
+        const previewResponse = await previewSource(fullPreviewPath);
+        await sleep(1000); // Pause 1 second after preview source
+
+        console.log('✅ Preview source triggered');
+        console.log(`   Status: ${previewResponse.statusCode}`);
+        if (previewResponse.data) {
+          console.log('   Response:', JSON.stringify(previewResponse.data, null, 2));
+        }
+      }
+
+      // Step 3: Trigger publish if requested
+      if (publishFlag) {
         console.log('📋 Triggering publish source...');
-        const publishResponse = await publishSource(fullPreviewPath);
+        // Build full path with branch for publish: org/repo/branch/dest
+        const orgRepo = targetDaPath.split('/').slice(0, 2).join('/');
+        let destOnly = targetDaPath.split('/').slice(2).join('/');
+        // Only strip extension for HTML files
+        if (destOnly.match(/\.html?$/i)) {
+          destOnly = destOnly.replace(/\.[^/.]+$/, '');
+        }
+        const fullPublishPath = `${orgRepo}/${DA_BRANCH}/${destOnly}`;
+        console.log(`   Full publish path: ${fullPublishPath}`);
+        const publishResponse = await publishSource(fullPublishPath);
         await sleep(1000); // Pause 1 second after publish source
 
         console.log('✅ Publish source triggered');
@@ -111,8 +193,6 @@ async function uploadToEDS(daFullPath, localFilePath, skipPreview = false) {
         if (publishResponse.data) {
           console.log('   Response:', JSON.stringify(publishResponse.data, null, 2));
         }
-      } else {
-        console.log('ℹ️ Publish skipped (PUBLISH=false in config)');
       }
     }
   } catch (error) {
@@ -121,261 +201,135 @@ async function uploadToEDS(daFullPath, localFilePath, skipPreview = false) {
   }
 }
 
-/**
- * Extract and upload images referenced in srcset attributes
- * @param {string} htmlContent - HTML file content
- */
-async function uploadImagesFromSrcset(htmlContent) {
-  console.log('\n📸 Processing images from srcset...');
+// Export functions for use in other scripts
+module.exports = { uploadToEDS, sleep };
 
-  // Extract all srcset URLs
-  const srcsetRegex = /srcset="([^"]+)"/g;
-  const srcsetMatches = htmlContent.match(srcsetRegex) || [];
-  const imagesToUpload = [];
+// Only run the command-line interface if this script is executed directly
+if (require.main === module) {
+  // Check for help flag
+  if (args.includes('--help') || args.includes('-h')) {
+    console.error('');
+    console.error('📤 Upload to EDS - File/Directory Upload Tool');
+    console.error('');
+    console.error('Description:');
+    console.error('  Uploads files or directories to DA (Digital Assets) with optional preview and publish.');
+    console.error('');
+    console.error('Usage:');
+    console.error('  ./upload-to-EDS.js <localPath> [daFullPath] [--preview] [--publish] [--debug]');
+    console.error('');
+    console.error('Arguments:');
+    console.error('  localPath     - Path to local file or directory (e.g., "./file.json" or "./my-folder")');
+    console.error('                  If a directory, all files will be uploaded recursively');
+    console.error('  daFullPath    - Optional: Full DA path including org/repo (e.g., "aemsites/koassets/drafts/tphan/file.html")');
+    console.error('                  If not provided, constructed as: {DA_ORG}/{DA_REPO}/{DA_DEST}/{filename}');
+    console.error('');
+    console.error('Options:');
+    console.error('  -p, --path <path>          Path to local file or directory (alternative to positional)');
+    console.error('  -d, --daFullPath <path>    Full DA destination path (alternative to positional)');
+    console.error('  -pr, --preview             Trigger preview after upload (default: false)');
+    console.error('  -pb, --publish             Trigger publish after upload (default: false)');
+    console.error('  -db, --debug               Debug mode: skip actual DA operations (default: false)');
+    console.error('  -h, --help                 Show this help message');
+    console.error('');
+    console.error('Examples (single file):');
+    console.error('  ./upload-to-EDS.js "file.html" --preview');
+    console.error('  ./upload-to-EDS.js "file.html" "aemsites/koassets/drafts/tphan/file.html" --preview');
+    console.error('  ./upload-to-EDS.js --path "file.html" --daFullPath "aemsites/koassets/drafts/tphan/file.html" --preview --publish');
+    console.error('  ./upload-to-EDS.js -p "file.html" -d "aemsites/koassets/drafts/tphan/file.html" -pr -pb');
+    console.error('');
+    console.error('Examples (directory):');
+    console.error('  ./upload-to-EDS.js "generated-docs" "aemsites/koassets/drafts/tphan/docs"');
+    console.error('  ./upload-to-EDS.js "my-folder" --preview');
+    console.error('');
+    console.error('Examples (debug mode):');
+    console.error('  ./upload-to-EDS.js "file.html" --debug');
+    console.error('  ./upload-to-EDS.js "file.html" --preview --publish --debug');
+    console.error('');
+    console.error('Examples (positional arguments):');
+    console.error('  ./upload-to-EDS.js "file.html"');
+    console.error('  ./upload-to-EDS.js "file.html" "aemsites/koassets/drafts/tphan/file.html"');
+    console.error('  ./upload-to-EDS.js "file.html" "aemsites/koassets/drafts/tphan/file.html" --preview --publish');
+    console.error('');
+    console.error('Notes:');
+    console.error('  - By default, files are uploaded without preview/publish (use flags to enable)');
+    console.error('  - Preview and publish are independent - either or both can be enabled');
+    console.error('  - Debug mode skips all DA operations - useful for testing without actual uploads');
+    console.error('  - For HTML files, extensions are stripped during preview/publish path construction');
+    console.error('  - Configuration loaded from da.config file (DA_ORG, DA_REPO, DA_DEST)');
+    console.error('');
+    process.exit(0);
+  }
 
-  srcsetMatches.forEach((srcsetAttr) => {
-    const srcsetUrl = srcsetAttr.replace(/srcset="|"/g, '');
-    const imageName = srcsetUrl.split('/').pop();
-    imagesToUpload.push({ imageName, srcsetUrl });
-  });
-
-  // Process each unique image sequentially to avoid overwhelming the server
-  const processedImages = new Set();
-  await imagesToUpload.reduce(async (promise, { imageName, srcsetUrl }) => {
-    await promise;
-
-    if (processedImages.has(imageName)) {
-      return;
-    }
-    processedImages.add(imageName);
-
-    // Check if image exists in extracted-results/images
-    const imagePath = path.join(__dirname, hierarchicalDirName, 'extracted-results', 'images', imageName);
-    if (fs.existsSync(imagePath)) {
-      // Extract DA path from srcset URL (remove https://content.da.live/)
-      const daPath = srcsetUrl.replace(/^https:\/\/content\.da\.live\//, '');
-      console.log(`   Uploading image: ${imageName}`);
-      try {
-        await uploadToEDS(daPath, imagePath, true); // Pass true to skip preview for images
-        // console.log(`uploadToEDS('${daPath}', '${imagePath}', true)`);
-      } catch (error) {
-        console.error(`   ❌ Error uploading image ${imageName}: ${error.message}`);
-      }
+  // Run the upload based on command line arguments
+  if (localPath) {
+    console.log('\n🚀 Starting upload with command line arguments...');
+    console.log(`   Local Path: ${localPath}`);
+    if (daFullPath) {
+      console.log(`   DA Full Path: ${daFullPath}`);
     } else {
-      console.log(`   ⚠ Image not found: ${imageName}`);
+      console.log('   DA Full Path: (auto-constructed from config)');
     }
-  }, Promise.resolve());
+    console.log(`   Preview: ${previewFlag}`);
+    console.log(`   Publish: ${publishFlag}`);
+    console.log(`   Debug: ${debugFlag}`);
+    uploadToEDS(localPath, daFullPath, previewFlag, publishFlag);
+  } else {
+    console.error('❌ Error: Missing required arguments');
+    console.error('');
+    console.error('Usage:');
+    console.error('  ./upload-to-EDS.js <localPath> [daFullPath] [--preview] [--publish] [--debug]');
+    console.error('');
+    console.error('Arguments:');
+    console.error('  localPath     - Path to local file or directory (e.g., "./file.json" or "./my-folder")');
+    console.error('                  If a directory, all files will be uploaded recursively');
+    console.error('  daFullPath    - Optional: Full DA path including org/repo (e.g., "aemsites/koassets/drafts/tphan/file.html")');
+    console.error('                  If not provided, constructed as: {DA_ORG}/{DA_REPO}/{DA_DEST}/{filename}');
+    console.error('');
+    console.error('Options:');
+    console.error('  -p, --path <path>          Path to local file or directory (alternative to positional)');
+    console.error('  -d, --daFullPath <path>    Full DA destination path (alternative to positional)');
+    console.error('  -pr, --preview             Trigger preview after upload (default: false)');
+    console.error('  -pb, --publish             Trigger publish after upload (default: false)');
+    console.error('  -db, --debug               Debug mode: skip actual DA operations (default: false)');
+    console.error('  -h, --help                 Show this help message');
+    console.error('');
+    console.error('Examples (single file):');
+    console.error('  ./upload-to-EDS.js "file.html" --preview');
+    console.error('  ./upload-to-EDS.js "file.html" "aemsites/koassets/drafts/tphan/file.html" --preview');
+    console.error('  ./upload-to-EDS.js --path "file.html" --daFullPath "aemsites/koassets/drafts/tphan/file.html" --preview --publish');
+    console.error('  ./upload-to-EDS.js -p "file.html" -d "aemsites/koassets/drafts/tphan/file.html" -pr -pb');
+    console.error('');
+    console.error('Examples (directory):');
+    console.error('  ./upload-to-EDS.js "generated-docs" "aemsites/koassets/drafts/tphan/docs"');
+    console.error('  ./upload-to-EDS.js "my-folder" --preview');
+    console.error('');
+    console.error('Examples (positional arguments):');
+    console.error('  ./upload-to-EDS.js "file.html"');
+    console.error('  ./upload-to-EDS.js "file.html" "aemsites/koassets/drafts/tphan/file.html"');
+    console.error('  ./upload-to-EDS.js "file.html" "aemsites/koassets/drafts/tphan/file.html" --preview --publish');
+    process.exit(1);
+  }
 }
 
-/**
- * Upload all images from a local directory to DA
- * @param {string} imagesPath - Relative path to directory containing images (relative to script directory)
- * @param {string} daFullPath - DA destination path (e.g., 'aemsites/koassets/fragments/all-content-stores/.coca-cola/')
- * @param {number} [concurrency=1] - Number of concurrent uploads (1 = sequential, higher = more parallel)
- */
-async function uploadAllImages(imagesPath, daFullPath, concurrency = 1) {
-  // Resolve relative path to absolute path
-  const absoluteImagesPath = path.resolve(__dirname, imagesPath);
-
-  console.log(`\n📸 Uploading all images from: ${imagesPath} (${absoluteImagesPath})`);
-  console.log(`   Destination: ${daFullPath}`);
-  console.log(`   Concurrency: ${concurrency} ${concurrency === 1 ? '(sequential)' : '(parallel)'}`);
-
-  // Check if images directory exists
-  if (!fs.existsSync(absoluteImagesPath)) {
-    console.error(`❌ Images directory not found: ${absoluteImagesPath}`);
-    return;
-  }
-
-  // Get all files in the images directory
-  const files = fs.readdirSync(absoluteImagesPath, { withFileTypes: true });
-
-  // Filter for image files (common image extensions)
-  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.tiff'];
-  const imageFiles = files
-    .filter((file) => file.isFile())
-    .filter((file) => {
-      const ext = path.extname(file.name).toLowerCase();
-      return imageExtensions.includes(ext);
-    })
-    .map((file) => file.name);
-
-  if (imageFiles.length === 0) {
-    console.log('   ⚠️ No image files found in directory');
-    return;
-  }
-
-  console.log(`   Found ${imageFiles.length} image files to upload`);
-
-  // Helper function to split array into chunks
-  const chunkArray = (array, chunkSize) => {
-    const chunks = [];
-    for (let i = 0; i < array.length; i += chunkSize) {
-      chunks.push(array.slice(i, i + chunkSize));
-    }
-    return chunks;
-  };
-
-  // Split images into batches based on concurrency
-  const imageBatches = chunkArray(imageFiles, concurrency);
-  let totalUploaded = 0;
-  let totalFailed = 0;
-
-  console.log(`   Processing ${imageBatches.length} batch(es) of up to ${concurrency} images each`);
-
-  // Process each batch
-  for (let batchIndex = 0; batchIndex < imageBatches.length; batchIndex += 1) {
-    const batch = imageBatches[batchIndex];
-    console.log(`\n   📦 Batch ${batchIndex + 1}/${imageBatches.length}: uploading ${batch.length} images...`);
-
-    // Upload all images in current batch concurrently
-    const batchPromises = batch.map(async (imageName) => {
-      const localImagePath = path.join(absoluteImagesPath, imageName);
-      // Ensure daFullPath ends with / and construct full DA path for this image
-      const normalizedDaPath = daFullPath.endsWith('/') ? daFullPath : `${daFullPath}/`;
-      const daImagePath = `${normalizedDaPath}${imageName}`;
-
-      console.log(`      📤 Uploading: ${imageName}`);
-      try {
-        await uploadToEDS(daImagePath, localImagePath, true); // Skip preview for images
-        console.log(`      ✅ Uploaded: ${imageName}`);
-        return { imageName, status: 'success' };
-      } catch (error) {
-        console.error(`      ❌ Error uploading ${imageName}: ${error.message}`);
-        return { imageName, status: 'error', error: error.message };
-      }
-    });
-
-    // Wait for all uploads in this batch to complete
-    const batchResults = await Promise.all(batchPromises);
-    const batchUploaded = batchResults.filter((r) => r.status === 'success').length;
-    const batchFailed = batchResults.filter((r) => r.status === 'error').length;
-
-    totalUploaded += batchUploaded;
-    totalFailed += batchFailed;
-
-    console.log(`   ✅ Batch ${batchIndex + 1} completed: ${batchUploaded} uploaded, ${batchFailed} failed`);
-
-    // Small pause between batches to avoid overwhelming server (except for last batch)
-    if (batchIndex < imageBatches.length - 1) {
-      console.log('   ⏸️  Pausing briefly before next batch...');
-      await sleep(500); // 0.5 second pause between batches
-    }
-  }
-
-  console.log(`\n✅ All uploads completed: ${totalUploaded} successful, ${totalFailed} failed out of ${imageFiles.length} total`);
-}
-
-/**
- * Recursively upload all HTML files from generated-documents folder
- */
-/* eslint-disable-next-line no-unused-vars */
-async function uploadAllGeneratedDocuments() {
-  const generatedDocsDir = path.join(__dirname, hierarchicalDirName, 'generated-documents');
-
-  console.log('\n📁 Uploading all generated documents...\n');
-
-  /**
-   * Recursively process files in directory
-   * @param {string} dir - Directory to process
-   * @param {number} depth - Current depth (0 = top level)
-   */
-  async function processDirectory(dir, depth = 0) {
-    const files = fs.readdirSync(dir, { withFileTypes: true });
-
-    await files.reduce(async (promise, file) => {
-      await promise;
-
-      if (file.isDirectory()) {
-        // Recursively process subdirectories
-        await processDirectory(path.join(dir, file.name), depth + 1);
-      } else if (file.name.endsWith('.html')) {
-        const filePath = path.join(dir, file.name);
-        const filename = file.name;
-
-        // Calculate relative path from generated-documents
-        const relativeDir = path.relative(generatedDocsDir, dir);
-        const relativePath = relativeDir ? `${relativeDir}/` : '';
-
-        // Determine DA destination path
-        let daDestPath;
-        if (depth === 0) {
-          // Top-level files: remove '/fragments' from DA_DEST
-          const destWithoutFragments = DA_DEST.replace(/\/?fragments$/, '');
-          daDestPath = destWithoutFragments ? `${DA_ORG}/${DA_REPO}/${destWithoutFragments}/${relativePath}${filename}` : `${DA_ORG}/${DA_REPO}/${relativePath}${filename}`; // DON'T add lastContentPathToken
-        } else {
-          // Nested files: use DA_DEST as-is
-          daDestPath = `${DA_ORG}/${DA_REPO}/${DA_DEST}/${lastContentPathToken}/${relativePath}${filename}`;
-        }
-
-        console.log(`\n📄 Uploading: ${filename} (depth: ${depth})`);
-        try {
-          console.log(`uploadToEDS('${daDestPath}', '${filePath}');`);
-          // await uploadToEDS(daDestPath, filePath);
-        } catch (error) {
-          console.error(`   ❌ Error uploading ${filename}: ${error.message}`);
-        }
-      }
-    }, Promise.resolve());
-  }
-
-  // Start processing from generated-documents root
-  await processDirectory(generatedDocsDir);
-  console.log('\n✅ All documents processed!');
-}
-
-// Run the upload
-// uploadAllGeneratedDocuments();
+// ============================================ FUNCTION USAGE EXAMPLES ============================================
+// uploadToEDS(localPath, daFullPath, previewFlag, publishFlag)
+//
+// Single file examples:
+// uploadToEDS('file.html', 'aemsites/koassets/drafts/tphan/file.html', true, true); // With preview and publish
+// uploadToEDS('file.html', 'aemsites/koassets/drafts/tphan/file.html', true, false); // With preview only
+// uploadToEDS('image.png', 'aemsites/koassets/drafts/tphan/image.png', false, false); // Upload only (no preview/publish)
+//
+// Directory examples (uploads all files recursively):
+// uploadToEDS('generated-docs', 'aemsites/koassets/drafts/tphan/docs', false, false); // Upload directory
+// uploadToEDS('my-folder', 'aemsites/koassets/drafts/tphan/my-folder', true, false); // Upload with preview
 
 // ============================================ DRAFTS ============================================
-// uploadToEDS('aemsites/koassets/drafts/tphan/all-content-stores.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/all-content-stores.html');
-// uploadToEDS('aemsites/koassets/drafts/tphan/fragments/all-content-stores/global-initiatives/global-initiatives.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/global-initiatives.html');
-// uploadToEDS('aemsites/koassets/drafts/tphan/fragments/all-content-stores/global-initiatives/coca-cola/coca-cola.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/coca-cola/coca-cola.html');
-// uploadToEDS('aemsites/koassets/drafts/tphan/fragments/all-content-stores/global-initiatives/fanta/fanta.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/fanta/fanta.html');
+// uploadToEDS('/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/all-content-stores.html', 'aemsites/koassets/drafts/tphan/all-content-stores.html');
+// uploadToEDS('/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/global-initiatives.html', 'aemsites/koassets/drafts/tphan/fragments/all-content-stores/global-initiatives/global-initiatives.html');
+// uploadToEDS('/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/coca-cola/coca-cola.html', 'aemsites/koassets/drafts/tphan/fragments/all-content-stores/global-initiatives/coca-cola/coca-cola.html');
+// uploadToEDS('/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/fanta/fanta.html', 'aemsites/koassets/drafts/tphan/fragments/all-content-stores/global-initiatives/fanta/fanta.html');
+// uploadToEDS('all-content-stores-sheet.json', 'aemsites/koassets/drafts/tphan/all-content-stores-sheet.json');
 
 // ============================================ LIVE ============================================
 
-// ALL CONTENT STORES
-// uploadToEDS('aemsites/koassets/all-content-stores.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/all-content-stores.html');
-
-// GLOBAL INITIATIVES
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/global-initiatives.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/global-initiatives.html');
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/coca-cola/coca-cola.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/coca-cola/coca-cola.html');
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/fanta/fanta.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/fanta/fanta.html');
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/sprite/sprite.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/sprite/sprite.html');
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/powerade/powerade.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/powerade/powerade.html');
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/minute-maid/minute-maid.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/minute-maid/minute-maid.html');
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/schweppes/schweppes.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/schweppes/schweppes.html');
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/global-initiatives/fuze-tea/fuze-tea.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/fuze-tea/fuze-tea.html');
-
-// REGIONAL INITIATIVES
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/regional-initiatives/regional-initiatives.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/regional-initiatives/regional-initiatives.html');
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/regional-initiatives/naou/naou.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/regional-initiatives/naou/naou.html');
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/regional-initiatives/europe/europe.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/regional-initiatives/europe/europe.html');
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/regional-initiatives/latam/latam.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/regional-initiatives/latam/latam.html');
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/regional-initiatives/australia/australia.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/regional-initiatives/australia/australia.html');
-
-// PAST INITIATIVES
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/past-initiatives/past-initiatives.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/past-initiatives/past-initiatives.html');
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/past-initiatives/coca-cola/coca-cola.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/past-initiatives/coca-cola/coca-cola.html');
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/past-initiatives/sprite/sprite.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/past-initiatives/sprite/sprite.html');
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/past-initiatives/fanta/fanta.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/past-initiatives/fanta/fanta.html');
-
-// BRANDS
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/brands/brands.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/brands/brands.html');
-
-// ESSENTIALS
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/essentials/essentials.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/essentials/essentials.html');
-
-// CUSTOMERS
-// uploadToEDS('aemsites/koassets/fragments/all-content-stores/customers/customers.html', '/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/customers/customers.html');
-
-// ============================================ BULK IMAGE UPLOADS ============================================
-
-// Upload all images from extracted-results/images to a specific DA location
-uploadAllImages('all-content-stores/extracted-results/images', 'aemsites/koassets/fragments/.all-content-stores/', 10); // 10 concurrent uploads
-
-// Example: Upload images for specific brand folders (using hierarchicalDirName for dynamic paths)
-// uploadAllImages(`${hierarchicalDirName}/extracted-results/images`, 'aemsites/koassets/fragments/all-content-stores/.coca-cola/', 1); // Sequential (safe)
-// uploadAllImages(`${hierarchicalDirName}/extracted-results/images`, 'aemsites/koassets/fragments/all-content-stores/.fanta/', 5); // 5 concurrent (faster)
-// uploadAllImages(`${hierarchicalDirName}/extracted-results/images`, 'aemsites/koassets/fragments/all-content-stores/.sprite/', 2); // 2 concurrent (balanced)
+// Note: For bulk image uploads, use the upload-images.js script instead
