@@ -45,7 +45,7 @@ async function uploadAllImages(imagesPath, concurrency = 1) {
 
     // Find all directories matching *-content-stores*/extracted-results/images
     const contentStoresDirs = fs.readdirSync(__dirname, { withFileTypes: true })
-      .filter((entry) => entry.isDirectory() && entry.name.endsWith('-content-stores'))
+      .filter((entry) => entry.isDirectory() && entry.name.includes('-content-stores'))
       .map((entry) => entry.name);
 
     console.log(`   Found ${contentStoresDirs.length} content stores directories`);
@@ -83,8 +83,8 @@ async function uploadAllImages(imagesPath, concurrency = 1) {
   const absoluteImagesPath = path.resolve(__dirname, imagesPath);
 
   // Extract content store name from path for targetDaBasePath
-  const pathMatch = imagesPath.match(/([^/]+)-content-stores/);
-  const contentStoreName = pathMatch ? `${pathMatch[1]}-content-stores` : null;
+  const pathMatch = imagesPath.match(/([^/]*-content-stores[^/]*)/);
+  const contentStoreName = pathMatch ? pathMatch[1] : null;
 
   // Derive targetDaBasePath
   let targetDaBasePath = null;

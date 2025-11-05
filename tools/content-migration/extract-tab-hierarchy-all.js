@@ -354,6 +354,18 @@ function downloadFile(url, outputPath) {
           const data = Buffer.concat(chunks);
           const dataStr = data.toString('utf8');
 
+          // Check if we got an HTML login/error page instead of actual content
+          const isHtmlResponse = dataStr.trim().startsWith('<!DOCTYPE')
+                                 || dataStr.trim().startsWith('<html')
+                                 || dataStr.trim().startsWith('<!doctype')
+                                 || dataStr.includes('AEM Sign In')
+                                 || dataStr.includes('j_security_check');
+
+          if (isHtmlResponse && (url.endsWith('.jpg') || url.endsWith('.png') || url.endsWith('.gif') || url.endsWith('.webp'))) {
+            reject(new Error('Authentication required - received HTML login page instead of image'));
+            return;
+          }
+
           // Save to cache
           saveToCacheFile(url, dataStr);
 
@@ -393,6 +405,85 @@ function ensureImagesDir() {
   return imagesDir;
 }
 
+// Function to validate if an image file is not corrupted
+function isValidImageFile(filePath) {
+  try {
+    const stats = fs.statSync(filePath);
+
+    // Check if file size is too small (likely corrupted or incomplete)
+    if (stats.size < 100) {
+      console.log(`   ⚠️  File too small (${stats.size} bytes): ${path.basename(filePath)}`);
+      return false;
+    }
+
+    // Read first 20 bytes to check file signature
+    const buffer = Buffer.alloc(20);
+    const fd = fs.openSync(filePath, 'r');
+    fs.readSync(fd, buffer, 0, 20, 0);
+    fs.closeSync(fd);
+
+    // Check if it's an HTML error page (common when download fails)
+    const bufferStr = buffer.toString('utf8', 0, 15);
+    if (bufferStr.includes('<!DOCTYPE') || bufferStr.includes('<html') || bufferStr.includes('<!doctype')) {
+      console.log(`   ⚠️  HTML error page detected: ${path.basename(filePath)}`);
+      return false;
+    }
+
+    // Check for common image file signatures
+    const isPNG = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47;
+    const isJPEG = buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
+    const isGIF = buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46;
+    const isWebP = buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50;
+    const isSVG = bufferStr.includes('<?xml') || bufferStr.includes('<svg');
+
+    if (!isPNG && !isJPEG && !isGIF && !isWebP && !isSVG) {
+      console.log(`   ⚠️  Invalid image format (first bytes: ${buffer.toString('hex', 0, 4)}): ${path.basename(filePath)}`);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.log(`   ⚠️  Error validating file: ${error.message}`);
+    return false;
+  }
+}
+
+// Function to clean up corrupted images in the images directory
+function cleanupCorruptedImages() {
+  const imagesDir = path.join(OUTPUT_DIR, 'images');
+
+  // Skip if images directory doesn't exist
+  if (!fs.existsSync(imagesDir)) {
+    return;
+  }
+
+  console.log('\n🔍 Checking for corrupted images...');
+
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+  const files = fs.readdirSync(imagesDir);
+  let corruptedCount = 0;
+
+  files.forEach((file) => {
+    const filePath = path.join(imagesDir, file);
+    const ext = path.extname(file).toLowerCase();
+
+    // Only check image files
+    if (imageExtensions.includes(ext) && fs.statSync(filePath).isFile()) {
+      if (!isValidImageFile(filePath)) {
+        console.log(`🗑️  Deleting corrupted image: ${file}`);
+        fs.unlinkSync(filePath);
+        corruptedCount++;
+      }
+    }
+  });
+
+  if (corruptedCount > 0) {
+    console.log(`✅ Cleaned up ${corruptedCount} corrupted image(s)\n`);
+  } else {
+    console.log('✅ No corrupted images found\n');
+  }
+}
+
 // Function to download and save image if it doesn't already exist
 async function downloadAndSaveImage(imageUrl, fileName, itemId) {
   const imagesDir = ensureImagesDir();
@@ -400,14 +491,27 @@ async function downloadAndSaveImage(imageUrl, fileName, itemId) {
   const finalFileName = buildFileNameWithId(itemId, fileName);
   const imagePath = path.join(imagesDir, sanitizeFileName(finalFileName));
 
-  // Check if image already exists
+  // Check if image already exists and is valid
   if (fs.existsSync(imagePath)) {
-    console.log(`⏭️  Image already exists, skipping: ${fileName}`);
-    return imagePath;
+    if (isValidImageFile(imagePath)) {
+      console.log(`⏭️  Image already exists, skipping: ${fileName}`);
+      return imagePath;
+    }
+    console.log(`⚠️  Corrupted image detected, re-downloading: ${fileName}`);
+    // Delete corrupted file
+    fs.unlinkSync(imagePath);
   }
 
   try {
     await downloadFile(imageUrl, imagePath);
+
+    // Validate downloaded image
+    if (!isValidImageFile(imagePath)) {
+      console.error(`❌ Downloaded image is corrupted: ${fileName}`);
+      fs.unlinkSync(imagePath);
+      return null;
+    }
+
     return imagePath;
   } catch (error) {
     console.error(`❌ Failed to download image ${imageUrl}: ${error.message}`);
@@ -558,6 +662,9 @@ async function main() {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
     console.log(`📁 Created directory: ${OUTPUT_DIR}`);
   }
+
+  // Clean up any corrupted images from previous runs
+  cleanupCorruptedImages();
 
   console.log('📥 Downloading jcr:content.infinity.json from AEM...\n');
 
@@ -2277,8 +2384,10 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
               // Fix path construction: ensure /root is included
               const jcrPath = currentPath.replace(/^root/, '_jcr_content/root');
 
-              // Use correct image format for banner images (coreimg.png instead of coreimg.85.1600.png)
-              const imageFormat = 'coreimg.png';
+              // Extract extension from filename and use it in coreimg format
+              const lastDotIndex = value.fileName.lastIndexOf('.');
+              const fileExt = lastDotIndex > 0 ? value.fileName.slice(lastDotIndex + 1) : 'png';
+              const imageFormat = `coreimg.${fileExt}`;
 
               // Sanitize filename using utility function
               const sanitizedFileName = sanitizeFileName(value.fileName);
@@ -2560,6 +2669,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
   // Save to file
   const jsonOutputPath = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
   const hierarchyStructure = {
+    title: jcrData['jcr:title'] || '',
     items: convertedHierarchy,
     linkUrl: CONTENT_PATH,
   };

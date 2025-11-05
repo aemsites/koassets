@@ -12,7 +12,7 @@
 const fs = require('fs');
 const path = require('path');
 const { globSync } = require('glob');
-// eslint-disable-next-line no-unused-vars
+const { sanitizeFileName } = require('./sanitize-utils.js');
 const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client.js');
 
 const TEMPLATES_DIR = path.join(__dirname, 'templates');
@@ -152,6 +152,55 @@ function findCsvFiles() {
 }
 
 /**
+ * Gets the DA destination path (aemsites/koassets/drafts/tphan)
+ */
+function getDestinationPath() {
+  // Build base path: org/repo
+  let destPath = `${DA_ORG}/${DA_REPO}`;
+
+  // Append DA_DEST if it exists
+  if (DA_DEST && DA_DEST.trim()) {
+    const dest = DA_DEST.trim();
+    // Ensure proper path separators
+    destPath += dest.startsWith('/') ? dest : `/${dest}`;
+  }
+
+  return destPath;
+}
+
+/**
+ * Extracts filename from a URL path
+ */
+function extractFilename(url) {
+  if (!url) return '';
+
+  // Extract the filename from the path
+  const parts = url.split('/');
+  const filename = parts[parts.length - 1];
+
+  return filename;
+}
+
+/**
+ * Formats banner image URL by extracting filename and prepending with full DA Live URL
+ * Returns empty string if the sanitized file doesn't exist in extracted-results/images
+ */
+function formatBannerImageUrl(imageUrl, destPath, storeName) {
+  if (!imageUrl) return '';
+
+  const filename = extractFilename(imageUrl);
+  const sanitizedFilename = sanitizeFileName(filename);
+
+  // Check if the sanitized file exists in the images directory
+  const imagePath = path.join(__dirname, storeName, 'extracted-results', 'images', sanitizedFilename);
+  if (!fs.existsSync(imagePath)) {
+    return '';
+  }
+
+  return `https://content.da.live/${destPath}/fragments/.${storeName}/${sanitizedFilename}`;
+}
+
+/**
  * Generate EDS documentation HTML files from multi-sheet JSON
  * @param {string} inputFile - Path to input JSON file (output from mergeCsvToMultiSheetJson)
  */
@@ -168,6 +217,9 @@ function generateEDSDocs(inputFile) {
       console.error('❌ Error: Invalid JSON format. Missing :names array.');
       process.exit(1);
     }
+
+    // Get DA destination path for formatting image URLs
+    const destPath = getDestinationPath();
 
     // Get DA_DEST without the '/fragments' suffix for sheet path
     // DA_DEST from da-admin-client has '/fragments' appended
@@ -188,6 +240,10 @@ function generateEDSDocs(inputFile) {
     );
     const individualStoreTemplate = fs.readFileSync(
       path.join(TEMPLATES_DIR, 'individual-content-store-template.html'),
+      'utf8',
+    );
+    const bannerTemplate = fs.readFileSync(
+      path.join(TEMPLATES_DIR, 'banner-template.html'),
       'utf8',
     );
 
@@ -218,11 +274,53 @@ function generateEDSDocs(inputFile) {
         .replace(/\$\{SHEET_NAME\}/g, name);
 
       // Choose page template based on name
-      const pageTemplate = isContentStoresList
+      let pageTemplate = isContentStoresList
         ? allContentStoresTemplate
         : individualStoreTemplate;
 
-      // Fill page template
+      // For individual stores, read hierarchy-structure.json for title and banner
+      if (!isContentStoresList) {
+        const hierarchyFile = path.join(
+          __dirname,
+          name,
+          'extracted-results',
+          'hierarchy-structure.json',
+        );
+
+        let title = '';
+        let bannerContent = '';
+
+        try {
+          if (fs.existsSync(hierarchyFile)) {
+            const hierarchyData = JSON.parse(fs.readFileSync(hierarchyFile, 'utf8'));
+
+            // Extract title
+            title = hierarchyData.title || '';
+
+            // Extract and format banner image URL
+            if (hierarchyData.bannerImages && hierarchyData.bannerImages.length > 0) {
+              const imageUrl = hierarchyData.bannerImages[0].imageUrl || '';
+              if (imageUrl) {
+                // Format image URL to DA Live format
+                const formattedImageUrl = formatBannerImageUrl(imageUrl, destPath, name);
+                if (formattedImageUrl) {
+                  // Fill in banner template
+                  bannerContent = bannerTemplate.replace(/\$\{IMAGE_URL\}/g, formattedImageUrl);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.warn(`      Warning: Could not read hierarchy file for ${name}: ${error.message}`);
+        }
+
+        // Replace TITLE and BANNER in individual store template
+        pageTemplate = pageTemplate
+          .replace(/\$\{TITLE\}/g, title)
+          .replace(/\$\{BANNER\}/g, bannerContent);
+      }
+
+      // Fill page template with block content
       const pageContent = pageTemplate.replace(/\$\{BLOCK_CONTENT_STORES\}/g, blockContent);
 
       // Write to file
