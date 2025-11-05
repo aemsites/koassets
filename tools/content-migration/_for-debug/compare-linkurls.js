@@ -82,12 +82,24 @@ function normalizeUrl(url) {
     normalized = '/';
   }
 
-  // Decode HTML entities to ensure consistent comparison (e.g., &amp; -> &)
-  normalized = normalized.replace(/&amp;/g, '&');
-  normalized = normalized.replace(/&lt;/g, '<');
-  normalized = normalized.replace(/&gt;/g, '>');
-  normalized = normalized.replace(/&quot;/g, '"');
-  normalized = normalized.replace(/&#39;/g, "'");
+  // Decode HTML entities to ensure consistent comparison
+  // Use a more robust approach to avoid double-unescaping issues
+  const entityMap = {
+    '&quot;': '"',
+    '&#39;': "'",
+    '&lt;': '<',
+    '&gt;': '>',
+    '&amp;': '&', // Must be last to avoid double-decoding
+  };
+
+  // Replace entities in order, with &amp; last
+  Object.keys(entityMap).forEach((entity) => {
+    if (entity !== '&amp;') {
+      normalized = normalized.replace(new RegExp(entity, 'g'), entityMap[entity]);
+    }
+  });
+  // Finally replace &amp; only if it's not part of another entity
+  normalized = normalized.replace(/&amp;(?!quot;|#39;|lt;|gt;)/g, '&');
 
   return normalized;
 }

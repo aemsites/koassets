@@ -1478,8 +1478,19 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         // If this is a text component with HTML content, try to extract clean text
         const resourceType = item['sling:resourceType'] || item[':type'] || '';
         if (resourceType.includes('text') && title) {
-          // Extract text content from HTML (simple approach - remove tags)
-          const cleanTitle = String(title).replace(/<[^>]*>/g, '').trim();
+          // Extract text content from HTML - use multiple passes to handle nested/malformed tags
+          let cleanTitle = String(title);
+          // Remove script and style tags with their content
+          cleanTitle = cleanTitle.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+          cleanTitle = cleanTitle.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+          // Remove all HTML tags (multiple passes to handle nested/malformed tags)
+          let prevTitle = '';
+          while (cleanTitle !== prevTitle && cleanTitle.includes('<')) {
+            prevTitle = cleanTitle;
+            cleanTitle = cleanTitle.replace(/<[^>]*>/g, '');
+          }
+          // Remove any remaining < or > characters to prevent injection
+          cleanTitle = cleanTitle.replace(/[<>]/g, '').trim();
 
           if (cleanTitle && cleanTitle.length > 0 && cleanTitle.length < 200) {
             title = cleanTitle;
