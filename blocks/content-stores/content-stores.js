@@ -280,39 +280,56 @@ function createViewerElement(contentStoresData) {
   function filterItem(item, searchTerm) {
     if (!item) return null;
 
+    const hadChildren = item.items && item.items.length > 0;
+    const isParent = hadChildren;
+
+    // If no search term, return everything
+    if (!searchTerm) {
+      return { ...item, hadChildren };
+    }
+
     // Check if item matches in title or text content
     const titleMatches = item.title && item.title.toLowerCase().includes(searchTerm);
-    const textMatches = item.text && item.text.toLowerCase().includes(searchTerm);
-    const matchesSearch = !searchTerm || titleMatches || textMatches;
 
-    const hadChildren = item.items && item.items.length > 0;
+    // Strip HTML tags from text before searching (only search visible text)
+    let visibleText = '';
+    if (item.text) {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = item.text;
+      visibleText = tempDiv.textContent || tempDiv.innerText || '';
+    }
+    const textMatches = visibleText && visibleText.toLowerCase().includes(searchTerm);
 
-    // Store original children before filtering
-    const originalChildren = item.items || [];
+    const matchesSearch = titleMatches || textMatches;
 
     // Recursively filter children
     const filteredChildren = item.items
       ? item.items.map((child) => filterItem(child, searchTerm)).filter(Boolean)
       : [];
 
+    const hasMatchingDescendants = filteredChildren.length > 0;
+
     // If this item matches the search
     if (matchesSearch) {
-      // Check if any children matched the search
-      const anyChildMatches = filteredChildren.length > 0;
-
-      // If no children match, show ALL children (unfiltered)
-      // If some children match, only show those that match
-      const childrenToShow = anyChildMatches ? filteredChildren : originalChildren;
-
+      if (isParent) {
+        // Parent matches: show itself + ALL its children (unfiltered)
+        return {
+          ...item,
+          items: item.items || [],
+          hadChildren,
+        };
+      }
+      // Leaf item matches: show itself only (ancestors will be added by parent logic)
       return {
         ...item,
-        items: childrenToShow,
+        items: [],
         hadChildren,
       };
     }
 
-    // If any children match, include this item with filtered children
-    if (filteredChildren.length > 0) {
+    // If this item doesn't match but has matching descendants
+    // Show this item as an ancestor with only the filtered children
+    if (hasMatchingDescendants) {
       return {
         ...item,
         items: filteredChildren,
