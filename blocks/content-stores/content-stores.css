@@ -26,7 +26,7 @@
 }
 
 .content-stores .controls {
-  padding: 30px 300px;
+  padding: 30px 280px;
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
@@ -232,7 +232,7 @@
 
 /* Smaller font for leaf items */
 .content-stores .tree-item.leaf-item .node-title {
-  font-size: var(--body-font-size-xs);
+  font-size: 13px;
 }
 
 /* Button type styling (matching cmp-button exactly) */
@@ -384,7 +384,7 @@
 }
 
 .content-stores .tree-item[data-item-type="title"] {
-  padding: 24px 300px;
+  padding: 24px 280px;
 }
 
 /* Alternating background colors for sections with title items */
@@ -398,7 +398,7 @@
 
 /* Top-level items styling (direct children of .content) */
 .content-stores .content > .tree-item:not([data-item-type="title"]) {
-  padding: 0 300px;
+  padding: 0 280px;
   border-radius: 0;
   box-sizing: border-box;
 }
@@ -523,7 +523,7 @@
 /* Grid container for leaf items - responsive to parent width */
 .content-stores .tree-children.has-grid {
   display: none;
-  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), max-content));
   gap: 20px;
   padding: 20px 0 0;
   border: none;
