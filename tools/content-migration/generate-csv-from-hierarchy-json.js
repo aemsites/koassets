@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint-disable no-console, no-restricted-syntax, max-len */
+/* eslint-disable no-console, no-restricted-syntax, max-len, import/no-extraneous-dependencies */
 /**
  * Generate spreadsheet from hierarchy-structure.merged.json
  * Traverses the JSON from bottom up and creates a CSV with:

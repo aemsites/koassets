@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { PATH_SEPARATOR } = require('./constants.js');
+const { PATH_SEPARATOR } = require('../constants.js');
 
 function splitPathSegments(pathStr) {
   if (!pathStr) return [];

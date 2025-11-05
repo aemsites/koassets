@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* eslint-disable no-console, no-restricted-syntax */
+/* eslint-disable no-console, no-restricted-syntax, import/no-extraneous-dependencies */
 /**
  * Convert all hierarchy-structure.csv files to a single multi-sheet JSON file
  *

@@ -11,7 +11,7 @@ const {
 } = require('./html-viewer-utils.js');
 
 const projectRoot = __dirname;
-const templatePath = path.join(projectRoot, 'for-debug/all-content-stores-viewer-tree-template.html');
+const templatePath = path.join(projectRoot, 'all-content-stores-viewer-tree-template.html');
 
 function showHelp() {
   console.log(`
