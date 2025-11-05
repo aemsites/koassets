@@ -6,12 +6,48 @@
 
 import { json, error } from 'itty-router';
 
+// Rights Request Status Constants
+const RIGHTS_REQUEST_STATUSES = {
+  NOT_STARTED: 'Not Started',
+  IN_PROGRESS: 'In Progress',
+  RM_CANCELED: 'RM Canceled',
+  QUOTE_PENDING: 'Quote Pending',
+  RELEASE_PENDING: 'Release Pending',
+  DONE: 'Done',
+  USER_CANCELED: 'User Canceled',
+};
+
+// Valid statuses for reviewers to set
+const REVIEWER_STATUSES = [
+  RIGHTS_REQUEST_STATUSES.IN_PROGRESS,
+  RIGHTS_REQUEST_STATUSES.RM_CANCELED,
+  RIGHTS_REQUEST_STATUSES.QUOTE_PENDING,
+  RIGHTS_REQUEST_STATUSES.RELEASE_PENDING,
+  RIGHTS_REQUEST_STATUSES.DONE,
+];
+
+// Valid statuses for submitters to set
+const SUBMITTER_STATUSES = [
+  RIGHTS_REQUEST_STATUSES.USER_CANCELED,
+];
+
+// Permission Constants
+const PERMISSIONS = {
+  RIGHTS_MANAGER: 'rights-manager',
+  REPORTS_ADMIN: 'reports-admin',
+};
+
 /**
  * Main Rights Requests API handler - routes requests to appropriate endpoint
  */
 export async function rightsRequestsApi(request, env) {
   const url = new URL(request.url);
   const path = url.pathname;
+
+  // Admin report route (all requests)
+  if (request.method === 'GET' && path.endsWith('/rightsrequests/all')) {
+    return listAllRightsRequests(request, env);
+  }
 
   // Request routes (submitter perspective)
   if (request.method === 'GET' && path.endsWith('/rightsrequests')) {
@@ -138,7 +174,7 @@ function transformReactToJCR(payload, userEmail) {
       },
     },
     rightsRequestReviewDetails: {
-      rightsRequestStatus: 'Not Started',
+      rightsRequestStatus: RIGHTS_REQUEST_STATUSES.NOT_STARTED,
       rightsReviewer: '',
       errorMessage: '',
     },
@@ -286,7 +322,7 @@ export async function assignReview(request, env) {
 
     const requestDataObj = JSON.parse(primaryRequestData);
     requestDataObj.rightsRequestReviewDetails.rightsReviewer = userEmail;
-    requestDataObj.rightsRequestReviewDetails.rightsRequestStatus = 'In Progress';
+    requestDataObj.rightsRequestReviewDetails.rightsRequestStatus = RIGHTS_REQUEST_STATUSES.IN_PROGRESS;
     requestDataObj.lastModified = new Date().toUTCString();
     requestDataObj.lastModifiedBy = userEmail;
 
@@ -320,6 +356,23 @@ export async function assignReview(request, env) {
 }
 
 /**
+ * Helper function to update request status
+ * @param {Object} env - Environment bindings
+ * @param {string} requestKey - KV key for the request
+ * @param {Object} requestData - Request data object
+ * @param {string} status - New status
+ * @param {string} userEmail - User email making the change
+ * @returns {Promise<Object>} Updated request data
+ */
+async function updateRequestStatusHelper(env, requestKey, requestData, status, userEmail) {
+  requestData.rightsRequestReviewDetails.rightsRequestStatus = status;
+  requestData.lastModified = new Date().toUTCString();
+  requestData.lastModifiedBy = userEmail;
+  await env.RIGHTS_REQUESTS.put(requestKey, JSON.stringify(requestData));
+  return requestData;
+}
+
+/**
  * Update review status for a rights request
  * POST /api/rightsrequests/reviews/status
  * Body: { requestId, status }
@@ -336,16 +389,7 @@ export async function updateReviewStatus(request, env) {
       return error(400, { success: false, error: 'Request ID and status are required' });
     }
 
-    // Valid statuses for reviewers
-    const validStatuses = [
-      'In Progress',
-      'RM Canceled',
-      'Quote Pending',
-      'Release Pending',
-      'Done',
-    ];
-
-    if (!validStatuses.includes(status)) {
+    if (!REVIEWER_STATUSES.includes(status)) {
       return error(400, { success: false, error: 'Invalid status' });
     }
 
@@ -367,17 +411,18 @@ export async function updateReviewStatus(request, env) {
 
     const requestDataObj = JSON.parse(primaryRequestData);
 
-    // Update status
-    requestDataObj.rightsRequestReviewDetails.rightsRequestStatus = status;
-    requestDataObj.lastModified = new Date().toUTCString();
-    requestDataObj.lastModifiedBy = userEmail;
-
-    // Save updated primary request
-    await env.RIGHTS_REQUESTS.put(review.requestId, JSON.stringify(requestDataObj));
+    // Update status using helper
+    const updatedData = await updateRequestStatusHelper(
+      env,
+      review.requestId,
+      requestDataObj,
+      status,
+      userEmail,
+    );
 
     return json({
       success: true,
-      data: requestDataObj,
+      data: updatedData,
       message: 'Status updated successfully',
     });
   } catch (err) {
@@ -407,10 +452,7 @@ export async function updateSubmitterRequestStatus(request, env) {
       return error(400, { success: false, error: 'Request ID and status are required' });
     }
 
-    // Valid statuses for submitters
-    const validStatuses = ['User Canceled'];
-
-    if (!validStatuses.includes(status)) {
+    if (!SUBMITTER_STATUSES.includes(status)) {
       return error(400, { success: false, error: 'Invalid status for submitter' });
     }
 
@@ -424,13 +466,8 @@ export async function updateSubmitterRequestStatus(request, env) {
 
     const requestDataObj = JSON.parse(primaryRequestData);
 
-    // Update status
-    requestDataObj.rightsRequestReviewDetails.rightsRequestStatus = status;
-    requestDataObj.lastModified = new Date().toUTCString();
-    requestDataObj.lastModifiedBy = userEmail;
-
-    // Save updated primary request
-    await env.RIGHTS_REQUESTS.put(primaryRequestKey, JSON.stringify(requestDataObj));
+    // Update status using helper
+    await updateRequestStatusHelper(env, primaryRequestKey, requestDataObj, status, userEmail);
 
     // If there's a review entry (assigned or unassigned), update it too
     const currentStatus = requestDataObj.rightsRequestReviewDetails.rightsRequestStatus;
@@ -505,6 +542,114 @@ export async function listRightsRequests(request, env) {
     return error(500, {
       success: false,
       error: 'Failed to retrieve rights requests',
+      message: err.message,
+    });
+  }
+}
+
+/**
+ * Check if user has the required permission
+ * @param {Object} user - User object from request
+ * @param {string} requiredPermission - Permission string to check for
+ * @returns {boolean} True if user has the required permission
+ */
+function isAuthorized(user, requiredPermission) {
+  // Check if user has the required permission
+  return user?.permissions?.includes(requiredPermission);
+}
+
+/**
+ * List all rights requests across all users (admin report)
+ * GET /api/rightsrequests/all
+ * Requires: PERMISSIONS.REPORTS_ADMIN
+ */
+export async function listAllRightsRequests(request, env) {
+  try {
+    // Get authenticated user email
+    const userEmail = request.user?.email?.toLowerCase();
+
+    if (!userEmail) {
+      return error(401, { success: false, error: 'User not authenticated' });
+    }
+
+    // Debug: Log user roles and permissions (temporary for debugging)
+    // eslint-disable-next-line no-console
+    console.log('[Admin Check] User info:', {
+      email: userEmail,
+      isAdmin: request.user?.isAdmin,
+      roles: request.user?.roles,
+      role: request.user?.role,
+      permissions: request.user?.permissions,
+      fullUser: request.user,
+    });
+
+    // Check reports-admin permission
+    if (!isAuthorized(request.user, PERMISSIONS.REPORTS_ADMIN)) {
+      return error(403, {
+        success: false,
+        error: `${PERMISSIONS.REPORTS_ADMIN} permission required`,
+        message: `You do not have the ${PERMISSIONS.REPORTS_ADMIN} permission to access this report`,
+        // Temporary debug info - shows what roles and permissions the user has
+        debug: {
+          userEmail,
+          isAdmin: request.user?.isAdmin,
+          roles: request.user?.roles,
+          role: request.user?.role,
+          permissions: request.user?.permissions,
+          allUserProperties: Object.keys(request.user || {}),
+          requiredPermission: PERMISSIONS.REPORTS_ADMIN,
+          note: `User needs: permissions array must include "${PERMISSIONS.REPORTS_ADMIN}"`,
+        },
+      });
+    }
+
+    // Get ALL keys from RIGHTS_REQUESTS KV store (no prefix to get everything)
+    // This will return all requests regardless of key pattern
+    const kvList = await env.RIGHTS_REQUESTS.list();
+
+    // Fetch all requests
+    const kvRequests = await Promise.all(
+      kvList.keys.map(async (key) => {
+        try {
+          const data = await env.RIGHTS_REQUESTS.get(key.name);
+          if (data) {
+            const parsed = JSON.parse(data);
+            // Include the KV key in the response
+            return { ...parsed, kvKey: key.name };
+          }
+          return null;
+        } catch (parseError) {
+          // Log error but continue processing other keys
+          // eslint-disable-next-line no-console
+          console.error(`Error parsing data for key ${key.name}:`, parseError.message);
+          return null;
+        }
+      }),
+    );
+
+    // Filter out any null values and convert to object
+    // Use standardized keys (rights-request-ID) but preserve raw KV key in the data
+    const requestsById = {};
+    kvRequests.filter((r) => r !== null).forEach((req) => {
+      // Use rights-request-ID as the key for consistency with other endpoints
+      const standardKey = `rights-request-${req.rightsRequestID}`;
+      requestsById[standardKey] = {
+        ...req,
+        // Keep both the raw KV key and standardized key for reference
+        rawKvKey: req.kvKey,
+      };
+    });
+
+    return json({
+      success: true,
+      data: requestsById,
+      count: Object.keys(requestsById).length,
+      totalKeys: kvList.keys.length,
+    });
+  } catch (err) {
+    return error(500, {
+      success: false,
+      error: 'Failed to retrieve all rights requests',
       message: err.message,
     });
   }
