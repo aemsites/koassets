@@ -232,7 +232,7 @@
 
 /* Smaller font for leaf items */
 .content-stores .tree-item.leaf-item .node-title {
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* Button type styling (matching cmp-button exactly) */
@@ -359,7 +359,13 @@
 }
 
 .content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node .node-title {
+  font-size: 15px;
   padding-left: 10px;
+  text-decoration: none;
+}
+
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:hover .node-title {
+  text-decoration: none;
 }
 
 .content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node .item-image,
