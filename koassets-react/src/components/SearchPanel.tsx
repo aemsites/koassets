@@ -30,7 +30,8 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
     onViewTypeChange,
     selectAuthorized,
     onSelectAuthorized,
-    isRightsSearch = false
+    isRightsSearch = false,
+    onShareSearch
 }) => {
     const handleToggleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         onExpandAllDetailsChange?.(e.target.checked);
@@ -165,9 +166,16 @@ const SearchPanel: React.FC<SearchPanelProps> = ({
                         />
                     </div>
 
-                    {/* Right side: (empty for now) */}
+                    {/* Right side: Share search */}
                     <div className="right-panel-group">
-                        {/* Future content can go here */}
+                        {onShareSearch && (
+                            <button
+                                className="share-search-btn"
+                                onClick={onShareSearch}
+                                title="Share Search"
+                                aria-label="Share Search"
+                            />
+                        )}
                     </div>
                 </div>
             </div>

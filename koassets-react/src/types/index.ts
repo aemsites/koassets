@@ -433,6 +433,13 @@ export interface ImageGalleryProps {
     onClearAllFacets?: () => void;
     deepLinkAsset?: Asset | null;
     onCloseDeepLinkModal?: () => void;
+    query?: string;
+    facetCheckedState?: FacetCheckedState;
+    selectedNumericFilters?: string[];
+    rightsStartDate?: DateValue | null;
+    rightsEndDate?: DateValue | null;
+    selectedMarkets?: Set<RightsData>;
+    selectedMediaChannels?: Set<RightsData>;
 }
 
 // Main App types (for the most complex component)
@@ -616,6 +623,7 @@ export interface SearchPanelProps {
     selectAuthorized?: boolean;
     onSelectAuthorized?: (isChecked: boolean) => void;
     isRightsSearch?: boolean;
+    onShareSearch?: () => void;
 }
 
 // Download archive data structure for sessionStorage
