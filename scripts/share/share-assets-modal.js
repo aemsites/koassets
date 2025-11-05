@@ -128,7 +128,8 @@ function showEmailPreviewModal() {
 
   // Add asset links as plain text (email clients will auto-link URLs)
   currentAssets.forEach((asset) => {
-    const assetName = asset.name || asset.assetId || asset.id || 'Asset';
+    // Use title if available, otherwise fall back to filename (name), then IDs
+    const assetName = asset.title || asset.name || asset.assetId || asset.id || 'Asset';
     const assetLink = getAssetLink(asset);
     // Format as plain text with asset name and link on same line
     bodyText += `${assetName} ${assetLink}\n`;
