@@ -482,7 +482,7 @@ async function extractLinkedContentStores(hierarchyStructureFile) {
   console.log('\n🚀 Starting extraction for discovered content stores...');
 
   // Import child_process for running the script
-  const { execSync } = require('child_process');
+  const { execFileSync } = require('child_process');
 
   let successCount = 0;
   let failureCount = 0;
@@ -493,8 +493,8 @@ async function extractLinkedContentStores(hierarchyStructureFile) {
 
     try {
       // Run the extraction script recursively
-      const command = `node extract-tab-hierarchy-all.js "${contentPath}"`;
-      const output = execSync(command, {
+      // Use execFileSync instead of execSync to prevent command injection
+      const output = execFileSync('node', ['extract-tab-hierarchy-all.js', contentPath], {
         cwd: __dirname,
         encoding: 'utf8',
         stdio: 'pipe',

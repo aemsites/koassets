@@ -14,6 +14,40 @@ import AssetPreview from './AssetPreview';
 import './ImageGallery.css';
 import SearchPanel from './SearchPanel';
 
+/**
+ * Sanitize HTML content to prevent XSS attacks
+ * Removes script tags, event handlers, and dangerous protocols
+ */
+function sanitizeHTML(html: string): string {
+    if (!html) return '';
+
+    // Create a temporary div to parse HTML
+    const temp = document.createElement('div');
+    temp.textContent = html; // This escapes all HTML
+    let sanitized = temp.innerHTML;
+
+    // If the original HTML contains actual tags (not just text), use a more permissive approach
+    if (html.includes('<') && html !== sanitized) {
+        temp.innerHTML = html;
+
+        // Remove script and style tags
+        temp.querySelectorAll('script, style').forEach(el => el.remove());
+
+        // Remove event handler attributes
+        temp.querySelectorAll('*').forEach(el => {
+            Array.from(el.attributes).forEach(attr => {
+                if (attr.name.startsWith('on') || attr.name === 'href' && attr.value.startsWith('javascript:')) {
+                    el.removeAttribute(attr.name);
+                }
+            });
+        });
+
+        sanitized = temp.innerHTML;
+    }
+
+    return sanitized;
+}
+
 // Display list of images
 const ImageGallery: React.FC<ImageGalleryProps> = ({
     images,
@@ -60,8 +94,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     console.debug('ImageGallery received deepLinkAsset:', deepLinkAsset);
 
     // Extract accordion parameters from external params with fallbacks
-    const accordionTitle = externalParams?.accordionTitle || DEFAULT_ACCORDION_CONFIG.accordionTitle;
-    const accordionContent = externalParams?.accordionContent || DEFAULT_ACCORDION_CONFIG.accordionContent;
+    // Sanitize HTML content to prevent XSS attacks
+    const accordionTitle = sanitizeHTML(externalParams?.accordionTitle || DEFAULT_ACCORDION_CONFIG.accordionTitle);
+    const accordionContent = sanitizeHTML(externalParams?.accordionContent || DEFAULT_ACCORDION_CONFIG.accordionContent);
 
     // Modal state management for asset preview
     const [selectedCard, setSelectedCard] = useState<Asset | null>(null);
