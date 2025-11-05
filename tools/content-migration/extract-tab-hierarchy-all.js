@@ -1478,18 +1478,24 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         // If this is a text component with HTML content, try to extract clean text
         const resourceType = item['sling:resourceType'] || item[':type'] || '';
         if (resourceType.includes('text') && title) {
-          // Extract text content from HTML - use multiple passes to handle nested/malformed tags
+          // Extract text content from HTML - sanitize to prevent injection
           let cleanTitle = String(title);
-          // Remove script and style tags with their content
-          cleanTitle = cleanTitle.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-          cleanTitle = cleanTitle.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
-          // Remove all HTML tags (multiple passes to handle nested/malformed tags)
+
+          // Iteratively remove all HTML tags (handles nested/malformed HTML)
+          // Loop until no more changes occur or max iterations reached
           let prevTitle = '';
-          while (cleanTitle !== prevTitle && cleanTitle.includes('<')) {
+          let iterations = 0;
+          const maxIterations = 10; // Prevent infinite loops
+
+          while (cleanTitle !== prevTitle && iterations < maxIterations) {
             prevTitle = cleanTitle;
+            // Remove any tag-like patterns
             cleanTitle = cleanTitle.replace(/<[^>]*>/g, '');
+            iterations += 1;
           }
-          // Remove any remaining < or > characters to prevent injection
+
+          // Final sanitization: remove ALL < and > characters to prevent any injection
+          // This ensures no HTML can remain regardless of malformed input
           cleanTitle = cleanTitle.replace(/[<>]/g, '').trim();
 
           if (cleanTitle && cleanTitle.length > 0 && cleanTitle.length < 200) {
