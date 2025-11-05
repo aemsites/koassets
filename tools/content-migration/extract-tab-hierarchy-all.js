@@ -448,6 +448,42 @@ function isValidImageFile(filePath) {
   }
 }
 
+// Function to clean up corrupted images in the images directory
+function cleanupCorruptedImages() {
+  const imagesDir = path.join(OUTPUT_DIR, 'images');
+
+  // Skip if images directory doesn't exist
+  if (!fs.existsSync(imagesDir)) {
+    return;
+  }
+
+  console.log('\n🔍 Checking for corrupted images...');
+
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+  const files = fs.readdirSync(imagesDir);
+  let corruptedCount = 0;
+
+  files.forEach((file) => {
+    const filePath = path.join(imagesDir, file);
+    const ext = path.extname(file).toLowerCase();
+
+    // Only check image files
+    if (imageExtensions.includes(ext) && fs.statSync(filePath).isFile()) {
+      if (!isValidImageFile(filePath)) {
+        console.log(`🗑️  Deleting corrupted image: ${file}`);
+        fs.unlinkSync(filePath);
+        corruptedCount++;
+      }
+    }
+  });
+
+  if (corruptedCount > 0) {
+    console.log(`✅ Cleaned up ${corruptedCount} corrupted image(s)\n`);
+  } else {
+    console.log('✅ No corrupted images found\n');
+  }
+}
+
 // Function to download and save image if it doesn't already exist
 async function downloadAndSaveImage(imageUrl, fileName, itemId) {
   const imagesDir = ensureImagesDir();
@@ -626,6 +662,9 @@ async function main() {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
     console.log(`📁 Created directory: ${OUTPUT_DIR}`);
   }
+
+  // Clean up any corrupted images from previous runs
+  cleanupCorruptedImages();
 
   console.log('📥 Downloading jcr:content.infinity.json from AEM...\n');
 
