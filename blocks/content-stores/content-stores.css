@@ -366,6 +366,7 @@
 
 .content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:hover .node-title {
   text-decoration: none;
+  color: var(--primary-color) !important;
 }
 
 .content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node .item-image,
@@ -379,10 +380,6 @@
 .content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:hover {
   background-color: transparent !important;
   color: inherit;
-}
-
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:hover .node-title {
-  color: var(--primary-color) !important;
 }
 
 .content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:hover .expand-icon {
