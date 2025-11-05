@@ -1399,33 +1399,6 @@ export default async function decorate(block) {
   } catch (error) {
     loading.remove();
 
-    // Check if the error response has debug info about user roles
-    if (error.message && (error.message.includes('403') || error.message.includes('permission required'))) {
-      // Try to fetch the error details
-      fetch('/api/rightsrequests/all', { credentials: 'include' })
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.debug) {
-            // Show alert with user's current roles and permissions
-            // eslint-disable-next-line no-alert
-            alert(
-              'ACCESS DENIED - Your Current User Info:\n\n'
-              + `Email: ${data.debug.userEmail}\n`
-              + `isAdmin: ${data.debug.isAdmin}\n`
-              + `role: ${data.debug.role}\n`
-              + `roles: ${JSON.stringify(data.debug.roles)}\n`
-              + `permissions: ${JSON.stringify(data.debug.permissions)}\n`
-              + `\nAll user properties: ${JSON.stringify(data.debug.allUserProperties)}\n\n`
-              + `${data.debug.note}`,
-            );
-          }
-        })
-        .catch(() => {
-          // eslint-disable-next-line no-alert
-          alert('Access denied. Check server logs for user role information.');
-        });
-    }
-
     const errorDiv = document.createElement('div');
     errorDiv.className = 'error-state';
     errorDiv.textContent = `Failed to load rights requests: ${error.message}`;
