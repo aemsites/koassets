@@ -36,10 +36,30 @@ import {
   hideCreateModal,
 } from './modals.js';
 
+// Metadata path constants for collection ACL
+const METADATA_NAMESPACE = 'tccc:metadata';
+const ACL_KEY = 'tccc:acl';
+
 // Check if we're in cookie auth mode (same logic as main app)
 function isCookieAuth() {
   return window.location.origin.endsWith('adobeaem.workers.dev')
     || window.location.origin === 'http://localhost:8787';
+}
+
+/**
+ * Ensure the ACL metadata path exists in a collection object
+ * Creates nested objects if they don't exist to prevent errors when updating ACL
+ * @param {Object} collection - Collection object to initialize
+ */
+function ensureAclPath(collection) {
+  if (!collection.apiData) collection.apiData = {};
+  if (!collection.apiData.collectionMetadata) collection.apiData.collectionMetadata = {};
+  if (!collection.apiData.collectionMetadata[METADATA_NAMESPACE]) {
+    collection.apiData.collectionMetadata[METADATA_NAMESPACE] = {};
+  }
+  if (!collection.apiData.collectionMetadata[METADATA_NAMESPACE][ACL_KEY]) {
+    collection.apiData.collectionMetadata[METADATA_NAMESPACE][ACL_KEY] = {};
+  }
 }
 
 // Global state for collections and API client
@@ -516,8 +536,8 @@ async function handleShareSubmit() {
 
     // Update collection metadata with new ACL
     const updateData = {
-      'tccc:metadata': {
-        'tccc:acl': {
+      [METADATA_NAMESPACE]: {
+        [ACL_KEY]: {
           ...currentAcl,
           [aclField]: existingUsers,
         },
@@ -525,6 +545,26 @@ async function handleShareSubmit() {
     };
 
     await collectionsClient.updateCollectionMetadata(sharingCollectionId, updateData);
+
+    // Optimistically update local collection data to reflect ACL changes immediately.
+    // The API's search endpoint doesn't return updated custom metadata right away,
+    // so we update our local copy to avoid requiring a page refresh for the UI to reflect changes.
+    const collectionIndex = allCollections.findIndex((c) => c.id === sharingCollectionId);
+    if (collectionIndex !== -1) {
+      const collection = allCollections[collectionIndex];
+
+      // Ensure the nested ACL path exists
+      ensureAclPath(collection);
+
+      // Update the ACL with the new user list
+      collection.apiData.collectionMetadata[METADATA_NAMESPACE][ACL_KEY] = {
+        ...currentAcl,
+        [aclField]: existingUsers,
+      };
+
+      // Note: We don't update lastUpdated because the API doesn't update it
+      // for ACL-only changes, so keeping it unchanged maintains consistency
+    }
 
     // Show success message
     showToast(`COLLECTION SHARED SUCCESSFULLY WITH ${emailList.length} USER(S)`, 'success');
@@ -535,8 +575,8 @@ async function handleShareSubmit() {
     // Hide the share modal
     hideShareModal();
 
-    // Refresh main display to update share counts
-    await refreshCollectionsDisplay();
+    // Update display with local data immediately (no API reload needed)
+    updateCollectionsDisplay();
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Failed to share collection:', error);
@@ -584,8 +624,8 @@ async function handleRemoveUser() {
 
     // Update collection metadata with new ACL
     const updateData = {
-      'tccc:metadata': {
-        'tccc:acl': {
+      [METADATA_NAMESPACE]: {
+        [ACL_KEY]: {
           ...currentAcl,
           [aclField]: updatedUsers,
         },
@@ -597,6 +637,30 @@ async function handleRemoveUser() {
     // Check if user removed themselves
     const currentUserEmail = (window.user?.email || '').toLowerCase();
     const removedSelf = currentUserEmail === email.toLowerCase();
+
+    // Optimistically update local collection data to reflect ACL changes immediately.
+    // The API's search endpoint doesn't return updated custom metadata right away,
+    // so we update our local copy to avoid requiring a page refresh for the UI to reflect changes.
+    if (!removedSelf) {
+      // Only do optimistic update if removing someone else
+      // If user removed themselves, we need to reload from API to see if collection is gone
+      const collectionIndex = allCollections.findIndex((c) => c.id === collectionId);
+      if (collectionIndex !== -1) {
+        const localCollection = allCollections[collectionIndex];
+
+        // Ensure the nested ACL path exists
+        ensureAclPath(localCollection);
+
+        // Update the ACL with the removed user
+        localCollection.apiData.collectionMetadata[METADATA_NAMESPACE][ACL_KEY] = {
+          ...currentAcl,
+          [aclField]: updatedUsers,
+        };
+
+        // Note: We don't update lastUpdated because the API doesn't update it
+        // for ACL-only changes, so keeping it unchanged maintains consistency
+      }
+    }
 
     // Hide the remove modal
     hideRemoveUserModal();
@@ -614,8 +678,8 @@ async function handleRemoveUser() {
       // Refresh the view access modal to show updated list
       await updateViewAccessDisplay(collectionId, collectionsClient, showRemoveUserConfirmation);
 
-      // Also refresh main display to update share counts
-      await refreshCollectionsDisplay();
+      // Update main display with local data immediately (no API reload needed)
+      updateCollectionsDisplay();
     }
   } catch (error) {
     // eslint-disable-next-line no-console
@@ -766,8 +830,8 @@ async function handleCreateCollection() {
       accessLevel: 'private', // Default to private
       items: [], // Required empty items array
       // Custom metadata with tccc: prefix
-      'tccc:metadata': {
-        'tccc:acl': {
+      [METADATA_NAMESPACE]: {
+        [ACL_KEY]: {
           [ACL_FIELDS.OWNER]: userEmail,
           [ACL_FIELDS.VIEWER]: [],
           [ACL_FIELDS.EDITOR]: [],
