@@ -1,3 +1,13 @@
+/* Share dropdown variables */
+:root {
+    --dropdown-item-padding: 12px 16px;
+    --dropdown-item-padding-mobile: 10px 14px;
+    --dropdown-icon-size: 18px;
+    --dropdown-icon-size-mobile: 16px;
+    --dropdown-icon-opacity: 0.7;
+    --dropdown-icon-opacity-hover: 1;
+}
+
 .my-collections {
     padding: 2rem;
     max-width: 1200px;
@@ -739,6 +749,98 @@
     display: block;
 }
 
+/* Share dropdown container */
+.share-btn-container {
+    position: relative;
+    display: inline-block;
+}
+
+/* Dropdown indicator (chevron down) */
+.my-collections .share-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 10px;
+    height: 10px;
+    background: url('/icons/chevron-down.svg') center center / contain no-repeat;
+    pointer-events: none;
+}
+
+/* Dropdown menu */
+.share-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 4px;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+    min-width: 160px;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+}
+
+.share-dropdown-menu.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Dropdown items */
+.share-dropdown-item {
+    padding: var(--dropdown-item-padding);
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+    transition: background-color 0.2s ease;
+}
+
+.share-dropdown-item:first-child {
+    border-radius: 8px 8px 0 0;
+}
+
+.share-dropdown-item:last-child {
+    border-radius: 0 0 8px 8px;
+}
+
+.share-dropdown-item:hover {
+    background-color: #f5f5f5;
+}
+
+/* Icons for dropdown items (on the left) */
+.share-dropdown-item[data-action="share-access"]::before {
+    content: '';
+    width: var(--dropdown-icon-size);
+    height: var(--dropdown-icon-size);
+    background: url('/icons/share.svg') center center / contain no-repeat;
+    display: block;
+    flex-shrink: 0;
+    opacity: var(--dropdown-icon-opacity);
+}
+
+.share-dropdown-item[data-action="copy-link"]::before {
+    content: '';
+    width: var(--dropdown-icon-size);
+    height: var(--dropdown-icon-size);
+    background: url('/icons/copy.svg') center center / contain no-repeat;
+    display: block;
+    flex-shrink: 0;
+    opacity: var(--dropdown-icon-opacity);
+}
+
+.share-dropdown-item:hover::before {
+    opacity: var(--dropdown-icon-opacity-hover);
+}
+
 /* Responsive design for collections list */
 @media (width <= 768px) {
     .collections-header {
@@ -803,5 +905,26 @@
         width: 24px;
         height: 24px;
         background-size: 100% 100%;
+    }
+
+    .my-collections .share-btn::after {
+        width: 8px;
+        height: 8px;
+        bottom: 1px;
+        right: 1px;
+    }
+
+    .share-dropdown-menu {
+        min-width: 140px;
+    }
+
+    .share-dropdown-item {
+        padding: var(--dropdown-item-padding-mobile);
+        font-size: 0.85rem;
+    }
+
+    .share-dropdown-item::before {
+        width: var(--dropdown-icon-size-mobile);
+        height: var(--dropdown-icon-size-mobile);
     }
 }
