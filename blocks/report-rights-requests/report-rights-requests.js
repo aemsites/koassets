@@ -14,6 +14,22 @@ const CONFIG = {
   DONE_STATUS: 'Done',
   MONTH_ORDER: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   DEBUG: false, // Set to true for debug logging
+  // Canvas rendering
+  CHART_BORDER_WIDTH: 2,
+  CHART_BORDER_COLOR: '#fff',
+  NO_DATA_FONT: '14px Arial',
+  NO_DATA_COLOR: '#999',
+  NO_DATA_TEXT_ALIGN: 'center',
+  // Messages
+  MESSAGES: {
+    NO_REVIEWER_DATA: 'No reviewer data',
+    NO_REPEATED_ASSETS: 'No repeated assets',
+    NO_MEDIA_RIGHTS: 'No media rights data',
+    NO_MARKETS: 'No markets data',
+    NO_FILTERED_DATA: 'No data for selected filters',
+    CSV_EXPORT_SUCCESS: 'Report exported successfully',
+    CSV_EXPORT_ERROR: 'Failed to export report',
+  },
 };
 
 // Status constants
@@ -22,7 +38,20 @@ const RIGHTS_REQUEST_STATUSES = {
   IN_PROGRESS: 'In Progress',
   QUOTE_PENDING: 'Quote Pending',
   DONE: 'Done',
+  RM_CANCELED: 'RM Canceled',
+  USER_CANCELED: 'User Canceled',
 };
+
+/**
+ * Check if a status is considered "completed" (has an approval/rejection date)
+ * @param {string} status - Status to check
+ * @returns {boolean} True if status is completed (Done, RM Canceled, or User Canceled)
+ */
+function isCompletedStatus(status) {
+  return status === RIGHTS_REQUEST_STATUSES.DONE
+    || status === RIGHTS_REQUEST_STATUSES.RM_CANCELED
+    || status === RIGHTS_REQUEST_STATUSES.USER_CANCELED;
+}
 
 // Global state
 let allRequests = [];
@@ -43,6 +72,20 @@ function debug(...args) {
     // eslint-disable-next-line no-console
     console.trace('[Report Debug]', ...args);
   }
+}
+
+/**
+ * Render "no data" message on canvas
+ * @param {HTMLCanvasElement} canvas - Canvas element to render on
+ * @param {string} message - Message to display
+ */
+function renderNoDataMessage(canvas, message) {
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.font = CONFIG.NO_DATA_FONT;
+  ctx.fillStyle = CONFIG.NO_DATA_COLOR;
+  ctx.textAlign = CONFIG.NO_DATA_TEXT_ALIGN;
+  ctx.fillText(message, canvas.width / 2, canvas.height / 2);
 }
 
 /**
@@ -207,6 +250,62 @@ function calculateRepeatedAssets(requests) {
 }
 
 /**
+ * Calculate media rights distribution across all requests
+ * @param {Array} requests - Array of rights request objects
+ * @returns {Array<{mediaRight: string, count: number}>} Media rights with counts,
+ *   sorted by count descending
+ */
+function calculateMediaRights(requests) {
+  const mediaRightsCounts = {};
+
+  requests.forEach((request) => {
+    const intendedUsage = request.rightsRequestDetails?.intendedUsage || {};
+    const mediaRights = intendedUsage.mediaRights || [];
+
+    // Count each media right
+    mediaRights.forEach((media) => {
+      const mediaName = media.name || media.id || '';
+      if (mediaName) {
+        mediaRightsCounts[mediaName] = (mediaRightsCounts[mediaName] || 0) + 1;
+      }
+    });
+  });
+
+  // Convert to array and sort by count
+  return Object.entries(mediaRightsCounts)
+    .map(([mediaRight, count]) => ({ mediaRight, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+/**
+ * Calculate markets covered distribution across all requests
+ * @param {Array} requests - Array of rights request objects
+ * @returns {Array<{market: string, count: number}>} Markets with counts,
+ *   sorted by count descending
+ */
+function calculateMarketsCovered(requests) {
+  const marketsCounts = {};
+
+  requests.forEach((request) => {
+    const intendedUsage = request.rightsRequestDetails?.intendedUsage || {};
+    const markets = intendedUsage.marketsCovered || [];
+
+    // Count each market
+    markets.forEach((market) => {
+      const marketName = market.name || market.id || '';
+      if (marketName) {
+        marketsCounts[marketName] = (marketsCounts[marketName] || 0) + 1;
+      }
+    });
+  });
+
+  // Convert to array and sort by count
+  return Object.entries(marketsCounts)
+    .map(([market, count]) => ({ market, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+/**
  * Calculate requests by reviewer
  * @param {Array} requests - Array of rights request objects
  * @returns {Array<{reviewer: string, count: number}>} Reviewer counts sorted by count descending
@@ -228,16 +327,16 @@ function calculateRequestsByReviewer(requests) {
 
 /**
  * Calculate review completion time statistics (min, avg, max) in days
- * Only includes requests with status "Done"
+ * Only includes requests with status "Done", "RM Canceled", or "User Canceled"
  * @param {Array} requests - Array of rights request objects
  * @returns {{min: number, avg: number, max: number}|null} Time stats or null
  *   if no completed reviews
  */
 function calculateReviewTimeStats(requests) {
-  // Only include requests with status "Done"
+  // Only include requests with completed status (Done, RM Canceled, User Canceled)
   const completedReviews = requests.filter((request) => {
     const status = request.rightsRequestReviewDetails?.rightsRequestStatus;
-    return status === RIGHTS_REQUEST_STATUSES.DONE;
+    return isCompletedStatus(status);
   });
 
   if (completedReviews.length === 0) {
@@ -540,8 +639,8 @@ function renderStatusChart(canvas, statusData) {
     datasets: [{
       data: statusData.map((item) => item.count),
       backgroundColor: CONFIG.CHART_COLORS.slice(0, statusData.length),
-      borderWidth: 2,
-      borderColor: '#fff',
+      borderWidth: CONFIG.CHART_BORDER_WIDTH,
+      borderColor: CONFIG.CHART_BORDER_COLOR,
     }],
   };
 
@@ -602,12 +701,7 @@ function renderReviewerChart(canvas, reviewerData) {
   }
 
   if (!reviewerData || reviewerData.length === 0) {
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = '14px Arial';
-    ctx.fillStyle = '#999';
-    ctx.textAlign = 'center';
-    ctx.fillText('No reviewer data', canvas.width / 2, canvas.height / 2);
+    renderNoDataMessage(canvas, CONFIG.MESSAGES.NO_REVIEWER_DATA);
     return null;
   }
 
@@ -618,8 +712,8 @@ function renderReviewerChart(canvas, reviewerData) {
       datasets: [{
         data: reviewerData.map((item) => item.count),
         backgroundColor: CONFIG.CHART_COLORS.slice(0, reviewerData.length),
-        borderWidth: 2,
-        borderColor: '#fff',
+        borderWidth: CONFIG.CHART_BORDER_WIDTH,
+        borderColor: CONFIG.CHART_BORDER_COLOR,
       }],
     },
     options: {
@@ -678,12 +772,7 @@ function renderRepeatedAssetsChart(canvas, assetData) {
 
   if (!assetData || assetData.length === 0) {
     // No repeated assets
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = '14px Arial';
-    ctx.fillStyle = '#999';
-    ctx.textAlign = 'center';
-    ctx.fillText('No repeated assets', canvas.width / 2, canvas.height / 2);
+    renderNoDataMessage(canvas, CONFIG.MESSAGES.NO_REPEATED_ASSETS);
     return null;
   }
 
@@ -692,8 +781,8 @@ function renderRepeatedAssetsChart(canvas, assetData) {
     datasets: [{
       data: assetData.map((item) => item.count),
       backgroundColor: CONFIG.ASSET_CHART_COLORS.slice(0, assetData.length),
-      borderWidth: 2,
-      borderColor: '#fff',
+      borderWidth: CONFIG.CHART_BORDER_WIDTH,
+      borderColor: CONFIG.CHART_BORDER_COLOR,
     }],
   };
 
@@ -729,6 +818,148 @@ function renderRepeatedAssetsChart(canvas, assetData) {
 
   assetsChartInstance = new window.Chart(canvas, config);
   return assetsChartInstance;
+}
+
+/**
+ * Render media rights pie chart
+ */
+let mediaRightsChartInstance = null;
+
+/**
+ * Render media rights distribution pie chart
+ * @param {HTMLCanvasElement} canvas - Canvas element to render on
+ * @param {Array<{mediaRight: string, count: number}>} mediaData - Media rights counts
+ * @returns {Chart|null} Chart instance or null if no data
+ */
+function renderMediaRightsChart(canvas, mediaData) {
+  if (!window.Chart) {
+    // eslint-disable-next-line no-console
+    console.error('Chart.js not loaded');
+    return null;
+  }
+
+  // Destroy existing chart
+  if (mediaRightsChartInstance) {
+    mediaRightsChartInstance.destroy();
+  }
+
+  if (!mediaData || mediaData.length === 0) {
+    renderNoDataMessage(canvas, CONFIG.MESSAGES.NO_MEDIA_RIGHTS);
+    return null;
+  }
+
+  const data = {
+    labels: mediaData.map((item) => `${item.mediaRight} (${item.count})`),
+    datasets: [{
+      data: mediaData.map((item) => item.count),
+      backgroundColor: CONFIG.ASSET_CHART_COLORS.slice(0, mediaData.length),
+      borderWidth: CONFIG.CHART_BORDER_WIDTH,
+      borderColor: CONFIG.CHART_BORDER_COLOR,
+    }],
+  };
+
+  const config = {
+    type: 'pie',
+    data,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: {
+            padding: 10,
+            font: { size: 11 },
+            boxWidth: 12,
+          },
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const item = mediaData[context.dataIndex];
+              const total = mediaData.reduce((sum, d) => sum + d.count, 0);
+              const percentage = ((item.count / total) * 100).toFixed(1);
+              return `${item.mediaRight}: ${item.count} (${percentage}%)`;
+            },
+          },
+        },
+      },
+    },
+  };
+
+  mediaRightsChartInstance = new window.Chart(canvas, config);
+  return mediaRightsChartInstance;
+}
+
+/**
+ * Render markets covered pie chart
+ */
+let marketsChartInstance = null;
+
+/**
+ * Render markets covered distribution pie chart
+ * @param {HTMLCanvasElement} canvas - Canvas element to render on
+ * @param {Array<{market: string, count: number}>} marketData - Markets counts
+ * @returns {Chart|null} Chart instance or null if no data
+ */
+function renderMarketsChart(canvas, marketData) {
+  if (!window.Chart) {
+    // eslint-disable-next-line no-console
+    console.error('Chart.js not loaded');
+    return null;
+  }
+
+  // Destroy existing chart
+  if (marketsChartInstance) {
+    marketsChartInstance.destroy();
+  }
+
+  if (!marketData || marketData.length === 0) {
+    renderNoDataMessage(canvas, CONFIG.MESSAGES.NO_MARKETS);
+    return null;
+  }
+
+  const data = {
+    labels: marketData.map((item) => `${item.market} (${item.count})`),
+    datasets: [{
+      data: marketData.map((item) => item.count),
+      backgroundColor: CONFIG.ASSET_CHART_COLORS.slice(0, marketData.length),
+      borderWidth: CONFIG.CHART_BORDER_WIDTH,
+      borderColor: CONFIG.CHART_BORDER_COLOR,
+    }],
+  };
+
+  const config = {
+    type: 'pie',
+    data,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: {
+            padding: 10,
+            font: { size: 11 },
+            boxWidth: 12,
+          },
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const item = marketData[context.dataIndex];
+              const total = marketData.reduce((sum, d) => sum + d.count, 0);
+              const percentage = ((item.count / total) * 100).toFixed(1);
+              return `${item.market}: ${item.count} (${percentage}%)`;
+            },
+          },
+        },
+      },
+    },
+  };
+
+  marketsChartInstance = new window.Chart(canvas, config);
+  return marketsChartInstance;
 }
 
 /**
@@ -940,8 +1171,8 @@ function exportToCSV() {
     // Use raw KV key if available for PATH column
     const pathValue = request.rawKvKey || request.kvKey || '';
 
-    // Only show approval date if status is DONE
-    const approvalDateValue = reviewDetails.rightsRequestStatus === RIGHTS_REQUEST_STATUSES.DONE
+    // Only show approval date if status is completed (Done, RM Canceled, User Canceled)
+    const approvalDateValue = isCompletedStatus(reviewDetails.rightsRequestStatus)
       ? (request.lastModified || '')
       : '';
 
@@ -982,6 +1213,9 @@ function exportToCSV() {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+
+  // Show success notification
+  showToast(CONFIG.MESSAGES.CSV_EXPORT_SUCCESS, 'success');
 }
 
 /**
@@ -1072,12 +1306,34 @@ function createSummarySection() {
     </div>
   `;
 
+  // Card 7: Media Rights Distribution (Pie Chart)
+  const mediaCard = document.createElement('div');
+  mediaCard.className = 'summary-card media-card';
+  mediaCard.innerHTML = `
+    <h3 class="summary-card-title">Media Rights Distribution</h3>
+    <div class="chart-container">
+      <canvas id="media-chart"></canvas>
+    </div>
+  `;
+
+  // Card 8: Markets Covered Distribution (Pie Chart)
+  const marketsCard = document.createElement('div');
+  marketsCard.className = 'summary-card markets-card';
+  marketsCard.innerHTML = `
+    <h3 class="summary-card-title">Markets Covered Distribution</h3>
+    <div class="chart-container">
+      <canvas id="markets-chart"></canvas>
+    </div>
+  `;
+
   summaryCards.appendChild(totalCard);
   summaryCards.appendChild(statusCard);
   summaryCards.appendChild(dateCard);
   summaryCards.appendChild(reviewerCard);
   summaryCards.appendChild(avgTimeCard);
   summaryCards.appendChild(assetsCard);
+  summaryCards.appendChild(mediaCard);
+  summaryCards.appendChild(marketsCard);
   summary.appendChild(summaryCards);
 
   return summary;
@@ -1115,12 +1371,7 @@ function initializeCharts() {
         statusChartInstance.destroy();
         statusChartInstance = null;
       }
-      const ctx = statusCanvas.getContext('2d');
-      ctx.clearRect(0, 0, statusCanvas.width, statusCanvas.height);
-      ctx.font = '14px Arial';
-      ctx.fillStyle = '#999';
-      ctx.textAlign = 'center';
-      ctx.fillText('No data for selected filters', statusCanvas.width / 2, statusCanvas.height / 2);
+      renderNoDataMessage(statusCanvas, CONFIG.MESSAGES.NO_FILTERED_DATA);
     }
   }
 
@@ -1167,6 +1418,20 @@ function initializeCharts() {
   // Render repeated assets chart
   if (assetsCanvas) {
     renderRepeatedAssetsChart(assetsCanvas, assetsData);
+  }
+
+  // Calculate and render media rights chart
+  const mediaData = calculateMediaRights(dataSource);
+  const mediaCanvas = document.getElementById('media-chart');
+  if (mediaCanvas) {
+    renderMediaRightsChart(mediaCanvas, mediaData);
+  }
+
+  // Calculate and render markets covered chart
+  const marketsData = calculateMarketsCovered(dataSource);
+  const marketsCanvas = document.getElementById('markets-chart');
+  if (marketsCanvas) {
+    renderMarketsChart(marketsCanvas, marketsData);
   }
 }
 
@@ -1255,8 +1520,8 @@ function createTableRow(request) {
   row.appendChild(createCell(reviewDetails.rightsReviewer || '-'));
 
   // RIGHTSREQUESTAPPROVEDORREJECTEDDATE
-  // Only show date if status is DONE (completed)
-  const approvalDate = reviewDetails.rightsRequestStatus === RIGHTS_REQUEST_STATUSES.DONE
+  // Only show date if status is completed (Done, RM Canceled, User Canceled)
+  const approvalDate = isCompletedStatus(reviewDetails.rightsRequestStatus)
     ? formatDate(request.lastModified)
     : '-';
   row.appendChild(createCell(approvalDate));
