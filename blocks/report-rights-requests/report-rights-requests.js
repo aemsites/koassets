@@ -11,8 +11,17 @@ const CONFIG = {
   CHART_INIT_DELAY_LONG: 100,
   TABLE_COLUMNS_COUNT: 15,
   DEFAULT_STATUS: 'Not Started',
+  DONE_STATUS: 'Done',
   MONTH_ORDER: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   DEBUG: false, // Set to true for debug logging
+};
+
+// Status constants
+const RIGHTS_REQUEST_STATUSES = {
+  NOT_STARTED: 'Not Started',
+  IN_PROGRESS: 'In Progress',
+  QUOTE_PENDING: 'Quote Pending',
+  DONE: 'Done',
 };
 
 // Global state
@@ -219,15 +228,16 @@ function calculateRequestsByReviewer(requests) {
 
 /**
  * Calculate review completion time statistics (min, avg, max) in days
- * Only includes completed reviews (not "Not Started" or "In Progress")
+ * Only includes requests with status "Done"
  * @param {Array} requests - Array of rights request objects
  * @returns {{min: number, avg: number, max: number}|null} Time stats or null
  *   if no completed reviews
  */
 function calculateReviewTimeStats(requests) {
+  // Only include requests with status "Done"
   const completedReviews = requests.filter((request) => {
     const status = request.rightsRequestReviewDetails?.rightsRequestStatus;
-    return status && status !== CONFIG.DEFAULT_STATUS && status !== 'In Progress';
+    return status === RIGHTS_REQUEST_STATUSES.DONE;
   });
 
   if (completedReviews.length === 0) {
@@ -930,6 +940,11 @@ function exportToCSV() {
     // Use raw KV key if available for PATH column
     const pathValue = request.rawKvKey || request.kvKey || '';
 
+    // Only show approval date if status is DONE
+    const approvalDateValue = reviewDetails.rightsRequestStatus === RIGHTS_REQUEST_STATUSES.DONE
+      ? (request.lastModified || '')
+      : '';
+
     return [
       pathValue,
       request.created || '',
@@ -937,7 +952,7 @@ function exportToCSV() {
       details.name || '',
       reviewDetails.rightsRequestStatus || '',
       reviewDetails.rightsReviewer || '',
-      request.lastModified || '', // Using lastModified as proxy for approval/rejection date
+      approvalDateValue,
       agency.name || '',
       agency.emailAddress || '',
       marketIds,
@@ -1234,7 +1249,11 @@ function createTableRow(request) {
   row.appendChild(createCell(reviewDetails.rightsReviewer || '-'));
 
   // RIGHTSREQUESTAPPROVEDORREJECTEDDATE
-  row.appendChild(createCell(formatDate(request.lastModified)));
+  // Only show date if status is DONE (completed)
+  const approvalDate = reviewDetails.rightsRequestStatus === RIGHTS_REQUEST_STATUSES.DONE
+    ? formatDate(request.lastModified)
+    : '-';
+  row.appendChild(createCell(approvalDate));
 
   // NAME
   row.appendChild(createCell(agency.name || '-'));
