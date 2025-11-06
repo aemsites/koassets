@@ -1242,8 +1242,14 @@ function createTableRow(request) {
   // TITLE
   row.appendChild(createCell(details.name || '-'));
 
-  // RIGHTSREQUESTSTATUS
-  row.appendChild(createCell(reviewDetails.rightsRequestStatus || CONFIG.DEFAULT_STATUS));
+  // RIGHTSREQUESTSTATUS - create styled badge
+  const statusCell = document.createElement('td');
+  const statusValue = reviewDetails.rightsRequestStatus || CONFIG.DEFAULT_STATUS;
+  const statusBadge = document.createElement('div');
+  statusBadge.className = `status-badge status-${statusValue.toLowerCase().replace(/\s+/g, '-')}`;
+  statusBadge.textContent = statusValue;
+  statusCell.appendChild(statusBadge);
+  row.appendChild(statusCell);
 
   // RIGHTSMANAGER
   row.appendChild(createCell(reviewDetails.rightsReviewer || '-'));

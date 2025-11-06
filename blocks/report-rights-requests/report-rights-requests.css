@@ -479,6 +479,48 @@
   width: 250px; /* ASSETPATHS */
 }
 
+/* Status Badges */
+.report-rights-requests .status-badge {
+  padding: 0.375rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  color: #1e1e1e;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Not Started - Teal */
+.report-rights-requests .status-badge.status-not-started {
+  border: 1px solid var(--status-not-started);
+  background-color: var(--status-not-started-bg);
+}
+
+/* In Progress, Quote Pending, Release Pending - Orange */
+.report-rights-requests .status-badge.status-in-progress,
+.report-rights-requests .status-badge.status-quote-pending,
+.report-rights-requests .status-badge.status-release-pending {
+  border: 1px solid var(--status-in-progress);
+  background-color: var(--status-in-progress-bg);
+}
+
+/* Done - Green */
+.report-rights-requests .status-badge.status-done {
+  border: 1px solid var(--status-completed);
+  background-color: var(--status-completed-bg);
+}
+
+/* User Canceled, RM Canceled - Red */
+.report-rights-requests .status-badge.status-user-canceled,
+.report-rights-requests .status-badge.status-rm-canceled {
+  border: 1px solid var(--status-cancelled);
+  background-color: var(--status-cancelled-bg);
+}
+
 /* Responsive design */
 @media (width <= 768px) {
   .report-header {
