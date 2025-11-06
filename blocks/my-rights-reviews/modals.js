@@ -3,6 +3,7 @@
  */
 
 import { getAvailableReviewerStatuses } from './config.js';
+import showToast from '../../scripts/toast/toast.js';
 
 /**
  * Update review status via API
@@ -129,13 +130,13 @@ export function showStatusModal(review, onStatusChanged) {
       confirmBtn.textContent = 'Updating...';
       await updateReviewStatus(review.rightsRequestID, newStatus);
       closeModal();
+      showToast(`Status updated to "${newStatus}"`, 'success');
       // Call the callback to refresh the reviews list
       if (onStatusChanged) {
         await onStatusChanged();
       }
     } catch (error) {
-      // eslint-disable-next-line no-alert
-      alert(`Failed to update status: ${error.message}`);
+      showToast(`Failed to update status: ${error.message}`, 'error');
       confirmBtn.disabled = false;
       confirmBtn.textContent = 'Confirm';
     }

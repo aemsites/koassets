@@ -7,6 +7,7 @@ import { showStatusModal } from './modals.js';
 import { REQUEST_STATUSES, getStatusClassName } from './config.js';
 import { formatDate } from '../../scripts/rights-management/date-formatter.js';
 import { ASSET_PREVIEW } from '../../scripts/rights-management/rights-constants.js';
+import showToast from '../../scripts/toast/toast.js';
 
 // Global state
 let allReviews = [];
@@ -244,14 +245,14 @@ function createReviewRow(review) {
         assignBtn.disabled = true;
         assignBtn.textContent = 'Assigning...';
         await assignReviewToMe(review.rightsRequestID);
+        showToast('Review assigned successfully', 'success');
         await loadReviews();
         // eslint-disable-next-line no-use-before-define
         applyFilters();
         // eslint-disable-next-line no-use-before-define
         renderReviews();
       } catch (error) {
-        // eslint-disable-next-line no-alert
-        alert(`Failed to assign review: ${error.message}`);
+        showToast(`Failed to assign review: ${error.message}`, 'error');
         assignBtn.disabled = false;
         assignBtn.textContent = 'Assign to Me';
       }
@@ -640,6 +641,19 @@ export default async function decorate(block) {
 
     // Remove loading state
     loading.remove();
+
+    // Check if there are any unassigned reviews
+    const unassignedReviews = allReviews.filter((r) => !r.reviewInfo?.rightsReviewer);
+
+    // If no unassigned reviews, switch to "My Reviews" tab
+    if (unassignedReviews.length === 0) {
+      currentTab = 'assigned';
+      // Update tab button classes
+      const unassignedTab = document.querySelector('[data-tab="unassigned"]');
+      const assignedTab = document.querySelector('[data-tab="assigned"]');
+      if (unassignedTab) unassignedTab.classList.remove('active');
+      if (assignedTab) assignedTab.classList.add('active');
+    }
 
     // Apply initial filters
     applyFilters();
