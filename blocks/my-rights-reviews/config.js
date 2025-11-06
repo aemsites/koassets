@@ -17,10 +17,11 @@ export const REQUEST_STATUSES = {
 
 /**
  * Statuses that can be set by reviewers
- * Excludes "Not Started" (initial state) and "User Canceled" (submitter only)
+ * Excludes "Not Started" (initial state only)
  */
 export const REVIEWER_CHANGEABLE_STATUSES = [
   REQUEST_STATUSES.IN_PROGRESS,
+  REQUEST_STATUSES.USER_CANCELED,
   REQUEST_STATUSES.RM_CANCELED,
   REQUEST_STATUSES.QUOTE_PENDING,
   REQUEST_STATUSES.RELEASE_PENDING,

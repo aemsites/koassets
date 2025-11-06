@@ -9,10 +9,16 @@ import { formatDate } from '../../scripts/rights-management/date-formatter.js';
 import { ASSET_PREVIEW } from '../../scripts/rights-management/rights-constants.js';
 import showToast from '../../scripts/toast/toast.js';
 
+// Tab constants
+const TABS = {
+  UNASSIGNED: 'unassigned',
+  ASSIGNED: 'assigned',
+};
+
 // Global state
 let allReviews = [];
 let filteredReviews = [];
-let currentTab = 'unassigned';
+let currentTab = TABS.UNASSIGNED;
 const selectedFilters = new Set(['all']);
 
 /**
@@ -325,7 +331,7 @@ function createReviewRow(review) {
 function applyFilters() {
   // First filter by tab (unassigned vs assigned)
   let tabFiltered = [];
-  if (currentTab === 'unassigned') {
+  if (currentTab === TABS.UNASSIGNED) {
     tabFiltered = allReviews.filter((r) => !r.reviewInfo?.rightsReviewer);
   } else {
     tabFiltered = allReviews.filter((r) => r.reviewInfo?.rightsReviewer);
@@ -397,7 +403,7 @@ function renderReviews() {
   if (filteredReviews.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'empty-state';
-    empty.textContent = currentTab === 'unassigned'
+    empty.textContent = currentTab === TABS.UNASSIGNED
       ? 'No unassigned reviews found.'
       : 'You have no assigned reviews.';
     reviewsList.appendChild(empty);
@@ -434,7 +440,7 @@ function updateShowingCount() {
   const showingText = document.querySelector('.my-rights-reviews .showing-text');
   if (showingText) {
     const count = filteredReviews.length;
-    const tabTotal = currentTab === 'unassigned'
+    const tabTotal = currentTab === TABS.UNASSIGNED
       ? allReviews.filter((r) => !r.reviewInfo?.rightsReviewer).length
       : allReviews.filter((r) => r.reviewInfo?.rightsReviewer).length;
     showingText.innerHTML = `Showing <strong>${count}</strong> of <strong>${tabTotal}</strong>`;
@@ -451,9 +457,9 @@ function createTabs() {
   const unassignedTab = document.createElement('button');
   unassignedTab.className = 'tab-button active';
   unassignedTab.textContent = 'Unassigned (0)';
-  unassignedTab.setAttribute('data-tab', 'unassigned');
+  unassignedTab.setAttribute('data-tab', TABS.UNASSIGNED);
   unassignedTab.addEventListener('click', () => {
-    currentTab = 'unassigned';
+    currentTab = TABS.UNASSIGNED;
     document.querySelectorAll('.tab-button').forEach((btn) => btn.classList.remove('active'));
     unassignedTab.classList.add('active');
     applyFilters();
@@ -463,9 +469,9 @@ function createTabs() {
   const assignedTab = document.createElement('button');
   assignedTab.className = 'tab-button';
   assignedTab.textContent = 'My Reviews (0)';
-  assignedTab.setAttribute('data-tab', 'assigned');
+  assignedTab.setAttribute('data-tab', TABS.ASSIGNED);
   assignedTab.addEventListener('click', () => {
-    currentTab = 'assigned';
+    currentTab = TABS.ASSIGNED;
     document.querySelectorAll('.tab-button').forEach((btn) => btn.classList.remove('active'));
     assignedTab.classList.add('active');
     applyFilters();
@@ -647,10 +653,10 @@ export default async function decorate(block) {
 
     // If no unassigned reviews, switch to "My Reviews" tab
     if (unassignedReviews.length === 0) {
-      currentTab = 'assigned';
+      currentTab = TABS.ASSIGNED;
       // Update tab button classes
-      const unassignedTab = document.querySelector('[data-tab="unassigned"]');
-      const assignedTab = document.querySelector('[data-tab="assigned"]');
+      const unassignedTab = document.querySelector(`[data-tab="${TABS.UNASSIGNED}"]`);
+      const assignedTab = document.querySelector(`[data-tab="${TABS.ASSIGNED}"]`);
       if (unassignedTab) unassignedTab.classList.remove('active');
       if (assignedTab) assignedTab.classList.add('active');
     }
