@@ -28,7 +28,7 @@ function createPdfCard(title, pdfLink) {
   previewButton.className = 'pdf-preview-button';
   previewButton.title = 'View PDF';
   previewButton.setAttribute('aria-label', `View ${title}`);
-  
+
   const zoomIcon = document.createElement('img');
   zoomIcon.src = '/icons/zoom.svg';
   zoomIcon.alt = 'View PDF';
