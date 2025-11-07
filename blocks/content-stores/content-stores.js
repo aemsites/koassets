@@ -38,7 +38,7 @@ const ROW_SCHEMA = {
   path: { type: 'string', default: '' },
   title: { type: 'string', default: '' },
   imageUrl: { type: 'string', default: '' },
-  linkURL: { type: 'string', default: '', aliases: ['linkUrl'] },
+  linkURL: { type: 'string', default: '' },
   type: { type: 'string', default: '' },
   text: { type: 'string', default: '' },
 };
@@ -110,7 +110,7 @@ function normalizeRow(row) {
     const schema = ROW_SCHEMA[key];
     let value = row[key];
 
-    // Handle aliases (e.g., linkUrl -> linkURL)
+    // Handle aliases if defined in schema
     if (!value && schema.aliases) {
       schema.aliases.some((alias) => {
         if (row[alias]) {
@@ -429,7 +429,7 @@ function createViewerElement(contentStoresData) {
     treeNode.dataset.path = item.path;
     treeNode.dataset.hasChildren = hasExpandable ? 'true' : 'false';
     treeNode.dataset.hasTextList = hasTextList ? 'true' : 'false';
-    treeNode.dataset.linkUrl = hasLink ? item.linkURL : '';
+    treeNode.dataset.linkURL = hasLink ? item.linkURL : '';
 
     // Only create expand icon if item has expandable content (but not for title type)
     if (hasExpandable && item.type !== 'title') {

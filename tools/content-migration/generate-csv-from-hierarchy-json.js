@@ -16,7 +16,9 @@ const path = require('path');
 const { globSync } = require('glob');
 const { PATH_SEPARATOR } = require('./constants.js');
 const { sanitizeFileName } = require('./sanitize-utils.js');
-const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client.js');
+const {
+  DA_ORG, DA_REPO, DA_DEST, IMAGES_BASE,
+} = require('./da-admin-client.js');
 
 /**
  * Transforms search-assets.html URLs to new search format
@@ -99,7 +101,7 @@ function transformSearchUrlsInText(text) {
  * Type priority:
  * 1. item.type if it's 'button' or 'accordion'
  * 2. item.linkSources.clickableUrl (type: 'link')
- * 3. item.linkURL or item.linkUrl (type: '')
+ * 3. item.linkURL (type: '')
  * @returns {Object} { url: string, type: string }
  */
 function extractLinkUrl(item) {
@@ -123,7 +125,7 @@ function extractLinkUrl(item) {
   }
 
   if (!url) {
-    url = item.linkURL ?? item.linkUrl ?? '';
+    url = item.linkURL ?? '';
   }
 
   // Transform search-assets.html URLs to new format
@@ -298,7 +300,7 @@ function formatImageUrl(imageUrl, destPath, storeName) {
     return '';
   }
 
-  return `https://content.da.live/${destPath}/fragments/.${storeName}/${sanitizedFilename}`;
+  return `https://content.da.live/${destPath}/${IMAGES_BASE}${storeName}/${sanitizedFilename}`;
 }
 
 /**

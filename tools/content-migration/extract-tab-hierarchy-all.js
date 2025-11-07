@@ -20,17 +20,30 @@ DESCRIPTION:
   Creates a clean JSON hierarchy with all teaser images and banner images downloaded.
 
 USAGE:
-  node extract-tab-hierarchy-all.js [CONTENT_PATH]
+  node extract-tab-hierarchy-all.js [CONTENT_PATH] [OPTIONS]
+
+  OPTIONS:
+  --recursive    Automatically extract linked content stores found in clickableURLs
+  --debug        Skip recursive extractions (only discover and list them)
+
+  DEFAULT (no parameters):
+  When no CONTENT_PATH is provided, defaults to: /content/share/us/en/all-content-stores
 
 EXAMPLES:
-  # Extract default content store (/content/share/us/en/all-content-stores)
-  node extract-tab-hierarchy-all.js
+  # Extract default content store with recursive extraction
+  node extract-tab-hierarchy-all.js --recursive
   
-  # Extract main content store (explicit)
+  # Extract default content store with recursive extraction and debug output
+  node extract-tab-hierarchy-all.js --recursive --debug
+  
+  # Extract specific content store (no recursive extraction)
   node extract-tab-hierarchy-all.js /content/share/us/en/all-content-stores
   
   # Extract specific campaign
   node extract-tab-hierarchy-all.js /content/share/us/en/all-content-stores/global-coca-cola-uplift
+  
+  # Extract specific content store with recursive extraction
+  node extract-tab-hierarchy-all.js /content/share/us/en/bottler-content-stores --recursive
 
 OUTPUTS:
   📁 {hierarchical-dir-name}/extracted-results/
@@ -187,8 +200,14 @@ const AEM_AUTHOR = 'https://author-p64403-e544653.adobeaemcloud.com';
 // Default content path
 const DEFAULT_CONTENT_PATH = '/content/share/us/en/all-content-stores';
 
-// Get content path from command line argument or use default
-const CONTENT_PATH = process.argv[2] || DEFAULT_CONTENT_PATH;
+// Parse command line arguments (path and flags)
+const args = process.argv.slice(2);
+const flags = {
+  debug: args.includes('--debug'),
+  recursive: args.includes('--recursive'),
+};
+// Get content path (first non-flag argument)
+const CONTENT_PATH = args.find((arg) => !arg.startsWith('--')) || DEFAULT_CONTENT_PATH;
 
 // Load AUTHOR_AUTH_COOKIE from config file
 let AUTHOR_AUTH_COOKIE;
@@ -524,8 +543,8 @@ console.log('=============================');
 console.log('');
 
 // Function to extract and process linked content stores
-async function extractLinkedContentStores(hierarchyStructureFile) {
-  console.log('\n🔍 Analyzing linkURLs for other content stores...');
+async function extractLinkedContentStores(hierarchyStructureFile, debug = false) {
+  console.log('\n🔍 Analyzing clickableURLs for other content stores...');
 
   // Read and parse the hierarchy file
   let hierarchyData;
@@ -537,48 +556,42 @@ async function extractLinkedContentStores(hierarchyStructureFile) {
     return;
   }
 
-  // Function to recursively extract all linkURLs from the hierarchy
-  function extractLinkURLs(obj, linkURLs = new Set()) {
+  // Function to recursively extract all clickableUrl from linkSources
+  function extractClickableURLs(obj, clickableURLs = new Set()) {
     if (Array.isArray(obj)) {
-      obj.forEach((item) => extractLinkURLs(item, linkURLs));
+      obj.forEach((item) => extractClickableURLs(item, clickableURLs));
     } else if (typeof obj === 'object' && obj !== null) {
-      if (obj.linkURL) {
-        linkURLs.add(obj.linkURL);
+      // Extract clickableUrl from linkSources object
+      if (obj.linkSources && obj.linkSources.clickableUrl) {
+        // Strip .html extension if present
+        const url = obj.linkSources.clickableUrl.replace(/\.html$/, '');
+        clickableURLs.add(url);
       }
-      Object.values(obj).forEach((value) => extractLinkURLs(value, linkURLs));
+      Object.values(obj).forEach((value) => extractClickableURLs(value, clickableURLs));
     }
-    return linkURLs;
+    return clickableURLs;
   }
 
-  // Extract all linkURLs
-  const allLinkURLs = extractLinkURLs(hierarchyData);
-  console.log(`📊 Found ${allLinkURLs.size} total linkURLs`);
+  // Extract all clickableURLs
+  const allClickableURLs = extractClickableURLs(hierarchyData);
+  console.log(`📊 Found ${allClickableURLs.size} total clickableURLs`);
 
-  // Extract unique content store base paths
+  // Filter out the current content path to avoid circular extraction
   const contentStorePaths = new Set();
-  const linkURLArray = Array.from(allLinkURLs);
 
-  linkURLArray.forEach((linkURL) => {
-    // Match pattern: /content/share/us/en/{content-store-name}/...
-    const match = linkURL.match(/^(\/content\/share\/us\/en\/[^/]+)/);
-    if (match) {
-      const basePath = match[1];
-      const baseStoreName = basePath.split('/').pop();
-
-      // Skip the current content store (avoid circular extraction)
-      const currentStoreName = CONTENT_PATH.split('/').pop();
-      if (baseStoreName !== currentStoreName && baseStoreName.endsWith('-content-stores')) {
-        contentStorePaths.add(basePath);
-      }
+  allClickableURLs.forEach((clickableURL) => {
+    // Skip the current content path (avoid circular extraction)
+    if (clickableURL !== CONTENT_PATH) {
+      contentStorePaths.add(clickableURL);
     }
   });
 
   if (contentStorePaths.size === 0) {
-    console.log('✅ No other content stores found to extract.');
+    console.log('✅ No other content paths found to extract.');
     return;
   }
 
-  console.log(`🎯 Discovered ${contentStorePaths.size} other content store(s):`);
+  console.log(`🎯 Discovered ${contentStorePaths.size} unique content path(s) to extract:`);
   Array.from(contentStorePaths).sort().forEach((path, index) => {
     console.log(`  ${index + 1}. ${path}`);
   });
@@ -590,60 +603,66 @@ async function extractLinkedContentStores(hierarchyStructureFile) {
 
   let successCount = 0;
   let failureCount = 0;
+  const failedPaths = [];
 
   for (const contentPath of Array.from(contentStorePaths).sort()) {
     console.log(`\n📋 Extracting: ${contentPath}`);
     console.log('-'.repeat(50));
 
-    try {
-      // Run the extraction script recursively
-      // Use execFileSync instead of execSync to prevent command injection
-      const output = execFileSync('node', ['extract-tab-hierarchy-all.js', contentPath], {
-        cwd: __dirname,
-        encoding: 'utf8',
-        stdio: 'pipe',
-      });
+    if (debug) {
+      console.log('⏭️  SKIPPED (debug mode)');
+    } else {
+      try {
+        // Run the extraction script recursively
+        // Use execFileSync instead of execSync to prevent command injection
+        const output = execFileSync('node', ['extract-tab-hierarchy-all.js', contentPath], {
+          cwd: __dirname,
+          encoding: 'utf8',
+          stdio: 'pipe',
+        });
 
-      console.log('✅ SUCCESS');
-      // Show the last few meaningful lines (summary section)
-      const lines = output.split('\n').filter((line) => line.trim());
-      const lastLines = lines.slice(-8); // Show last 8 non-empty lines
-      lastLines.forEach((line) => console.log(line));
+        console.log('✅ SUCCESS');
+        // Show the last few meaningful lines (summary section)
+        const lines = output.split('\n').filter((line) => line.trim());
+        const lastLines = lines.slice(-8); // Show last 8 non-empty lines
+        lastLines.forEach((line) => console.log(line));
 
-      successCount++;
-    } catch (error) {
-      console.log('❌ FAILED');
+        successCount++;
+      } catch (error) {
+        console.log('❌ FAILED');
 
-      // Collect all available error information
-      const errorParts = [];
+        // Collect all available error information
+        const errorParts = [];
 
-      if (error.stdout) {
-        errorParts.push(error.stdout);
-      }
-      if (error.stderr) {
-        errorParts.push(error.stderr);
-      }
-      if (error.message && !error.stdout && !error.stderr) {
-        errorParts.push(error.message);
-      }
-
-      const errorOutput = errorParts.join('\n');
-
-      // Show meaningful error context - last few lines before failure
-      const lines = errorOutput.split('\n').filter((line) => line.trim());
-      const errorLines = lines.slice(-10); // Show last 10 non-empty lines for better context
-
-      if (errorLines.length > 0) {
-        console.log('Error details:');
-        errorLines.forEach((line) => console.log(`  ${line}`));
-      } else {
-        console.log(`Error: ${error.message || 'Unknown error'}`);
-        if (error.code) {
-          console.log(`Exit code: ${error.code}`);
+        if (error.stdout) {
+          errorParts.push(error.stdout);
         }
-      }
+        if (error.stderr) {
+          errorParts.push(error.stderr);
+        }
+        if (error.message && !error.stdout && !error.stderr) {
+          errorParts.push(error.message);
+        }
 
-      failureCount++;
+        const errorOutput = errorParts.join('\n');
+
+        // Show meaningful error context - last few lines before failure
+        const lines = errorOutput.split('\n').filter((line) => line.trim());
+        const errorLines = lines.slice(-10); // Show last 10 non-empty lines for better context
+
+        if (errorLines.length > 0) {
+          console.log('Error details:');
+          errorLines.forEach((line) => console.log(`  ${line}`));
+        } else {
+          console.log(`Error: ${error.message || 'Unknown error'}`);
+          if (error.code) {
+            console.log(`Exit code: ${error.code}`);
+          }
+        }
+
+        failureCount++;
+        failedPaths.push(contentPath);
+      }
     }
   }
 
@@ -653,6 +672,13 @@ async function extractLinkedContentStores(hierarchyStructureFile) {
   console.log(`✅ Successful extractions: ${successCount}`);
   console.log(`❌ Failed extractions: ${failureCount}`);
   console.log(`📁 Total linked stores processed: ${contentStorePaths.size}`);
+
+  if (failedPaths.length > 0) {
+    console.log('\n🚫 Failed content paths:');
+    failedPaths.forEach((path, index) => {
+      console.log(`  ${index + 1}. ${path}`);
+    });
+  }
 }
 
 // Main execution function
@@ -1057,7 +1083,7 @@ async function main() {
             const uniqueKey = `${newPath}`;
 
             // Create a synthetic JCR key for linkURL storage
-            const linkUrlKey = `${newPath}_linkurl`;
+            const linkURLKey = `${newPath}_linkurl`;
 
             // Store all three URL sources for comparison (keep extensions)
             const linkSources = {};
@@ -1094,7 +1120,7 @@ async function main() {
               linkSources,
             };
 
-            jcrTeaserImageMap[linkUrlKey] = mapEntry;
+            jcrTeaserImageMap[linkURLKey] = mapEntry;
           }
 
           // Recurse into nested items
@@ -1961,26 +1987,6 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       }
     });
 
-    // Function to replace "container" types with nearest non-container ancestor's type
-    // COMMENTED OUT per user request
-    // function replaceContainerTypes(items, parentType = null) {
-    //   if (!items || !Array.isArray(items)) return items;
-    //
-    //   return items.map((item) => {
-    //     // If this item is a container and has a parent, inherit parent's type
-    //     if (item.type === 'container' && parentType && parentType !== 'container') {
-    //       item.type = parentType;
-    //     }
-    //
-    //     // Recursively process children, passing down this item's type
-    //     if (item.items) {
-    //       item.items = replaceContainerTypes(item.items, item.type);
-    //     }
-    //
-    //     return item;
-    //   });
-    // }
-
     // Function to remove duplicate consecutive containers with the same title
     function removeDuplicateContainers(items) {
       if (!items || !Array.isArray(items)) return items;
@@ -2088,10 +2094,6 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
     const cleanedHierarchy = unwrapStructuralContainers(rawHierarchy);
     const deduplicatedHierarchy = removeDuplicateContainers(cleanedHierarchy);
     const groupedHierarchy = groupHierarchyBySections(deduplicatedHierarchy, jcrData);
-    // Replace containers with parent types (AFTER grouping creates them)
-    // COMMENTED OUT per user request
-    // const containerReplacedHierarchy = replaceContainerTypes(groupedHierarchy);
-    // mainHierarchy = cleanupDuplicatePathSegments(containerReplacedHierarchy);
     mainHierarchy = cleanupDuplicatePathSegments(groupedHierarchy);
   }
 
@@ -2671,7 +2673,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
   const hierarchyStructure = {
     title: jcrData['jcr:title'] || '',
     items: convertedHierarchy,
-    linkUrl: CONTENT_PATH,
+    linkURL: CONTENT_PATH,
   };
 
   // Add banner images to root level if any found
@@ -3126,9 +3128,13 @@ main().then(async () => {
     await downloadAllImages(allImagesToDownload, OUTPUT_DIR);
   }
 
-  // After successful extraction, check for linked content stores
-  const hierarchyFile = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
-  await extractLinkedContentStores(hierarchyFile);
+  // After successful extraction, check for linked content stores (only when --recursive flag is provided)
+  if (flags.recursive) {
+    const hierarchyFile = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
+    console.log('------------------------------------------ Starting recursive extraction of linked content stores... ------------------------------------------');
+    await extractLinkedContentStores(hierarchyFile, flags.debug);
+    console.log('------------------------------------------ Recursive extraction of linked content stores completed. ------------------------------------------');
+  }
 
   // Force clean exit
   process.exit(0);

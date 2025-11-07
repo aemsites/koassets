@@ -37,6 +37,7 @@
 .content-stores .search-box {
   flex: 1;
   position: relative;
+  min-width: min(500px, 100%);
 }
 
 .content-stores .search-box input {
@@ -126,6 +127,8 @@
 
 .content-stores .tree-item {
   margin-bottom: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Make leaf items (no children) display inline */
@@ -150,7 +153,8 @@
   transition: all 0.2s ease;
   user-select: text;
   border: 1px solid var(--primary-color);
-  width: 100%;
+  width: fit-content;
+  max-width: 100%;
   box-sizing: border-box;
 }
 
@@ -174,7 +178,7 @@
 
 /* Narrower styling for leaf nodes */
 .content-stores .tree-item.leaf-item .tree-node {
-  padding: 0 20px;
+  padding: 0 15px;
   min-width: auto;
   width: auto;
   display: inline-flex;
@@ -260,12 +264,12 @@
 .content-stores .tree-node.type-button .node-title {
   flex: 1;
   line-height: 1.4;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  white-space: normal;
   text-align: left;
   text-decoration: none;
   font-family: "TCCC UnityText Medium", roboto-condensed-fallback, sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Ensure no underline on button titles even when they have links */
@@ -388,6 +392,7 @@
 
 .content-stores .tree-item[data-item-type="title"] {
   padding: 24px 200px;
+  box-sizing: border-box;
 }
 
 /* Alternating background colors for sections with title items */
@@ -526,11 +531,12 @@
 /* Grid container for leaf items - responsive to parent width */
 .content-stores .tree-children.has-grid {
   display: none;
-  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), max-content));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr));
   gap: 20px;
   padding: 20px 0 0;
   border: none;
   box-sizing: border-box;
+  width: 100%;
 }
 
 .content-stores .tree-children.has-grid.expanded {
@@ -607,20 +613,13 @@
   text-decoration: underline;
 }
 
-/* Responsive grid for leaf items */
-@media (width < 1200px) {
-  .content-stores .tree-children.has-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
 @media (width <= 768px) {
   .content-stores .header h1 {
     font-size: 2rem;
   }
 
   .content-stores .content {
-    padding: 1rem;
+    padding: 0;
   }
 
   .content-stores .controls {
@@ -641,5 +640,19 @@
 
   .content-stores .tree-children.has-grid {
     grid-template-columns: 1fr;
+  }
+
+  .content-stores .tree-item[data-item-type="title"] {
+    padding: 24px 1.5rem;
+  }
+
+  .content-stores .content > .tree-item:not([data-item-type="title"]) {
+    padding: 0 1.5rem;
+  }
+
+  .content-stores .tree-item {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
   }
 }

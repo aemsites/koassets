@@ -4,6 +4,20 @@ const fs = require('fs');
 const path = require('path');
 
 /**
+ * Generate skip URL from content store directory name
+ * Pattern: all-content-stores -> /content/share/us/en/all-content-stores
+ *          all-content-stores-fifa-club-wc-2025 -> /content/share/us/en/all-content-stores/fifa-club-wc-2025
+ *          bottler-content-stores-coke-holiday-2025 -> /content/share/us/en/bottler-content-stores/coke-holiday-2025
+ * @param {string} storeName - The content store directory name
+ * @returns {string} The URL to skip for this content store
+ */
+function getSkipUrlForStore(storeName) {
+  // Replace the first dash after "all-content-stores" or "bottler-content-stores" with a slash
+  const urlPath = storeName.replace(/^((?:all|bottler)-content-stores)-/, '$1/');
+  return `/content/share/us/en/${urlPath}`;
+}
+
+/**
  * Find all directories matching the pattern *-content-stores*
  * @returns {string[]} Array of matching directory names
  */
@@ -136,17 +150,18 @@ function extractHrefUrls(htmlText) {
  * @param {any} obj - The object to search
  * @param {Map<string, Set<string>>} linkUrlKeys - Map to store normalized URL -> Set of keys
  * @param {Map<string, string>} originalUrls - Map to store normalized -> original URL mapping
+ * @param {string} skipUrl - URL to skip during extraction (optional)
  */
-function extractLinkUrls(obj, linkUrlKeys, originalUrls) {
+function extractLinkUrls(obj, linkUrlKeys, originalUrls, skipUrl = null) {
   if (typeof obj !== 'object' || obj === null) {
     return;
   }
 
   if (Array.isArray(obj)) {
-    obj.forEach((item) => extractLinkUrls(item, linkUrlKeys, originalUrls));
+    obj.forEach((item) => extractLinkUrls(item, linkUrlKeys, originalUrls, skipUrl));
   } else {
     Object.keys(obj).forEach((key) => {
-      const urlKeys = ['linkURL', 'url', 'analyticsUrl', 'clickableUrl', 'xdm:linkURL', 'imageResourceUrl'];
+      const urlKeys = ['linkUrl', 'linkURL', 'url', 'analyticsUrl', 'clickableUrl', 'xdm:linkURL', 'imageResourceUrl'];
       if (urlKeys.includes(key) && typeof obj[key] === 'string') {
         const original = obj[key];
         // Skip 'hh' values
@@ -154,6 +169,10 @@ function extractLinkUrls(obj, linkUrlKeys, originalUrls) {
           return;
         }
         const normalized = normalizeUrl(original);
+        // Skip the URL for this specific content store
+        if (skipUrl && normalized === skipUrl) {
+          return;
+        }
         if (!linkUrlKeys.has(normalized)) {
           linkUrlKeys.set(normalized, new Set());
         }
@@ -168,6 +187,10 @@ function extractLinkUrls(obj, linkUrlKeys, originalUrls) {
             return;
           }
           const normalized = normalizeUrl(url);
+          // Skip the URL for this specific content store
+          if (skipUrl && normalized === skipUrl) {
+            return;
+          }
           if (!linkUrlKeys.has(normalized)) {
             linkUrlKeys.set(normalized, new Set());
           }
@@ -175,7 +198,7 @@ function extractLinkUrls(obj, linkUrlKeys, originalUrls) {
           originalUrls.set(normalized, url);
         });
       } else {
-        extractLinkUrls(obj[key], linkUrlKeys, originalUrls);
+        extractLinkUrls(obj[key], linkUrlKeys, originalUrls, skipUrl);
       }
     });
   }
@@ -206,8 +229,12 @@ function processContentStore(storeName) {
   const cachesDir = path.join(baseDir, 'caches');
   const hierarchyFile = path.join(baseDir, 'hierarchy-structure.json');
 
+  // Generate the skip URL for this content store
+  const skipUrl = getSkipUrlForStore(storeName);
+
   console.log(`🔍 Extracting linkURL values from: ${storeName}`);
-  console.log(`📁 Base directory: ${baseDir}\n`);
+  console.log(`📁 Base directory: ${baseDir}`);
+  console.log(`🚫 Skipping URL: ${skipUrl}\n`);
 
   // Check if base directory exists
   if (!fs.existsSync(baseDir)) {
@@ -265,7 +292,7 @@ function processContentStore(storeName) {
   tabsFiles.forEach((tabsFile) => {
     const tabsData = loadJsonFile(tabsFile);
     if (tabsData) {
-      extractLinkUrls(tabsData, tabsUrlKeys, tabsOriginalUrls);
+      extractLinkUrls(tabsData, tabsUrlKeys, tabsOriginalUrls, skipUrl);
     }
   });
 
@@ -277,7 +304,7 @@ function processContentStore(storeName) {
     otherCacheFiles.forEach((cacheFile) => {
       const cacheData = loadJsonFile(cacheFile);
       if (cacheData) {
-        extractLinkUrls(cacheData, otherCacheUrlKeys, otherCacheOriginalUrls);
+        extractLinkUrls(cacheData, otherCacheUrlKeys, otherCacheOriginalUrls, skipUrl);
       }
     });
   }
@@ -285,7 +312,7 @@ function processContentStore(storeName) {
   // Extract linkURLs from hierarchy file
   const hierarchyUrlKeys = new Map();
   const hierarchyOriginalUrls = new Map();
-  extractLinkUrls(hierarchyData, hierarchyUrlKeys, hierarchyOriginalUrls);
+  extractLinkUrls(hierarchyData, hierarchyUrlKeys, hierarchyOriginalUrls, skipUrl);
 
   // Get unique URLs from each source
   const tabsLinks = new Set(tabsUrlKeys.keys());

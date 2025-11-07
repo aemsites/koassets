@@ -4,7 +4,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client.js');
+const {
+  DA_ORG, DA_REPO, DA_DEST, IMAGES_BASE,
+} = require('./da-admin-client.js');
 const { uploadToEDS, sleep } = require('./upload-to-EDS.js');
 
 // Parse command line arguments
@@ -60,11 +62,11 @@ async function uploadAllImages(imagesPath, concurrency = 1) {
       if (fs.existsSync(absoluteImagesDir)) {
         console.log(`\n   📁 Processing: ${imagesDir}`);
 
-        // Derive targetDaBasePath: ${DA_ORG}/${DA_REPO}/${DA_DEST}/fragments/.${contentStoreDir}
+        // Derive targetDaBasePath: ${DA_ORG}/${DA_REPO}/${DA_DEST}/${FRAGMENTS_BASE}${contentStoreDir}
         const normalizedDest = DA_DEST && DA_DEST.startsWith('/') ? DA_DEST.substring(1) : DA_DEST;
         const targetDaBasePath = normalizedDest
-          ? `${DA_ORG}/${DA_REPO}/${normalizedDest}/fragments/.${contentStoreDir}`
-          : `${DA_ORG}/${DA_REPO}/fragments/.${contentStoreDir}`;
+          ? `${DA_ORG}/${DA_REPO}/${normalizedDest}/${IMAGES_BASE}${contentStoreDir}`
+          : `${DA_ORG}/${DA_REPO}/${IMAGES_BASE}${contentStoreDir}`;
 
         console.log(`   Target DA path: ${targetDaBasePath}`);
 
@@ -91,9 +93,9 @@ async function uploadAllImages(imagesPath, concurrency = 1) {
   if (contentStoreName) {
     const normalizedDest = DA_DEST && DA_DEST.startsWith('/') ? DA_DEST.substring(1) : DA_DEST;
     if (normalizedDest) {
-      targetDaBasePath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/fragments/.${contentStoreName}`;
+      targetDaBasePath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/${IMAGES_BASE}${contentStoreName}`;
     } else {
-      targetDaBasePath = `${DA_ORG}/${DA_REPO}/fragments/.${contentStoreName}`;
+      targetDaBasePath = `${DA_ORG}/${DA_REPO}/${IMAGES_BASE}${contentStoreName}`;
     }
   }
 
@@ -217,11 +219,11 @@ function showHelp() {
   console.error('');
   console.error('Destination Path:');
   console.error('  Images are automatically uploaded to:');
-  console.error('    {DA_ORG}/{DA_REPO}/{DA_DEST}/fragments/.{content-store-name}/');
+  console.error(`    {DA_ORG}/{DA_REPO}/{DA_DEST}/${IMAGES_BASE}{content-store-name}/`);
   console.error('');
   console.error('  The content store name is extracted from the images path.');
   console.error('  Example: "all-content-stores/extracted-results/images"');
-  console.error('    → uploads to: aemsites/koassets/drafts/tphan/fragments/.all-content-stores/');
+  console.error(`    → uploads to: aemsites/koassets/drafts/tphan/${IMAGES_BASE}all-content-stores/`);
   console.error('');
   console.error('Examples:');
   console.error('');

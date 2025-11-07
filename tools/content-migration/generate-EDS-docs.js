@@ -13,7 +13,9 @@ const fs = require('fs');
 const path = require('path');
 const { globSync } = require('glob');
 const { sanitizeFileName } = require('./sanitize-utils.js');
-const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client.js');
+const {
+  DA_ORG, DA_REPO, DA_DEST, IMAGES_BASE,
+} = require('./da-admin-client.js');
 
 const TEMPLATES_DIR = path.join(__dirname, 'templates');
 const EDS_DOCS_DIR = path.join(__dirname, 'generated-eds-docs');
@@ -197,7 +199,7 @@ function formatBannerImageUrl(imageUrl, destPath, storeName) {
     return '';
   }
 
-  return `https://content.da.live/${destPath}/fragments/.${storeName}/${sanitizedFilename}`;
+  return `https://content.da.live/${destPath}/${IMAGES_BASE}${storeName}/${sanitizedFilename}`;
 }
 
 /**
