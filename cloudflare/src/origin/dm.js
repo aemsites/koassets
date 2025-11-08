@@ -1,6 +1,7 @@
 import { ROLE } from '../user';
 import { decodeJwt } from 'jose';
 import { fetchHelixSheet } from '../util/helixutil';
+import { getRestrictedBrands } from '../user';
 
 // create IMS token using Oauth server-to-server credentials
 async function createIMSToken(request, clientId, clientSecret, scope) {
@@ -173,9 +174,9 @@ async function searchAuthorization(request, env, search) {
   }
 
   // RESTRICTED BRAND CHECK
-  const restrictedBrands = await fetchHelixSheet(env, '/config/access/restricted-brands', { params: { limit: 1 } });
-  // determine all restricted brands that the user has no access to
-  const deniedBrands = restrictedBrands?.[':names']?.filter(b => !user.brands.includes(b)) || [];
+  // get list of all restricted brands from index
+  const restrictedBrands = Object.keys(await getRestrictedBrands(env));
+  const deniedBrands = restrictedBrands.filter(b => !user.brands.includes(b)) || [];
   const brandCheck = `${deniedBrands.map(b => `NOT tccc-brand._tagIDs:'tccc:brand/${b}'`).join(' AND ')}`;
 
   // INTENDED BOTTLER COUNTRY CHECK

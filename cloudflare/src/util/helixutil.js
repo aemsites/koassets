@@ -1,20 +1,25 @@
 export async function fetchHelixSheet(env, path, options) {
-  const headers = {};
-  if (env.HELIX_ORIGIN_AUTHENTICATION) {
-    headers.authorization = `token ${await env.HELIX_ORIGIN_AUTHENTICATION.get()}`;
+  let url = `${env.HELIX_ORIGIN}${path}`;
+  if (!url.endsWith('.json')) {
+    url += '.json';
   }
-
-  let url = `${env.HELIX_ORIGIN}${path}.json`;
   if (options?.params) {
     url += `?${new URLSearchParams(options.params).toString()}`;
+  }
+
+  const headers = {
+    'accept-encoding': 'br, gzip',
+    'x-byo-cdn-type': 'cloudflare',
+  };
+
+  if (env.HELIX_ORIGIN_AUTHENTICATION) {
+    headers.authorization = `token ${await env.HELIX_ORIGIN_AUTHENTICATION.get()}`;
   }
 
   const pushInvalidation = env.HELIX_PUSH_INVALIDATION !== 'disabled';
   if (pushInvalidation) {
     headers['x-push-invalidation'] = 'enabled';
   }
-
-  // console.log('>>>', req.method, req.url /*, req.headers*/);
 
   const fetchOptions = {
     headers,
@@ -31,15 +36,17 @@ export async function fetchHelixSheet(env, path, options) {
     fetchOptions.cache = 'no-store';
   }
 
+  // console.log('>>>', 'GET', url, headers);
+
   const response = await fetch(url, fetchOptions);
 
-  // TODO: remove after debugging in production (to understand caching headers)
-  console.log('fetchHelixSheet response headers:', url, Object.fromEntries(response.headers.entries()));
+  // console.log('<<<', response.status, 'GET', url, Object.fromEntries(response.headers.entries()));
 
   if (!response.ok) {
     console.error('Failed to fetch spreadsheet:', response.status, response.statusText);
     return;
   }
+
   const json = await response.json();
 
   function handleArrays(obj, arrays) {
