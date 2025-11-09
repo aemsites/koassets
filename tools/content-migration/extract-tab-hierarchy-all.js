@@ -546,9 +546,18 @@ async function extractLinkedContentStores(hierarchyStructureFile, debug = false)
 
   allClickableURLs.forEach((clickableURL) => {
     // Skip the current content path (avoid circular extraction)
-    if (clickableURL !== CONTENT_PATH) {
-      contentStorePaths.add(clickableURL);
+    if (clickableURL === CONTENT_PATH) {
+      return;
     }
+
+    // Only process valid AEM content store paths
+    // Valid patterns: /content/share/us/en/all-content-stores/* or /content/share/us/en/bottler-content-stores/*
+    if (!clickableURL.startsWith('/content/share/us/en/')) {
+      console.log(`  ⏭️  Skipping non-AEM path: ${clickableURL}`);
+      return;
+    }
+
+    contentStorePaths.add(clickableURL);
   });
 
   if (contentStorePaths.size === 0) {
@@ -627,6 +636,12 @@ async function extractLinkedContentStores(hierarchyStructureFile, debug = false)
 
         failureCount++;
         failedPaths.push(contentPath);
+
+        // EXIT IMMEDIATELY on first failure
+        console.log(`\n💥 STOPPING recursive extraction due to failure in: ${contentPath}`);
+        console.log(`📊 Processed: ${successCount + failureCount}/${contentStorePaths.size} stores before stopping`);
+        console.log(`✅ Successful: ${successCount}`);
+        process.exit(1);
       }
     }
   }
@@ -1248,15 +1263,38 @@ async function main() {
       mapContainerTitles(jcrData.root);
 
       // Merge JCR buttons and accordion text into hierarchy by matching tab titles
-      function mergeJCRContentIntoHierarchy(items) {
+      const mergedContainers = new Set(); // Track which JCR containers we've already merged
+
+      function mergeJCRContentIntoHierarchy(items, depth = 0) {
         if (!items || !Array.isArray(items)) return;
+
+        // Safeguard against infinite recursion
+        if (depth > 50) {
+          console.warn(`⚠️  Stopping recursion at depth ${depth} to prevent stack overflow`);
+          return;
+        }
 
         items.forEach((item) => {
           // Check if this item's title matches any button container's parent
           jcrButtons.forEach(({ containerPath, buttons }) => {
-            // Get the parent path (remove /container at the end)
-            const parentPath = containerPath.replace(/\/container$/, '');
-            const parentTitle = containerTitleMap[parentPath];
+            // Skip if we've already merged this container
+            if (mergedContainers.has(containerPath)) {
+              return;
+            }
+            // Find the nearest ancestor container with a title by traversing up the path
+            let parentTitle = null;
+            let parentPath = containerPath;
+            const pathParts = containerPath.split('/');
+
+            // Try each ancestor path from closest to furthest
+            for (let i = pathParts.length - 1; i >= 0 && !parentTitle; i--) {
+              const ancestorPath = pathParts.slice(0, i + 1).join('/');
+              if (containerTitleMap[ancestorPath]) {
+                parentTitle = containerTitleMap[ancestorPath];
+                parentPath = ancestorPath;
+                break;
+              }
+            }
 
             // Match by title (most reliable) or by key
             const titleMatches = parentTitle && item.title === parentTitle;
@@ -1264,11 +1302,14 @@ async function main() {
 
             if (titleMatches || keyMatches) {
               // This item might be the parent - add buttons if not already present
-              const existingButtonTitles = new Set();
+              // Use ID or key for comparison (more unique than title)
+              const existingButtonKeys = new Set();
               if (item.items) {
                 item.items.forEach((child) => {
                   if (child.type === 'button') {
-                    existingButtonTitles.add(child.title);
+                    // Use ID, key, or title as fallback for uniqueness check
+                    const uniqueKey = child.id || child.key || child.title;
+                    existingButtonKeys.add(uniqueKey);
                   }
                 });
               }
@@ -1276,18 +1317,25 @@ async function main() {
               // Add missing buttons
               let addedCount = 0;
               buttons.forEach((button) => {
-                if (!existingButtonTitles.has(button.title)) {
+                const buttonUniqueKey = button.id || button.key || button.title;
+                if (!existingButtonKeys.has(buttonUniqueKey)) {
                   if (!item.items) {
                     item.items = [];
                   }
-                  // Add path to button
-                  button.path = item.path ? `${item.path}${PATH_SEPARATOR}${button.title}` : button.title;
-                  item.items.push(button);
+                  // Create a deep copy to avoid circular references
+                  const buttonCopy = JSON.parse(JSON.stringify(button));
+                  // Add path to button copy
+                  buttonCopy.path = item.path ? `${item.path}${PATH_SEPARATOR}${buttonCopy.title}` : buttonCopy.title;
+                  item.items.push(buttonCopy);
                   addedCount++;
+                  // Mark as added to prevent re-adding in future iterations
+                  existingButtonKeys.add(buttonUniqueKey);
                 }
               });
               if (addedCount > 0) {
                 console.log(`  ✅ Added ${addedCount} missing button(s) to "${item.title}"`);
+                // Mark this container as merged to prevent duplicates
+                mergedContainers.add(containerPath);
               }
             }
           });
@@ -1317,7 +1365,7 @@ async function main() {
 
           // Recurse into children
           if (item.items) {
-            mergeJCRContentIntoHierarchy(item.items);
+            mergeJCRContentIntoHierarchy(item.items, depth + 1);
           }
         });
       }
@@ -3058,8 +3106,14 @@ function extractComponentsFromContainer(container, items, sectionTitle) {
 }
 
 // Unwrap accordion items but keep their children
-function unwrapAccordionItems(items) {
+function unwrapAccordionItems(items, depth = 0) {
   if (!items || !Array.isArray(items)) return items;
+
+  // Safeguard against infinite recursion
+  if (depth > 100) {
+    console.warn(`⚠️  unwrapAccordionItems: Stopping recursion at depth ${depth}`);
+    return items;
+  }
 
   const result = [];
 
@@ -3068,7 +3122,7 @@ function unwrapAccordionItems(items) {
     if (item.title && (item.title.startsWith('accordion_') || item.title === 'accordion')) {
       if (item.items && item.items.length > 0) {
         // Recursively unwrap children and add them directly
-        const unwrappedChildren = unwrapAccordionItems(item.items);
+        const unwrappedChildren = unwrapAccordionItems(item.items, depth + 1);
 
         // If the accordion itself had text, preserve it by adding to the first child
         if (item.text && unwrappedChildren.length > 0) {
@@ -3092,7 +3146,7 @@ function unwrapAccordionItems(items) {
     } else {
       // Keep the item and recursively process its children
       if (item.items) {
-        item.items = unwrapAccordionItems(item.items);
+        item.items = unwrapAccordionItems(item.items, depth + 1);
       }
       result.push(item);
     }
@@ -3102,8 +3156,14 @@ function unwrapAccordionItems(items) {
 }
 
 // Function to detect and convert accordion items (containers with only text content)
-function convertAccordionContainers(items) {
+function convertAccordionContainers(items, depth = 0) {
   if (!items || !Array.isArray(items)) return items;
+
+  // Safeguard against infinite recursion
+  if (depth > 100) {
+    console.warn(`⚠️  convertAccordionContainers: Stopping recursion at depth ${depth}`);
+    return items;
+  }
 
   return items.map((item) => {
     const updatedItem = { ...item };
@@ -3125,7 +3185,7 @@ function convertAccordionContainers(items) {
 
     // Recursively process children
     if (updatedItem.items) {
-      updatedItem.items = convertAccordionContainers(updatedItem.items);
+      updatedItem.items = convertAccordionContainers(updatedItem.items, depth + 1);
     }
 
     return updatedItem;
@@ -3133,8 +3193,14 @@ function convertAccordionContainers(items) {
 }
 
 // Function to detect and convert tab panel items (containers with nested items or with cq:panelTitle)
-function convertTabContainers(items) {
+function convertTabContainers(items, depth = 0) {
   if (!items || !Array.isArray(items)) return items;
+
+  // Safeguard against infinite recursion
+  if (depth > 100) {
+    console.warn(`⚠️  convertTabContainers: Stopping recursion at depth ${depth}`);
+    return items;
+  }
 
   return items.map((item) => {
     const updatedItem = { ...item };
@@ -3156,7 +3222,7 @@ function convertTabContainers(items) {
 
     // Recursively process children
     if (updatedItem.items) {
-      updatedItem.items = convertTabContainers(updatedItem.items);
+      updatedItem.items = convertTabContainers(updatedItem.items, depth + 1);
     }
 
     return updatedItem;
@@ -3164,8 +3230,14 @@ function convertTabContainers(items) {
 }
 
 // Function to filter out empty containers (no items, no text, no meaningful content)
-function filterEmptyContainers(items) {
+function filterEmptyContainers(items, depth = 0) {
   if (!items || !Array.isArray(items)) return items;
+
+  // Safeguard against infinite recursion
+  if (depth > 100) {
+    console.warn(`⚠️  filterEmptyContainers: Stopping recursion at depth ${depth}`);
+    return items;
+  }
 
   return items
     .filter((item) => {
@@ -3186,7 +3258,7 @@ function filterEmptyContainers(items) {
     .map((item) => {
       // Recursively filter children
       if (item.items) {
-        return { ...item, items: filterEmptyContainers(item.items) };
+        return { ...item, items: filterEmptyContainers(item.items, depth + 1) };
       }
       return item;
     });
