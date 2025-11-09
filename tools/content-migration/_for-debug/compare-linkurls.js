@@ -6,13 +6,15 @@ const path = require('path');
 /**
  * Generate skip URL from content store directory name
  * Pattern: all-content-stores -> /content/share/us/en/all-content-stores
- *          all-content-stores-fifa-club-wc-2025 -> /content/share/us/en/all-content-stores/fifa-club-wc-2025
- *          bottler-content-stores-coke-holiday-2025 -> /content/share/us/en/bottler-content-stores/coke-holiday-2025
+ *          all-content-stores-fifa-club-wc-2025 ->
+ *            /content/share/us/en/all-content-stores/fifa-club-wc-2025
+ *          bottler-content-stores-coke-holiday-2025 ->
+ *            /content/share/us/en/bottler-content-stores/coke-holiday-2025
  * @param {string} storeName - The content store directory name
  * @returns {string} The URL to skip for this content store
  */
 function getSkipUrlForStore(storeName) {
-  // Replace the first dash after "all-content-stores" or "bottler-content-stores" with a slash
+  // Replace first dash after "all-content-stores" or "bottler-content-stores" with a slash
   const urlPath = storeName.replace(/^((?:all|bottler)-content-stores)-/, '$1/');
   return `/content/share/us/en/${urlPath}`;
 }
@@ -34,10 +36,10 @@ function findContentStoreDirectories() {
 // Parse command line arguments
 const args = process.argv.slice(2);
 const showAll = args.includes('--all');
-const contentStoreName = args.find((arg) => !arg.startsWith('--'));
+const contentStoreArg = args.find((arg) => !arg.startsWith('--'));
 let contentStoreNames = [];
 
-if (!contentStoreName) {
+if (!contentStoreArg) {
   // If no argument provided, find all *-content-stores* directories
   contentStoreNames = findContentStoreDirectories();
 
@@ -57,7 +59,8 @@ if (!contentStoreName) {
     console.log('📋 Show mode: first 3 URLs (use --all to see all)\n');
   }
 } else {
-  // If argument provided, use just that one
+  // If argument provided, extract just the directory name (in case absolute path was provided)
+  const contentStoreName = path.basename(contentStoreArg);
   contentStoreNames = [contentStoreName];
   if (showAll) {
     console.log('📋 Show all mode: enabled\n');
@@ -115,6 +118,12 @@ function normalizeUrl(url) {
   // Finally replace &amp; only if it's not part of another entity
   normalized = normalized.replace(/&amp;(?!quot;|#39;|lt;|gt;)/g, '&');
 
+  // Strip .html extension from content store URLs for consistency
+  // Only strip if it ends with .html and doesn't have query parameters after
+  if (normalized.endsWith('.html')) {
+    normalized = normalized.slice(0, -5);
+  }
+
   return normalized;
 }
 
@@ -161,11 +170,15 @@ function extractLinkUrls(obj, linkUrlKeys, originalUrls, skipUrl = null) {
     obj.forEach((item) => extractLinkUrls(item, linkUrlKeys, originalUrls, skipUrl));
   } else {
     Object.keys(obj).forEach((key) => {
-      const urlKeys = ['linkUrl', 'linkURL', 'url', 'analyticsUrl', 'clickableUrl', 'xdm:linkURL', 'imageResourceUrl'];
+      const urlKeys = ['linkUrl', 'linkURL', 'url', 'analyticsUrl', 'clickableUrl', 'xdm:linkURL', 'imageResourceUrl', 'storageUrl'];
       if (urlKeys.includes(key) && typeof obj[key] === 'string') {
         const original = obj[key];
-        // Skip 'hh' values
-        if (original === 'hh') {
+        // Skip invalid placeholder values
+        if (original === 'hh' || original === 'g') {
+          return;
+        }
+        // Validate URL format (must start with http://, https://, or /)
+        if (!original.startsWith('http://') && !original.startsWith('https://') && !original.startsWith('/')) {
           return;
         }
         const normalized = normalizeUrl(original);
@@ -182,8 +195,12 @@ function extractLinkUrls(obj, linkUrlKeys, originalUrls, skipUrl = null) {
         // Extract href URLs from HTML text content
         const hrefUrls = extractHrefUrls(obj[key]);
         hrefUrls.forEach((url) => {
-          // Skip 'hh' values
-          if (url === 'hh') {
+          // Skip invalid placeholder values
+          if (url === 'hh' || url === 'g') {
+            return;
+          }
+          // Validate URL format (must start with http://, https://, or /)
+          if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/')) {
             return;
           }
           const normalized = normalizeUrl(url);
@@ -194,7 +211,7 @@ function extractLinkUrls(obj, linkUrlKeys, originalUrls, skipUrl = null) {
           if (!linkUrlKeys.has(normalized)) {
             linkUrlKeys.set(normalized, new Set());
           }
-          linkUrlKeys.get(normalized).add('href');
+          linkUrlKeys.get(normalized).add('text-href');
           originalUrls.set(normalized, url);
         });
       } else {
