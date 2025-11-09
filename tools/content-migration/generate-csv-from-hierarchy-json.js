@@ -14,7 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 const { globSync } = require('glob');
-const { PATH_SEPARATOR } = require('./constants.js');
+const { PATH_SEPARATOR, DATA_DIR } = require('./constants.js');
 const { sanitizeFileName } = require('./sanitize-utils.js');
 const {
   DA_ORG, DA_REPO, DA_DEST, IMAGES_BASE,
@@ -295,7 +295,7 @@ function formatImageUrl(imageUrl, destPath, storeName) {
   const sanitizedFilename = sanitizeFileName(filename);
 
   // Check if the sanitized file exists in the images directory
-  const imagePath = path.join(__dirname, storeName, 'extracted-results', 'images', sanitizedFilename);
+  const imagePath = path.join(__dirname, DATA_DIR, storeName, 'extracted-results', 'images', sanitizedFilename);
   if (!fs.existsSync(imagePath)) {
     return '';
   }
@@ -402,7 +402,7 @@ function processFile(inputFile, outputFile) {
  * Finds all matching hierarchy-structure.json files
  */
 function findInputFiles() {
-  const pattern = '*-content-stores*/extracted-results/hierarchy-structure.json';
+  const pattern = `${DATA_DIR}/*-content-stores*/extracted-results/hierarchy-structure.json`;
   const matches = globSync(pattern, { cwd: __dirname });
   return matches.map((f) => path.join(__dirname, f));
 }

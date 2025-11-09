@@ -4,6 +4,7 @@ set -e
 # Get the directory where this script is located and the parent (content-migration) directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+DATA_DIR="DATA"
 
 # Compare files in directories with their backups in bk/
 # Usage:
@@ -39,8 +40,8 @@ compare_json_csv_files() {
     esac
   done
   
-  # Change to SRC_DIR to ensure all relative paths work correctly
-  pushd "$SRC_DIR" > /dev/null
+  # Change to DATA_DIR within SRC_DIR to ensure all relative paths work correctly
+  pushd "$SRC_DIR/$DATA_DIR" > /dev/null
   
   # If no directories provided, find all *-content-stores* directories
   if [[ ${#dirs[@]} -eq 0 ]]; then

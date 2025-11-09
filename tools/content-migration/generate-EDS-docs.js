@@ -16,9 +16,10 @@ const { sanitizeFileName } = require('./sanitize-utils.js');
 const {
   DA_ORG, DA_REPO, DA_DEST, IMAGES_BASE,
 } = require('./da-admin-client.js');
+const { DATA_DIR } = require('./constants.js');
 
 const TEMPLATES_DIR = path.join(__dirname, 'templates');
-const EDS_DOCS_DIR = path.join(__dirname, 'generated-eds-docs');
+const EDS_DOCS_DIR = path.join(__dirname, DATA_DIR, 'generated-eds-docs');
 
 /**
  * Parses a CSV line, handling quoted fields with commas
@@ -148,7 +149,7 @@ function extractStoreName(csvPath) {
  * Finds all hierarchy-structure.csv files
  */
 function findCsvFiles() {
-  const pattern = '*-content-stores*/derived-results/hierarchy-structure.csv';
+  const pattern = `${DATA_DIR}/*-content-stores*/derived-results/hierarchy-structure.csv`;
   const matches = globSync(pattern, { cwd: __dirname });
   return matches.map((f) => path.join(__dirname, f));
 }
@@ -194,7 +195,7 @@ function formatBannerImageUrl(imageUrl, destPath, storeName) {
   const sanitizedFilename = sanitizeFileName(filename);
 
   // Check if the sanitized file exists in the images directory
-  const imagePath = path.join(__dirname, storeName, 'extracted-results', 'images', sanitizedFilename);
+  const imagePath = path.join(__dirname, DATA_DIR, storeName, 'extracted-results', 'images', sanitizedFilename);
   if (!fs.existsSync(imagePath)) {
     return '';
   }
@@ -284,6 +285,7 @@ function generateEDSDocs(inputFile) {
       if (!isContentStoresList) {
         const hierarchyFile = path.join(
           __dirname,
+          DATA_DIR,
           name,
           'extracted-results',
           'hierarchy-structure.json',
@@ -406,6 +408,13 @@ function mergeCsvToMultiSheetJson(outputFile) {
 
 // Run if called directly
 if (require.main === module) {
+  // Ensure DATA directory exists
+  const dataDir = path.join(__dirname, DATA_DIR);
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+    console.log(`📁 Created DATA directory: ${dataDir}\n`);
+  }
+
   // Get output file from command line argument or use default
   const args = process.argv.slice(2);
   const outputFileName = args[0] || 'all-content-stores-sheet.json';

@@ -7,7 +7,7 @@ const path = require('path');
 const https = require('https');
 const { URL } = require('url');
 const { sanitizeFileName, buildFileNameWithId } = require('./sanitize-utils.js');
-const { PATH_SEPARATOR } = require('./constants.js');
+const { PATH_SEPARATOR, DATA_DIR } = require('./constants.js');
 
 // Help and usage information
 function showHelp() {
@@ -255,7 +255,7 @@ function createHierarchicalDirName(contentPath) {
 }
 
 const hierarchicalDirName = createHierarchicalDirName(CONTENT_PATH);
-const OUTPUT_DIR = path.join(__dirname, hierarchicalDirName, 'extracted-results');
+const OUTPUT_DIR = path.join(__dirname, DATA_DIR, hierarchicalDirName, 'extracted-results');
 const CACHE_DIR = path.join(OUTPUT_DIR, 'caches');
 
 // Helper function to get cache file path
@@ -578,7 +578,7 @@ async function extractLinkedContentStores(hierarchyStructureFile, debug = false)
       console.log('⏭️  SKIPPED (debug mode)');
     } else {
       try {
-        // Run the extraction script recursively
+      // Run the extraction script recursively
         // Use execFileSync instead of execSync to prevent command injection
         const output = execFileSync('node', ['extract-tab-hierarchy-all.js', contentPath], {
           cwd: __dirname,
@@ -648,6 +648,13 @@ async function extractLinkedContentStores(hierarchyStructureFile, debug = false)
 
 // Main execution function
 async function main() {
+  // Ensure DATA directory exists
+  const dataDir = path.join(__dirname, DATA_DIR);
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+    console.log(`📁 Created DATA directory: ${dataDir}`);
+  }
+
   // Ensure output directory exists
   if (!fs.existsSync(OUTPUT_DIR)) {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
@@ -814,8 +821,8 @@ async function main() {
         const items = tabs[':items'] || {};
 
         itemsOrder.forEach((key) => {
-          // Create a unique key combining original key and tabs index
-          // This ensures items with the same name from different tabs don't overwrite each other
+        // Create a unique key combining original key and tabs index
+        // This ensures items with the same name from different tabs don't overwrite each other
           const uniqueKey = `${key}__tabs${idx}`;
 
           combinedTabsData[':itemsOrder'].push(uniqueKey);
@@ -1161,7 +1168,9 @@ async function main() {
       // eslint-disable-next-line no-use-before-define
       mainHierarchy = parseHierarchyFromModel(mainTabsData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrData, jcrPathMap, jcrTeaserImageMap);
     } else {
-      console.log('📌 No tabs data to parse - will rely on non-tabs content extraction\n');
+      console.log('📌 No tabs data from Sling Model - extracting tabs directly from JCR\n');
+      // eslint-disable-next-line no-use-before-define
+      mainHierarchy = extractTabsFromJCR(jcrData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrPathMap, jcrTeaserImageMap);
     }
 
     // Extract non-tabs content and merge with main hierarchy
@@ -1392,6 +1401,120 @@ function getItemTypeFromResourceType(item, itemKey = '') {
   }
 
   return 'item';
+}
+
+// Extract tabs directly from JCR when Sling Model has no tabs
+function extractTabsFromJCR(jcrData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrPathMap, jcrTeaserImageMap) {
+  console.log('📖 Extracting tabs from JCR...\n');
+
+  const hierarchy = [];
+
+  // Find all tabs components in JCR
+  const tabsComponents = [];
+  function findTabsComponents(obj, path = '') {
+    if (!obj || typeof obj !== 'object') return;
+
+    if (obj['sling:resourceType'] === 'tccc-dam/components/tabs') {
+      tabsComponents.push({ obj, path });
+    }
+
+    for (const key in obj) {
+      if (typeof obj[key] === 'object' && !key.startsWith(':')) {
+        findTabsComponents(obj[key], `${path}/${key}`);
+      }
+    }
+  }
+
+  findTabsComponents(jcrData.root);
+  console.log(`🔍 Found ${tabsComponents.length} tabs component(s) in JCR`);
+
+  // Process each tabs component
+  tabsComponents.forEach(({ obj: tabsObj, path: tabsPath }) => {
+    // Get all tab items (item_1, item_2, etc.)
+    const itemsOrder = tabsObj[':itemsOrder'] || Object.keys(tabsObj).filter((k) => !k.startsWith(':') && !k.startsWith('jcr:') && !k.startsWith('cq:') && !k.startsWith('sling:'));
+
+    console.log(`  📂 Processing tabs at ${tabsPath} with ${itemsOrder.length} tab(s)`);
+
+    itemsOrder.forEach((itemKey) => {
+      const tabItem = tabsObj[itemKey];
+      if (!tabItem || typeof tabItem !== 'object') return;
+
+      const tabTitle = tabItem['cq:panelTitle'] || tabItem['jcr:title'] || itemKey;
+      console.log(`    - ${tabTitle}`);
+
+      const tab = {
+        title: tabTitle,
+        path: tabTitle,
+        type: 'tab',
+        key: itemKey,
+        items: [],
+      };
+
+      // Extract all content from this tab (containers, buttons, etc.)
+      function extractTabContent(containerObj, parentPath = '') {
+        const items = [];
+
+        if (!containerObj || typeof containerObj !== 'object') return items;
+
+        // Check if this is a container with items
+        if (containerObj['sling:resourceType'] === 'tccc-dam/components/container' || containerObj[':items']) {
+          const contentItems = containerObj[':items'] || containerObj;
+          const contentOrder = contentItems[':itemsOrder'] || Object.keys(contentItems).filter((k) => !k.startsWith(':') && !k.startsWith('jcr:') && !k.startsWith('cq:') && !k.startsWith('sling:'));
+
+          contentOrder.forEach((contentKey) => {
+            const contentItem = contentItems[contentKey];
+            if (!contentItem || typeof contentItem !== 'object') return;
+
+            const resourceType = contentItem[':type'] || contentItem['sling:resourceType'] || '';
+            const itemType = getItemTypeFromResourceType(resourceType, contentKey);
+            const itemTitle = contentItem['jcr:title'] || contentItem['cq:panelTitle'] || contentKey;
+            const itemPath = parentPath ? `${parentPath} >>> ${itemTitle}` : itemTitle;
+
+            const item = {
+              title: itemTitle,
+              path: itemPath,
+              type: itemType,
+              key: contentKey,
+            };
+
+            // Extract linkSources for buttons
+            if (itemType === 'button' && contentItem.linkURL) {
+              item.linkSources = {
+                clickableUrl: stripHostOnly(contentItem.linkURL),
+              };
+            }
+
+            // Extract text content
+            if (contentItem.text) {
+              item.text = contentItem.text;
+            }
+
+            // Recursively extract nested items
+            if (contentItem[':items'] || contentItem.container) {
+              const nestedItems = extractTabContent(contentItem.container || contentItem, itemPath);
+              if (nestedItems.length > 0) {
+                item.items = nestedItems;
+              }
+            }
+
+            items.push(item);
+          });
+        }
+
+        return items;
+      }
+
+      // Extract content from the tab's container
+      if (tabItem.container) {
+        tab.items = extractTabContent(tabItem.container, tabTitle);
+      }
+
+      hierarchy.push(tab);
+    });
+  });
+
+  console.log(`✅ Extracted ${hierarchy.length} tab(s) from JCR\n`);
+  return hierarchy;
 }
 
 function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrData, jcrPathMap, jcrTeaserImageMap) {
@@ -2060,6 +2183,7 @@ function groupHierarchyBySections(items, jcrData) {
 // Group items using JCR section structure
 function groupByJCRSections(items, jcrSections) {
   const grouped = [];
+  const matchedItems = new Set();
 
   console.log('\n📋 Grouping by JCR section metadata:');
 
@@ -2068,6 +2192,9 @@ function groupByJCRSections(items, jcrSections) {
     const itemsInSection = items.filter((item) => item.__jcrSection === section.title);
 
     if (itemsInSection.length > 0) {
+      // Mark these items as matched
+      itemsInSection.forEach((item) => matchedItems.add(item));
+
       // Check if section contains only one item with the same title (redundant nesting)
       if (itemsInSection.length === 1
             && itemsInSection[0].title
@@ -2120,7 +2247,20 @@ function groupByJCRSections(items, jcrSections) {
     }
   });
 
-  console.log(`  - ${grouped.map((s) => `${s.title} (${s.items.length})`).join(', ')}\n`);
+  // Include items that didn't match any JCR section
+  const unmatchedItems = items.filter((item) => !matchedItems.has(item));
+  if (unmatchedItems.length > 0) {
+    console.log(`⚠️  Found ${unmatchedItems.length} unmatched items (no JCR section metadata):`);
+    unmatchedItems.forEach((item) => {
+      console.log(`  - ${item.title} (type: ${item.type})`);
+      // Remove __jcrSection metadata if present
+      const cleanItem = { ...item };
+      delete cleanItem.__jcrSection;
+      grouped.push(cleanItem);
+    });
+  }
+
+  console.log(`  - ${grouped.map((s) => `${s.title} (${s.items?.length || 0})`).join(', ')}\n`);
 
   return grouped;
 }
@@ -2308,7 +2448,7 @@ function extractNonTabsContent(jcrData) {
           || containerKey.startsWith('sling:');
 
       if (!shouldSkip) {
-        // Look for title components and their associated content
+      // Look for title components and their associated content
         const titleComponent = findTitleComponent(container);
         if (titleComponent) {
           // Found a title component - extract its type from JCR
