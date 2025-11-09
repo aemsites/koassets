@@ -48,22 +48,44 @@ function compare_images() {
 
 function compare_single() {
     target="$1"
-    
-    # Change to DATA_DIR within SRC_DIR to ensure all relative paths work correctly
-    pushd "$SRC_DIR/$DATA_DIR" > /dev/null
+    current="$2"
+    total="$3"
     
     # Extract just the directory name if full path was provided
     target_dir=$(basename "$target")
-    echo -e "\n\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> WORKING ON: $target <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
     
-    echo -e "\n\n============================================== Comparing linkURLs between hierarchy-structure.json and tabs*.json ... ==============================================\n\n"
-    node "${SCRIPT_DIR}/compare-linkurls.js" "$target_dir"
+    if [[ -n "$current" && -n "$total" ]]; then
+        echo -e "\n\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> WORKING ON: $target (#$current/$total) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+    else
+        echo -e "\n\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> WORKING ON: $target <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+    fi
+    
+    # Check if directory exists
+    if [[ ! -d "$SRC_DIR/$DATA_DIR/$target_dir" ]]; then
+        echo "❌ ERROR: Directory not found: $SRC_DIR/$DATA_DIR/$target_dir"
+        return 1
+    fi
+    
+    # Change to DATA_DIR within SRC_DIR to ensure all relative paths work correctly
+    pushd "$SRC_DIR/$DATA_DIR" > /dev/null || {
+        echo "❌ ERROR: Failed to change to $SRC_DIR/$DATA_DIR"
+        return 1
+    }
     
     # Check if backup directory exists
     if [[ ! -d "bk/${target_dir}" ]]; then
         echo "⏭️  Skipping $target_dir (no backup directory)"
         popd > /dev/null
         return 0
+    fi
+    
+    echo -e "\n\n============================================== Comparing linkURLs between hierarchy-structure.json and tabs*.json ... ==============================================\n\n"
+    
+    # Run comparison with error handling
+    if ! node "${SCRIPT_DIR}/compare-linkurls.js" "$target_dir" 2>&1; then
+        echo "⚠️  Warning: Comparison failed for $target_dir"
+        popd > /dev/null
+        return 1
     fi
     
 #    echo -e "\n\n============================================== Comparing derived-results/*csv with backup... ==============================================\n\n"
@@ -74,24 +96,96 @@ function compare_single() {
     
     # Return to original directory
     popd > /dev/null
-            
-    echo -e "\n\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> DONE WITH: $target <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+    
+    if [[ -n "$current" && -n "$total" ]]; then
+        echo -e "\n\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> DONE WITH: $target (#$current/$total) <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+    else
+        echo -e "\n\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> DONE WITH: $target <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
+    fi
 }
 
 function compare_all() {
     # Change to DATA_DIR within SRC_DIR so all paths are relative
-    cd "$SRC_DIR/$DATA_DIR"
+    echo "DEBUG: Changing to $SRC_DIR/$DATA_DIR"
+    cd "$SRC_DIR/$DATA_DIR" || {
+        echo "❌ ERROR: Failed to change to $SRC_DIR/$DATA_DIR"
+        exit 1
+    }
+    echo "DEBUG: Successfully changed directory"
     
     # Discover all folders matching *-content-stores* pattern
     echo "Discovering folders matching *-content-stores* pattern..."
+    
+    # Count total folders first
+    local folders=()
+    echo "DEBUG: Starting to count folders..."
     for folder in *-content-stores*; do
         if [[ -d "$folder" ]]; then
-            compare_single "$folder"
+            folders+=("$folder")
         fi
     done
+    
+    local total=${#folders[@]}
+    echo "Found $total folder(s) to process"
+    echo "DEBUG: About to start processing..."
+    echo ""
+    
+    # Process each folder with progress tracking
+    local current=0
+    local success_count=0
+    local skip_count=0
+    local fail_count=0
+    local failed_folders=()
+    
+    echo "DEBUG: Starting loop through ${#folders[@]} folders"
+    for folder in "${folders[@]}"; do
+        current=$((current + 1))
+        echo "DEBUG: Loop iteration $current, folder=$folder"
+        
+        # Temporarily disable exit on error to check result
+        set +e
+        echo "DEBUG: About to call compare_single for $folder"
+        compare_single "$folder" "$current" "$total"
+        local result=$?
+        echo "DEBUG: compare_single returned $result"
+        set -e
+        
+        if [[ $result -eq 0 ]]; then
+            success_count=$((success_count + 1))
+        elif [[ $result -eq 1 ]]; then
+            fail_count=$((fail_count + 1))
+            failed_folders+=("$folder")
+            # Exit immediately on failure
+            echo -e "\n\n❌ STOPPING due to failure in: $folder"
+            echo "📊 Processed: $current/$total folders before stopping"
+            echo "✅ Successful: $success_count"
+            exit 1
+        fi
+    done
+    
+    # Print summary
+    echo -e "\n\n============================================== SUMMARY =============================================="
+    echo "📊 Processed: $current/$total folders"
+    echo "✅ Successful: $success_count"
+    echo "⏭️  Skipped (no backup): $((current - success_count - fail_count))"
+    echo "❌ Failed: $fail_count"
+    
+    if [[ ${#failed_folders[@]} -gt 0 ]]; then
+        echo -e "\n⚠️  Failed folders:"
+        for failed in "${failed_folders[@]}"; do
+            echo "  - $failed"
+        done
+    fi
+    echo "=============================================================================================="
 }
 
 #compare_images
+
+echo "DEBUG: SCRIPT_DIR=$SCRIPT_DIR"
+echo "DEBUG: SRC_DIR=$SRC_DIR"
+echo "DEBUG: DATA_DIR=$DATA_DIR"
+echo ""
+
 compare_all
 
 echo -e "\n\n============================================== Comparing generated-eds-docs/* with backup... ==============================================\n\n"

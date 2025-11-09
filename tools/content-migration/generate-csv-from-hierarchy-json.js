@@ -84,6 +84,35 @@ function transformSearchUrlsInText(text) {
     return text;
   }
 
+  // For very large text fields, use a more efficient approach to avoid regex catastrophic backtracking
+  if (text.length > 100000) {
+    console.log(`   ⚠️  Processing large text field (${text.length} chars) with optimized approach...`);
+
+    // Process text in chunks to avoid regex performance issues
+    const chunkSize = 50000; // Process 50KB at a time
+    let result = '';
+
+    for (let i = 0; i < text.length; i += chunkSize) {
+      const chunk = text.substring(i, Math.min(i + chunkSize, text.length));
+
+      // Use a simpler, more efficient regex that matches href="...search-assets.html..."
+      // This avoids the problematic [^"'\s]* pattern that causes backtracking
+      const urlPattern = /href=(["'])([^"']*search-assets\.html[^"']*)["']/gi;
+
+      const transformedChunk = chunk.replace(urlPattern, (match, quote, url) => {
+        // Decode HTML entities in URL
+        const decodedUrl = url.replace(/&amp;/g, '&');
+        const transformedUrl = transformSearchUrl(decodedUrl);
+        return `href=${quote}${transformedUrl}${quote}`;
+      });
+
+      result += transformedChunk;
+    }
+
+    return result;
+  }
+
+  // For normal-sized text, use the original pattern
   // Match URLs in href attributes and standalone URLs
   // Pattern matches: href="URL" or href='URL' or standalone https://...search-assets.html...
   const urlPattern = /((?:href=["'])?)([^"'\s]*search-assets\.html[^"'\s]*)(["']?)/gi;

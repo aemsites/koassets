@@ -20,6 +20,7 @@ echo "Generating CSV from merged hierarchy json ..."
 echo "=========================================="
 echo ""
 node generate-csv-from-hierarchy-json.js ### ==> will generate CSVs from '*-content-stores*/extracted-results/hierarchy-structure.json'
+node _for-debug/generate-html-viewer.js --no-open ### ==> will create html from csv  
 echo ""
 echo ""
 
@@ -32,6 +33,7 @@ echo "=========================================="
 echo ""
 
 node generate-EDS-docs.js ### ==> will create 'all-content-stores-sheet.json' and other content store pages 
+
 
 exit 0
 

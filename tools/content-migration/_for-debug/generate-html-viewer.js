@@ -32,13 +32,13 @@ OPTIONS:
 DEFAULT FILE SEARCH:
   When no input paths are provided, the script automatically searches for:
   1. Any preferredDefaults passed programmatically
-  2. All directories matching pattern: *-content-stores*/derived-results/hierarchy-structure.csv
+  2. All directories in DATA/ matching pattern: *-content-stores*/derived-results/hierarchy-structure.csv
 
   Files are processed in the order found, with preferredDefaults taking priority.
 
 EXAMPLES:
   # Generate viewer for a specific CSV file
-  node generate-html-viewer.js all-content-stores/derived-results/hierarchy-structure.csv
+  node generate-html-viewer.js DATA/all-content-stores/derived-results/hierarchy-structure.csv
 
   # Generate viewers for multiple files
   node generate-html-viewer.js file1.csv file2.json
@@ -46,7 +46,7 @@ EXAMPLES:
   # Generate viewer without opening in browser
   node generate-html-viewer.js --no-open
 
-  # Use default file search (processes all *-content-stores*/derived-results/*.csv)
+  # Use default file search (processes all DATA/*-content-stores*/derived-results/*.csv)
   node generate-html-viewer.js
 
 OUTPUT:
@@ -66,24 +66,29 @@ OUTPUT:
 }
 
 function getDefaultCandidates(preferredDefaults = []) {
-  // Dynamically find all *-content-stores* directories
+  // Dynamically find all *-content-stores* directories in DATA folder
   let baseDefaults = [];
   try {
-    const entries = fs.readdirSync(projectRoot, { withFileTypes: true });
+    const dataDir = path.resolve(projectRoot, '../DATA');
+    const entries = fs.readdirSync(dataDir, { withFileTypes: true });
     baseDefaults = entries
       .filter((entry) => entry.isDirectory() && entry.name.includes('-content-stores'))
       .map((entry) => entry.name)
       .sort()
-      .map((dir) => `${dir}/derived-results/hierarchy-structure.csv`);
+      .map((dir) => path.join(dataDir, dir, 'derived-results/hierarchy-structure.csv'));
   } catch (error) {
-    console.warn('⚠️  Could not scan for content-stores directories:', error.message);
+    console.warn('⚠️  Could not scan for content-stores directories in DATA:', error.message);
   }
 
-  const combined = [...preferredDefaults, ...baseDefaults];
+  // Resolve preferredDefaults relative to projectRoot
+  const resolvedPreferred = preferredDefaults.map(
+    (candidate) => path.resolve(projectRoot, candidate),
+  );
+
+  const combined = [...resolvedPreferred, ...baseDefaults];
   const seen = new Set();
 
   return combined
-    .map((candidate) => path.resolve(projectRoot, candidate))
     .filter((candidatePath) => {
       if (seen.has(candidatePath)) {
         return false;
