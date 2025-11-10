@@ -7,12 +7,14 @@ echo "=========================================="
 echo ""
 
 # Extract all-content-stores & stores
-node extract-tab-hierarchy-all.js --recursive ### ==> will fetch '/content/share/us/en/*-content-stores'
-    #node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/global-coca-cola-uplift'
-    #node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/portfolio-get-together-2025'
-    #node extract-tab-hierarchy-all.js '/content/share/us/en/bottler-content-stores/coke-holiday-2025'
-    #node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/ramadan-2025'
-    #node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/fifa-club-wc-2025'
+#node extract-tab-hierarchy-all.js --recursive ### ==> will fetch '/content/share/us/en/*-content-stores'
+    node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores'
+    node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/global-coca-cola-uplift'
+    node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/portfolio-get-together-2025'
+    node extract-tab-hierarchy-all.js '/content/share/us/en/bottler-content-stores/coke-holiday-2025'
+    node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/ramadan-2025'
+    node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/fifa-club-wc-2025'
+    node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/tea'
 
 
 echo "=========================================="

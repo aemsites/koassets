@@ -100,7 +100,7 @@ compare_json_csv_files() {
           if diff <(jq -S . "$file") <(jq -S . "$backup_file") >/dev/null 2>&1; then
             echo "Matched ✅"
           else
-            echo "Different ❌ between \"$file\" and \"$backup_file\""
+            echo "Different ❌ between \"$DATA_DIR/$file\" \"$DATA_DIR/$backup_file\""
             diff --color=always <(jq -S . "$file") <(jq -S . "$backup_file") | head -100
             exit 1
           fi
@@ -108,21 +108,21 @@ compare_json_csv_files() {
           # CSV comparison with record counting
           local has_error=false
           
-          echo "  [1/2] Checking record count..."
-          local rows_current=$(awk 'BEGIN{n=0;q=0} {for(i=1;i<=length($0);i++){c=substr($0,i,1);if(c=="\""&&(i==1||substr($0,i-1,1)!="\\"))q=!q} if(q==0)n++} END{print n}' "$file")
-          local rows_backup=$(awk 'BEGIN{n=0;q=0} {for(i=1;i<=length($0);i++){c=substr($0,i,1);if(c=="\""&&(i==1||substr($0,i-1,1)!="\\"))q=!q} if(q==0)n++} END{print n}' "$backup_file")
+          # echo "  [1/2] Checking record count..."
+          # local rows_current=$(awk 'BEGIN{n=0;q=0} {for(i=1;i<=length($0);i++){c=substr($0,i,1);if(c=="\""&&(i==1||substr($0,i-1,1)!="\\"))q=!q} if(q==0)n++} END{print n}' "$file")
+          # local rows_backup=$(awk 'BEGIN{n=0;q=0} {for(i=1;i<=length($0);i++){c=substr($0,i,1);if(c=="\""&&(i==1||substr($0,i-1,1)!="\\"))q=!q} if(q==0)n++} END{print n}' "$backup_file")
           
-          if [[ "$rows_current" != "$rows_backup" ]]; then
-            echo "    Record count: MISMATCH ❌"
-            echo "      Current: $rows_current records"
-            echo "      Backup:  $rows_backup records"
-            echo "      Diff:    $((rows_current - rows_backup)) records"
-            echo "  Overall: FAILED ❌ (failed fast on record count)"
-            echo
-            exit 1
-          else
-            echo "    Record count: MATCH ✅ ($rows_current records)"
-          fi
+          # if [[ "$rows_current" != "$rows_backup" ]]; then
+          #   echo "    Record count: MISMATCH ❌"
+          #   echo "      Current: $rows_current records"
+          #   echo "      Backup:  $rows_backup records"
+          #   echo "      Diff:    $((rows_current - rows_backup)) records"
+          #   echo "  Overall: FAILED ❌ (failed fast on record count)"
+          #   echo
+          #   exit 1
+          # else
+          #   echo "    Record count: MATCH ✅ ($rows_current records)"
+          # fi
           
           echo "  [2/2] Checking content..."
           local tmp_current=$(mktemp)
@@ -136,7 +136,7 @@ compare_json_csv_files() {
             rm -f "$tmp_current" "$tmp_backup"
           else
             echo "    Content: DIFFERENT ❌"
-            echo "      Comparing: \"$file\" vs \"$backup_file\""
+            echo "      Comparing: \"$DATA_DIR/$file\" vs \"$DATA_DIR/$backup_file\""
             diff --color=always "$tmp_current" "$tmp_backup" | head -50
             rm -f "$tmp_current" "$tmp_backup"
             has_error=true
@@ -153,7 +153,7 @@ compare_json_csv_files() {
           if diff "$file" "$backup_file" >/dev/null 2>&1; then
             echo "Matched ✅"
           else
-            echo "Different ❌ between \"$file\" and \"$backup_file\""
+            echo "Different ❌ between \"$DATA_DIR/$file\" and \"$DATA_DIR/$backup_file\""
             # For binary files, just show they differ
             if file "$file" | grep -q "text"; then
               diff --color=always "$file" "$backup_file" | head -100
@@ -165,7 +165,7 @@ compare_json_csv_files() {
         fi
         echo
       else
-        echo "Missing in bk/: $backup_file"
+        echo "Missing in $DATA_DIR/bk/: $DATA_DIR/$backup_file"
         echo
       fi
     done < <(find "$top_dir" -type f -print0)

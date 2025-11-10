@@ -20,6 +20,14 @@ function getSkipUrlForStore(storeName) {
 }
 
 /**
+ * Global list of URLs to skip across all content stores
+ * These are URLs that are intentionally not included in hierarchy (e.g., skipped items)
+ */
+const GLOBALLY_SKIPPED_URLS = [
+  '/r/Y9tWw8YPEK', // Forms.Office.com URL from "Content Store Request Form" button (intentionally skipped)
+];
+
+/**
  * Find all directories matching the pattern *-content-stores*
  * @returns {string[]} Array of matching directory names
  */
@@ -186,6 +194,10 @@ function extractLinkUrls(obj, linkUrlKeys, originalUrls, skipUrl = null) {
         if (skipUrl && normalized === skipUrl) {
           return;
         }
+        // Skip globally skipped URLs
+        if (GLOBALLY_SKIPPED_URLS.includes(normalized)) {
+          return;
+        }
         if (!linkUrlKeys.has(normalized)) {
           linkUrlKeys.set(normalized, new Set());
         }
@@ -206,6 +218,10 @@ function extractLinkUrls(obj, linkUrlKeys, originalUrls, skipUrl = null) {
           const normalized = normalizeUrl(url);
           // Skip the URL for this specific content store
           if (skipUrl && normalized === skipUrl) {
+            return;
+          }
+          // Skip globally skipped URLs
+          if (GLOBALLY_SKIPPED_URLS.includes(normalized)) {
             return;
           }
           if (!linkUrlKeys.has(normalized)) {
