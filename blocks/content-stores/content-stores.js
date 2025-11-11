@@ -385,6 +385,17 @@ function createViewerElement(contentStoresData) {
       treeItem.dataset.itemType = item.type;
     }
 
+    // For type 'text', only display the text content without title
+    if (item.type === 'text') {
+      if (item.text) {
+        const richContent = document.createElement('div');
+        richContent.className = 'rich-content';
+        richContent.innerHTML = item.text;
+        treeItem.appendChild(richContent);
+      }
+      return treeItem;
+    }
+
     const hasChildren = item.items && item.items.length > 0;
     const hasTextList = item.text && (item.text.includes('<a') || (item.text.match(/<p>/g) || []).length > 1);
     // Accordion type items should always be expandable if they have text content
@@ -532,11 +543,12 @@ function createViewerElement(contentStoresData) {
       childrenContainer.className = 'tree-children';
       if (isExpanded) childrenContainer.classList.add('expanded');
 
-      // Check if all children are leaf items (no grandchildren)
-      const allChildrenAreLeaves = item.items.every(
+      // Check if all children are leaf items (no grandchildren), excluding text type items
+      const nonTextChildren = item.items.filter((child) => child.type !== 'text');
+      const allChildrenAreLeaves = nonTextChildren.length > 0 && nonTextChildren.every(
         (child) => !child.items || child.items.length === 0,
       );
-      // Apply grid layout if all children are leaf items
+      // Apply grid layout if all non-text children are leaf items
       if (allChildrenAreLeaves) {
         childrenContainer.classList.add('has-grid');
       }

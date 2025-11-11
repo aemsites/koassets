@@ -136,7 +136,7 @@ compare_json_csv_files() {
             rm -f "$tmp_current" "$tmp_backup"
           else
             echo "    Content: DIFFERENT ❌"
-            echo "      Comparing: \"$DATA_DIR/$file\" vs \"$DATA_DIR/$backup_file\""
+            echo "      Comparing: \"$DATA_DIR/$file\" \"$DATA_DIR/$backup_file\""
             diff --color=always "$tmp_current" "$tmp_backup" | head -50
             rm -f "$tmp_current" "$tmp_backup"
             has_error=true

@@ -161,6 +161,14 @@
         function renderTreeItem(item, depth) {
             if (!item) return '';
             
+            // For type 'text', only display the text content without title
+            if (item.type === 'text') {
+                if (item.text) {
+                    return `<div class="tree-item" data-item-type="text"><div class="rich-content">${item.text}</div></div>`;
+                }
+                return '';
+            }
+            
             const hasChildren = item.items && item.items.length > 0;
             const hasTextList = item.text && (item.text.includes('<a') || (item.text.match(/<p>/g) || []).length > 1);
             // Accordion type items should always be expandable if they have text content

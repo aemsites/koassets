@@ -1225,10 +1225,11 @@ async function main() {
       extractTimestampsFromModel(mainTabsData[':items']);
     }
 
-    // Remove teasers from jcrTeaserImageMap that don't have imageResource AND don't have linkSources
+    // Remove teasers from jcrTeaserImageMap that don't have imageResource AND don't have linkSources AND don't have fileName
+    // Keep teasers with fileName even if not in Sling Model (needed for JCR-only content like non-tabs sections)
     const beforeCleanup = Object.keys(jcrTeaserImageMap).length;
     for (const uniqueKey in jcrTeaserImageMap) {
-      if (!jcrTeaserImageMap[uniqueKey].hasImageResource && !jcrTeaserImageMap[uniqueKey].linkSources) {
+      if (!jcrTeaserImageMap[uniqueKey].hasImageResource && !jcrTeaserImageMap[uniqueKey].linkSources && !jcrTeaserImageMap[uniqueKey].fileName) {
         delete jcrTeaserImageMap[uniqueKey];
       }
     }
@@ -1253,7 +1254,7 @@ async function main() {
 
     // Extract non-tabs content and merge with main hierarchy
     // eslint-disable-next-line no-use-before-define
-    const nonTabsSections = extractNonTabsContent(jcrData);
+    const nonTabsSections = extractNonTabsContent(jcrData, jcrTeaserImageMap);
     if (nonTabsSections.length > 0) {
       console.log(`\n📦 Found ${nonTabsSections.length} section(s) outside tabs:`);
       nonTabsSections.forEach((section) => {
@@ -1658,7 +1659,7 @@ async function main() {
     // Extract missing sections from JCR that aren't in Sling Model
     console.log('\n🔍 Checking for missing sections in JCR...');
     const existingSectionTitles = convertedHierarchy.map((section) => section.title);
-    const missingSections = extractMissingSectionsFromJCR(jcrData, existingSectionTitles, convertedHierarchy);
+    const missingSections = extractMissingSectionsFromJCR(jcrData, existingSectionTitles, convertedHierarchy, jcrTeaserImageMap);
 
     if (missingSections.length > 0) {
       console.log(`✅ Found ${missingSections.length} missing section(s) from JCR - adding to hierarchy`);
@@ -2357,12 +2358,17 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
 
       // Fallback: infer type from ID pattern if sling:resourceType is missing
       if (itemType === 'item' && item.id) {
-        const idPrefix = item.id.split('-')[0];
-        if (idPrefix === 'button') itemType = 'button';
-        else if (idPrefix === 'accordion') itemType = 'accordion';
-        else if (idPrefix === 'tabs') itemType = 'tabs';
-        else if (idPrefix === 'container') itemType = 'container';
-        else if (idPrefix === 'text') itemType = 'text';
+        // Check for custom-button- prefix first (before splitting)
+        if (item.id.startsWith('custom-button-')) {
+          itemType = 'button';
+        } else {
+          const idPrefix = item.id.split('-')[0];
+          if (idPrefix === 'button') itemType = 'button';
+          else if (idPrefix === 'accordion') itemType = 'accordion';
+          else if (idPrefix === 'tabs') itemType = 'tabs';
+          else if (idPrefix === 'container') itemType = 'container';
+          else if (idPrefix === 'text') itemType = 'text';
+        }
       }
 
       // Build display path only for output (for user viewing)
@@ -3165,7 +3171,7 @@ function hasCarouselComponent(container) {
   return false;
 }
 
-function extractNonTabsContent(jcrData) {
+function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
   const sections = [];
 
   if (!jcrData.root || !jcrData.root.container) {
@@ -3281,7 +3287,7 @@ function extractNonTabsContent(jcrData) {
 
     // Extract content from all containers in this section
     for (const container of section.containers) {
-      extractComponentsFromContainer(container, sectionItems, titleText);
+      extractComponentsFromContainer(container, sectionItems, titleText, jcrTeaserImageMap);
     }
 
     // Always add the section, even if it has no items (may be a header separator)
@@ -3298,7 +3304,7 @@ function extractNonTabsContent(jcrData) {
 }
 
 // Extract missing top-level sections from JCR that aren't in Sling Model
-function extractMissingSectionsFromJCR(jcrData, existingSectionTitles = [], mainHierarchy = []) {
+function extractMissingSectionsFromJCR(jcrData, existingSectionTitles = [], mainHierarchy = [], jcrTeaserImageMap = {}) {
   const missingSections = [];
 
   if (!jcrData.root || !jcrData.root.container) {
@@ -3349,7 +3355,7 @@ function extractMissingSectionsFromJCR(jcrData, existingSectionTitles = [], main
 
           // Extract all content from the parent container
           const sectionItems = [];
-          extractContentFromContainer(container, sectionItems, sectionTitle);
+          extractContentFromContainer(container, sectionItems, sectionTitle, jcrTeaserImageMap);
 
           if (sectionItems.length > 0) {
             missingSections.push({
@@ -3406,7 +3412,7 @@ function extractMissingSectionsFromJCR(jcrData, existingSectionTitles = [], main
 
       // Extract any buttons or teasers from this container
       const items = [];
-      extractContentFromContainer(container, items, 'Other Content');
+      extractContentFromContainer(container, items, 'Other Content', jcrTeaserImageMap);
 
       // Filter out items that already exist in the hierarchy
       const uniqueItems = items.filter((item) => {
@@ -3456,7 +3462,7 @@ function extractMissingSectionsFromJCR(jcrData, existingSectionTitles = [], main
 }
 
 // Extract all content (tabs, accordions, buttons, teasers, text) from a JCR container
-function extractContentFromContainer(container, items, parentTitle) {
+function extractContentFromContainer(container, items, parentTitle, jcrTeaserImageMap = {}) {
   if (!container || typeof container !== 'object') return;
 
   for (const key in container) {
@@ -3470,7 +3476,7 @@ function extractContentFromContainer(container, items, parentTitle) {
 
     // Handle tabs components
     if (resourceType === 'tccc-dam/components/tabs') {
-      const tabs = extractTabsFromTabsComponent(component, parentTitle);
+      const tabs = extractTabsFromTabsComponent(component, parentTitle, jcrTeaserImageMap);
       items.push(...tabs);
     }
     // Handle accordion components
@@ -3485,7 +3491,7 @@ function extractContentFromContainer(container, items, parentTitle) {
     }
     // Handle teaser components
     else if (resourceType === 'tccc-dam/components/teaser') {
-      const teaser = extractTeaserFromComponent(component, key, parentTitle);
+      const teaser = extractTeaserFromComponent(component, key, parentTitle, jcrTeaserImageMap);
       if (teaser) items.push(teaser);
     }
     // Handle text components (standalone text with embedded links)
@@ -3514,13 +3520,13 @@ function extractContentFromContainer(container, items, parentTitle) {
     }
     // Handle container components (recurse)
     else if (resourceType === 'tccc-dam/components/container') {
-      extractContentFromContainer(component, items, parentTitle);
+      extractContentFromContainer(component, items, parentTitle, jcrTeaserImageMap);
     }
   }
 }
 
 // Extract tabs from a tabs component
-function extractTabsFromTabsComponent(tabsComponent, parentTitle) {
+function extractTabsFromTabsComponent(tabsComponent, parentTitle, jcrTeaserImageMap = {}) {
   const tabs = [];
 
   for (const key in tabsComponent) {
@@ -3534,7 +3540,7 @@ function extractTabsFromTabsComponent(tabsComponent, parentTitle) {
     const tabPath = `${parentTitle} >>> ${tabTitle}`;
 
     const tabItems = [];
-    extractContentFromContainer(tabItem, tabItems, tabPath);
+    extractContentFromContainer(tabItem, tabItems, tabPath, jcrTeaserImageMap);
 
     tabs.push({
       title: tabTitle,
@@ -3620,7 +3626,7 @@ function extractButtonFromComponent(buttonComp, key, parentTitle) {
 }
 
 // Extract teaser from component
-function extractTeaserFromComponent(teaserComp, key, parentTitle) {
+function extractTeaserFromComponent(teaserComp, key, parentTitle, jcrTeaserImageMap = {}) {
   const teaserTitle = teaserComp['jcr:title'] || key;
   const linkURL = teaserComp.linkURL;
 
@@ -3629,12 +3635,39 @@ function extractTeaserFromComponent(teaserComp, key, parentTitle) {
     path: `${parentTitle} >>> ${teaserTitle}`,
     type: 'teaser',
     key,
+    id: `teaser-${createDeterministicId(teaserTitle + key)}`,
   };
 
   if (linkURL) {
     teaser.linkSources = {
       clickableUrl: stripHostOnly(linkURL),
     };
+  }
+
+  // Construct imageUrl from jcrTeaserImageMap
+  let imageUrl = null;
+  // Find this teaser in the map by matching the key
+  for (const [jcrPath, teaserData] of Object.entries(jcrTeaserImageMap)) {
+    if (teaserData.teaserKey === key && teaserData.fileName) {
+      const { fileName, lastModified } = teaserData;
+      const fileExtension = fileName.substring(fileName.lastIndexOf('.') + 1);
+      const imageFormat = `coreimg.85.1600.${fileExtension}`;
+
+      // Build full JCR path
+      const fullJcrPath = `${CONTENT_PATH}/_jcr_content/root${teaserData.jcrPath}`;
+
+      // Build filename with item ID for uniqueness
+      const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
+      const ext = fileName.substring(fileName.lastIndexOf('.'));
+      const finalFileName = `${teaser.id}-${nameWithoutExt}${ext}`;
+
+      imageUrl = `${fullJcrPath}.${imageFormat}/${lastModified}/${finalFileName}`;
+      break;
+    }
+  }
+
+  if (imageUrl) {
+    teaser.imageUrl = imageUrl;
   }
 
   return teaser;
@@ -3720,7 +3753,7 @@ function findSectionTitleComponent(obj, depth = 0, maxDepth = 3) {
 }
 
 // Helper to extract components (buttons, teasers, etc.) from a container
-function extractComponentsFromContainer(container, items, sectionTitle) {
+function extractComponentsFromContainer(container, items, sectionTitle, jcrTeaserImageMap = {}) {
   for (const key in container) {
     if (!key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
       const component = container[key];
@@ -3803,6 +3836,32 @@ function extractComponentsFromContainer(container, items, sectionTitle) {
             teaserItem.linkSources = linkSources;
           }
 
+          // Construct imageUrl from jcrTeaserImageMap
+          let imageUrl = null;
+          // Find this teaser in the map by matching the key
+          for (const [jcrPath, teaserData] of Object.entries(jcrTeaserImageMap)) {
+            if (teaserData.teaserKey === key && teaserData.fileName) {
+              const { fileName, lastModified } = teaserData;
+              const fileExtension = fileName.substring(fileName.lastIndexOf('.') + 1);
+              const imageFormat = `coreimg.85.1600.${fileExtension}`;
+
+              // Build full JCR path
+              const fullJcrPath = `${CONTENT_PATH}/_jcr_content/root${teaserData.jcrPath}`;
+
+              // Build filename with item ID for uniqueness
+              const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
+              const ext = fileName.substring(fileName.lastIndexOf('.'));
+              const finalFileName = `${teaserItem.id}-${nameWithoutExt}${ext}`;
+
+              imageUrl = `${fullJcrPath}.${imageFormat}/${lastModified}/${finalFileName}`;
+              break;
+            }
+          }
+
+          if (imageUrl) {
+            teaserItem.imageUrl = imageUrl;
+          }
+
           items.push(teaserItem);
         }
 
@@ -3820,13 +3879,22 @@ function extractComponentsFromContainer(container, items, sectionTitle) {
               } else {
                 lastItem.text += `\n${textContent}`;
               }
+            } else {
+              // No items yet - create a standalone text item
+              items.push({
+                title: key,
+                path: `${sectionTitle}${PATH_SEPARATOR}${key}`,
+                type: 'text',
+                key,
+                text: textContent,
+              });
             }
           }
         }
 
         // Recursively search nested containers
         if (resourceType === 'tccc-dam/components/container') {
-          extractComponentsFromContainer(component, items, sectionTitle);
+          extractComponentsFromContainer(component, items, sectionTitle, jcrTeaserImageMap);
         }
       }
     }
@@ -3862,6 +3930,12 @@ function unwrapAccordionItems(items, depth = 0) {
     // Skip items with specific titles that should not be included
     const skipTitles = ['Content Store Request Form'];
     if (item.title && skipTitles.includes(item.title)) {
+      // Skip this item entirely (don't add to result)
+      return;
+    }
+
+    // Skip items with specific text content (boilerplate/instructional text)
+    if (item.text && item.text.includes('Explore tabs below to access various content')) {
       // Skip this item entirely (don't add to result)
       return;
     }
@@ -3914,9 +3988,13 @@ function unwrapAccordionItems(items, depth = 0) {
         }
 
         result.push(...updatedChildren);
+      } else if (item.text && item.text.trim()) {
+        // Keep text-only items even if they're named like wrappers (e.g., "text_copy_copy_copy_")
+        // because they contain meaningful content
+        result.push(item);
       }
-      // Skip wrapper items with no children entirely, even if they have text
-      // These are structural metadata (e.g., "text_copy_copy_copy_") not meaningful content
+      // Skip wrapper items with no children and no text entirely
+      // These are structural metadata with no content
     } else {
       // Keep the item and recursively process its children
       if (item.items) {
@@ -4375,6 +4453,22 @@ async function downloadAllImages(hierarchyData, outputDir) {
                   resolve();
                 });
               } else {
+                // If redirect failed with 404 and this is the first attempt, try fallback URL
+                if (!isRetry && redirectResponse.statusCode === 404) {
+                  console.log(`❌ Failed redirect ${redirectUrl} (HTTP ${redirectResponse.statusCode}) - trying fallback...`);
+
+                  // Create fallback URL by removing teaser-{id}- prefix from filename
+                  const fallbackUrl = createFallbackUrl(urlToTry);
+                  if (fallbackUrl && fallbackUrl !== urlToTry) {
+                    console.log(`🔄 Trying fallback: ${fallbackUrl}`);
+                    attemptDownload(fallbackUrl, true);
+                    return;
+                  }
+
+                  // No fallback available, log final failure
+                  console.log(`❌ No fallback available for ${redirectUrl}`);
+                }
+
                 failed++;
                 failedUrls.push({ url: redirectUrl, reason: `HTTP ${redirectResponse.statusCode} (after redirect)`, filename: safeFilename });
                 console.log(`❌ Failed redirect ${redirectUrl} (HTTP ${redirectResponse.statusCode})`);
