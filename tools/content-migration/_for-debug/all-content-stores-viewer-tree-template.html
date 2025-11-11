@@ -99,8 +99,17 @@
 
         function filterItem(item, searchTerm) {
             if (!item) return null;
-            // Only search in title
-            const matchesSearch = !searchTerm || item.title.toLowerCase().includes(searchTerm);
+            // Search in title and synonym
+            const titleMatches = !searchTerm || item.title.toLowerCase().includes(searchTerm);
+            
+            // Check if synonym matches - split by comma and check each term
+            let synonymMatches = false;
+            if (item.synonym) {
+                const synonymTerms = item.synonym.split(',').map(term => term.trim().toLowerCase());
+                synonymMatches = synonymTerms.some(term => term.includes(searchTerm));
+            }
+            
+            const matchesSearch = titleMatches || synonymMatches;
             const hadChildren = item.items && item.items.length > 0;
             const filteredChildren = item.items ? item.items.map(child => filterItem(child, searchTerm)).filter(Boolean) : [];
             if (matchesSearch) return {...item, items: filteredChildren, hadChildren};
@@ -204,7 +213,10 @@
                 ? `<a href="${item.linkURL}" target="_blank" class="node-title has-link" onclick="event.stopPropagation()">${item.title}</a>`
                 : `<span class="node-title">${item.title}</span>`;
             
-            let html = `<div class="tree-item"><div class="tree-node ${isExpanded ? 'expanded' : ''}" data-path="${item.path}" data-has-children="${hasExpandable}" data-has-text-list="${hasTextList}">
+            // Add synonym as data attribute if it exists
+            const synonymAttr = item.synonym ? ` data-synonym="${item.synonym}"` : '';
+            
+            let html = `<div class="tree-item"><div class="tree-node ${isExpanded ? 'expanded' : ''}" data-path="${item.path}" data-has-children="${hasExpandable}" data-has-text-list="${hasTextList}"${synonymAttr}>
                 <span class="expand-icon ${isExpanded ? 'expanded' : ''}" style="${!hasExpandable ? 'visibility:hidden;' : ''}">▶</span>
                 ${iconHtml}
                 ${typeBadge}

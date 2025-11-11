@@ -41,6 +41,7 @@ const ROW_SCHEMA = {
   linkURL: { type: 'string', default: '' },
   type: { type: 'string', default: '' },
   text: { type: 'string', default: '' },
+  synonym: { type: 'string', default: '' },
 };
 
 /**
@@ -288,7 +289,7 @@ function createViewerElement(contentStoresData) {
       return { ...item, hadChildren };
     }
 
-    // Check if item matches in title or text content
+    // Check if item matches in title, text content, or synonym
     const titleMatches = item.title && item.title.toLowerCase().includes(searchTerm);
 
     // Strip HTML tags from text before searching (only search visible text)
@@ -300,7 +301,14 @@ function createViewerElement(contentStoresData) {
     }
     const textMatches = visibleText && visibleText.toLowerCase().includes(searchTerm);
 
-    const matchesSearch = titleMatches || textMatches;
+    // Check if synonym matches - split by comma and check each term
+    let synonymMatches = false;
+    if (item.synonym) {
+      const synonymTerms = item.synonym.split(',').map((term) => term.trim().toLowerCase());
+      synonymMatches = synonymTerms.some((term) => term.includes(searchTerm));
+    }
+
+    const matchesSearch = titleMatches || textMatches || synonymMatches;
 
     // Recursively filter children
     const filteredChildren = item.items
@@ -443,6 +451,10 @@ function createViewerElement(contentStoresData) {
     treeNode.dataset.hasChildren = hasExpandable ? 'true' : 'false';
     treeNode.dataset.hasTextList = hasTextList ? 'true' : 'false';
     treeNode.dataset.linkURL = hasLink ? item.linkURL : '';
+    // Add synonym as hidden data attribute for search
+    if (item.synonym) {
+      treeNode.dataset.synonym = item.synonym;
+    }
 
     // Only create expand icon if item has expandable content (but not for title type)
     if (hasExpandable && item.type !== 'title') {

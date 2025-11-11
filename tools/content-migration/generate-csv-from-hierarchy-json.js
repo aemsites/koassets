@@ -362,6 +362,7 @@ function itemToRow(item, destPath, storeName) {
     escapeCsvField(linkData.url),
     escapeCsvField(item.type || ''),
     escapeCsvField(transformedText),
+    escapeCsvField(item.synonym || ''),
   ].join(',');
 }
 
@@ -410,7 +411,7 @@ function processFile(inputFile, outputFile) {
   // No sorting needed - maintain the original order
 
   // Create CSV content
-  const headers = ['path', 'title', 'imageUrl', 'linkURL', 'type', 'text'];
+  const headers = ['path', 'title', 'imageUrl', 'linkURL', 'type', 'text', 'synonym'];
   const csvLines = [headers.join(',')];
 
   items.forEach((item) => {
