@@ -1,20 +1,40 @@
 #!/bin/bash
 set -e
 
+# Usage: ./migrate-all.sh --input stores-file
+#   --input <file>  Required file containing list of store paths (one per line)
+
+# Parse arguments - stores file is REQUIRED
+stores_file=""
+if [[ "$1" == "--input" && -n "$2" ]]; then
+    stores_file="$2"
+elif [[ -n "$1" && -f "$1" ]]; then
+    # Support positional argument for backward compatibility
+    stores_file="$1"
+fi
+
+if [[ -z "$stores_file" ]]; then
+    echo "❌ ERROR: Stores file is required"
+    echo "Usage: $0 --input stores-file"
+    exit 1
+fi
+
+if [[ ! -f "$stores_file" ]]; then
+    echo "❌ ERROR: Stores file not found: $stores_file"
+    exit 1
+fi
+
 echo "=========================================="
 echo "Extracting content hierarchies ..."
 echo "=========================================="
 echo ""
 
 # Extract all-content-stores & stores
-#node extract-tab-hierarchy-all.js --recursive ### ==> will fetch '/content/share/us/en/*-content-stores'
-    node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores'
-    node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/global-coca-cola-uplift'
-    node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/portfolio-get-together-2025'
-    node extract-tab-hierarchy-all.js '/content/share/us/en/bottler-content-stores/coke-holiday-2025'
-    node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/ramadan-2025'
-    node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/fifa-club-wc-2025'
-    node extract-tab-hierarchy-all.js '/content/share/us/en/all-content-stores/tea'
+#node extract-tab-hierarchy-all.js --recursive --debug ### ==> will fetch '/content/share/us/en/*-content-stores'
+
+# Use --input flag to pass stores file to Node.js script
+echo "📄 Using stores from file: $stores_file"
+node extract-tab-hierarchy-all.js --input "$stores_file"
 
 
 echo "=========================================="
@@ -34,7 +54,7 @@ echo "   - Generating all-content-stores page and other content store pages ... 
 echo "=========================================="
 echo ""
 
-node generate-EDS-docs.js ### ==> will create 'all-content-stores-sheet.json' and other content store pages 
+node generate-EDS-docs.js --input "$stores_file" ### ==> will create 'all-content-stores-sheet.json' and other content store pages 
 
 
 exit 0

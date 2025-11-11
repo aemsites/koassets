@@ -8,9 +8,11 @@ const {
   DA_ORG, DA_REPO, DA_DEST, IMAGES_BASE,
 } = require('./da-admin-client.js');
 const { uploadToEDS, sleep } = require('./upload-to-EDS.js');
+const { DATA_DIR } = require('./constants.js');
 
 // Parse command line arguments
-// Usage: ./upload-images.js [--path <imagesPath>] [--concurrency <number>]
+// Usage: ./upload-images.js [--input <stores-file>] [--path <imagesPath>] [--concurrency <number>]
+// Example: ./upload-images.js --input stores.txt --concurrency 10
 // Example: ./upload-images.js --path all-content-stores/extracted-results/images --concurrency 10
 // Example: ./upload-images.js --concurrency 10  (auto-discover with concurrency=10)
 // Example: ./upload-images.js (auto-discovers all content stores)
@@ -18,12 +20,16 @@ const args = process.argv.slice(2);
 
 let imagesPath;
 let concurrency = 1;
+let storesFile;
 
 // Parse flags
 for (let i = 0; i < args.length; i += 1) {
   const arg = args[i];
 
-  if (arg === '--path' || arg === '-p') {
+  if (arg === '--input' || arg === '-i') {
+    storesFile = args[i + 1];
+    i += 1; // Skip next argument since we consumed it
+  } else if (arg === '--path' || arg === '-p') {
     imagesPath = args[i + 1];
     i += 1; // Skip next argument since we consumed it
   } else if (arg === '--concurrency' || arg === '-c') {
@@ -34,21 +40,54 @@ for (let i = 0; i < args.length; i += 1) {
 }
 
 /**
+ * Extract store directory name from a content path
+ * @param {string} contentPath - Content path like "/content/share/us/en/all-content-stores/360-integrated-activations"
+ * @returns {string} Store directory name like "all-content-stores-360-integrated-activations"
+ */
+function extractStoreNameFromPath(contentPath) {
+  // Remove leading/trailing slashes and split
+  const parts = contentPath.replace(/^\/+|\/+$/g, '').split('/');
+
+  // Find the index of the main content store (e.g., "all-content-stores")
+  const mainStoreIndex = parts.findIndex((part) => part.includes('-content-stores'));
+
+  if (mainStoreIndex === -1) {
+    // If path doesn't contain -content-stores, assume it's already a directory name
+    return contentPath;
+  }
+
+  // Get all parts from main store onwards
+  const storeSegments = parts.slice(mainStoreIndex);
+
+  // Join with hyphens to form directory name
+  return storeSegments.join('-');
+}
+
+/**
  * Upload all images from a local directory to DA
  * @param {string} [imagesPath] - Optional: Relative path to directory containing images (relative to script directory).
  *                                 If not provided, auto-discovers all content stores with extracted-results/images
  * @param {number} [concurrency=1] - Number of concurrent uploads (1 = sequential, higher = more parallel)
+ * @param {string[]} [storesList] - Optional: List of store paths/names to process (from --input file)
  */
 // eslint-disable-next-line no-shadow
-async function uploadAllImages(imagesPath, concurrency = 1) {
+async function uploadAllImages(imagesPath, concurrency = 1, storesList = null) {
   // If no imagesPath provided, auto-discover all content stores with images
   if (!imagesPath) {
     console.log('\n📸 Auto-discovering content stores with images...');
 
     // Find all directories matching *-content-stores*/extracted-results/images
-    const contentStoresDirs = fs.readdirSync(__dirname, { withFileTypes: true })
+    const dataPath = path.join(__dirname, DATA_DIR);
+    let contentStoresDirs = fs.readdirSync(dataPath, { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && entry.name.includes('-content-stores'))
       .map((entry) => entry.name);
+
+    // If storesList provided, filter to only those stores
+    if (storesList && storesList.length > 0) {
+      console.log(`   Filtering to ${storesList.length} stores from input file...`);
+      const storeNames = storesList.map((store) => extractStoreNameFromPath(store));
+      contentStoresDirs = contentStoresDirs.filter((dir) => storeNames.includes(dir));
+    }
 
     console.log(`   Found ${contentStoresDirs.length} content stores directories`);
 
@@ -56,7 +95,7 @@ async function uploadAllImages(imagesPath, concurrency = 1) {
     await contentStoresDirs.reduce(async (promise, contentStoreDir) => {
       await promise;
 
-      const imagesDir = path.join(contentStoreDir, 'extracted-results', 'images');
+      const imagesDir = path.join(DATA_DIR, contentStoreDir, 'extracted-results', 'images');
       const absoluteImagesDir = path.resolve(__dirname, imagesDir);
 
       if (fs.existsSync(absoluteImagesDir)) {
@@ -71,7 +110,7 @@ async function uploadAllImages(imagesPath, concurrency = 1) {
         console.log(`   Target DA path: ${targetDaBasePath}`);
 
         // Recursively call uploadAllImages with the specific path
-        await uploadAllImages(imagesDir, concurrency);
+        await uploadAllImages(imagesDir, concurrency, storesList);
       } else {
         console.log(`   ⚠️ Skipping ${contentStoreDir}: no images directory found`);
       }
@@ -203,13 +242,18 @@ function showHelp() {
   console.error('  Can auto-discover all content stores or upload from a specific path.');
   console.error('');
   console.error('Usage:');
-  console.error('  ./upload-images.js [--path <imagesPath>] [--concurrency <number>]');
+  console.error('  ./upload-images.js [--input <stores-file>] [--path <imagesPath>] [--concurrency <number>]');
   console.error('');
   console.error('Options:');
+  console.error('  -i, --input <file>         Stores file (one content path per line, # for comments)');
+  console.error('                             If provided, only processes stores listed in the file');
+  console.error('                             Example content paths: "/content/share/us/en/all-content-stores"');
+  console.error('                             Can also use directory names: "all-content-stores-360-integrated-activations"');
+  console.error('');
   console.error('  -p, --path <path>          Path to images directory (relative to script location)');
-  console.error('                             If not provided, auto-discovers all *-content-stores/extracted-results/images');
-  console.error('                             Examples: "all-content-stores/extracted-results/images"');
-  console.error('                                       "bottler-content-stores/extracted-results/images"');
+  console.error('                             If not provided, auto-discovers all DATA/*-content-stores/extracted-results/images');
+  console.error('                             Examples: "DATA/all-content-stores/extracted-results/images"');
+  console.error('                                       "DATA/bottler-content-stores/extracted-results/images"');
   console.error('');
   console.error('  -c, --concurrency <number> Number of concurrent uploads (default: 1)');
   console.error('                             1 = sequential (safest), higher = faster but more load on server');
@@ -222,7 +266,7 @@ function showHelp() {
   console.error(`    {DA_ORG}/{DA_REPO}/{DA_DEST}/${IMAGES_BASE}{content-store-name}/`);
   console.error('');
   console.error('  The content store name is extracted from the images path.');
-  console.error('  Example: "all-content-stores/extracted-results/images"');
+  console.error('  Example: "DATA/all-content-stores/extracted-results/images"');
   console.error(`    → uploads to: aemsites/koassets/drafts/tphan/${IMAGES_BASE}all-content-stores/`);
   console.error('');
   console.error('Examples:');
@@ -234,16 +278,20 @@ function showHelp() {
   console.error('  ./upload-images.js --concurrency 10');
   console.error('  ./upload-images.js -c 10');
   console.error('');
+  console.error('  # Upload only stores from input file:');
+  console.error('  ./upload-images.js --input stores.txt');
+  console.error('  ./upload-images.js -i stores.txt -c 10');
+  console.error('');
   console.error('  # Upload specific content store (sequential):');
-  console.error('  ./upload-images.js --path all-content-stores/extracted-results/images');
-  console.error('  ./upload-images.js -p all-content-stores/extracted-results/images');
+  console.error('  ./upload-images.js --path DATA/all-content-stores/extracted-results/images');
+  console.error('  ./upload-images.js -p DATA/all-content-stores/extracted-results/images');
   console.error('');
   console.error('  # Upload specific content store with 10 concurrent uploads:');
-  console.error('  ./upload-images.js --path all-content-stores/extracted-results/images --concurrency 10');
-  console.error('  ./upload-images.js -p all-content-stores/extracted-results/images -c 10');
+  console.error('  ./upload-images.js --path DATA/all-content-stores/extracted-results/images --concurrency 10');
+  console.error('  ./upload-images.js -p DATA/all-content-stores/extracted-results/images -c 10');
   console.error('');
   console.error('  # Upload bottler content store with 5 concurrent uploads:');
-  console.error('  ./upload-images.js -p bottler-content-stores/extracted-results/images -c 5');
+  console.error('  ./upload-images.js -p DATA/bottler-content-stores/extracted-results/images -c 5');
   console.error('');
   console.error('Notes:');
   console.error('  - Images are uploaded without preview/publish flags');
@@ -259,16 +307,39 @@ if (args.includes('--help') || args.includes('-h')) {
   process.exit(0);
 }
 
+// Read stores file if provided
+let storesList = null;
+if (storesFile) {
+  console.log(`\n📄 Reading stores from file: ${storesFile}`);
+  try {
+    const fileContent = fs.readFileSync(storesFile, 'utf8');
+    storesList = [];
+    fileContent.split('\n').forEach((line) => {
+      const trimmed = line.trim();
+      // Skip empty lines and comments
+      if (trimmed && !trimmed.startsWith('#')) {
+        storesList.push(trimmed);
+      }
+    });
+    console.log(`   Found ${storesList.length} store(s) in file\n`);
+  } catch (error) {
+    console.error(`❌ Error reading stores file ${storesFile}:`, error.message);
+    process.exit(1);
+  }
+}
+
 // Run the upload based on command line arguments
 console.log('\n🚀 Starting image upload...');
 if (imagesPath) {
   console.log(`   Images Path: ${imagesPath}`);
+} else if (storesList) {
+  console.log('   Images Path: (auto-discovering stores from input file)');
 } else {
   console.log('   Images Path: (auto-discovering all content stores)');
 }
 console.log(`   Concurrency: ${concurrency}`);
 
-uploadAllImages(imagesPath, concurrency).catch((error) => {
+uploadAllImages(imagesPath, concurrency, storesList).catch((error) => {
   console.error('❌ Error:', error.message);
   process.exit(1);
 });

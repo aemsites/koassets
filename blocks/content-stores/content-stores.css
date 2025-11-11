@@ -153,8 +153,7 @@
   transition: all 0.2s ease;
   user-select: text;
   border: 1px solid var(--primary-color);
-  width: fit-content;
-  max-width: 100%;
+  width: 100%;
   box-sizing: border-box;
 }
 
@@ -185,17 +184,27 @@
 }
 
 .content-stores .tree-node.expanded:not(.type-button, .type-title) {
-  background-color: #ED0000;
-  border-color: #ED0000;
-  color: white;
-  padding: 10px;
+  color: var(--primary-color);
 }
 
 .content-stores .tree-node.expanded:not(.type-button, .type-title) .node-title {
-  color: white;
+  color: var(--primary-color);
 }
 
 .content-stores .tree-node.expanded:not(.type-button, .type-title) .expand-icon {
+  color: var(--primary-color);
+}
+
+/* When expanded AND hovered, change text to white */
+.content-stores .tree-node.expanded:not(.type-button, .type-title):hover {
+  color: white;
+}
+
+.content-stores .tree-node.expanded:not(.type-button, .type-title):hover .node-title {
+  color: white;
+}
+
+.content-stores .tree-node.expanded:not(.type-button, .type-title):hover .expand-icon {
   color: white;
 }
 
@@ -496,8 +505,8 @@
   text-decoration: underline;
 }
 
-/* Disabled styling for leaf nodes without links (excluding buttons) */
-.content-stores .tree-node:not(.type-button)[data-has-children="false"] .node-title:not(.has-link) {
+/* Disabled styling for leaf nodes without links (excluding buttons and titles) */
+.content-stores .tree-node:not(.type-button, .type-title)[data-has-children="false"] .node-title:not(.has-link) {
   color: var(--dark-color);
   opacity: 0.5;
   cursor: default;
@@ -531,7 +540,9 @@
 /* Grid container for leaf items - responsive to parent width */
 .content-stores .tree-children.has-grid {
   display: none;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), max-content));
+
+  /* grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr)); */
   gap: 20px;
   padding: 20px 0 0;
   border: none;

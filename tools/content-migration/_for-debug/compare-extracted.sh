@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -e
 
+# Usage: ./compare-extracted.sh [--input stores-file]
+#   --input <file>  Optional file containing list of store directory names (one per line)
+#                   If not provided, auto-discovers all *-content-stores* directories
+
 # Source the compare-json-files function
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/compare-json-csv-files.sh"
@@ -105,6 +109,19 @@ function compare_single() {
 }
 
 function compare_all() {
+    local stores_file_arg="$1"
+    
+    # Resolve stores file path before changing directory
+    local stores_file=""
+    if [[ -n "$stores_file_arg" ]]; then
+        # Convert to absolute path if it's relative
+        if [[ "$stores_file_arg" = /* ]]; then
+            stores_file="$stores_file_arg"
+        else
+            stores_file="$(cd "$(dirname "$stores_file_arg")" 2>/dev/null && pwd)/$(basename "$stores_file_arg")"
+        fi
+    fi
+    
     # Change to DATA_DIR within SRC_DIR so all paths are relative
     echo "DEBUG: Changing to $SRC_DIR/$DATA_DIR"
     cd "$SRC_DIR/$DATA_DIR" || {
@@ -113,17 +130,29 @@ function compare_all() {
     }
     echo "DEBUG: Successfully changed directory"
     
-    # Discover all folders matching *-content-stores* pattern
-    echo "Discovering folders matching *-content-stores* pattern..."
-    
-    # Count total folders first
+    # Determine which folders to process
     local folders=()
-    echo "DEBUG: Starting to count folders..."
-    for folder in *-content-stores*; do
-        if [[ -d "$folder" ]]; then
-            folders+=("$folder")
-        fi
-    done
+    
+    if [[ -n "$stores_file" && -f "$stores_file" ]]; then
+        echo "📄 Reading stores from file: $stores_file"
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            # Skip empty lines and comments
+            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+            # Extract basename if it's a path
+            local dir_name=$(basename "$line" .html)
+            folders+=("$dir_name")
+        done < "$stores_file"
+        echo "   Found ${#folders[@]} store(s) in file"
+    else
+        # Discover all folders matching *-content-stores* pattern
+        echo "Discovering folders matching *-content-stores* pattern..."
+        echo "DEBUG: Starting to count folders..."
+        for folder in *-content-stores*; do
+            if [[ -d "$folder" ]]; then
+                folders+=("$folder")
+            fi
+        done
+    fi
     
     local total=${#folders[@]}
     echo "Found $total folder(s) to process"
@@ -186,7 +215,17 @@ echo "DEBUG: SRC_DIR=$SRC_DIR"
 echo "DEBUG: DATA_DIR=$DATA_DIR"
 echo ""
 
-compare_all
+# Parse arguments
+stores_file=""
+if [[ "$1" == "--input" && -n "$2" ]]; then
+    stores_file="$2"
+elif [[ -n "$1" && -f "$1" ]]; then
+    # Support positional argument for backward compatibility
+    stores_file="$1"
+fi
+
+# Pass the stores file argument if provided
+compare_all "$stores_file"
 
 echo -e "\n\n============================================== Comparing generated-eds-docs/* with backup... ==============================================\n\n"
 ${SCRIPT_DIR}/compare-json-csv-files.sh generated-eds-docs

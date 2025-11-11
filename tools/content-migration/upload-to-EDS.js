@@ -79,7 +79,20 @@ async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFl
     // If daFullPath not provided, construct base path from DA config (without directory name)
     let baseDaPath = daFullPath;
     if (!baseDaPath) {
-      if (DA_DEST) {
+      // Check if localPath starts with DATA/generated-eds-docs/ and transform accordingly
+      const normalizedLocalPath = localPath.replace(/\\/g, '/');
+      const dataGenDocsPrefix = 'DATA/generated-eds-docs/';
+
+      if (normalizedLocalPath.includes(dataGenDocsPrefix)) {
+        // Strip DATA/generated-eds-docs/ prefix and construct DA path
+        const relativePath = normalizedLocalPath.substring(
+          normalizedLocalPath.indexOf(dataGenDocsPrefix) + dataGenDocsPrefix.length,
+        );
+        // Remove trailing slash if present
+        const cleanRelativePath = relativePath.replace(/\/$/, '');
+        baseDaPath = `${DA_ORG}/${DA_REPO}/drafts/tphan/${cleanRelativePath}`;
+      } else if (DA_DEST) {
+        // Default behavior: use DA_DEST
         // Remove leading slash from DA_DEST if present
         const normalizedDest = DA_DEST.startsWith('/') ? DA_DEST.substring(1) : DA_DEST;
         baseDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}`;
@@ -115,13 +128,26 @@ async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFl
   // If localPath is a file, construct path with filename if not provided
   let targetDaPath = daFullPath;
   if (!targetDaPath) {
-    const basename = path.basename(localPath);
-    if (DA_DEST) {
-      // Remove leading slash from DA_DEST if present
-      const normalizedDest = DA_DEST.startsWith('/') ? DA_DEST.substring(1) : DA_DEST;
-      targetDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/${basename}`;
+    // Check if localPath starts with DATA/generated-eds-docs/ and transform accordingly
+    const normalizedLocalPath = localPath.replace(/\\/g, '/');
+    const dataGenDocsPrefix = 'DATA/generated-eds-docs/';
+
+    if (normalizedLocalPath.includes(dataGenDocsPrefix)) {
+      // Strip DATA/generated-eds-docs/ prefix and construct DA path
+      const relativePath = normalizedLocalPath.substring(
+        normalizedLocalPath.indexOf(dataGenDocsPrefix) + dataGenDocsPrefix.length,
+      );
+      targetDaPath = `${DA_ORG}/${DA_REPO}/drafts/tphan/${relativePath}`;
     } else {
-      targetDaPath = `${DA_ORG}/${DA_REPO}/${basename}`;
+      // Default behavior: use basename with DA_DEST
+      const basename = path.basename(localPath);
+      if (DA_DEST) {
+        // Remove leading slash from DA_DEST if present
+        const normalizedDest = DA_DEST.startsWith('/') ? DA_DEST.substring(1) : DA_DEST;
+        targetDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/${basename}`;
+      } else {
+        targetDaPath = `${DA_ORG}/${DA_REPO}/${basename}`;
+      }
     }
   }
 

@@ -387,9 +387,11 @@ function createViewerElement(contentStoresData) {
 
     const hasChildren = item.items && item.items.length > 0;
     const hasTextList = item.text && (item.text.includes('<a') || (item.text.match(/<p>/g) || []).length > 1);
+    // Accordion type items should always be expandable if they have text content
+    const isAccordionWithText = item.type === 'accordion' && item.text && item.text.trim() !== '';
     // Use hadChildren to preserve original parent status even when filtered
     const wasParent = item.hadChildren || false;
-    const hasExpandable = hasChildren || hasTextList || wasParent;
+    const hasExpandable = hasChildren || hasTextList || isAccordionWithText || wasParent;
     // Title type items are expanded by default
     let isExpanded;
     if (item.type === 'title') {
@@ -517,7 +519,7 @@ function createViewerElement(contentStoresData) {
     if (item.text) {
       const richContent = document.createElement('div');
       richContent.className = 'rich-content';
-      if (hasTextList) {
+      if (hasTextList || isAccordionWithText) {
         richContent.classList.add('tree-children');
         if (isExpanded) richContent.classList.add('expanded');
       }
@@ -573,7 +575,8 @@ function createViewerElement(contentStoresData) {
     items.forEach((item) => {
       const hasChildren = item.items && item.items.length > 0;
       const hasTextList = item.text && (item.text.includes('<a') || (item.text.match(/<p>/g) || []).length > 1);
-      if (hasChildren || hasTextList) {
+      const isAccordionWithText = item.type === 'accordion' && item.text && item.text.trim() !== '';
+      if (hasChildren || hasTextList || isAccordionWithText) {
         expandedNodes.add(item.path);
       }
       if (hasChildren) expandAllItems(item.items);
