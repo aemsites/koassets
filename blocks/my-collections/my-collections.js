@@ -2,6 +2,9 @@
 import { DynamicMediaCollectionsClient } from '../../scripts/collections/collections-api-client.js';
 import { transformApiCollectionToInternal } from '../../scripts/collections/collections-utils.js';
 
+// Import messages client for notifications
+import { MessagesClient } from '../../scripts/notifications/notifications-client.js';
+
 // Import collection helpers (constants and utility functions)
 import { ACL_FIELDS, ACL_ROLES, getCollectionACL } from './collection-helpers.js';
 
@@ -64,6 +67,7 @@ function ensureAclPath(collection) {
 
 // Global state for collections and API client
 let collectionsClient = null;
+let messagesClient = null;
 let allCollections = [];
 let isLoading = false;
 
@@ -88,6 +92,11 @@ export default async function decorate(block) {
     collectionsClient = new DynamicMediaCollectionsClient({
       accessToken,
       user: currentUser, // Pass user for auth filtering
+    });
+
+    // Initialize messages client for notifications
+    messagesClient = new MessagesClient({
+      user: currentUser,
     });
 
     // eslint-disable-next-line no-console
@@ -566,6 +575,32 @@ async function handleShareSubmit() {
       // for ACL-only changes, so keeping it unchanged maintains consistency
     }
 
+    // Send notification to each newly shared user
+    if (messagesClient) {
+      const { origin } = window.location;
+      const encodedId = encodeURIComponent(sharingCollectionId);
+      const collectionUrl = `${origin}/my-collections-details?id=${encodedId}`;
+      const currentUserEmail = window.user?.email || 'Unknown User';
+
+      // Send messages to all shared users in parallel
+      const notificationPromises = emailList.map((email) => messagesClient
+        .sendMessageToUser(email, {
+          subject: 'Collection Shared With You',
+          message: `The collection "${sharingCollectionName}" has been shared with you with ${role} access.\n\nView collection: ${collectionUrl}`,
+          type: 'Notification',
+          from: currentUserEmail,
+          priority: 'normal',
+          expiresInXDays: 30,
+        })
+        .catch((error) => {
+          // eslint-disable-next-line no-console
+          console.error(`Failed to send notification to ${email}:`, error);
+        }));
+
+      // Wait for all notifications to complete
+      await Promise.allSettled(notificationPromises);
+    }
+
     // Show success message
     showToast(`COLLECTION SHARED SUCCESSFULLY WITH ${emailList.length} USER(S)`, 'success');
 
@@ -659,6 +694,24 @@ async function handleRemoveUser() {
 
         // Note: We don't update lastUpdated because the API doesn't update it
         // for ACL-only changes, so keeping it unchanged maintains consistency
+      }
+    }
+
+    // Send notification to the removed user (but not if they removed themselves)
+    if (!removedSelf && messagesClient) {
+      try {
+        await messagesClient.sendMessageToUser(email, {
+          subject: 'Collection Access Removed',
+          message: `Your ${role} access to the collection "${collectionName}" has been removed.`,
+          type: 'Notification',
+          from: currentUserEmail,
+          priority: 'normal',
+          expiresInXDays: 30,
+        });
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error(`Failed to send notification to ${email}:`, error);
+        // Continue even if notification fails
       }
     }
 

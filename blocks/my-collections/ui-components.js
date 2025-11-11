@@ -5,36 +5,96 @@
 
 import { hasCollectionAccess } from '../../scripts/collections/collections-auth.js';
 import { ACL_FIELDS, getUserRole, getCollectionACL } from './collection-helpers.js';
+import showToast from '../../scripts/toast/toast.js';
+
+// Constants for dropdown functionality
+const DROPDOWN_CONSTANTS = {
+  CSS_CLASS_SHOW: 'show',
+  TEXTAREA_OFFSET: '-999999px',
+  MENU_TEXT: {
+    SHARE_ACCESS: 'Share Access',
+    COPY_LINK: 'Copy Link',
+  },
+  TOAST_MESSAGES: {
+    LINK_COPIED: 'Collection link copied to clipboard',
+    COPY_FAILED: 'Failed to copy link',
+  },
+  ARIA: {
+    EXPANDED_TRUE: 'true',
+    EXPANDED_FALSE: 'false',
+  },
+};
 
 /**
- * Show a toast notification
- * @param {string} message - Message to display
- * @param {string} type - Type of toast ('success', 'error', 'info')
+ * Build collection detail page URL
+ * @param {string} collectionId - Collection ID
+ * @returns {string} Full URL to collection details page
  */
-export function showToast(message, type = 'success') {
-  // Create toast element
-  const toast = document.createElement('div');
-  toast.className = `toast toast-${type}`;
-  toast.textContent = message;
-
-  // Add to document
-  document.body.appendChild(toast);
-
-  // Trigger animation
-  setTimeout(() => {
-    toast.classList.add('show');
-  }, 10);
-
-  // Remove after timeout
-  setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => {
-      if (toast.parentNode) {
-        document.body.removeChild(toast);
-      }
-    }, 300);
-  }, 3000);
+function buildCollectionUrl(collectionId) {
+  return `${window.location.origin}/my-collections-details?id=${collectionId}`;
 }
+
+/**
+ * Copy text to clipboard
+ * @param {string} text - Text to copy
+ * @returns {Promise<boolean>} True if successful
+ */
+async function copyToClipboard(text) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+    // Fallback for older browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = DROPDOWN_CONSTANTS.TEXTAREA_OFFSET;
+    document.body.appendChild(textArea);
+    textArea.select();
+    const success = document.execCommand('copy');
+    document.body.removeChild(textArea);
+    return success;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to copy to clipboard:', error);
+    return false;
+  }
+}
+
+/**
+ * Close a dropdown menu and update button state
+ * @param {HTMLElement} menu - Dropdown menu element
+ * @param {HTMLElement} button - Button element
+ */
+function closeDropdown(menu, button) {
+  menu.classList.remove(DROPDOWN_CONSTANTS.CSS_CLASS_SHOW);
+  button.setAttribute('aria-expanded', DROPDOWN_CONSTANTS.ARIA.EXPANDED_FALSE);
+}
+
+/**
+ * Close all open share dropdowns
+ */
+function closeAllDropdowns() {
+  document.querySelectorAll('.share-dropdown-menu.show').forEach((menu) => {
+    const btn = menu.previousElementSibling;
+    if (btn) {
+      closeDropdown(menu, btn);
+    }
+  });
+}
+
+// Global click handler to close dropdowns when clicking outside
+// This prevents memory leaks from per-row event listeners
+document.addEventListener('click', (e) => {
+  const clickedInsideDropdown = e.target.closest('.share-btn-container');
+  if (!clickedInsideDropdown) {
+    closeAllDropdowns();
+  }
+});
+
+// Export showToast for backwards compatibility
+export { showToast };
 
 /**
  * Resolve URL value from various formats
@@ -244,17 +304,104 @@ export function createCollectionRow(collection, handlers, currentUser) {
     deleteBtn.setAttribute('aria-label', 'Delete Collection');
     deleteBtn.onclick = () => handlers.onDelete(collection.id, collection.name);
 
-    // Share button
+    /**
+     * Create share dropdown button with menu
+     * Creates a dropdown with two options: Share Access (opens modal) and Copy Link
+     */
+    // Share dropdown container
+    const shareContainer = document.createElement('div');
+    shareContainer.className = 'share-btn-container';
+
+    // Share button with dropdown indicator
     const shareBtn = document.createElement('button');
     shareBtn.className = 'action-btn share-btn';
     shareBtn.innerHTML = '';
     shareBtn.title = 'Share Collection';
     shareBtn.setAttribute('aria-label', 'Share Collection');
-    shareBtn.onclick = () => handlers.onShare(collection.id);
+    shareBtn.setAttribute('aria-haspopup', DROPDOWN_CONSTANTS.ARIA.EXPANDED_TRUE);
+    shareBtn.setAttribute('aria-expanded', DROPDOWN_CONSTANTS.ARIA.EXPANDED_FALSE);
+
+    // Dropdown menu
+    const dropdownMenu = document.createElement('div');
+    dropdownMenu.className = 'share-dropdown-menu';
+    dropdownMenu.setAttribute('role', 'menu');
+
+    // Share Access option
+    const shareAccessItem = document.createElement('div');
+    shareAccessItem.className = 'share-dropdown-item';
+    shareAccessItem.setAttribute('role', 'menuitem');
+    shareAccessItem.setAttribute('data-action', 'share-access');
+    shareAccessItem.textContent = DROPDOWN_CONSTANTS.MENU_TEXT.SHARE_ACCESS;
+    shareAccessItem.onclick = (e) => {
+      e.stopPropagation();
+      closeDropdown(dropdownMenu, shareBtn);
+      handlers.onShare(collection.id);
+    };
+
+    // Copy Link option
+    const copyLinkItem = document.createElement('div');
+    copyLinkItem.className = 'share-dropdown-item';
+    copyLinkItem.setAttribute('role', 'menuitem');
+    copyLinkItem.setAttribute('data-action', 'copy-link');
+    copyLinkItem.textContent = DROPDOWN_CONSTANTS.MENU_TEXT.COPY_LINK;
+    copyLinkItem.onclick = async (e) => {
+      e.stopPropagation();
+      closeDropdown(dropdownMenu, shareBtn);
+
+      const url = buildCollectionUrl(collection.id);
+      const success = await copyToClipboard(url);
+
+      if (success) {
+        showToast(DROPDOWN_CONSTANTS.TOAST_MESSAGES.LINK_COPIED, 'success');
+      } else {
+        showToast(DROPDOWN_CONSTANTS.TOAST_MESSAGES.COPY_FAILED, 'error');
+      }
+
+      // Call handler if provided
+      if (handlers.onCopyLink) {
+        handlers.onCopyLink(collection.id);
+      }
+    };
+
+    // Toggle dropdown on button click
+    shareBtn.onclick = (e) => {
+      e.stopPropagation();
+      const isOpen = dropdownMenu.classList.contains(DROPDOWN_CONSTANTS.CSS_CLASS_SHOW);
+
+      // Close any other open dropdowns
+      document.querySelectorAll('.share-dropdown-menu.show').forEach((menu) => {
+        if (menu !== dropdownMenu) {
+          const btn = menu.previousElementSibling;
+          if (btn) {
+            closeDropdown(menu, btn);
+          }
+        }
+      });
+
+      // Toggle this dropdown
+      dropdownMenu.classList.toggle(DROPDOWN_CONSTANTS.CSS_CLASS_SHOW);
+      shareBtn.setAttribute(
+        'aria-expanded',
+        isOpen ? DROPDOWN_CONSTANTS.ARIA.EXPANDED_FALSE : DROPDOWN_CONSTANTS.ARIA.EXPANDED_TRUE,
+      );
+    };
+
+    // Keyboard support
+    shareBtn.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && dropdownMenu.classList.contains(DROPDOWN_CONSTANTS.CSS_CLASS_SHOW)) {
+        closeDropdown(dropdownMenu, shareBtn);
+        shareBtn.focus();
+      }
+    });
+
+    dropdownMenu.appendChild(shareAccessItem);
+    dropdownMenu.appendChild(copyLinkItem);
+    shareContainer.appendChild(shareBtn);
+    shareContainer.appendChild(dropdownMenu);
 
     actionCell.appendChild(editBtn);
     actionCell.appendChild(deleteBtn);
-    actionCell.appendChild(shareBtn);
+    actionCell.appendChild(shareContainer);
   } else {
     // Show read-only indicator for viewers
     const readOnlyText = document.createElement('span');
