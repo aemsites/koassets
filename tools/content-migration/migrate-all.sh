@@ -65,5 +65,5 @@ echo "=========================================="
 echo ""
 
 node upload-images.js -c 10
-node upload-to-EDS.js generated-eds-docs --preview #--debug
+node upload-to-EDS.js DATA/generated-eds-docs --preview #--debug
 
