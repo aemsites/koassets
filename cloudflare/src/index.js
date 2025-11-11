@@ -19,6 +19,7 @@ import { cors } from './util/itty';
 import { apiUser } from './user';
 import { savedSearchesApi } from './api/savedsearches';
 import { rightsRequestsApi } from './api/rightsrequests';
+import { notificationsApi } from './api/notifications';
 
 // Shared CORS origins
 const allowedOrigins = [
@@ -45,10 +46,21 @@ const { preflight: savedSearchesPreflight, corsify: savedSearchesCorsify } = cor
   maxAge: 600,
 });
 
-// Middleware to apply extended CORS for saved searches routes
+// Extended CORS for Messages API routes (includes DELETE)
+const { preflight: messagesPreflight, corsify: messagesCorsify } = cors({
+  origin: allowedOrigins,
+  allowMethods: ['GET', 'POST', 'DELETE'],
+  credentials: true,
+  maxAge: 600,
+});
+
+// Middleware to apply extended CORS for saved searches and messages routes
 const savedSearchesCorsMiddleware = (request) => {
   if (request.url.includes('/api/savedsearches/')) {
     return savedSearchesPreflight(request);
+  }
+  if (request.url.includes('/api/messages')) {
+    return messagesPreflight(request);
   }
   return preflight(request);
 };
@@ -57,6 +69,9 @@ const savedSearchesCorsMiddleware = (request) => {
 const finalCorsMiddleware = (response, request) => {
   if (request.url.includes('/api/savedsearches/')) {
     return savedSearchesCorsify(response, request);
+  }
+  if (request.url.includes('/api/messages')) {
+    return messagesCorsify(response, request);
   }
   return corsify(response, request);
 };
@@ -112,6 +127,10 @@ router
 
   // Rights Requests API
   .all('/api/rightsrequests/*', rightsRequestsApi)
+
+  // Notifications API (with extended CORS for DELETE)
+  .all('/api/messages/*', notificationsApi)
+  .all('/api/messages', notificationsApi)
 
   // future API routes
   .all('/api/*', () => error(404))

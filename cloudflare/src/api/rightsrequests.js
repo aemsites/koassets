@@ -5,6 +5,16 @@
  */
 
 import { json, error } from 'itty-router';
+import { sendMessage, sendMessageToMultiple } from '../util/notifications-helpers.js';
+
+// Rights Reviewers - users who receive notifications for new requests
+// TODO pull from sheet or some other dynamic way
+const RIGHTS_REVIEWERS = [
+  'jfait@adobe.com',
+  'pkoch@adobe.com',
+  'inedoviesov@adobe.com'
+  // Add more reviewers here
+];
 
 // Rights Request Status Constants
 const RIGHTS_REQUEST_STATUSES = {
@@ -82,10 +92,10 @@ export async function rightsRequestsApi(request, env) {
  */
 function formatDateToGMT(date) {
   if (!date) return '';
-  
+
   try {
     let dateObj;
-    
+
     // Handle different input types
     if (date instanceof Date) {
       dateObj = date;
@@ -97,12 +107,12 @@ function formatDateToGMT(date) {
     } else {
       return '';
     }
-    
+
     // Check if date is valid
     if (Number.isNaN(dateObj.getTime())) {
       return '';
     }
-    
+
     // Convert to UTC string (e.g., "Mon Jan 05 2026 00:00:00 GMT+0000")
     return dateObj.toUTCString().replace('GMT', 'GMT+0000');
   } catch (error) {
@@ -210,6 +220,19 @@ export async function createRightsRequest(request, env) {
       submittedBy: userEmail,
     };
     await env.RIGHTS_REQUEST_REVIEWS.put(reviewKey, JSON.stringify(reviewData));
+
+    // Send notification messages to all reviewers
+    const requestDetailsUrl = `${new URL(request.url).origin}/my-rights-review-details?requestId=${jcrData.rightsRequestID}`;
+    const myReviewsUrl = `${new URL(request.url).origin}/my-rights-reviews`;
+
+    await sendMessageToMultiple(env, RIGHTS_REVIEWERS, {
+      subject: 'New Rights Review Request',
+      message: `A new rights request has been submitted that requires review.\n\nRequest ID: ${jcrData.rightsRequestID}\nSubmitted by: ${userEmail}\n\nView request details: ${requestDetailsUrl}\n\nYou can assign this to yourself from your rights reviews page: ${myReviewsUrl}`,
+      type: 'Notification',
+      from: 'Rights Management System',
+      priority: 'normal',
+      expiresInXDays: 7,
+    });
 
     return json({
       success: true,
@@ -421,6 +444,20 @@ export async function updateReviewStatus(request, env) {
       userEmail,
     );
 
+    // Send notification to submitter about status change
+    const submitterEmail = requestDataObj.rightsRequestSubmittedUserID;
+    const requestDetailsUrl = `${new URL(request.url).origin}/my-rights-review-details?requestId=${requestId}`;
+    const myRequestsUrl = `${new URL(request.url).origin}/my-rights-requests`;
+
+    await sendMessage(env, submitterEmail, {
+      subject: 'Rights Request Status Update',
+      message: `Your rights request status has been updated.\n\nRequest ID: ${requestId}\nNew Status: ${status}\n\nView request details: ${requestDetailsUrl}\n\nYou can see all your rights requests from your requests page: ${myRequestsUrl}`,
+      type: 'Notification',
+      from: 'Rights Management System',
+      priority: 'normal',
+      expiresInXDays: 7,
+    });
+
     return json({
       success: true,
       data: updatedData,
@@ -471,7 +508,6 @@ export async function updateSubmitterRequestStatus(request, env) {
     await updateRequestStatusHelper(env, primaryRequestKey, requestDataObj, status, userEmail);
 
     // If there's a review entry (assigned or unassigned), update it too
-    const currentStatus = requestDataObj.rightsRequestReviewDetails.rightsRequestStatus;
     const reviewerEmail = requestDataObj.rightsRequestReviewDetails.rightsReviewer;
 
     if (reviewerEmail) {
