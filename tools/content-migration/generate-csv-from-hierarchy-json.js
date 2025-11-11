@@ -126,33 +126,33 @@ function transformSearchUrlsInText(text) {
 }
 
 /**
- * Extracts link URL and type from item, supporting both old and new formats
- * Type priority:
- * 1. item.type if it's 'button' or 'accordion'
- * 2. item.linkSources.clickableUrl (type: 'link')
- * 3. item.linkURL (type: '')
- * @returns {Object} { url: string, type: string }
+ * Transforms type name for CSV output
+ * Renames 'title' to 'section-title' for clarity
+ * @param {string} type - The original type
+ * @returns {string} - The transformed type
+ */
+function transformType(type) {
+  if (type === 'title') {
+    return 'section-title';
+  }
+  return type || '';
+}
+
+/**
+ * Extracts link URL from item, supporting both old and new formats
+ * @returns {string} The link URL
  */
 function extractLinkUrl(item) {
   let url = '';
-  let type = '';
 
-  // Determine type - prioritize item.type if it's 'button' or 'accordion'
-  if (item.type === 'button' || item.type === 'accordion') {
-    type = item.type;
-  } else if (item.linkSources && typeof item.linkSources === 'object') {
-    if (item.linkSources.clickableUrl) {
-      type = 'link';
-    }
-  }
-
-  // Determine URL
+  // Check linkSources first (new format)
   if (item.linkSources && typeof item.linkSources === 'object') {
     if (item.linkSources.clickableUrl) {
       url = item.linkSources.clickableUrl;
     }
   }
 
+  // Fallback to linkURL (old format)
   if (!url) {
     url = item.linkURL ?? '';
   }
@@ -163,7 +163,7 @@ function extractLinkUrl(item) {
   // Transform content store URLs to new format
   url = transformContentStoreUrl(url);
 
-  return { url, type };
+  return url;
 }
 
 /**
@@ -352,15 +352,15 @@ function escapeCsvField(value) {
  * Converts an item to a CSV row
  */
 function itemToRow(item, destPath, storeName) {
-  const linkData = extractLinkUrl(item);
+  const linkUrl = extractLinkUrl(item);
   // Transform search URLs in text content
   const transformedText = transformSearchUrlsInText(item.text || '');
   return [
     escapeCsvField(formatPath(item.path || '')),
     escapeCsvField(item.title || ''),
     escapeCsvField(formatImageUrl(item.imageUrl || '', destPath, storeName)),
-    escapeCsvField(linkData.url),
-    escapeCsvField(item.type || ''),
+    escapeCsvField(linkUrl),
+    escapeCsvField(transformType(item.type)),
     escapeCsvField(transformedText),
     escapeCsvField(item.synonym || ''),
   ].join(',');

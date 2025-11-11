@@ -413,7 +413,7 @@ function createViewerElement(contentStoresData) {
     const hasExpandable = hasChildren || hasTextList || isAccordionWithText || wasParent;
     // Title type items are expanded by default
     let isExpanded;
-    if (item.type === 'title') {
+    if (item.type === 'section-title') {
       isExpanded = true;
     } else if (expandAllMode) {
       isExpanded = hasExpandable;
@@ -443,8 +443,8 @@ function createViewerElement(contentStoresData) {
       if (!hasLink) {
         treeNode.classList.add('disabled');
       }
-    } else if (item.type === 'title') {
-      treeNode.classList.add('type-title');
+    } else if (item.type === 'section-title') {
+      treeNode.classList.add('type-section-title');
     }
 
     treeNode.dataset.path = item.path;
@@ -456,8 +456,8 @@ function createViewerElement(contentStoresData) {
       treeNode.dataset.synonym = item.synonym;
     }
 
-    // Only create expand icon if item has expandable content (but not for title type)
-    if (hasExpandable && item.type !== 'title') {
+    // Only create expand icon if item has expandable content (but not for section-title type)
+    if (hasExpandable && item.type !== 'section-title') {
       const expandIcon = document.createElement('span');
       expandIcon.className = 'expand-icon';
       if (isExpanded) expandIcon.classList.add('expanded');
@@ -474,9 +474,9 @@ function createViewerElement(contentStoresData) {
       treeNode.appendChild(picture);
     }
 
-    // Create title element - h2 for title type, span or anchor for others
+    // Create title element - h2 for section-title type, span or anchor for others
     let nodeTitle;
-    if (item.type === 'title') {
+    if (item.type === 'section-title') {
       nodeTitle = document.createElement('h2');
       nodeTitle.className = 'node-title';
       // Create id from title (lowercase, replace spaces/special chars with hyphens)
@@ -504,8 +504,8 @@ function createViewerElement(contentStoresData) {
     }
     treeNode.appendChild(nodeTitle);
 
-    // Don't add click handler for title type items (they're always expanded)
-    if (item.type !== 'title') {
+    // Don't add click handler for section-title type items (they're always expanded)
+    if (item.type !== 'section-title') {
       treeNode.addEventListener('click', (event) => {
         const selection = window.getSelection();
         if (selection && selection.toString().trim().length > 0) {
