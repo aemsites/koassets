@@ -380,7 +380,7 @@ function buildViewerHtml(templatePath, hierarchyData, viewerTitle, dirName = '')
   const aemPath = convertDirNameToAemPath(dirName);
   const aemAuthorUrl = `https://author-p64403-e544653.adobeaemcloud.com${aemPath}.html?wcmmode=disabled`;
   const aemLinkHtml = aemPath
-    ? `<p id="viewer-subtitle">${dirName} | <a href="${aemAuthorUrl}" onclick="window.open(this.href, '_blank', 'popup=yes,width=1500,height=1200,left=1000,top=10,menubar=yes,toolbar=yes,location=yes,status=yes,scrollbars=yes,resizable=yes'); return false;" style="color: #0066cc; cursor: pointer;">🔗 View in AEM Author</a></p>`
+    ? `<p id="viewer-subtitle">${dirName} | <a href="${aemAuthorUrl}" onclick="window.open(this.href, '_blank', 'popup=yes,width=1500,height=1200,left=1500,top=10,menubar=yes,toolbar=yes,location=yes,status=yes,scrollbars=yes,resizable=yes'); return false;" style="color: #0066cc; cursor: pointer;">🔗 View in AEM Author</a></p>`
     : `<p id="viewer-subtitle">${dirName}</p>`;
 
   return newHtml

@@ -1937,6 +1937,9 @@ async function main() {
           // Multiple items with same path - pick the one with content
           let bestItem = groupItems[0];
 
+          // Preserve __jcrOrder from any item that has it
+          const itemWithOrder = groupItems.find((item) => typeof item.__jcrOrder === 'number');
+
           for (const item of groupItems) {
             // Prefer items that have non-empty items array
             const currentHasItems = item.items && Array.isArray(item.items) && item.items.length > 0;
@@ -1947,6 +1950,11 @@ async function main() {
               bestItem = item;
             }
             // If both have items or both don't have items, keep the first one (bestItem)
+          }
+
+          // Preserve __jcrOrder if any item had it
+          if (itemWithOrder && typeof itemWithOrder.__jcrOrder === 'number') {
+            bestItem.__jcrOrder = itemWithOrder.__jcrOrder;
           }
 
           // Log if we're removing an empty duplicate
@@ -1988,6 +1996,15 @@ async function main() {
       console.log('✅ No duplicates found');
     }
 
+    // Sort sections by JCR order to preserve the exact order from the file
+    console.log('\n🔀 Sorting sections by JCR order...');
+    convertedHierarchy.sort((a, b) => {
+      const orderA = typeof a.__jcrOrder === 'number' ? a.__jcrOrder : 9999;
+      const orderB = typeof b.__jcrOrder === 'number' ? b.__jcrOrder : 9999;
+      return orderA - orderB;
+    });
+    console.log('✅ Sections sorted to preserve JCR file order');
+
     // Save to file
     const jsonOutputPath = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
     const hierarchyStructure = {
@@ -2011,6 +2028,7 @@ async function main() {
       items.forEach((item) => {
         delete item['cq:panelTitle']; // Internal metadata only, not needed in output
         delete item.__jcrSection; // Internal metadata only
+        delete item.__jcrOrder; // Internal metadata only, used for sorting
         if (item.items) {
           removeInternalMetadata(item.items);
         }
@@ -3272,7 +3290,10 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
   // Scan for all sections
   const detectedSections = scanForSections(jcrData.root.container);
 
-  // Convert to hierarchy format
+  // Convert to hierarchy format with JCR order
+  // The detectedSections array is already in the correct order from the JCR file,
+  // so we just assign __jcrOrder sequentially
+  let orderIndex = 0;
   for (const section of detectedSections) {
     const titleText = section.title['jcr:title'];
 
@@ -3297,6 +3318,7 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
       path: titleText,
       type: getItemTypeFromResourceType(section.title),
       items: sectionItems,
+      __jcrOrder: orderIndex++, // Assign JCR order sequentially
     });
   }
 
