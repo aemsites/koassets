@@ -7,21 +7,8 @@
     "message": "Welcome to the new KO Assets platform. We're excited to have you here! This system provides powerful asset management capabilities including collections, rights management, and advanced search. Explore the features and let us know if you have any questions.",
     "type": "Announcement",
     "from": "Admin Team",
-    "priority": "normal",
-    "expiresInXDays": 30,
-    "status": "unread"
-  },
-  {
-    "id": "msg-system-002",
-    "owner": "SYSTEM",
-    "date": "2025-11-06T14:30:00Z",
-    "subject": "URGENT: System Maintenance Scheduled",
-    "message": "Important: The KO Assets system will undergo scheduled maintenance on November 10th from 2:00 AM to 4:00 AM EST. During this time, the system will be unavailable. Please plan your work accordingly and download any assets you need before the maintenance window. We apologize for any inconvenience.",
-    "type": "Alert",
-    "from": "KO Assets System",
     "priority": "important",
-    "expiresInXDays": 30,
-    "status": "unread"
+    "expiresInXDays": 120
   },
   {
     "id": "msg-2025-005",
@@ -30,10 +17,10 @@
     "subject": "Monthty Updates",
     "message": "We've added many improvements and some new content. Check out http://localhost:8787/help/updates/2025-october . We'd love to hear your feedback!",
     "type": "Announcement",
-    "from": "product-team@coca-cola.com",
+    "from": "Admin Team",
     "priority": "normal",
-    "expiresInXDays": 21,
-    "status": "unread"
+    "expiresInXDays": 120
   }
 ]
 
+ 
