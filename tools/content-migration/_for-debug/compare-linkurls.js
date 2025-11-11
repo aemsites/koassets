@@ -4,6 +4,30 @@ const fs = require('fs');
 const path = require('path');
 
 /**
+ * Generate skip URL from content store directory name
+ * Pattern: all-content-stores -> /content/share/us/en/all-content-stores
+ *          all-content-stores-fifa-club-wc-2025 ->
+ *            /content/share/us/en/all-content-stores/fifa-club-wc-2025
+ *          bottler-content-stores-coke-holiday-2025 ->
+ *            /content/share/us/en/bottler-content-stores/coke-holiday-2025
+ * @param {string} storeName - The content store directory name
+ * @returns {string} The URL to skip for this content store
+ */
+function getSkipUrlForStore(storeName) {
+  // Replace first dash after "all-content-stores" or "bottler-content-stores" with a slash
+  const urlPath = storeName.replace(/^((?:all|bottler)-content-stores)-/, '$1/');
+  return `/content/share/us/en/${urlPath}`;
+}
+
+/**
+ * Global list of URLs to skip across all content stores
+ * These are URLs that are intentionally not included in hierarchy (e.g., skipped items)
+ */
+const GLOBALLY_SKIPPED_URLS = [
+  '/r/Y9tWw8YPEK', // Forms.Office.com URL from "Content Store Request Form" button (intentionally skipped)
+];
+
+/**
  * Find all directories matching the pattern *-content-stores*
  * @returns {string[]} Array of matching directory names
  */
@@ -20,10 +44,10 @@ function findContentStoreDirectories() {
 // Parse command line arguments
 const args = process.argv.slice(2);
 const showAll = args.includes('--all');
-const contentStoreName = args.find((arg) => !arg.startsWith('--'));
+const contentStoreArg = args.find((arg) => !arg.startsWith('--'));
 let contentStoreNames = [];
 
-if (!contentStoreName) {
+if (!contentStoreArg) {
   // If no argument provided, find all *-content-stores* directories
   contentStoreNames = findContentStoreDirectories();
 
@@ -43,7 +67,8 @@ if (!contentStoreName) {
     console.log('📋 Show mode: first 3 URLs (use --all to see all)\n');
   }
 } else {
-  // If argument provided, use just that one
+  // If argument provided, extract just the directory name (in case absolute path was provided)
+  const contentStoreName = path.basename(contentStoreArg);
   contentStoreNames = [contentStoreName];
   if (showAll) {
     console.log('📋 Show all mode: enabled\n');
@@ -101,6 +126,12 @@ function normalizeUrl(url) {
   // Finally replace &amp; only if it's not part of another entity
   normalized = normalized.replace(/&amp;(?!quot;|#39;|lt;|gt;)/g, '&');
 
+  // Strip .html extension from content store URLs for consistency
+  // Only strip if it ends with .html and doesn't have query parameters after
+  if (normalized.endsWith('.html')) {
+    normalized = normalized.slice(0, -5);
+  }
+
   return normalized;
 }
 
@@ -131,29 +162,42 @@ function extractHrefUrls(htmlText) {
 /**
  * Recursively extract all URL values from a JSON object and normalize them
  * Extracts from: linkURL, url, analyticsUrl, xdm:linkURL, imageResourceUrl,
- * storageUrl, clickableUrl keys, and href attributes in text content
+ * storageUrl, clickableUrl, searchLink keys, and href attributes in text content
  * Counts unique (URL, key) combinations: same URL with same key only counts once
  * @param {any} obj - The object to search
  * @param {Map<string, Set<string>>} linkUrlKeys - Map to store normalized URL -> Set of keys
  * @param {Map<string, string>} originalUrls - Map to store normalized -> original URL mapping
+ * @param {string} skipUrl - URL to skip during extraction (optional)
  */
-function extractLinkUrls(obj, linkUrlKeys, originalUrls) {
+function extractLinkUrls(obj, linkUrlKeys, originalUrls, skipUrl = null) {
   if (typeof obj !== 'object' || obj === null) {
     return;
   }
 
   if (Array.isArray(obj)) {
-    obj.forEach((item) => extractLinkUrls(item, linkUrlKeys, originalUrls));
+    obj.forEach((item) => extractLinkUrls(item, linkUrlKeys, originalUrls, skipUrl));
   } else {
     Object.keys(obj).forEach((key) => {
-      const urlKeys = ['linkURL', 'url', 'analyticsUrl', 'clickableUrl', 'xdm:linkURL', 'imageResourceUrl'];
+      const urlKeys = ['linkUrl', 'linkURL', 'url', 'analyticsUrl', 'clickableUrl', 'xdm:linkURL', 'imageResourceUrl', 'storageUrl', 'searchLink'];
       if (urlKeys.includes(key) && typeof obj[key] === 'string') {
         const original = obj[key];
-        // Skip 'hh' values
-        if (original === 'hh') {
+        // Skip invalid placeholder values
+        if (original === 'hh' || original === 'g') {
+          return;
+        }
+        // Validate URL format (must start with http://, https://, or /)
+        if (!original.startsWith('http://') && !original.startsWith('https://') && !original.startsWith('/')) {
           return;
         }
         const normalized = normalizeUrl(original);
+        // Skip the URL for this specific content store
+        if (skipUrl && normalized === skipUrl) {
+          return;
+        }
+        // Skip globally skipped URLs
+        if (GLOBALLY_SKIPPED_URLS.includes(normalized)) {
+          return;
+        }
         if (!linkUrlKeys.has(normalized)) {
           linkUrlKeys.set(normalized, new Set());
         }
@@ -163,19 +207,31 @@ function extractLinkUrls(obj, linkUrlKeys, originalUrls) {
         // Extract href URLs from HTML text content
         const hrefUrls = extractHrefUrls(obj[key]);
         hrefUrls.forEach((url) => {
-          // Skip 'hh' values
-          if (url === 'hh') {
+          // Skip invalid placeholder values
+          if (url === 'hh' || url === 'g') {
+            return;
+          }
+          // Validate URL format (must start with http://, https://, or /)
+          if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/')) {
             return;
           }
           const normalized = normalizeUrl(url);
+          // Skip the URL for this specific content store
+          if (skipUrl && normalized === skipUrl) {
+            return;
+          }
+          // Skip globally skipped URLs
+          if (GLOBALLY_SKIPPED_URLS.includes(normalized)) {
+            return;
+          }
           if (!linkUrlKeys.has(normalized)) {
             linkUrlKeys.set(normalized, new Set());
           }
-          linkUrlKeys.get(normalized).add('href');
+          linkUrlKeys.get(normalized).add('text-href');
           originalUrls.set(normalized, url);
         });
       } else {
-        extractLinkUrls(obj[key], linkUrlKeys, originalUrls);
+        extractLinkUrls(obj[key], linkUrlKeys, originalUrls, skipUrl);
       }
     });
   }
@@ -206,8 +262,12 @@ function processContentStore(storeName) {
   const cachesDir = path.join(baseDir, 'caches');
   const hierarchyFile = path.join(baseDir, 'hierarchy-structure.json');
 
+  // Generate the skip URL for this content store
+  const skipUrl = getSkipUrlForStore(storeName);
+
   console.log(`🔍 Extracting linkURL values from: ${storeName}`);
-  console.log(`📁 Base directory: ${baseDir}\n`);
+  console.log(`📁 Base directory: ${baseDir}`);
+  console.log(`🚫 Skipping URL: ${skipUrl}\n`);
 
   // Check if base directory exists
   if (!fs.existsSync(baseDir)) {
@@ -249,6 +309,13 @@ function processContentStore(storeName) {
   tabsFiles.forEach((file) => {
     console.log(`   - ${path.basename(file)}`);
   });
+
+  if (otherCacheFiles.length > 0) {
+    console.log(`\n📄 Found ${otherCacheFiles.length} other cache file(s):`);
+    otherCacheFiles.forEach((file) => {
+      console.log(`   - ${path.basename(file)}`);
+    });
+  }
   console.log('');
 
   // Load hierarchy file
@@ -265,7 +332,7 @@ function processContentStore(storeName) {
   tabsFiles.forEach((tabsFile) => {
     const tabsData = loadJsonFile(tabsFile);
     if (tabsData) {
-      extractLinkUrls(tabsData, tabsUrlKeys, tabsOriginalUrls);
+      extractLinkUrls(tabsData, tabsUrlKeys, tabsOriginalUrls, skipUrl);
     }
   });
 
@@ -277,7 +344,7 @@ function processContentStore(storeName) {
     otherCacheFiles.forEach((cacheFile) => {
       const cacheData = loadJsonFile(cacheFile);
       if (cacheData) {
-        extractLinkUrls(cacheData, otherCacheUrlKeys, otherCacheOriginalUrls);
+        extractLinkUrls(cacheData, otherCacheUrlKeys, otherCacheOriginalUrls, skipUrl);
       }
     });
   }
@@ -285,16 +352,19 @@ function processContentStore(storeName) {
   // Extract linkURLs from hierarchy file
   const hierarchyUrlKeys = new Map();
   const hierarchyOriginalUrls = new Map();
-  extractLinkUrls(hierarchyData, hierarchyUrlKeys, hierarchyOriginalUrls);
+  extractLinkUrls(hierarchyData, hierarchyUrlKeys, hierarchyOriginalUrls, skipUrl);
 
   // Get unique URLs from each source
   const tabsLinks = new Set(tabsUrlKeys.keys());
   const hierarchyLinks = new Set(hierarchyUrlKeys.keys());
+  const otherCacheLinks = new Set(otherCacheUrlKeys.keys());
 
   // Calculate total occurrences (count unique URL+key combinations)
   const tabsTotal = Array.from(tabsUrlKeys.values())
     .reduce((sum, keySet) => sum + keySet.size, 0);
   const hierarchyTotal = Array.from(hierarchyUrlKeys.values())
+    .reduce((sum, keySet) => sum + keySet.size, 0);
+  const otherCacheTotal = Array.from(otherCacheUrlKeys.values())
     .reduce((sum, keySet) => sum + keySet.size, 0);
 
   // Convert sets to sorted arrays for better readability
@@ -305,6 +375,9 @@ function processContentStore(storeName) {
   console.log('📊 EXTRACTION RESULTS');
   console.log('====================');
   console.log(`📄 tabs*.json files: ${sortedTabsLinks.length} unique linkURLs (${tabsTotal} total)`);
+  if (otherCacheFiles.length > 0) {
+    console.log(`📄 other cache files (jcr*, etc.): ${otherCacheLinks.size} unique linkURLs (${otherCacheTotal} total)`);
+  }
   console.log(`📄 hierarchy-structure.json: ${sortedHierarchyLinks.length} unique linkURLs (${hierarchyTotal} total)`);
 
   // Calculate URL differences (don't print yet, need to check other cache files first)
@@ -325,11 +398,19 @@ function processContentStore(storeName) {
     extraNotInAnyCache = extraInHierarchy.filter((url) => !otherCacheUrlKeys.has(url));
   }
 
+  // Check if there are URLs in other cache files (JCR) that are not in hierarchy
+  const sortedOtherCacheLinks = Array.from(otherCacheLinks).sort();
+  const missingFromHierarchyInOtherCache = sortedOtherCacheLinks.filter(
+    (url) => !hierarchyLinks.has(url),
+  );
+
   // NOW print the comparison analysis after checking all sources
   console.log('\n🔍 COMPARISON ANALYSIS');
   console.log('======================');
 
-  const hasMismatches = missingInHierarchy.length > 0 || extraNotInAnyCache.length > 0;
+  const hasMismatches = missingInHierarchy.length > 0
+    || extraNotInAnyCache.length > 0
+    || missingFromHierarchyInOtherCache.length > 0;
 
   if (!hasMismatches) {
     console.log('✅ All matched');
@@ -365,6 +446,25 @@ function processContentStore(storeName) {
         console.log(`      ... and ${extraNotInAnyCache.length - 3} more (use --all to see all)`);
       }
     }
+
+    // Report URLs in other cache files (JCR) but not in hierarchy
+    if (missingFromHierarchyInOtherCache.length > 0) {
+      const cacheCount = missingFromHierarchyInOtherCache.length;
+      console.log(`\n⚠️  linkURLs in other cache files (jcr*) but MISSING FROM ${hierarchyFile}: ${cacheCount}`);
+      const urlsToShow = showAll
+        ? missingFromHierarchyInOtherCache
+        : missingFromHierarchyInOtherCache.slice(0, 3);
+      urlsToShow.forEach((url, index) => {
+        const originalUrl = otherCacheOriginalUrls.get(url) || url;
+        console.log(`   ${index + 1}. ${url}`);
+        if (originalUrl !== url) {
+          console.log(`       (original: ${originalUrl})`);
+        }
+      });
+      if (!showAll && missingFromHierarchyInOtherCache.length > 3) {
+        console.log(`      ... and ${missingFromHierarchyInOtherCache.length - 3} more (use --all to see all)`);
+      }
+    }
   }
 
   // Count validation - check that hierarchy count matches source files
@@ -382,12 +482,19 @@ function processContentStore(storeName) {
 
     // Hierarchy count should match tabs count,
     // or if tabs is 0, should match other cache count
+    // SPECIAL CASE: Allow hierarchy to have extra text-href if it duplicates linkSources
     const matchesTabs = hierarchyCount === tabsCount;
     const matchesOtherCache = (tabsCount === 0
       && otherCacheCount > 0
       && hierarchyCount === otherCacheCount);
 
-    if (!matchesTabs && !matchesOtherCache) {
+    // Check if the extra count is due to text-href duplication
+    const hierarchyHasTextHref = hierarchyKeySet && hierarchyKeySet.has('text-href');
+    const hierarchyNonTextCount = hierarchyHasTextHref ? hierarchyCount - 1 : hierarchyCount;
+    const matchesWithoutTextHref = (hierarchyHasTextHref && hierarchyNonTextCount === tabsCount)
+      || (hierarchyHasTextHref && tabsCount === 0 && hierarchyNonTextCount === otherCacheCount);
+
+    if (!matchesTabs && !matchesOtherCache && !matchesWithoutTextHref) {
       countMismatches.push({
         url,
         tabsCount,
@@ -438,13 +545,16 @@ function processContentStore(storeName) {
   const overlapPercentage = (commonUrls.length / maxLength) * 100;
   console.log(`URL match overlap: ${overlapPercentage.toFixed(1)}%`);
 
-  const hasMissingUrls = missingInHierarchy.length > 0 || extraNotInAnyCache.length > 0;
+  const hasMissingUrls = missingInHierarchy.length > 0
+    || extraNotInAnyCache.length > 0
+    || missingFromHierarchyInOtherCache.length > 0;
   const hasCountMismatches = countMismatches.length > 0;
 
   // Consider it a perfect match if all hierarchy URLs are in SOME cache file
-  // (either tabs or other cache files) and counts match
+  // (either tabs or other cache files), all cache URLs are in hierarchy, and counts match
   const allHierarchyUrlsFound = extraNotInAnyCache.length === 0 && missingInHierarchy.length === 0;
-  const isPerfectMatch = allHierarchyUrlsFound && !hasCountMismatches;
+  const allCacheUrlsInHierarchy = missingFromHierarchyInOtherCache.length === 0;
+  const isPerfectMatch = allHierarchyUrlsFound && allCacheUrlsInHierarchy && !hasCountMismatches;
   if (isPerfectMatch) {
     console.log('✅ Perfect match! All linkURLs are functionally equivalent with valid counts.');
   } else {
@@ -453,6 +563,9 @@ function processContentStore(storeName) {
     }
     if (extraNotInAnyCache.length > 0) {
       console.log(`🆕 ${extraNotInAnyCache.length} linkURL(s) from ${hierarchyFile} are MISSING FROM all cache files`);
+    }
+    if (missingFromHierarchyInOtherCache.length > 0) {
+      console.log(`⚠️  ${missingFromHierarchyInOtherCache.length} linkURL(s) from other cache files (jcr*) are MISSING FROM ${hierarchyFile}`);
     }
     if (hasCountMismatches) {
       console.log(`🔢 ${countMismatches.length} linkURL(s) in ${hierarchyFile} have INVALID COUNTS (don't match any source)`);

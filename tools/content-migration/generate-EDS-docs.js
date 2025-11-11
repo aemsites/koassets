@@ -7,16 +7,37 @@
  * 1. Finds all content-stores derived-results/hierarchy-structure.csv files
  * 2. Converts each CSV to JSON format
  * 3. Writes to all-content-stores-sheet.json with multi-sheet format
+ * 4. Generates HTML documentation files
+ *
+ * USAGE:
+ *   node generate-EDS-docs.js [--input stores-file] [output-filename]
+ *
+ * OPTIONS:
+ *   --input <file>  Optional stores file (one content path per line, # for comments)
+ *                   If provided, only processes stores listed in the file
+ *
+ * EXAMPLES:
+ *   # Process all stores
+ *   node generate-EDS-docs.js
+ *
+ *   # Process only stores from file
+ *   node generate-EDS-docs.js --input stores.txt
+ *
+ *   # Process stores from file with custom output name
+ *   node generate-EDS-docs.js --input stores.txt custom-output.json
  */
 
 const fs = require('fs');
 const path = require('path');
 const { globSync } = require('glob');
 const { sanitizeFileName } = require('./sanitize-utils.js');
-const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client.js');
+const {
+  DA_ORG, DA_REPO, DA_DEST, IMAGES_BASE,
+} = require('./da-admin-client.js');
+const { DATA_DIR } = require('./constants.js');
 
 const TEMPLATES_DIR = path.join(__dirname, 'templates');
-const EDS_DOCS_DIR = path.join(__dirname, 'generated-eds-docs');
+const EDS_DOCS_DIR = path.join(__dirname, DATA_DIR, 'generated-eds-docs');
 
 /**
  * Parses a CSV line, handling quoted fields with commas
@@ -143,12 +164,47 @@ function extractStoreName(csvPath) {
 }
 
 /**
- * Finds all hierarchy-structure.csv files
+ * Convert content path to directory name
+ * e.g., "/content/share/us/en/all-content-stores" => "all-content-stores"
+ * e.g., "/content/share/us/en/all-content-stores/tea" => "all-content-stores-tea"
  */
-function findCsvFiles() {
-  const pattern = '*-content-stores*/derived-results/hierarchy-structure.csv';
+function contentPathToDirName(contentPath) {
+  const parts = contentPath.split('/').filter((p) => p);
+  const storeName = parts[parts.length - 1];
+  const parentName = parts[parts.length - 2];
+
+  // Check if parent is a content store
+  if (parentName && parentName.endsWith('-content-stores')) {
+    // Sub-store: use parent-child naming
+    return `${parentName}-${storeName}`;
+  }
+
+  // Main store: use as-is
+  return storeName;
+}
+
+/**
+ * Finds all hierarchy-structure.csv files, optionally filtered by stores file
+ * @param {string[]} storesList - Optional array of content paths to filter
+ */
+function findCsvFiles(storesList = null) {
+  const pattern = `${DATA_DIR}/*-content-stores*/derived-results/hierarchy-structure.csv`;
   const matches = globSync(pattern, { cwd: __dirname });
-  return matches.map((f) => path.join(__dirname, f));
+  const allFiles = matches.map((f) => path.join(__dirname, f));
+
+  // If no stores list provided, return all files
+  if (!storesList || storesList.length === 0) {
+    return allFiles;
+  }
+
+  // Convert stores list to directory names
+  const dirNames = new Set(storesList.map(contentPathToDirName));
+
+  // Filter files by directory names
+  return allFiles.filter((csvPath) => {
+    const storeName = extractStoreName(csvPath);
+    return dirNames.has(storeName);
+  });
 }
 
 /**
@@ -192,12 +248,12 @@ function formatBannerImageUrl(imageUrl, destPath, storeName) {
   const sanitizedFilename = sanitizeFileName(filename);
 
   // Check if the sanitized file exists in the images directory
-  const imagePath = path.join(__dirname, storeName, 'extracted-results', 'images', sanitizedFilename);
+  const imagePath = path.join(__dirname, DATA_DIR, storeName, 'extracted-results', 'images', sanitizedFilename);
   if (!fs.existsSync(imagePath)) {
     return '';
   }
 
-  return `https://content.da.live/${destPath}/fragments/.${storeName}/${sanitizedFilename}`;
+  return `https://content.da.live/${destPath}/${IMAGES_BASE}${storeName}/${sanitizedFilename}`;
 }
 
 /**
@@ -282,6 +338,7 @@ function generateEDSDocs(inputFile) {
       if (!isContentStoresList) {
         const hierarchyFile = path.join(
           __dirname,
+          DATA_DIR,
           name,
           'extracted-results',
           'hierarchy-structure.json',
@@ -341,19 +398,23 @@ function generateEDSDocs(inputFile) {
 /**
  * Merge CSV files to multi-sheet JSON
  * @param {string} outputFile - Path to output JSON file
+ * @param {string[]} storesList - Optional array of content paths to filter
  */
-function mergeCsvToMultiSheetJson(outputFile) {
+function mergeCsvToMultiSheetJson(outputFile, storesList = null) {
   try {
     console.log('🔍 Finding CSV files...');
-    const csvFiles = findCsvFiles();
+    const csvFiles = findCsvFiles(storesList);
 
     if (csvFiles.length === 0) {
       console.error('❌ No CSV files found matching pattern:');
       console.error('   *-content-stores*/derived-results/hierarchy-structure.csv');
+      if (storesList) {
+        console.error('   Filtered by stores file with', storesList.length, 'store(s)');
+      }
       process.exit(1);
     }
 
-    console.log(`📄 Found ${csvFiles.length} CSV file(s)\n`);
+    console.log(`📄 Found ${csvFiles.length} CSV file(s)${storesList ? ' (filtered by stores file)' : ''}\n`);
 
     const result = {
       ':type': 'multi-sheet',
@@ -404,15 +465,56 @@ function mergeCsvToMultiSheetJson(outputFile) {
 
 // Run if called directly
 if (require.main === module) {
-  // Get output file from command line argument or use default
+  // Ensure DATA directory exists
+  const dataDir = path.join(__dirname, DATA_DIR);
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+    console.log(`📁 Created DATA directory: ${dataDir}\n`);
+  }
+
+  // Parse command line arguments
   const args = process.argv.slice(2);
-  const outputFileName = args[0] || 'all-content-stores-sheet.json';
+  let storesList = null;
+  let outputFileName = 'all-content-stores-sheet.json';
+
+  // Check for --input flag
+  const inputIndex = args.indexOf('--input');
+  if (inputIndex !== -1 && args[inputIndex + 1]) {
+    const storesFile = args[inputIndex + 1];
+    console.log(`📄 Reading stores from file: ${storesFile}`);
+
+    try {
+      const fileContent = fs.readFileSync(storesFile, 'utf8');
+      storesList = [];
+      fileContent.split('\n').forEach((line) => {
+        const trimmed = line.trim();
+        // Skip empty lines and comments
+        if (trimmed && !trimmed.startsWith('#')) {
+          storesList.push(trimmed);
+        }
+      });
+      console.log(`   Found ${storesList.length} store(s) in file\n`);
+    } catch (error) {
+      console.error(`❌ Error reading stores file ${storesFile}:`, error.message);
+      process.exit(1);
+    }
+
+    // Get output file from remaining args
+    const otherArgs = args.filter((arg, i) => i !== inputIndex && i !== inputIndex + 1);
+    if (otherArgs.length > 0) {
+      [outputFileName] = otherArgs;
+    }
+  } else {
+    // No --input flag, check for output file name as first arg
+    outputFileName = args[0] || 'all-content-stores-sheet.json';
+  }
+
   // Save to eds-docs folder by default
   const outputFile = path.isAbsolute(outputFileName)
     ? outputFileName
     : path.join(EDS_DOCS_DIR, outputFileName);
 
-  mergeCsvToMultiSheetJson(outputFile);
+  mergeCsvToMultiSheetJson(outputFile, storesList);
   generateEDSDocs(outputFile);
 }
 

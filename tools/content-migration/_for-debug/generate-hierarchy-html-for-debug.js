@@ -9,7 +9,7 @@ const HIERARCHY_FILE = process.argv[2];
 if (!HIERARCHY_FILE) {
   console.error('❌ Usage: node generate-hierarchy-html-for-debug.js <hierarchy-json-file-path>');
   console.error('   Example: node generate-hierarchy-html-for-debug.js all-content-stores/extracted-results/hierarchy-structure.json');
-  console.error('   Example: node generate-hierarchy-html-for-debug.js all-content-stores__global-coca-cola-uplift/extracted-results/hierarchy-structure.json');
+  console.error('   Example: node generate-hierarchy-html-for-debug.js all-content-stores-global-coca-cola-uplift/extracted-results/hierarchy-structure.json');
   console.error('   Example: node generate-hierarchy-html-for-debug.js ./all-content-stores/extracted-results/hierarchy-structure.json');
   process.exit(1);
 }

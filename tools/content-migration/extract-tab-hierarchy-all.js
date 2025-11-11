@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
-/* eslint-disable no-console, no-shadow, no-restricted-syntax, no-inner-declarations, no-underscore-dangle, no-plusplus, no-await-in-loop, no-undef, no-unused-vars, global-require, no-lonely-if, prefer-destructuring, radix, max-len */
+/* eslint-disable no-console, no-shadow, no-restricted-syntax, no-inner-declarations, no-underscore-dangle, no-plusplus, no-await-in-loop, no-undef, no-unused-vars, global-require, no-lonely-if, prefer-destructuring, radix, max-len, guard-for-in, no-continue, brace-style */
 
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const { URL } = require('url');
 const { sanitizeFileName, buildFileNameWithId } = require('./sanitize-utils.js');
-const { PATH_SEPARATOR } = require('./constants.js');
+const { PATH_SEPARATOR, DATA_DIR } = require('./constants.js');
 
 // Help and usage information
 function showHelp() {
@@ -20,17 +20,37 @@ DESCRIPTION:
   Creates a clean JSON hierarchy with all teaser images and banner images downloaded.
 
 USAGE:
-  node extract-tab-hierarchy-all.js [CONTENT_PATH]
+  node extract-tab-hierarchy-all.js [CONTENT_PATH] [OPTIONS]
+
+  OPTIONS:
+  --recursive       Automatically extract linked content stores found in clickableURLs
+  --debug           Skip recursive extractions (only discover and list them)
+  --input <file>    Read content paths from file (one per line, # for comments)
+
+  DEFAULT (no parameters):
+  When no CONTENT_PATH is provided, defaults to: /content/share/us/en/all-content-stores
 
 EXAMPLES:
-  # Extract default content store (/content/share/us/en/all-content-stores)
-  node extract-tab-hierarchy-all.js
+  # Extract default content store with recursive extraction
+  node extract-tab-hierarchy-all.js --recursive
   
-  # Extract main content store (explicit)
+  # Extract default content store with recursive extraction and debug output
+  node extract-tab-hierarchy-all.js --recursive --debug
+  
+  # Extract specific content store (no recursive extraction)
   node extract-tab-hierarchy-all.js /content/share/us/en/all-content-stores
   
   # Extract specific campaign
   node extract-tab-hierarchy-all.js /content/share/us/en/all-content-stores/global-coca-cola-uplift
+  
+  # Extract specific content store with recursive extraction
+  node extract-tab-hierarchy-all.js /content/share/us/en/bottler-content-stores --recursive
+  
+  # Extract multiple stores from a file
+  node extract-tab-hierarchy-all.js --input stores.txt
+  
+  # Extract stores from file with recursive extraction
+  node extract-tab-hierarchy-all.js --input stores.txt --recursive
 
 OUTPUTS:
   📁 {hierarchical-dir-name}/extracted-results/
@@ -187,8 +207,44 @@ const AEM_AUTHOR = 'https://author-p64403-e544653.adobeaemcloud.com';
 // Default content path
 const DEFAULT_CONTENT_PATH = '/content/share/us/en/all-content-stores';
 
-// Get content path from command line argument or use default
-const CONTENT_PATH = process.argv[2] || DEFAULT_CONTENT_PATH;
+// Parse command line arguments (path and flags)
+const args = process.argv.slice(2);
+const flags = {
+  debug: args.includes('--debug'),
+  recursive: args.includes('--recursive'),
+};
+
+// Check for --input flag
+const inputFlagIndex = args.indexOf('--input');
+let CONTENT_PATHS = [];
+
+if (inputFlagIndex !== -1 && args[inputFlagIndex + 1]) {
+  // Read stores from file
+  const inputFile = args[inputFlagIndex + 1];
+  try {
+    const fileContent = fs.readFileSync(inputFile, 'utf8');
+    const lines = fileContent.split('\n');
+    lines.forEach((line) => {
+      const trimmedLine = line.trim();
+      // Skip empty lines and comments
+      if (trimmedLine && !trimmedLine.startsWith('#')) {
+        CONTENT_PATHS.push(trimmedLine);
+      }
+    });
+    console.log(`📄 Reading stores from file: ${inputFile}`);
+    console.log(`   Found ${CONTENT_PATHS.length} store(s) in file\n`);
+  } catch (error) {
+    console.error(`❌ Error reading input file ${inputFile}: ${error.message}`);
+    process.exit(1);
+  }
+} else {
+  // Get content path (first non-flag argument)
+  const CONTENT_PATH = args.find((arg) => !arg.startsWith('--')) || DEFAULT_CONTENT_PATH;
+  CONTENT_PATHS = [CONTENT_PATH];
+}
+
+// Get the first content path (for backward compatibility with existing code)
+const CONTENT_PATH = CONTENT_PATHS[0];
 
 // Load AUTHOR_AUTH_COOKIE from config file
 let AUTHOR_AUTH_COOKIE;
@@ -236,7 +292,7 @@ function createHierarchicalDirName(contentPath) {
 }
 
 const hierarchicalDirName = createHierarchicalDirName(CONTENT_PATH);
-const OUTPUT_DIR = path.join(__dirname, hierarchicalDirName, 'extracted-results');
+const OUTPUT_DIR = path.join(__dirname, DATA_DIR, hierarchicalDirName, 'extracted-results');
 const CACHE_DIR = path.join(OUTPUT_DIR, 'caches');
 
 // Helper function to get cache file path
@@ -406,14 +462,16 @@ function ensureImagesDir() {
 }
 
 // Function to validate if an image file is not corrupted
+// Returns an object: { valid: true } or { valid: false, reason: 'html'|'invalid'|'error', message: string }
 function isValidImageFile(filePath) {
   try {
     const stats = fs.statSync(filePath);
 
     // Check if file size is too small (likely corrupted or incomplete)
     if (stats.size < 100) {
-      console.log(`   ⚠️  File too small (${stats.size} bytes): ${path.basename(filePath)}`);
-      return false;
+      const msg = `File too small (${stats.size} bytes): ${path.basename(filePath)}`;
+      console.log(`   ⚠️  ${msg}`);
+      return { valid: false, reason: 'invalid', message: msg };
     }
 
     // Read first 20 bytes to check file signature
@@ -425,8 +483,9 @@ function isValidImageFile(filePath) {
     // Check if it's an HTML error page (common when download fails)
     const bufferStr = buffer.toString('utf8', 0, 15);
     if (bufferStr.includes('<!DOCTYPE') || bufferStr.includes('<html') || bufferStr.includes('<!doctype')) {
-      console.log(`   ⚠️  HTML error page detected: ${path.basename(filePath)}`);
-      return false;
+      const msg = `HTML error page detected: ${path.basename(filePath)}`;
+      console.log(`   ⚠️  ${msg}`);
+      return { valid: false, reason: 'html', message: msg };
     }
 
     // Check for common image file signatures
@@ -437,14 +496,16 @@ function isValidImageFile(filePath) {
     const isSVG = bufferStr.includes('<?xml') || bufferStr.includes('<svg');
 
     if (!isPNG && !isJPEG && !isGIF && !isWebP && !isSVG) {
-      console.log(`   ⚠️  Invalid image format (first bytes: ${buffer.toString('hex', 0, 4)}): ${path.basename(filePath)}`);
-      return false;
+      const msg = `Invalid image format (first bytes: ${buffer.toString('hex', 0, 4)}): ${path.basename(filePath)}`;
+      console.log(`   ⚠️  ${msg}`);
+      return { valid: false, reason: 'invalid', message: msg };
     }
 
-    return true;
+    return { valid: true };
   } catch (error) {
-    console.log(`   ⚠️  Error validating file: ${error.message}`);
-    return false;
+    const msg = `Error validating file: ${error.message}`;
+    console.log(`   ⚠️  ${msg}`);
+    return { valid: false, reason: 'error', message: msg };
   }
 }
 
@@ -462,6 +523,7 @@ function cleanupCorruptedImages() {
   const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
   const files = fs.readdirSync(imagesDir);
   let corruptedCount = 0;
+  const htmlFiles = [];
 
   files.forEach((file) => {
     const filePath = path.join(imagesDir, file);
@@ -469,7 +531,12 @@ function cleanupCorruptedImages() {
 
     // Only check image files
     if (imageExtensions.includes(ext) && fs.statSync(filePath).isFile()) {
-      if (!isValidImageFile(filePath)) {
+      const validationResult = isValidImageFile(filePath);
+      if (!validationResult.valid) {
+        if (validationResult.reason === 'html') {
+          // Track HTML files separately - these are critical errors
+          htmlFiles.push({ file, message: validationResult.message });
+        }
         console.log(`🗑️  Deleting corrupted image: ${file}`);
         fs.unlinkSync(filePath);
         corruptedCount++;
@@ -482,40 +549,20 @@ function cleanupCorruptedImages() {
   } else {
     console.log('✅ No corrupted images found\n');
   }
-}
 
-// Function to download and save image if it doesn't already exist
-async function downloadAndSaveImage(imageUrl, fileName, itemId) {
-  const imagesDir = ensureImagesDir();
-  // Build filename with itemId prepended
-  const finalFileName = buildFileNameWithId(itemId, fileName);
-  const imagePath = path.join(imagesDir, sanitizeFileName(finalFileName));
-
-  // Check if image already exists and is valid
-  if (fs.existsSync(imagePath)) {
-    if (isValidImageFile(imagePath)) {
-      console.log(`⏭️  Image already exists, skipping: ${fileName}`);
-      return imagePath;
-    }
-    console.log(`⚠️  Corrupted image detected, re-downloading: ${fileName}`);
-    // Delete corrupted file
-    fs.unlinkSync(imagePath);
-  }
-
-  try {
-    await downloadFile(imageUrl, imagePath);
-
-    // Validate downloaded image
-    if (!isValidImageFile(imagePath)) {
-      console.error(`❌ Downloaded image is corrupted: ${fileName}`);
-      fs.unlinkSync(imagePath);
-      return null;
-    }
-
-    return imagePath;
-  } catch (error) {
-    console.error(`❌ Failed to download image ${imageUrl}: ${error.message}`);
-    return null;
+  // If HTML files were detected, fail the script
+  if (htmlFiles.length > 0) {
+    console.error('\n❌ ❌ ❌  CRITICAL ERROR: HTML CONTENT DETECTED IN IMAGE FILES  ❌ ❌ ❌\n');
+    console.error(`   Found ${htmlFiles.length} image file(s) containing HTML content:`);
+    htmlFiles.forEach((item, index) => {
+      console.error(`   ${index + 1}. ${item.file} - ${item.message}`);
+    });
+    console.error('\n   This indicates a download failure where the server returned an error page');
+    console.error('   instead of the actual image. Please check:\n');
+    console.error('   - Authentication cookie is valid');
+    console.error('   - Network connectivity to AEM server');
+    console.error('   - Image URLs are correct\n');
+    throw new Error(`Script failed: ${htmlFiles.length} image file(s) contain HTML content instead of valid images`);
   }
 }
 
@@ -524,8 +571,8 @@ console.log('=============================');
 console.log('');
 
 // Function to extract and process linked content stores
-async function extractLinkedContentStores(hierarchyStructureFile) {
-  console.log('\n🔍 Analyzing linkURLs for other content stores...');
+async function extractLinkedContentStores(hierarchyStructureFile, debug = false) {
+  console.log('\n🔍 Analyzing clickableURLs for other content stores...');
 
   // Read and parse the hierarchy file
   let hierarchyData;
@@ -537,48 +584,51 @@ async function extractLinkedContentStores(hierarchyStructureFile) {
     return;
   }
 
-  // Function to recursively extract all linkURLs from the hierarchy
-  function extractLinkURLs(obj, linkURLs = new Set()) {
+  // Function to recursively extract all clickableUrl from linkSources
+  function extractClickableURLs(obj, clickableURLs = new Set()) {
     if (Array.isArray(obj)) {
-      obj.forEach((item) => extractLinkURLs(item, linkURLs));
+      obj.forEach((item) => extractClickableURLs(item, clickableURLs));
     } else if (typeof obj === 'object' && obj !== null) {
-      if (obj.linkURL) {
-        linkURLs.add(obj.linkURL);
+      // Extract clickableUrl from linkSources object
+      if (obj.linkSources && obj.linkSources.clickableUrl) {
+        // Strip .html extension if present
+        const url = obj.linkSources.clickableUrl.replace(/\.html$/, '');
+        clickableURLs.add(url);
       }
-      Object.values(obj).forEach((value) => extractLinkURLs(value, linkURLs));
+      Object.values(obj).forEach((value) => extractClickableURLs(value, clickableURLs));
     }
-    return linkURLs;
+    return clickableURLs;
   }
 
-  // Extract all linkURLs
-  const allLinkURLs = extractLinkURLs(hierarchyData);
-  console.log(`📊 Found ${allLinkURLs.size} total linkURLs`);
+  // Extract all clickableURLs
+  const allClickableURLs = extractClickableURLs(hierarchyData);
+  console.log(`📊 Found ${allClickableURLs.size} total clickableURLs`);
 
-  // Extract unique content store base paths
+  // Filter out the current content path to avoid circular extraction
   const contentStorePaths = new Set();
-  const linkURLArray = Array.from(allLinkURLs);
 
-  linkURLArray.forEach((linkURL) => {
-    // Match pattern: /content/share/us/en/{content-store-name}/...
-    const match = linkURL.match(/^(\/content\/share\/us\/en\/[^/]+)/);
-    if (match) {
-      const basePath = match[1];
-      const baseStoreName = basePath.split('/').pop();
-
-      // Skip the current content store (avoid circular extraction)
-      const currentStoreName = CONTENT_PATH.split('/').pop();
-      if (baseStoreName !== currentStoreName && baseStoreName.endsWith('-content-stores')) {
-        contentStorePaths.add(basePath);
-      }
+  allClickableURLs.forEach((clickableURL) => {
+    // Skip the current content path (avoid circular extraction)
+    if (clickableURL === CONTENT_PATH) {
+      return;
     }
+
+    // Only process valid AEM content store paths
+    // Valid patterns: /content/share/us/en/all-content-stores/* or /content/share/us/en/bottler-content-stores/*
+    if (!clickableURL.startsWith('/content/share/us/en/')) {
+      console.log(`  ⏭️  Skipping non-AEM path: ${clickableURL}`);
+      return;
+    }
+
+    contentStorePaths.add(clickableURL);
   });
 
   if (contentStorePaths.size === 0) {
-    console.log('✅ No other content stores found to extract.');
+    console.log('✅ No other content paths found to extract.');
     return;
   }
 
-  console.log(`🎯 Discovered ${contentStorePaths.size} other content store(s):`);
+  console.log(`🎯 Discovered ${contentStorePaths.size} unique content path(s) to extract:`);
   Array.from(contentStorePaths).sort().forEach((path, index) => {
     console.log(`  ${index + 1}. ${path}`);
   });
@@ -590,60 +640,72 @@ async function extractLinkedContentStores(hierarchyStructureFile) {
 
   let successCount = 0;
   let failureCount = 0;
+  const failedPaths = [];
 
   for (const contentPath of Array.from(contentStorePaths).sort()) {
     console.log(`\n📋 Extracting: ${contentPath}`);
     console.log('-'.repeat(50));
 
-    try {
+    if (debug) {
+      console.log('⏭️  SKIPPED (debug mode)');
+    } else {
+      try {
       // Run the extraction script recursively
-      // Use execFileSync instead of execSync to prevent command injection
-      const output = execFileSync('node', ['extract-tab-hierarchy-all.js', contentPath], {
-        cwd: __dirname,
-        encoding: 'utf8',
-        stdio: 'pipe',
-      });
+        // Use execFileSync instead of execSync to prevent command injection
+        const output = execFileSync('node', ['extract-tab-hierarchy-all.js', contentPath], {
+          cwd: __dirname,
+          encoding: 'utf8',
+          stdio: 'pipe',
+        });
 
-      console.log('✅ SUCCESS');
-      // Show the last few meaningful lines (summary section)
-      const lines = output.split('\n').filter((line) => line.trim());
-      const lastLines = lines.slice(-8); // Show last 8 non-empty lines
-      lastLines.forEach((line) => console.log(line));
+        console.log('✅ SUCCESS');
+        // Show the last few meaningful lines (summary section)
+        const lines = output.split('\n').filter((line) => line.trim());
+        const lastLines = lines.slice(-8); // Show last 8 non-empty lines
+        lastLines.forEach((line) => console.log(line));
 
-      successCount++;
-    } catch (error) {
-      console.log('❌ FAILED');
+        successCount++;
+      } catch (error) {
+        console.log('❌ FAILED');
 
-      // Collect all available error information
-      const errorParts = [];
+        // Collect all available error information
+        const errorParts = [];
 
-      if (error.stdout) {
-        errorParts.push(error.stdout);
-      }
-      if (error.stderr) {
-        errorParts.push(error.stderr);
-      }
-      if (error.message && !error.stdout && !error.stderr) {
-        errorParts.push(error.message);
-      }
-
-      const errorOutput = errorParts.join('\n');
-
-      // Show meaningful error context - last few lines before failure
-      const lines = errorOutput.split('\n').filter((line) => line.trim());
-      const errorLines = lines.slice(-10); // Show last 10 non-empty lines for better context
-
-      if (errorLines.length > 0) {
-        console.log('Error details:');
-        errorLines.forEach((line) => console.log(`  ${line}`));
-      } else {
-        console.log(`Error: ${error.message || 'Unknown error'}`);
-        if (error.code) {
-          console.log(`Exit code: ${error.code}`);
+        if (error.stdout) {
+          errorParts.push(error.stdout);
         }
-      }
+        if (error.stderr) {
+          errorParts.push(error.stderr);
+        }
+        if (error.message && !error.stdout && !error.stderr) {
+          errorParts.push(error.message);
+        }
 
-      failureCount++;
+        const errorOutput = errorParts.join('\n');
+
+        // Show meaningful error context - last few lines before failure
+        const lines = errorOutput.split('\n').filter((line) => line.trim());
+        const errorLines = lines.slice(-10); // Show last 10 non-empty lines for better context
+
+        if (errorLines.length > 0) {
+          console.log('Error details:');
+          errorLines.forEach((line) => console.log(`  ${line}`));
+        } else {
+          console.log(`Error: ${error.message || 'Unknown error'}`);
+          if (error.code) {
+            console.log(`Exit code: ${error.code}`);
+          }
+        }
+
+        failureCount++;
+        failedPaths.push(contentPath);
+
+        // EXIT IMMEDIATELY on first failure
+        console.log(`\n💥 STOPPING recursive extraction due to failure in: ${contentPath}`);
+        console.log(`📊 Processed: ${successCount + failureCount}/${contentStorePaths.size} stores before stopping`);
+        console.log(`✅ Successful: ${successCount}`);
+        process.exit(1);
+      }
     }
   }
 
@@ -653,10 +715,24 @@ async function extractLinkedContentStores(hierarchyStructureFile) {
   console.log(`✅ Successful extractions: ${successCount}`);
   console.log(`❌ Failed extractions: ${failureCount}`);
   console.log(`📁 Total linked stores processed: ${contentStorePaths.size}`);
+
+  if (failedPaths.length > 0) {
+    console.log('\n🚫 Failed content paths:');
+    failedPaths.forEach((path, index) => {
+      console.log(`  ${index + 1}. ${path}`);
+    });
+  }
 }
 
 // Main execution function
 async function main() {
+  // Ensure DATA directory exists
+  const dataDir = path.join(__dirname, DATA_DIR);
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+    console.log(`📁 Created DATA directory: ${dataDir}`);
+  }
+
   // Ensure output directory exists
   if (!fs.existsSync(OUTPUT_DIR)) {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
@@ -781,64 +857,66 @@ async function main() {
       }
     }
 
+    let mainTabsData = null;
+
     if (allTabsData.length === 0) {
-      throw new Error('Could not download any tabs data');
-    }
+      console.log('\n⚠️  No tabs data found - will extract non-tabs content only');
+    } else {
+      console.log(`\n✅ Downloaded ${allTabsData.length} tabs model(s)`);
 
-    console.log(`\n✅ Downloaded ${allTabsData.length} tabs model(s)`);
+      // Track the most comprehensive model (the one with the most items)
+      let mostComprehensiveModel = allTabsData[0];
+      let maxItemCount = allTabsData[0][':itemsOrder']?.length || 0;
 
-    // Track the most comprehensive model (the one with the most items)
-    let mostComprehensiveModel = allTabsData[0];
-    let maxItemCount = allTabsData[0][':itemsOrder']?.length || 0;
-
-    allTabsData.forEach((tabs, idx) => {
-      const itemCount = tabs[':itemsOrder']?.length || 0;
-      console.log(`  - Tabs ${idx}: ${itemCount} items`);
-      if (itemCount > maxItemCount) {
-        maxItemCount = itemCount;
-        mostComprehensiveModel = tabs;
-      }
-    });
-
-    console.log(`\n📊 Most comprehensive model: ${maxItemCount} items`);
-    fs.writeFileSync(
-      path.join(OUTPUT_DIR, 'most-comprehensive-tabs.model.json'),
-      JSON.stringify(mostComprehensiveModel, null, 2),
-    );
-    console.log('💾 Saved most comprehensive model to: most-comprehensive-tabs.model.json\n');
-
-    // Combine ALL tabs data to get complete hierarchy
-    const combinedTabsData = {
-      ':itemsOrder': [],
-      ':items': {},
-      ':type': 'tccc-dam/components/tabs',
-      id: 'combined-tabs',
-    };
-
-    // Merge all tabs intelligently
-    // Use a unique key for each item from each tabs to preserve all content
-    allTabsData.forEach((tabs, idx) => {
-      const itemsOrder = tabs[':itemsOrder'] || [];
-      const items = tabs[':items'] || {};
-
-      itemsOrder.forEach((key) => {
-        // Create a unique key combining original key and tabs index
-        // This ensures items with the same name from different tabs don't overwrite each other
-        const uniqueKey = `${key}__tabs${idx}`;
-
-        combinedTabsData[':itemsOrder'].push(uniqueKey);
-        const item = items[key];
-        combinedTabsData[':items'][uniqueKey] = item;
-
-        // Attach JCR section information from the tabs data
-        if (tabs.__jcrSection) {
-          item.__jcrSection = tabs.__jcrSection;
+      allTabsData.forEach((tabs, idx) => {
+        const itemCount = tabs[':itemsOrder']?.length || 0;
+        console.log(`  - Tabs ${idx}: ${itemCount} items`);
+        if (itemCount > maxItemCount) {
+          maxItemCount = itemCount;
+          mostComprehensiveModel = tabs;
         }
       });
-    });
 
-    console.log(`📌 Combined all tabs into ${combinedTabsData[':itemsOrder'].length} items\n`);
-    const mainTabsData = combinedTabsData;
+      console.log(`\n📊 Most comprehensive model: ${maxItemCount} items`);
+      fs.writeFileSync(
+        path.join(OUTPUT_DIR, 'most-comprehensive-tabs.model.json'),
+        JSON.stringify(mostComprehensiveModel, null, 2),
+      );
+      console.log('💾 Saved most comprehensive model to: most-comprehensive-tabs.model.json\n');
+
+      // Combine ALL tabs data to get complete hierarchy
+      const combinedTabsData = {
+        ':itemsOrder': [],
+        ':items': {},
+        ':type': 'tccc-dam/components/tabs',
+        id: 'combined-tabs',
+      };
+
+      // Merge all tabs intelligently
+      // Use a unique key for each item from each tabs to preserve all content
+      allTabsData.forEach((tabs, idx) => {
+        const itemsOrder = tabs[':itemsOrder'] || [];
+        const items = tabs[':items'] || {};
+
+        itemsOrder.forEach((key) => {
+        // Create a unique key combining original key and tabs index
+        // This ensures items with the same name from different tabs don't overwrite each other
+          const uniqueKey = `${key}__tabs${idx}`;
+
+          combinedTabsData[':itemsOrder'].push(uniqueKey);
+          const item = items[key];
+          combinedTabsData[':items'][uniqueKey] = item;
+
+          // Attach JCR section information from the tabs data
+          if (tabs.__jcrSection) {
+            item.__jcrSection = tabs.__jcrSection;
+          }
+        });
+      });
+
+      console.log(`📌 Combined all tabs into ${combinedTabsData[':itemsOrder'].length} items\n`);
+      mainTabsData = combinedTabsData;
+    }
 
     // Create a map of all titles to their sling:resourceType from JCR
     const jcrTitleMap = {};
@@ -923,12 +1001,31 @@ async function main() {
             if (rt && rt.includes('text') && obj[key].text) {
               textContent = obj[key].text;
             } else {
-              // Otherwise, look for properties starting with "text_" that contain a "text" field
-              for (const textKey in obj[key]) {
-                if (textKey.startsWith('text_') && obj[key][textKey].text) {
-                  textContent = obj[key][textKey].text;
-                  break; // Take the first text_* property found
+              // Otherwise, collect ALL text components (text_*, text) and concatenate them
+              const textComponents = [];
+
+              // Check :itemsOrder first to respect authoring order
+              const itemsOrder = obj[key][':itemsOrder'] || [];
+              for (const orderedKey of itemsOrder) {
+                if ((orderedKey === 'text' || orderedKey.startsWith('text_'))
+                    && obj[key][orderedKey] && obj[key][orderedKey].text) {
+                  textComponents.push(obj[key][orderedKey].text);
                 }
+              }
+
+              // If no :itemsOrder, fall back to unordered iteration
+              if (textComponents.length === 0) {
+                for (const textKey in obj[key]) {
+                  if ((textKey === 'text' || textKey.startsWith('text_'))
+                      && obj[key][textKey].text) {
+                    textComponents.push(obj[key][textKey].text);
+                  }
+                }
+              }
+
+              // Concatenate all text components
+              if (textComponents.length > 0) {
+                textContent = textComponents.join('\n');
               }
             }
 
@@ -976,7 +1073,9 @@ async function main() {
         }
       }
     }
-    enrichByTitle(mainTabsData[':items']);
+    if (mainTabsData) {
+      enrichByTitle(mainTabsData[':items']);
+    }
 
     // Extract jcr:lastModified timestamps from model data for teasers
     function extractTimestampsFromModel(items, basePath = '') {
@@ -1036,8 +1135,17 @@ async function main() {
                 }
               }
               // xdm:linkURL - analytics/data layer tracking URL
-              if (item.dataLayer && item.id && item.dataLayer[item.id] && item.dataLayer[item.id]['xdm:linkURL']) {
-                linkSources.analyticsUrl = stripHostOnly(item.dataLayer[item.id]['xdm:linkURL']);
+              // Check nested under item.id first, then direct
+              let xdmLinkURL1;
+              if (item.dataLayer) {
+                if (item.id && item.dataLayer[item.id] && item.dataLayer[item.id]['xdm:linkURL']) {
+                  xdmLinkURL1 = item.dataLayer[item.id]['xdm:linkURL'];
+                } else if (item.dataLayer['xdm:linkURL']) {
+                  xdmLinkURL1 = item.dataLayer['xdm:linkURL'];
+                }
+              }
+              if (xdmLinkURL1 && isValidLinkURL(xdmLinkURL1)) {
+                linkSources.analyticsUrl = stripHostOnly(xdmLinkURL1);
               }
               // imageResource.linkURL - link from image metadata
               if (item.imageResource.linkURL) {
@@ -1057,7 +1165,7 @@ async function main() {
             const uniqueKey = `${newPath}`;
 
             // Create a synthetic JCR key for linkURL storage
-            const linkUrlKey = `${newPath}_linkurl`;
+            const linkURLKey = `${newPath}_linkurl`;
 
             // Store all three URL sources for comparison (keep extensions)
             const linkSources = {};
@@ -1082,8 +1190,17 @@ async function main() {
               }
             }
             // xdm:linkURL - analytics/data layer tracking URL
-            if (item.dataLayer && item.id && item.dataLayer[item.id] && item.dataLayer[item.id]['xdm:linkURL']) {
-              linkSources.analyticsUrl = stripHostOnly(item.dataLayer[item.id]['xdm:linkURL']);
+            // Check nested under item.id first, then direct
+            let xdmLinkURL2;
+            if (item.dataLayer) {
+              if (item.id && item.dataLayer[item.id] && item.dataLayer[item.id]['xdm:linkURL']) {
+                xdmLinkURL2 = item.dataLayer[item.id]['xdm:linkURL'];
+              } else if (item.dataLayer['xdm:linkURL']) {
+                xdmLinkURL2 = item.dataLayer['xdm:linkURL'];
+              }
+            }
+            if (xdmLinkURL2 && isValidLinkURL(xdmLinkURL2)) {
+              linkSources.analyticsUrl = stripHostOnly(xdmLinkURL2);
             }
 
             // Store all URL sources
@@ -1094,7 +1211,7 @@ async function main() {
               linkSources,
             };
 
-            jcrTeaserImageMap[linkUrlKey] = mapEntry;
+            jcrTeaserImageMap[linkURLKey] = mapEntry;
           }
 
           // Recurse into nested items
@@ -1104,12 +1221,15 @@ async function main() {
         }
       }
     }
-    extractTimestampsFromModel(mainTabsData[':items']);
+    if (mainTabsData) {
+      extractTimestampsFromModel(mainTabsData[':items']);
+    }
 
-    // Remove teasers from jcrTeaserImageMap that don't have imageResource AND don't have linkSources
+    // Remove teasers from jcrTeaserImageMap that don't have imageResource AND don't have linkSources AND don't have fileName
+    // Keep teasers with fileName even if not in Sling Model (needed for JCR-only content like non-tabs sections)
     const beforeCleanup = Object.keys(jcrTeaserImageMap).length;
     for (const uniqueKey in jcrTeaserImageMap) {
-      if (!jcrTeaserImageMap[uniqueKey].hasImageResource && !jcrTeaserImageMap[uniqueKey].linkSources) {
+      if (!jcrTeaserImageMap[uniqueKey].hasImageResource && !jcrTeaserImageMap[uniqueKey].linkSources && !jcrTeaserImageMap[uniqueKey].fileName) {
         delete jcrTeaserImageMap[uniqueKey];
       }
     }
@@ -1119,264 +1239,820 @@ async function main() {
     }
 
     // Button container processing disabled - buttons are already part of regular tabs structure
-    console.log(`📌 Using ${mainTabsData[':itemsOrder'].length} tabs items\n`);
+    let mainHierarchy = [];
+    if (mainTabsData) {
+      console.log(`📌 Using ${mainTabsData[':itemsOrder'].length} tabs items\n`);
 
-    // Continue with parsing
+      // Continue with parsing
+      // eslint-disable-next-line no-use-before-define
+      mainHierarchy = parseHierarchyFromModel(mainTabsData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrData, jcrPathMap, jcrTeaserImageMap);
+    } else {
+      console.log('📌 No tabs data from Sling Model - extracting tabs directly from JCR\n');
+      // eslint-disable-next-line no-use-before-define
+      mainHierarchy = extractTabsFromJCR(jcrData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrPathMap, jcrTeaserImageMap);
+    }
+
+    // Extract non-tabs content and merge with main hierarchy
     // eslint-disable-next-line no-use-before-define
-    parseHierarchyFromModel(mainTabsData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrData, jcrPathMap, jcrTeaserImageMap);
+    const nonTabsSections = extractNonTabsContent(jcrData, jcrTeaserImageMap);
+    if (nonTabsSections.length > 0) {
+      console.log(`\n📦 Found ${nonTabsSections.length} section(s) outside tabs:`);
+      nonTabsSections.forEach((section) => {
+        console.log(`   - ${section.title} (${section.items.length} items)`);
+      });
+      // Prepend non-tabs sections to the beginning of the hierarchy
+      mainHierarchy = [...nonTabsSections, ...mainHierarchy];
+    }
+
+    // Find banner images
+    // eslint-disable-next-line no-use-before-define
+    const bannerImages = extractBannerImage(jcrData, CONTENT_PATH);
+
+    // Build global item registry from existing hierarchy (Sling Model)
+    // This tracks items with their parent context to prevent duplicates within the same parent
+    // Declared here so it's accessible throughout the script
+    const globalItemRegistry = new Set();
+    function buildGlobalItemRegistry(items, parentPath = '') {
+      if (!items || !Array.isArray(items)) return;
+      items.forEach((item) => {
+        if (item.type === 'button' || item.type === 'accordion') {
+          // Include parent path in unique key to allow same-named items in different sections
+          const uniqueKey = `${parentPath}|${item.type}|${item.key || ''}|${item.title || ''}`;
+          globalItemRegistry.add(uniqueKey);
+        }
+        if (item.items) {
+          // Pass the current item's path as parent for children
+          buildGlobalItemRegistry(item.items, item.path || item.title || '');
+        }
+      });
+    }
+
+    // Supplement with content from JCR BEFORE transformations (so unwrapping doesn't remove accordions with JCR text)
+    // Skip this if non-tabs sections already exist (they've already been fully extracted including accordions)
+    const hasNonTabsSections = nonTabsSections.length > 0;
+
+    if (hasNonTabsSections) {
+      console.log('\n⏭️  Skipping JCR button/accordion extraction (non-tabs sections already fully extracted)');
+      // Still initialize the global registry for deduplication later
+      buildGlobalItemRegistry(mainHierarchy);
+      console.log(`📋 Global item registry: ${globalItemRegistry.size} unique item(s) from Sling Model`);
+    } else {
+      console.log('\n🔍 Checking for missing content in JCR (buttons only - accordion extraction disabled)...');
+      // eslint-disable-next-line no-use-before-define
+      const jcrButtonContainerPaths = findAllButtonContainerPaths(jcrData.root);
+      // Accordion extraction disabled to avoid duplicates
+      const jcrAccordionPaths = [];
+
+      console.log(`📊 Found ${jcrButtonContainerPaths.length} container(s) with buttons in JCR`);
+      console.log('📊 JCR accordion extraction: DISABLED');
+
+      if (jcrButtonContainerPaths.length > 0 || jcrAccordionPaths.length > 0) {
+      // Extract buttons from all containers
+        const jcrButtons = [];
+        jcrButtonContainerPaths.forEach((containerPath) => {
+        // eslint-disable-next-line no-use-before-define
+          const buttons = extractButtonsFromContainer(jcrData, containerPath);
+          if (buttons.length > 0) {
+            console.log(`  - ${containerPath}: ${buttons.length} button(s)`);
+            jcrButtons.push({ containerPath, buttons });
+          }
+        });
+
+        // Extract text from all accordions (each accordion may have multiple panels)
+        const jcrAccordionTexts = [];
+        jcrAccordionPaths.forEach((accordionPath) => {
+        // eslint-disable-next-line no-use-before-define
+          const panels = extractTextFromAccordion(jcrData, accordionPath);
+          if (panels && Array.isArray(panels)) {
+            panels.forEach((panel) => {
+              jcrAccordionTexts.push({
+                accordionPath,
+                text: panel.text,
+                title: panel.title,
+                panelKey: panel.key,
+              });
+            });
+          }
+        });
+
+        console.log(`\n📌 Found ${jcrButtons.reduce((sum, c) => sum + c.buttons.length, 0)} button(s) and ${jcrAccordionTexts.length} accordion text content(s) to merge`);
+
+        // Build a map of JCR container paths to their panel titles for better matching
+        const containerTitleMap = {};
+        function mapContainerTitles(obj, currentPath = '') {
+          if (!obj || typeof obj !== 'object') return;
+          for (const key in obj) {
+            if (!key.startsWith(':') && typeof obj[key] === 'object') {
+              const newPath = currentPath ? `${currentPath}/${key}` : key;
+              const panelTitle = obj[key]['cq:panelTitle'] || obj[key]['jcr:title'];
+              if (panelTitle) {
+                containerTitleMap[`/jcr:content/${newPath}`] = panelTitle;
+              }
+              mapContainerTitles(obj[key], newPath);
+            }
+          }
+        }
+        mapContainerTitles(jcrData.root);
+
+        // Initialize global item registry with mainHierarchy
+        buildGlobalItemRegistry(mainHierarchy);
+        console.log(`📋 Global item registry: ${globalItemRegistry.size} unique item(s) from Sling Model`);
+
+        // Merge JCR buttons and accordion text into hierarchy by matching tab titles
+        const mergedContainers = new Set(); // Track which JCR containers we've already merged
+
+        function mergeJCRContentIntoHierarchy(items, depth = 0) {
+          if (!items || !Array.isArray(items)) return;
+
+          // Safeguard against infinite recursion
+          if (depth > 50) {
+            console.warn(`⚠️  Stopping recursion at depth ${depth} to prevent stack overflow`);
+            return;
+          }
+
+          items.forEach((item) => {
+          // Check if this item's title matches any button container's parent
+            jcrButtons.forEach(({ containerPath, buttons }) => {
+            // Skip if we've already merged this container
+              if (mergedContainers.has(containerPath)) {
+                return;
+              }
+              // Find the nearest ancestor container with a title by traversing up the path
+              let parentTitle = null;
+              let parentPath = containerPath;
+              const pathParts = containerPath.split('/');
+
+              // Try each ancestor path from closest to furthest
+              for (let i = pathParts.length - 1; i >= 0 && !parentTitle; i--) {
+                const ancestorPath = pathParts.slice(0, i + 1).join('/');
+                if (containerTitleMap[ancestorPath]) {
+                  parentTitle = containerTitleMap[ancestorPath];
+                  parentPath = ancestorPath;
+                  break;
+                }
+              }
+
+              // Match by title (most reliable) or by key
+              const titleMatches = parentTitle && item.title === parentTitle;
+              const keyMatches = item.key && (parentPath.includes(`/${item.key}/`) || parentPath.endsWith(`/${item.key}`));
+
+              if (titleMatches || keyMatches) {
+              // This item might be the parent - add buttons if not already present
+              // Use key+title combination for comparison (more reliable than ID alone)
+                const existingButtonKeys = new Set();
+                if (item.items) {
+                  item.items.forEach((child) => {
+                    if (child.type === 'button') {
+                    // Use key+title combination for uniqueness check
+                      const uniqueKey = `${child.key || ''}|${child.title || ''}`;
+                      existingButtonKeys.add(uniqueKey);
+                    }
+                  });
+                }
+
+                // Add missing buttons
+                let addedCount = 0;
+                let skippedCount = 0;
+                buttons.forEach((button) => {
+                  const buttonUniqueKey = `${button.key || ''}|${button.title || ''}`;
+                  // For buttons: use global deduplication (buttons should be globally unique)
+                  const globalButtonKey = `button|${button.key || ''}|${button.title || ''}`;
+                  // Check if this button exists ANYWHERE in the hierarchy
+                  let existsGlobally = false;
+                  for (const registryKey of globalItemRegistry) {
+                    if (registryKey.endsWith(globalButtonKey)) {
+                      existsGlobally = true;
+                      break;
+                    }
+                  }
+                  if (existsGlobally) {
+                    // This button already exists elsewhere in the hierarchy (from Sling Model)
+                    skippedCount++;
+                  } else if (!existingButtonKeys.has(buttonUniqueKey)) {
+                    if (!item.items) {
+                      item.items = [];
+                    }
+                    // Create a deep copy to avoid circular references
+                    const buttonCopy = JSON.parse(JSON.stringify(button));
+                    // Add path to button copy
+                    buttonCopy.path = item.path ? `${item.path}${PATH_SEPARATOR}${buttonCopy.title}` : buttonCopy.title;
+                    item.items.push(buttonCopy);
+                    addedCount++;
+                    // Mark as added to prevent re-adding in future iterations
+                    existingButtonKeys.add(buttonUniqueKey);
+                    // Also add to global registry (with parent path) to prevent duplicates
+                    const globalUniqueKey = `${item.path || item.title || ''}|button|${button.key || ''}|${button.title || ''}`;
+                    globalItemRegistry.add(globalUniqueKey);
+                  }
+                });
+                if (addedCount > 0 || skippedCount > 0) {
+                  if (addedCount > 0) {
+                    console.log(`  ✅ Added ${addedCount} missing button(s) to "${item.title}"`);
+                  }
+                  if (skippedCount > 0) {
+                    console.log(`  ⏭️  Skipped ${skippedCount} duplicate button(s) for "${item.title}" (already exists in hierarchy)`);
+                  }
+                  // Mark this container as merged to prevent duplicates
+                  mergedContainers.add(containerPath);
+                }
+              }
+            });
+
+            // Merge accordion text content
+            jcrAccordionTexts.forEach(({ accordionPath, text }) => {
+            // Only merge accordion text to accordion items, NOT to parent tabs
+            // Extract the accordion key from the JCR path (last component)
+              const pathParts = accordionPath.split('/').filter((p) => p && !p.startsWith('jcr:'));
+              const accordionKeyInPath = pathParts[pathParts.length - 1]; // e.g., "accordion_copy_copy__667460752"
+
+              // Only match if this is an accordion item AND the keys match exactly
+              const shouldMerge = (item.type === 'accordion' && item.key === accordionKeyInPath);
+
+              if (shouldMerge && text) {
+              // Append text if not already present
+                if (!item.text) {
+                  item.text = text;
+                } else if (!item.text.includes(text.substring(0, 300))) {
+                // Only append if this text isn't already present (check first 300 chars as signature for better uniqueness)
+                  item.text += `\n${text}`;
+                }
+                // Mark as matched
+                accordionPath.matched = true;
+              }
+            });
+
+            // Recurse into children
+            if (item.items) {
+              mergeJCRContentIntoHierarchy(item.items, depth + 1);
+            }
+          });
+        }
+
+        mergeJCRContentIntoHierarchy(mainHierarchy);
+
+        // Extract unmatched JCR-only accordion panels and add them to the hierarchy
+        const unmatchedAccordions = jcrAccordionTexts.filter(({ accordionPath }) => !accordionPath.matched);
+        if (unmatchedAccordions.length > 0) {
+          console.log(`\n🔍 Found ${unmatchedAccordions.length} JCR-only accordion panel(s) to add to hierarchy`);
+
+          // Group panels by accordion path
+          const accordionGroups = {};
+          unmatchedAccordions.forEach(({
+            accordionPath, text, title, panelKey,
+          }) => {
+            if (!accordionGroups[accordionPath]) {
+              accordionGroups[accordionPath] = [];
+            }
+            accordionGroups[accordionPath].push({ text, title, panelKey });
+          });
+
+          // Sort accordion paths by depth (shallowest first) to ensure parent accordions are added before children
+          const sortedPaths = Object.keys(accordionGroups).sort((a, b) => {
+            const depthA = a.split('/').length;
+            const depthB = b.split('/').length;
+            return depthA - depthB;
+          });
+
+          // For each accordion (in depth order), find its nearest ancestor with a title
+          sortedPaths.forEach((accordionPath) => {
+            const panels = accordionGroups[accordionPath];
+
+            // Extract path hierarchy
+            // e.g., "/jcr:content/container/container_copy/container_copy_78921/accordion_copy_50799"
+            const allPathParts = accordionPath.split('/');
+
+            // Find the nearest ancestor with a title by traversing up the path
+            // IMPORTANT: We need to find an ancestor that exists in the hierarchy,
+            // not one that's also JCR-only
+            let ancestorTitle = null;
+            let foundInHierarchy = false;
+
+            for (let i = allPathParts.length - 2; i >= 0 && !foundInHierarchy; i--) {
+              const ancestorPath = allPathParts.slice(0, i + 1).join('/');
+              // Check if any paths under this ancestor have a title
+              // Find ALL matching titles, then check which ones exist in hierarchy
+              const matchingTitles = Object.keys(containerTitleMap)
+                .filter((path) => path.startsWith(ancestorPath))
+                .map((path) => containerTitleMap[path]);
+
+              if (matchingTitles.length > 0) {
+              // Check if any of these titles exists in the hierarchy (not just in JCR)
+                function titleExistsInHierarchy(items, title) {
+                  if (!items || !Array.isArray(items)) return false;
+                  for (const item of items) {
+                    if (item.title === title) return true;
+                    if (item.items && titleExistsInHierarchy(item.items, title)) return true;
+                  }
+                  return false;
+                }
+
+                // Find first title that exists in hierarchy
+                for (const potentialTitle of matchingTitles) {
+                  if (titleExistsInHierarchy(mainHierarchy, potentialTitle)) {
+                    ancestorTitle = potentialTitle;
+                    foundInHierarchy = true;
+                    break;
+                  }
+                }
+              }
+            }
+
+            const pathParts = accordionPath.split('/').filter((p) => p && !p.startsWith('jcr:'));
+            const grandparentKey = pathParts[pathParts.length - 3]; // container_copy
+
+            // Find the ancestor section in hierarchy
+            function findAncestorAndAddAccordions(items) {
+              if (!items || !Array.isArray(items)) return false;
+
+              for (const item of items) {
+              // Match by title (e.g., "Visual", "VIS ID")
+                const titleMatches = ancestorTitle && item.title === ancestorTitle;
+                const keyMatches = item.key && (grandparentKey === item.key || item.path?.includes(ancestorTitle));
+
+                if (titleMatches || keyMatches) {
+                // Add each panel as a separate accordion item (check for global duplicates)
+                  let addedAccordionCount = 0;
+                  let skippedAccordionCount = 0;
+                  panels.forEach((panel) => {
+                    // For accordions: use global deduplication (same as buttons)
+                    const globalAccordionKey = `accordion|${panel.panelKey || ''}|${panel.title || ''}`;
+                    // Check if this accordion exists ANYWHERE in the actual hierarchy (not just registry)
+                    // This handles nested tabs that might not be in the main registry
+                    let existsGlobally = false;
+                    function checkHierarchyForAccordion(items) {
+                      if (!items || !Array.isArray(items)) return false;
+                      for (const hierarchyItem of items) {
+                        if (hierarchyItem.type === 'accordion'
+                            && hierarchyItem.key === panel.panelKey
+                            && hierarchyItem.title === panel.title) {
+                          return true;
+                        }
+                        if (hierarchyItem.items && checkHierarchyForAccordion(hierarchyItem.items)) {
+                          return true;
+                        }
+                      }
+                      return false;
+                    }
+                    existsGlobally = checkHierarchyForAccordion(mainHierarchy);
+
+                    if (existsGlobally) {
+                      skippedAccordionCount++;
+                    } else {
+                      const accordionItem = {
+                        title: panel.title,
+                        path: item.path ? `${item.path}${PATH_SEPARATOR}${panel.title}` : panel.title,
+                        type: 'accordion',
+                        key: panel.panelKey,
+                        text: panel.text || '',
+                      };
+
+                      if (!item.items) {
+                        item.items = [];
+                      }
+                      item.items.push(accordionItem);
+                      addedAccordionCount++;
+                      // Add to global registry (with parent path) to prevent duplicates
+                      const globalUniqueKey = `${item.path || item.title || ''}|accordion|${panel.panelKey || ''}|${panel.title || ''}`;
+                      globalItemRegistry.add(globalUniqueKey);
+                    }
+                  });
+                  if (addedAccordionCount > 0) {
+                    console.log(`  ✅ Added ${addedAccordionCount} JCR-only accordion panel(s) to "${item.title}"`);
+                  }
+                  if (skippedAccordionCount > 0) {
+                    console.log(`  ⏭️  Skipped ${skippedAccordionCount} duplicate accordion(s) for "${item.title}" (already exists in hierarchy)`);
+                  }
+                  return true;
+                }
+
+                // Recurse into children FIRST to find nested items
+                if (item.items && findAncestorAndAddAccordions(item.items)) {
+                  return true;
+                }
+              }
+              return false;
+            }
+
+            if (!findAncestorAndAddAccordions(mainHierarchy)) {
+              console.log(`  ⚠️  Could not find ancestor for accordion at ${accordionPath} (looking for "${ancestorTitle}")`);
+            }
+          });
+        }
+
+      // NOTE: Orphan accordion text fallback logic removed
+      // If accordion text doesn't match any hierarchy item, it's intentionally ignored
+      // Merging orphans to the first item caused incorrect text associations
+      }
+    } // End of else block for JCR button/accordion extraction
+
+    // NOW apply transformations AFTER JCR content is merged
+    console.log('\n🔄 Applying hierarchy transformations...');
+    // eslint-disable-next-line no-use-before-define
+    const unwrappedHierarchy = unwrapAccordionItems(mainHierarchy);
+    // eslint-disable-next-line no-use-before-define
+    const accordionConverted = convertAccordionContainers(unwrappedHierarchy);
+    // eslint-disable-next-line no-use-before-define
+    const tabConverted = convertTabContainers(accordionConverted);
+    // eslint-disable-next-line no-use-before-define
+    let convertedHierarchy = filterEmptyContainers(tabConverted);
+
+    // Extract missing sections from JCR that aren't in Sling Model
+    console.log('\n🔍 Checking for missing sections in JCR...');
+    const existingSectionTitles = convertedHierarchy.map((section) => section.title);
+    const missingSections = extractMissingSectionsFromJCR(jcrData, existingSectionTitles, convertedHierarchy, jcrTeaserImageMap);
+
+    if (missingSections.length > 0) {
+      console.log(`✅ Found ${missingSections.length} missing section(s) from JCR - adding to hierarchy`);
+      convertedHierarchy.push(...missingSections);
+
+      // Rebuild global registry to include newly added sections from JCR
+      console.log('🔄 Rebuilding global item registry with JCR-added sections...');
+      globalItemRegistry.clear();
+      buildGlobalItemRegistry(convertedHierarchy);
+      console.log(`📋 Updated global item registry: ${globalItemRegistry.size} unique item(s)`);
+
+      // Unwrap any accordion wrappers that were added from JCR
+      // (items with title starting with 'accordion_' - skip the wrapper but keep its children)
+      console.log('🔄 Unwrapping accordion wrappers added from JCR...');
+      const beforeUnwrap = JSON.stringify(convertedHierarchy).length;
+      for (let i = 0; i < convertedHierarchy.length; i++) {
+        if (convertedHierarchy[i].items) {
+          convertedHierarchy[i].items = unwrapAccordionItems(convertedHierarchy[i].items);
+        }
+      }
+      const afterUnwrap = JSON.stringify(convertedHierarchy).length;
+      console.log(`✅ Unwrapped JCR accordions (${beforeUnwrap} -> ${afterUnwrap} bytes)`);
+
+      // Remove "Other Content" section if it became empty after unwrapping
+      const otherContentIndex = convertedHierarchy.findIndex(
+        (section) => section.title === 'Other Content',
+      );
+      if (otherContentIndex !== -1) {
+        const otherContent = convertedHierarchy[otherContentIndex];
+        if (!otherContent.items || otherContent.items.length === 0) {
+          console.log('⚠️  Removing empty "Other Content" section');
+          convertedHierarchy.splice(otherContentIndex, 1);
+        }
+      }
+    } else {
+      console.log('✅ No missing sections detected');
+    }
+
+    // JCR-based proximity grouping: Nest tabs under titles based on JCR file order
+    console.log('\n🔍 Applying JCR-based proximity semantic grouping...');
+
+    // Build a map of JCR container order (titles and tabs components)
+    const jcrContainerOrder = [];
+    const rootContainer = jcrData.root.container;
+
+    for (const containerKey in rootContainer) {
+      const container = rootContainer[containerKey];
+      if (!container || typeof container !== 'object') continue;
+      if (containerKey.startsWith('jcr:') || containerKey.startsWith('cq:') || containerKey.startsWith('sling:')) continue;
+
+      // Check if this container has a title component
+      for (const nestedKey in container) {
+        const nestedItem = container[nestedKey];
+        if (nestedItem && nestedItem['sling:resourceType'] === 'tccc-dam/components/title') {
+          jcrContainerOrder.push({
+            type: 'title',
+            title: nestedItem['jcr:title'],
+            containerKey,
+          });
+          break;
+        }
+      }
+
+      // Check if this container has a tabs component
+      for (const nestedKey in container) {
+        const nestedItem = container[nestedKey];
+        if (nestedItem && nestedItem['sling:resourceType'] === 'tccc-dam/components/tabs') {
+          // Extract tab panel titles
+          const tabTitles = [];
+          for (const tabKey in nestedItem) {
+            const tabItem = nestedItem[tabKey];
+            if (tabItem && typeof tabItem === 'object' && tabItem['cq:panelTitle']) {
+              tabTitles.push(tabItem['cq:panelTitle']);
+            }
+          }
+          jcrContainerOrder.push({
+            type: 'tabs',
+            tabTitles,
+            containerKey,
+          });
+          break;
+        }
+      }
+    }
+
+    if (jcrContainerOrder.length > 0) {
+      console.log(`Found ${jcrContainerOrder.filter((i) => i.type === 'title').length} title(s) and ${jcrContainerOrder.filter((i) => i.type === 'tabs').length} tabs component(s) in JCR`);
+    }
+
+    // Group tabs under preceding titles based on JCR proximity
+    const groupedHierarchy = [];
+    const processedTabs = new Set(); // Track which tabs have been nested
+
+    for (let i = 0; i < jcrContainerOrder.length; i++) {
+      const current = jcrContainerOrder[i];
+
+      if (current.type === 'title') {
+        // Find this title in convertedHierarchy
+        const titleItem = convertedHierarchy.find((item) => item.type === 'title' && item.title === current.title);
+
+        if (titleItem) {
+          const titleSection = { ...titleItem };
+          if (!titleSection.items) {
+            titleSection.items = [];
+          }
+
+          // Look ahead in JCR order for immediately following tabs
+          let grouped = false;
+          if (i + 1 < jcrContainerOrder.length && jcrContainerOrder[i + 1].type === 'tabs') {
+            const nextTabs = jcrContainerOrder[i + 1];
+
+            // Find and nest these tabs under this title
+            const tabsToNest = [];
+            for (const tabTitle of nextTabs.tabTitles) {
+              const tabItem = convertedHierarchy.find((item) => item.type === 'tab' && item.title === tabTitle && !processedTabs.has(item.title));
+              if (tabItem) {
+                tabsToNest.push(tabItem);
+                processedTabs.add(tabItem.title);
+              }
+            }
+
+            if (tabsToNest.length > 0) {
+              titleSection.items.push(...tabsToNest);
+              console.log(`  📁 Grouped ${tabsToNest.length} tab(s) [${tabsToNest.map((t) => t.title).join(', ')}] under title "${current.title}"`);
+              grouped = true;
+            }
+          }
+
+          groupedHierarchy.push(titleSection);
+        }
+      }
+    }
+
+    // Add any remaining items that weren't processed
+    convertedHierarchy.forEach((item) => {
+      if (item.type === 'title' && !groupedHierarchy.find((g) => g.type === 'title' && g.title === item.title)) {
+        // Title wasn't in JCR order (probably added from non-tabs content) - keep it as is
+        groupedHierarchy.push(item);
+      } else if (item.type === 'tab' && !processedTabs.has(item.title)) {
+        // Tab wasn't nested - keep it at root level
+        groupedHierarchy.push(item);
+      } else if (item.type !== 'title' && item.type !== 'tab') {
+        // Other item types (accordion, button, etc.) - keep as is
+        groupedHierarchy.push(item);
+      }
+    });
+
+    // Replace convertedHierarchy with the grouped version only if we nested tabs
+    const originalLength = convertedHierarchy.length;
+    if (processedTabs.size > 0) {
+      convertedHierarchy = groupedHierarchy;
+      console.log(`✅ JCR-based proximity grouping complete (${processedTabs.size} tabs nested)`);
+    } else {
+      console.log('✅ No JCR-based proximity grouping needed (no tabs found in JCR)');
+    }
+
+    // Final deduplication pass: Remove any buttons or accordions that appear multiple times
+    console.log('\n🔍 Running final deduplication pass...');
+
+    // Pass 1: Collect all button/accordion items
+    const allItems = new Map(); // uniqueKey -> array of {item, path}
+    function collectItems(items, parentPath = '') {
+      if (!items || !Array.isArray(items)) return;
+      items.forEach((item) => {
+        if (item.type === 'button' || item.type === 'accordion') {
+          // Use global uniqueness for both buttons and accordions (type|key|title)
+          // Content comparison will determine if they're true duplicates
+          const uniqueKey = `${item.type}|${item.key}|${item.title}`;
+          if (!allItems.has(uniqueKey)) {
+            allItems.set(uniqueKey, []);
+          }
+          allItems.get(uniqueKey).push({ item, path: item.path || parentPath });
+        }
+        if (item.items) {
+          collectItems(item.items, item.path || item.title || parentPath);
+        }
+      });
+    }
+
+    for (const section of convertedHierarchy) {
+      collectItems(section.items, section.path || section.title);
+    }
+
+    // Pass 2: For duplicates, decide which to keep (prefer Sling Model version)
+    const itemsToRemove = new Set(); // Set of paths to remove
+    allItems.forEach((occurrences, uniqueKey) => {
+      if (occurrences.length > 1) {
+        // Check if all occurrences are at the same path - this indicates a bug where items were added twice
+        const paths = occurrences.map((o) => o.path);
+        const uniquePaths = [...new Set(paths)];
+
+        if (uniquePaths.length === 1) {
+          // All duplicates are at the same path - this is a bug, just keep the first one
+          console.log(`  ⚠️  WARNING: Multiple instances of ${occurrences[0].item.type} "${occurrences[0].item.title}" at same path "${uniquePaths[0]}" - keeping only first instance`);
+          // Don't remove any via path matching - instead deduplicate the array directly
+          return;
+        }
+
+        // Check if all occurrences have the same URL/content - if not, they're not truly duplicates
+        if (occurrences[0].item.type === 'button') {
+          const urls = occurrences.map((o) => {
+            const ls = o.item.linkSources || {};
+            return ls.clickableUrl || ls.analyticsUrl || ls.storageUrl || '';
+          });
+          const uniqueURLs = [...new Set(urls.filter((u) => u))];
+          if (uniqueURLs.length > 1) {
+            // Buttons have different URLs - they're not truly duplicates, keep all
+            console.log(`  ℹ️  Keeping all ${occurrences.length} buttons titled "${occurrences[0].item.title}" (different URLs)`);
+            return;
+          }
+        } else if (occurrences[0].item.type === 'accordion') {
+          // For accordions, check if they have different text content
+          const texts = occurrences.map((o) => (o.item.text || '').trim());
+          const uniqueTexts = [...new Set(texts)];
+          if (uniqueTexts.length > 1 && uniqueTexts.some((t) => t.length > 0)) {
+            // Accordions have different non-empty text content - not true duplicates, keep all
+            console.log(`  ℹ️  Keeping all ${occurrences.length} accordions titled "${occurrences[0].item.title}" (different content)`);
+            return;
+          }
+        }
+
+        // Find the best one (prefer Sling Model, but also consider content richness)
+        let bestIdx = 0;
+        for (let i = 1; i < occurrences.length; i++) {
+          const current = occurrences[i].item;
+          const best = occurrences[bestIdx].item;
+
+          // Score: panelTitle=10, button-ID=5, text content length=0.001 per char
+          const currentScore = (current['cq:panelTitle'] ? 10 : 0)
+                             + (current.id && current.id.startsWith('button-') && !current.id.startsWith('custom-button-') ? 5 : 0)
+                             + ((current.text || '').length * 0.001);
+          const bestScore = (best['cq:panelTitle'] ? 10 : 0)
+                          + (best.id && best.id.startsWith('button-') && !best.id.startsWith('custom-button-') ? 5 : 0)
+                          + ((best.text || '').length * 0.001);
+          if (currentScore > bestScore) {
+            bestIdx = i;
+          }
+        }
+
+        // Mark all others for removal
+        occurrences.forEach((occ, idx) => {
+          if (idx !== bestIdx) {
+            itemsToRemove.add(occ.path);
+            console.log(`  ⏭️  Removing duplicate ${occ.item.type} "${occ.item.title}" from "${occ.path}"`);
+          }
+        });
+        console.log(`  ✅ Keeping ${occurrences[bestIdx].item.type} "${occurrences[bestIdx].item.title}" at "${occurrences[bestIdx].path}"`);
+      }
+    });
+
+    // Pass 3: Filter hierarchy to remove marked items AND deduplicate same-path items
+    function filterItems(items) {
+      if (!items || !Array.isArray(items)) return items;
+
+      // First filter by path
+      let filtered = items.filter((item) => !itemsToRemove.has(item.path));
+
+      // Then deduplicate items at the same path - prefer items with content
+      const pathGroups = new Map(); // pathKey -> array of items
+      filtered.forEach((item) => {
+        // For any item type, group by path
+        const pathKey = `${item.type}|${item.path}`;
+        if (!pathGroups.has(pathKey)) {
+          pathGroups.set(pathKey, []);
+        }
+        pathGroups.get(pathKey).push(item);
+      });
+
+      // For each group, pick the best item (prefer items with content)
+      const itemsToKeep = new Set();
+      pathGroups.forEach((groupItems, pathKey) => {
+        if (groupItems.length === 1) {
+          itemsToKeep.add(groupItems[0]);
+        } else {
+          // Multiple items with same path - pick the one with content
+          let bestItem = groupItems[0];
+
+          for (const item of groupItems) {
+            // Prefer items that have non-empty items array
+            const currentHasItems = item.items && Array.isArray(item.items) && item.items.length > 0;
+            const bestHasItems = bestItem.items && Array.isArray(bestItem.items) && bestItem.items.length > 0;
+
+            if (currentHasItems && !bestHasItems) {
+              // Current has items, best doesn't - prefer current
+              bestItem = item;
+            }
+            // If both have items or both don't have items, keep the first one (bestItem)
+          }
+
+          // Log if we're removing an empty duplicate
+          if (groupItems.length > 1) {
+            const removedCount = groupItems.length - 1;
+            console.log(`  🔄 Removing ${removedCount} duplicate(s) at path "${bestItem.path}" (keeping the one with ${bestItem.items?.length || 0} items)`);
+          }
+
+          itemsToKeep.add(bestItem);
+        }
+      });
+
+      // Filter to keep only the selected items
+      filtered = filtered.filter((item) => itemsToKeep.has(item));
+
+      // Recursively process children
+      filtered.forEach((item) => {
+        if (item.items) {
+          item.items = filterItems(item.items);
+        }
+      });
+
+      return filtered;
+    }
+
+    // First, apply filtering to root-level items themselves
+    convertedHierarchy = filterItems(convertedHierarchy);
+
+    // Then apply filtering to nested items within each section
+    for (let i = 0; i < convertedHierarchy.length; i++) {
+      if (convertedHierarchy[i].items) {
+        convertedHierarchy[i].items = filterItems(convertedHierarchy[i].items);
+      }
+    }
+
+    if (itemsToRemove.size > 0) {
+      console.log(`✅ Removed ${itemsToRemove.size} duplicate item(s)`);
+    } else {
+      console.log('✅ No duplicates found');
+    }
+
+    // Save to file
+    const jsonOutputPath = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
+    const hierarchyStructure = {
+      title: jcrData['jcr:title'] || '',
+      items: convertedHierarchy,
+      linkURL: CONTENT_PATH,
+    };
+
+    // Add banner images to root level if any found
+    if (bannerImages.length > 0) {
+      hierarchyStructure.bannerImages = bannerImages;
+      console.log(`🖼️  Found ${bannerImages.length} banner image(s):`);
+      bannerImages.forEach((img, index) => {
+        console.log(`   ${index + 1}. ${img.fileName} (${img.alt || 'No alt text'})`);
+      });
+    }
+
+    // Clean up internal metadata before saving
+    function removeInternalMetadata(items) {
+      if (!items || !Array.isArray(items)) return items;
+      items.forEach((item) => {
+        delete item['cq:panelTitle']; // Internal metadata only, not needed in output
+        delete item.__jcrSection; // Internal metadata only
+        if (item.items) {
+          removeInternalMetadata(item.items);
+        }
+      });
+      return items;
+    }
+
+    // Remove internal metadata from all sections
+    if (hierarchyStructure.items) {
+      removeInternalMetadata(hierarchyStructure.items);
+    }
+
+    fs.writeFileSync(jsonOutputPath, JSON.stringify(hierarchyStructure, null, 2));
+    console.log('✅ Hierarchy extracted successfully!');
+    console.log(`💾 JSON structure saved to: ${jsonOutputPath}`);
+
+    console.log('\n📋 OUTPUTS SAVED');
+    console.log('===============');
+    console.log(`📋 JSON structure: ${jsonOutputPath}`);
+
+    // Display summary
+    function countItems(items) {
+      let count = items.length;
+      items.forEach((item) => {
+        if (item.items) {
+          count += countItems(item.items);
+        }
+      });
+      return count;
+    }
+
+    const totalItems = countItems(mainHierarchy);
+    console.log('\n📊 Hierarchy Summary:');
+    console.log(`  Total items (including nested): ${totalItems}`);
+    console.log(`  Root level items: ${mainHierarchy.length}`);
+    if (mainHierarchy.length > 0) {
+      console.log(`  First item: "${mainHierarchy[0].title}" (${mainHierarchy[0].type})`);
+    }
   } catch (error) {
     console.error(`❌ Failed: ${error.message}`);
     process.exit(1);
   }
-}
-
-// Function to build JSON structure
-function buildJsonStructure(jsonData, teaserPathMap) {
-  if (!jsonData || !jsonData[':items']) return [];
-
-  function buildJsonItems(items, parentPath = '', displayPath = '') {
-    if (!items || typeof items !== 'object') return [];
-
-    const result = [];
-    const itemsOrder = items[':itemsOrder'] || Object.keys(items[':items'] || items);
-    const itemsData = items[':items'] || items;
-
-    if (itemsOrder && itemsData) {
-      itemsOrder.forEach((itemKey) => {
-        // Skip renamed duplicate items at root level (e.g., item_1_source1)
-        if (parentPath === '' && itemKey.match(/_source\d+$/)) {
-          return;
-        }
-
-        const item = itemsData[itemKey];
-        if (!item) return;
-
-        // Skip internal/structural keys
-        if (itemKey.startsWith(':')) {
-          return;
-        }
-
-        // Get title using fallback chain
-        // eslint-disable-next-line no-use-before-define
-        const title = extractTitleFromItem(item, itemKey);
-
-        // Build display path (hierarchy path for user viewing)
-        const currentDisplayPath = displayPath ? `${displayPath}${PATH_SEPARATOR}${title.trim()}` : title.trim();
-
-        // Check if this is a teaser with image
-        // eslint-disable-next-line no-use-before-define
-        const isTeaserWithImage = isTeaser(item, itemKey);
-
-        // Get content items (skipping structural containers)
-        // eslint-disable-next-line no-use-before-define
-        const contentItems = getContentItems(item);
-        const hasChildren = contentItems && contentItems[':items']
-                                  && Object.keys(contentItems[':items']).length > 0;
-
-        // Build current path for context
-        let currentPath = parentPath;
-
-        if (itemKey !== ':items' && itemKey !== ':itemsOrder') {
-          currentPath += `/${itemKey}`;
-        }
-
-        // Determine type
-        let itemType = 'item'; // default
-        if (isTeaserWithImage) {
-          itemType = 'image';
-        } else if (!hasChildren) {
-          // Items without children are links
-          itemType = 'link';
-        } else {
-          // Check if this has tab children (structure indicates tabs)
-          const childKeys = Object.keys(contentItems[':items'] || {});
-          const hasTabsChild = childKeys.some((k) => k === 'tabs' || k.match(/^tabs_.*$/));
-
-          if (hasTabsChild) {
-            itemType = 'tabs';
-          } else {
-            // Has children but no tabs component = dropdown or container
-            itemType = 'dropdown';
-          }
-        }
-
-        // Build the JSON item
-        const jsonItem = {
-          title,
-          path: currentDisplayPath,
-          type: itemType,
-        };
-
-        // Add ID if different from title
-        if (title !== itemKey && item.id) {
-          jsonItem.id = item.id;
-        }
-
-        // Add linkURL if available from item itself (Sling Model data only)
-        // Check multiple possible locations: item.linkURL, item.link.url
-        // Otherwise use ID-based matching (most accurate), then title-based
-        if (item.linkURL) {
-          jsonItem.linkURL = stripHostAndExtension(item.linkURL); // Strip for item.linkURL
-        } else if (item.link && item.link.url) {
-          jsonItem.linkURL = stripHostAndExtension(item.link.url); // Strip for item.link.url
-        } else if (item.id && jcrLinkUrlMap[item.id]) {
-          // Try ID-based matching first (most accurate for duplicate titles)
-          jsonItem.linkURL = stripHostAndExtension(jcrLinkUrlMap[item.id]);
-        } else {
-          // Use title-based matching (only items WITH linkURLs are in the map)
-          const linkURL = stripHostAndExtension(jcrLinkUrlMap[String(title)]);
-          if (linkURL) {
-            jsonItem.linkURL = linkURL;
-          }
-        }
-
-        // Add image URL if it's a teaser with image
-        if (isTeaserWithImage) {
-          // Get teaser by composite key: item.id + itemKey
-          const compositeKey = `${item.id}:${itemKey}`;
-          const matchingTeaser = teaserPathMap[compositeKey];
-          if (matchingTeaser) {
-            // eslint-disable-next-line no-use-before-define
-            const imageUrl = buildImageUrl(item, itemKey, matchingTeaser.jcrPath);
-            if (imageUrl) {
-              jsonItem.imageUrl = imageUrl;
-
-              // Download the image with full URL
-              const { fileName } = item.imageResource;
-              const fullImageUrl = `${AEM_AUTHOR}${imageUrl}`;
-              downloadAndSaveImage(fullImageUrl, fileName, item.id).catch((err) => {
-                console.error(`⚠️  Could not download image: ${err.message}`);
-              });
-            }
-          }
-        }
-
-        // Add children if they exist - PRESERVE ALL NESTING
-        if (hasChildren && contentItems[':items']) {
-          const childKeys = Object.keys(contentItems[':items']);
-          // Build items from the raw children to preserve all levels
-          const childItems = buildJsonItemsFromContainer(contentItems[':items'], currentPath, currentDisplayPath);
-          if (childItems.length > 0) {
-            jsonItem.items = childItems;
-          }
-        }
-
-        result.push(jsonItem);
-      });
-    }
-
-    return result;
-  }
-
-  // Helper function to build items from a container, preserving all nesting
-  function buildJsonItemsFromContainer(itemsData, parentPath = '', displayPath = '') {
-    const result = [];
-    const itemsOrder = itemsData[':itemsOrder'] || Object.keys(itemsData);
-
-    itemsOrder.forEach((itemKey) => {
-      // Skip internal keys
-      if (itemKey.startsWith(':')) {
-        return;
-      }
-
-      const item = itemsData[itemKey];
-      if (!item) return;
-
-      // Get title
-      // eslint-disable-next-line no-use-before-define
-      const title = extractTitleFromItem(item, itemKey);
-
-      // Skip text-only items and instruction items
-      if (!title || title.includes('<p>') || title.includes('<') || itemKey.startsWith('text_')) {
-        return;
-      }
-
-      const currentDisplayPath = displayPath ? `${displayPath}${PATH_SEPARATOR}${title.trim()}` : title.trim();
-      let currentPath = parentPath;
-
-      if (itemKey !== ':items' && itemKey !== ':itemsOrder') {
-        currentPath += `/${itemKey}`;
-      }
-
-      // Check for children
-      const hasChildren = item[':items'] && Object.keys(item[':items']).length > 0;
-
-      // Determine type
-      let itemType = 'item';
-      if (!hasChildren) {
-        itemType = 'link';
-      } else {
-        const childKeys = Object.keys(item[':items'] || {});
-        const hasTabsChild = childKeys.some((k) => k === 'tabs' || k.match(/^tabs_.*$/));
-        const hasAccordionChild = childKeys.some((k) => k === 'accordion' || k.match(/^accordion_.*$/));
-        const hasContainerChild = childKeys.some((k) => k === 'container' || k.match(/^container_.*$/));
-
-        if (itemKey.startsWith('accordion')) {
-          itemType = 'accordion';
-        } else if (itemKey.startsWith('teaser')) {
-          itemType = 'teaser';
-        } else if (hasTabsChild) {
-          itemType = 'tabs';
-        } else if (hasAccordionChild) {
-          itemType = 'accordion-container';
-        } else if (hasContainerChild) {
-          itemType = 'container';
-        } else {
-          itemType = 'dropdown';
-        }
-      }
-
-      const jsonItem = {
-        title,
-        path: currentDisplayPath,
-        type: itemType,
-      };
-
-      // Add ID if it exists
-      if (item.id && item.id !== itemKey) {
-        jsonItem.id = item.id;
-      }
-
-      // Add linkURL if available from item itself (Sling Model data only)
-      // Check multiple possible locations: item.linkURL, item.link.url
-      // Otherwise use ID-based matching (most accurate), then title-based
-      if (item.linkURL) {
-        jsonItem.linkURL = stripHostAndExtension(item.linkURL); // Strip for item.linkURL
-      } else if (item.link && item.link.url) {
-        jsonItem.linkURL = stripHostAndExtension(item.link.url); // Strip for item.link.url
-      } else if (item.id && jcrLinkUrlMap[item.id]) {
-        // Try ID-based matching first (most accurate for duplicate titles)
-        jsonItem.linkURL = stripHostAndExtension(jcrLinkUrlMap[item.id]);
-      } else {
-        // Use title-based matching (only items WITH linkURLs are in the map)
-        const linkURL = stripHostAndExtension(jcrLinkUrlMap[String(title)]);
-        if (linkURL) {
-          jsonItem.linkURL = linkURL;
-        }
-      }
-
-      // Recursively add children
-      if (hasChildren) {
-        const childItems = buildJsonItemsFromContainer(item[':items'], currentPath, currentDisplayPath);
-        if (childItems.length > 0) {
-          jsonItem.items = childItems;
-        }
-      }
-
-      result.push(jsonItem);
-    });
-
-    return result;
-  }
-
-  return buildJsonItems(jsonData);
-}
-
-// Global helper functions for both display and JSON generation
-
-// Function to get title with fallback chain: cq:panelTitle || title || id
-function getTitle(item, itemId) {
-  return item['cq:panelTitle'] || item.title || itemId;
 }
 
 // Function to build image URL from teaser component
@@ -1395,97 +2071,6 @@ function buildImageUrl(item, itemKey, jcrPath) {
   // Build the complete image URL with dynamic format, prepend item.id to fileName
   const fileNameWithId = buildFileNameWithId(item.id, fileName);
   return `${BASE_URL}${jcrPath}/${itemKey}.${imageFormat}/${lastModified}/${fileNameWithId}`;
-}
-
-// Function to build image URL for teaser items during hierarchy extraction
-function buildTeaserImageUrl(item, key, currentKeyPath, contentPath) {
-  if (!item.imageResource || !item.imageResource.fileName) {
-    return null;
-  }
-
-  const { fileName } = item.imageResource;
-  const lastModified = item.imageResource['jcr:lastModified'] || new Date().toISOString();
-
-  // Extract file extension from the image filename
-  const fileExtension = fileName.substring(fileName.lastIndexOf('.') + 1);
-  const imageFormat = `coreimg.85.1600.${fileExtension}`;
-
-  // Build the teaser image URL
-  // URL format: {AEM_AUTHOR}{CONTENT_PATH}{currentKeyPath}/{key}.{imageFormat}/{lastModified}/{fileName}
-  return `${AEM_AUTHOR}${contentPath}/${currentKeyPath}/${key}.${imageFormat}/${lastModified}/${fileName}`;
-}
-
-// Function to check if item is a teaser with image
-function isTeaser(item, itemKey) {
-  return itemKey.startsWith('teaser_')
-           && item
-           && typeof item === 'object'
-           && item.title;
-}
-
-// Function to skip structural containers and get content items
-function getContentItems(items) {
-  if (!items || !items[':items']) return null;
-
-  const children = items[':items'];
-  const childKeys = Object.keys(children);
-
-  // If only one child and it's a structural container, drill down
-  if (childKeys.length === 1) {
-    const onlyChild = children[childKeys[0]];
-    const childKey = childKeys[0];
-
-    // Skip structural containers and accordions
-    if (childKey === 'tabs' || childKey.match(/^tabs_.*$/)
-        || childKey === 'container' || childKey.match(/^container.*$/)
-        || childKey === 'accordion' || childKey.match(/^accordion.*$/)) {
-      return getContentItems(onlyChild);
-    }
-  }
-
-  return items;
-}
-
-// Function to extract meaningful titles from accordion/wrapper structures
-function extractTitleFromItem(item, itemKey) {
-  // If item has .text property, use it (best source for actual content)
-  if (item.text && typeof item.text === 'string') {
-    const textContent = item.text.trim();
-    // Skip if it's HTML markup or instruction text
-    if (textContent && textContent.length > 0
-        && !textContent.includes('<p>')
-        && !textContent.toLowerCase().includes('bold and underlined')) {
-      return textContent;
-    }
-  }
-
-  // If item itself has a title, return it
-  const directTitle = item['cq:panelTitle'] || item.title;
-  if (directTitle && directTitle.trim()) {
-    return directTitle.trim();
-  }
-
-  // If this is a structural wrapper (accordion/container with single child), dig deeper
-  if (item[':items']) {
-    const childKeys = Object.keys(item[':items']);
-    if (childKeys.length === 1) {
-      const onlyChildKey = childKeys[0];
-      const onlyChild = item[':items'][onlyChildKey];
-
-      // If child has a good title, return it
-      if (onlyChild) {
-        const childTitle = onlyChild['cq:panelTitle'] || onlyChild.title;
-        if (childTitle && childTitle.trim()) {
-          return childTitle.trim();
-        }
-        // Recursively try to extract from deeper levels
-        return extractTitleFromItem(onlyChild, onlyChildKey);
-      }
-    }
-  }
-
-  // Fallback to key name
-  return itemKey;
 }
 
 // Helper function to determine item type from sling:resourceType
@@ -1533,6 +2118,120 @@ function getItemTypeFromResourceType(item, itemKey = '') {
   }
 
   return 'item';
+}
+
+// Extract tabs directly from JCR when Sling Model has no tabs
+function extractTabsFromJCR(jcrData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrPathMap, jcrTeaserImageMap) {
+  console.log('📖 Extracting tabs from JCR...\n');
+
+  const hierarchy = [];
+
+  // Find all tabs components in JCR
+  const tabsComponents = [];
+  function findTabsComponents(obj, path = '') {
+    if (!obj || typeof obj !== 'object') return;
+
+    if (obj['sling:resourceType'] === 'tccc-dam/components/tabs') {
+      tabsComponents.push({ obj, path });
+    }
+
+    for (const key in obj) {
+      if (typeof obj[key] === 'object' && !key.startsWith(':')) {
+        findTabsComponents(obj[key], `${path}/${key}`);
+      }
+    }
+  }
+
+  findTabsComponents(jcrData.root);
+  console.log(`🔍 Found ${tabsComponents.length} tabs component(s) in JCR`);
+
+  // Process each tabs component
+  tabsComponents.forEach(({ obj: tabsObj, path: tabsPath }) => {
+    // Get all tab items (item_1, item_2, etc.)
+    const itemsOrder = tabsObj[':itemsOrder'] || Object.keys(tabsObj).filter((k) => !k.startsWith(':') && !k.startsWith('jcr:') && !k.startsWith('cq:') && !k.startsWith('sling:'));
+
+    console.log(`  📂 Processing tabs at ${tabsPath} with ${itemsOrder.length} tab(s)`);
+
+    itemsOrder.forEach((itemKey) => {
+      const tabItem = tabsObj[itemKey];
+      if (!tabItem || typeof tabItem !== 'object') return;
+
+      const tabTitle = tabItem['cq:panelTitle'] || tabItem['jcr:title'] || itemKey;
+      console.log(`    - ${tabTitle}`);
+
+      const tab = {
+        title: tabTitle,
+        path: tabTitle,
+        type: 'tab',
+        key: itemKey,
+        items: [],
+      };
+
+      // Extract all content from this tab (containers, buttons, etc.)
+      function extractTabContent(containerObj, parentPath = '') {
+        const items = [];
+
+        if (!containerObj || typeof containerObj !== 'object') return items;
+
+        // Check if this is a container with items
+        if (containerObj['sling:resourceType'] === 'tccc-dam/components/container' || containerObj[':items']) {
+          const contentItems = containerObj[':items'] || containerObj;
+          const contentOrder = contentItems[':itemsOrder'] || Object.keys(contentItems).filter((k) => !k.startsWith(':') && !k.startsWith('jcr:') && !k.startsWith('cq:') && !k.startsWith('sling:'));
+
+          contentOrder.forEach((contentKey) => {
+            const contentItem = contentItems[contentKey];
+            if (!contentItem || typeof contentItem !== 'object') return;
+
+            const resourceType = contentItem[':type'] || contentItem['sling:resourceType'] || '';
+            const itemType = getItemTypeFromResourceType(resourceType, contentKey);
+            const itemTitle = contentItem['jcr:title'] || contentItem['cq:panelTitle'] || contentKey;
+            const itemPath = parentPath ? `${parentPath} >>> ${itemTitle}` : itemTitle;
+
+            const item = {
+              title: itemTitle,
+              path: itemPath,
+              type: itemType,
+              key: contentKey,
+            };
+
+            // Extract linkSources for buttons
+            if (itemType === 'button' && contentItem.linkURL) {
+              item.linkSources = {
+                clickableUrl: stripHostOnly(contentItem.linkURL),
+              };
+            }
+
+            // Extract text content
+            if (contentItem.text) {
+              item.text = contentItem.text;
+            }
+
+            // Recursively extract nested items
+            if (contentItem[':items'] || contentItem.container) {
+              const nestedItems = extractTabContent(contentItem.container || contentItem, itemPath);
+              if (nestedItems.length > 0) {
+                item.items = nestedItems;
+              }
+            }
+
+            items.push(item);
+          });
+        }
+
+        return items;
+      }
+
+      // Extract content from the tab's container
+      if (tabItem.container) {
+        tab.items = extractTabContent(tabItem.container, tabTitle);
+      }
+
+      hierarchy.push(tab);
+    });
+  });
+
+  console.log(`✅ Extracted ${hierarchy.length} tab(s) from JCR\n`);
+  return hierarchy;
 }
 
 function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrData, jcrPathMap, jcrTeaserImageMap) {
@@ -1659,12 +2358,17 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
 
       // Fallback: infer type from ID pattern if sling:resourceType is missing
       if (itemType === 'item' && item.id) {
-        const idPrefix = item.id.split('-')[0];
-        if (idPrefix === 'button') itemType = 'button';
-        else if (idPrefix === 'accordion') itemType = 'accordion';
-        else if (idPrefix === 'tabs') itemType = 'tabs';
-        else if (idPrefix === 'container') itemType = 'container';
-        else if (idPrefix === 'text') itemType = 'text';
+        // Check for custom-button- prefix first (before splitting)
+        if (item.id.startsWith('custom-button-')) {
+          itemType = 'button';
+        } else {
+          const idPrefix = item.id.split('-')[0];
+          if (idPrefix === 'button') itemType = 'button';
+          else if (idPrefix === 'accordion') itemType = 'accordion';
+          else if (idPrefix === 'tabs') itemType = 'tabs';
+          else if (idPrefix === 'container') itemType = 'container';
+          else if (idPrefix === 'text') itemType = 'text';
+        }
       }
 
       // Build display path only for output (for user viewing)
@@ -1701,6 +2405,12 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
 
       if (item.id) {
         hierarchyItem.id = item.id;
+      }
+
+      // Preserve cq:panelTitle metadata (used by convertTabContainers to identify tab panels)
+      // Note: This is internal metadata and will be removed before saving to JSON
+      if (item['cq:panelTitle']) {
+        hierarchyItem['cq:panelTitle'] = item['cq:panelTitle'];
       }
 
       // Preserve JCR section information if available
@@ -1740,8 +2450,22 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       }
 
       // xdm:linkURL - analytics/data layer tracking URL
-      if (item.dataLayer && item.id && item.dataLayer[item.id] && item.dataLayer[item.id]['xdm:linkURL']) {
-        itemLinkSources.analyticsUrl = stripHostOnly(item.dataLayer[item.id]['xdm:linkURL']);
+      // Check nested under item.id first, then direct
+      let xdmLinkURL;
+      if (item.dataLayer) {
+        if (item.id && item.dataLayer[item.id] && item.dataLayer[item.id]['xdm:linkURL']) {
+          xdmLinkURL = item.dataLayer[item.id]['xdm:linkURL'];
+        } else if (item.dataLayer['xdm:linkURL']) {
+          xdmLinkURL = item.dataLayer['xdm:linkURL'];
+        }
+      }
+      if (xdmLinkURL && isValidLinkURL(xdmLinkURL)) {
+        itemLinkSources.analyticsUrl = stripHostOnly(xdmLinkURL);
+      }
+
+      // imageResource.linkURL - link from image resource metadata
+      if (item.imageResource && item.imageResource.linkURL && isValidLinkURL(item.imageResource.linkURL)) {
+        itemLinkSources.imageResourceUrl = stripHostOnly(item.imageResource.linkURL);
       }
 
       // buttonLink.url - for button components, assign to clickableUrl
@@ -1781,7 +2505,22 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       // First, check if text content exists directly in the model item
       if (item.text && itemType === 'text') {
         hierarchyItem.text = item.text;
-      } else {
+      } else if (item[':items'] && item[':itemsOrder']) {
+        // For containers, extract and concatenate text from ALL child text components
+        const textComponents = [];
+        for (const childKey of item[':itemsOrder']) {
+          const child = item[':items'][childKey];
+          if (child && (childKey === 'text' || childKey.startsWith('text_')) && child.text) {
+            textComponents.push(child.text);
+          }
+        }
+        if (textComponents.length > 0) {
+          hierarchyItem.text = textComponents.join('\n');
+        }
+      }
+
+      // If no text found yet, look up text content using JCR context
+      if (!hierarchyItem.text) {
         // Look up text content using JCR context with multiple fallback strategies
         let textContent = null;
         const uniqueContextKey = `${String(title)}|${immediateParentKey}|${currentKeyPath}`;
@@ -1931,7 +2670,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
 
   // Extract from root :items
   let mainHierarchy = [];
-  if (modelData[':items']) {
+  if (modelData && modelData[':items']) {
     const rawHierarchy = extractItemsHierarchy(modelData[':items'], '', '', jcrPathMap, jcrTeaserImageMap);
 
     // Add tabs index tracking to top-level items based on unique keys
@@ -1960,26 +2699,6 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         item.__tabsIndex = tabsIndex;
       }
     });
-
-    // Function to replace "container" types with nearest non-container ancestor's type
-    // COMMENTED OUT per user request
-    // function replaceContainerTypes(items, parentType = null) {
-    //   if (!items || !Array.isArray(items)) return items;
-    //
-    //   return items.map((item) => {
-    //     // If this item is a container and has a parent, inherit parent's type
-    //     if (item.type === 'container' && parentType && parentType !== 'container') {
-    //       item.type = parentType;
-    //     }
-    //
-    //     // Recursively process children, passing down this item's type
-    //     if (item.items) {
-    //       item.items = replaceContainerTypes(item.items, item.type);
-    //     }
-    //
-    //     return item;
-    //   });
-    // }
 
     // Function to remove duplicate consecutive containers with the same title
     function removeDuplicateContainers(items) {
@@ -2088,627 +2807,1313 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
     const cleanedHierarchy = unwrapStructuralContainers(rawHierarchy);
     const deduplicatedHierarchy = removeDuplicateContainers(cleanedHierarchy);
     const groupedHierarchy = groupHierarchyBySections(deduplicatedHierarchy, jcrData);
-    // Replace containers with parent types (AFTER grouping creates them)
-    // COMMENTED OUT per user request
-    // const containerReplacedHierarchy = replaceContainerTypes(groupedHierarchy);
-    // mainHierarchy = cleanupDuplicatePathSegments(containerReplacedHierarchy);
     mainHierarchy = cleanupDuplicatePathSegments(groupedHierarchy);
   }
 
-  // Function to extract sections from JCR structure
-  function extractSectionsFromJCR(jcrData) {
-    const sections = [];
+  return mainHierarchy;
+}
 
-    if (!jcrData.root || !jcrData.root.container) {
-      return null;
+// Function to extract sections from JCR structure
+function extractSectionsFromJCR(jcrData) {
+  const sections = [];
+
+  if (!jcrData.root || !jcrData.root.container) {
+    return null;
+  }
+
+  // Recursively search for title components and the containers that follow them
+  function searchForTitles(obj, parentPath = '') {
+    const foundSections = [];
+    const itemsList = [];
+
+    // First pass: collect all direct children in order
+    for (const key in obj) {
+      if (obj[key] && typeof obj[key] === 'object' && !key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
+        itemsList.push({ key, item: obj[key] });
+      }
     }
 
-    // Recursively search for title components and the containers that follow them
-    function searchForTitles(obj, parentPath = '') {
-      const foundSections = [];
-      const itemsList = [];
+    // Second pass: identify title markers and group subsequent containers
+    let currentSection = null;
+    itemsList.forEach((entry, index) => {
+      const { key, item } = entry;
 
-      // First pass: collect all direct children in order
-      for (const key in obj) {
-        if (obj[key] && typeof obj[key] === 'object' && !key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
-          itemsList.push({ key, item: obj[key] });
+      // Check if this is a title component (section marker)
+      if (item['sling:resourceType'] === 'tccc-dam/components/title' && item['jcr:title']) {
+        // Save previous section if exists
+        if (currentSection) {
+          foundSections.push(currentSection);
         }
+        // Start new section with original type
+        currentSection = {
+          title: item['jcr:title'],
+          type: getItemTypeFromResourceType(item, key),
+          containerKeys: [],
+        };
+      } else if (currentSection && (item['sling:resourceType'] === 'tccc-dam/components/container' || item['sling:resourceType'] === 'tccc-dam/components/tabs')) {
+        // This container/tabs belongs to the current section
+        currentSection.containerKeys.push(key);
       }
 
-      // Second pass: identify title markers and group subsequent containers
-      let currentSection = null;
-      itemsList.forEach((entry, index) => {
-        const { key, item } = entry;
-
-        // Check if this is a title component (section marker)
-        if (item['sling:resourceType'] === 'tccc-dam/components/title' && item['jcr:title']) {
-          // Save previous section if exists
-          if (currentSection) {
-            foundSections.push(currentSection);
-          }
-          // Start new section with original type
-          currentSection = {
-            title: item['jcr:title'],
-            type: getItemTypeFromResourceType(item, key),
-            containerKeys: [],
-          };
-        } else if (currentSection && (item['sling:resourceType'] === 'tccc-dam/components/container' || item['sling:resourceType'] === 'tccc-dam/components/tabs')) {
-          // This container/tabs belongs to the current section
-          currentSection.containerKeys.push(key);
-        }
-
-        // Recursively search nested items inside containers
-        if (item && typeof item === 'object' && item['sling:resourceType'] === 'tccc-dam/components/container') {
-          foundSections.push(...searchForTitles(item, `${parentPath}/${key}`));
-        }
-      });
-
-      if (currentSection) {
-        foundSections.push(currentSection);
-      }
-
-      return foundSections;
-    }
-
-    const foundSections = searchForTitles(jcrData.root.container);
-
-    // Remove duplicates (keep first occurrence of each title)
-    const uniqueSections = [];
-    const seenTitles = new Set();
-    foundSections.forEach((section) => {
-      if (!seenTitles.has(section.title)) {
-        uniqueSections.push(section);
-        seenTitles.add(section.title);
+      // Recursively search nested items inside containers
+      if (item && typeof item === 'object' && item['sling:resourceType'] === 'tccc-dam/components/container') {
+        foundSections.push(...searchForTitles(item, `${parentPath}/${key}`));
       }
     });
 
-    return uniqueSections.length > 0 ? uniqueSections : null;
-  }
-
-  // Function to group items into sections - try JCR-based grouping first, then fallback
-  function groupHierarchyBySections(items, jcrData) {
-    // Try to extract sections from JCR structure
-    let jcrSections = null;
-    if (jcrData) {
-      jcrSections = extractSectionsFromJCR(jcrData);
-      if (jcrSections) {
-        console.log('\n🔍 JCR sections detected:', jcrSections.map((s) => s.title).join(', '));
-      } else {
-        console.log('\n🔍 No JCR sections detected in structure');
-      }
+    if (currentSection) {
+      foundSections.push(currentSection);
     }
 
+    return foundSections;
+  }
+
+  const foundSections = searchForTitles(jcrData.root.container);
+
+  // Remove duplicates (keep first occurrence of each title)
+  const uniqueSections = [];
+  const seenTitles = new Set();
+  foundSections.forEach((section) => {
+    if (!seenTitles.has(section.title)) {
+      uniqueSections.push(section);
+      seenTitles.add(section.title);
+    }
+  });
+
+  return uniqueSections.length > 0 ? uniqueSections : null;
+}
+
+// Function to group items into sections - try JCR-based grouping first, then fallback
+function groupHierarchyBySections(items, jcrData) {
+  // Try to extract sections from JCR structure
+  let jcrSections = null;
+  if (jcrData) {
+    jcrSections = extractSectionsFromJCR(jcrData);
     if (jcrSections) {
-      const result = groupByJCRSections(items, jcrSections);
-      // Only use JCR grouping if it actually produced results
-      if (result.length > 0 && result.some((s) => s.items.length > 0)) {
-        return result;
-      }
+      console.log('\n🔍 JCR sections detected:', jcrSections.map((s) => s.title).join(', '));
+    } else {
+      console.log('\n🔍 No JCR sections detected in structure');
     }
-
-    // Fallback: group by first-level path component
-    return groupByFirstPathComponent(items);
   }
 
-  // Group items using JCR section structure
-  function groupByJCRSections(items, jcrSections) {
-    const grouped = [];
+  if (jcrSections) {
+    const result = groupByJCRSections(items, jcrSections);
+    // Only use JCR grouping if it actually produced results
+    if (result.length > 0 && result.some((s) => s.items.length > 0)) {
+      return result;
+    }
+  }
 
-    console.log('\n📋 Grouping by JCR section metadata:');
+  // Fallback: group by first-level path component
+  return groupByFirstPathComponent(items);
+}
 
-    jcrSections.forEach((section) => {
-      // Find all items that belong to this section based on __jcrSection metadata
-      const itemsInSection = items.filter((item) => item.__jcrSection === section.title);
+// Group items using JCR section structure
+function groupByJCRSections(items, jcrSections) {
+  const grouped = [];
+  const matchedItems = new Set();
 
-      if (itemsInSection.length > 0) {
-        // Check if section contains only one item with the same title (redundant nesting)
-        if (itemsInSection.length === 1
+  console.log('\n📋 Grouping by JCR section metadata:');
+
+  jcrSections.forEach((section) => {
+    // Find all items that belong to this section based on __jcrSection metadata
+    const itemsInSection = items.filter((item) => item.__jcrSection === section.title);
+
+    if (itemsInSection.length > 0) {
+      // Mark these items as matched
+      itemsInSection.forEach((item) => matchedItems.add(item));
+
+      // Check if section contains only one item with the same title (redundant nesting)
+      if (itemsInSection.length === 1
             && itemsInSection[0].title
             && itemsInSection[0].title.trim() === section.title.trim()) {
-          // Flatten: use the container directly as the section, but use original type from JCR
-          const flattenedItem = { ...itemsInSection[0] };
-          delete flattenedItem.__jcrSection;
-          flattenedItem.type = section.type || 'section'; // Use original type from JCR
-          grouped.push(flattenedItem);
-          console.log(`  - ${section.title} (${flattenedItem.items?.length || 0}) [flattened duplicate]`);
-        } else {
-          // Normal section with multiple items or different titles
-          const sectionObj = {
-            title: section.title,
-            path: section.title,
-            type: section.type || 'section', // Use original type from JCR
-            items: itemsInSection.map((item) => {
-              const updatedItem = { ...item };
-              // Remove the internal metadata before output
-              delete updatedItem.__jcrSection;
+        // Flatten: use the container directly as the section, but use original type from JCR
+        const flattenedItem = { ...itemsInSection[0] };
+        delete flattenedItem.__jcrSection;
+        flattenedItem.type = section.type || 'section'; // Use original type from JCR
+        grouped.push(flattenedItem);
+        console.log(`  - ${section.title} (${flattenedItem.items?.length || 0}) [flattened duplicate]`);
+      } else {
+        // Normal section with multiple items or different titles
+        const sectionObj = {
+          title: section.title,
+          path: section.title,
+          type: section.type || 'section', // Use original type from JCR
+          items: itemsInSection.map((item) => {
+            const updatedItem = { ...item };
+            // Remove the internal metadata before output
+            delete updatedItem.__jcrSection;
 
-              if (!item.path.startsWith(section.title)) {
-                updatedItem.path = `${section.title}${PATH_SEPARATOR}${item.path}`;
-              }
-              if (item.items && Array.isArray(item.items)) {
-                updatedItem.items = item.items.map((child) => {
-                  const childCopy = { ...child };
+            if (!item.path.startsWith(section.title)) {
+              updatedItem.path = `${section.title}${PATH_SEPARATOR}${item.path}`;
+            }
+            if (item.items && Array.isArray(item.items)) {
+              updatedItem.items = item.items.map((child) => {
+                const childCopy = { ...child };
 
-                  // Check if child path already starts with the updated parent path
-                  if (childCopy.path && childCopy.path.startsWith(updatedItem.path)) {
-                    // Path already correct, no changes needed
-                    // Just keep the existing path
-                  } else if (childCopy.path) {
-                    // Child path needs to be updated to include the section prefix
-                    childCopy.path = `${updatedItem.path}${PATH_SEPARATOR}${childCopy.path}`;
-                  }
+                // Check if child path already starts with the updated parent path
+                if (childCopy.path && childCopy.path.startsWith(updatedItem.path)) {
+                  // Path already correct, no changes needed
+                  // Just keep the existing path
+                } else if (childCopy.path) {
+                  // Child path needs to be updated to include the section prefix
+                  childCopy.path = `${updatedItem.path}${PATH_SEPARATOR}${childCopy.path}`;
+                }
 
-                  if (childCopy.items && Array.isArray(childCopy.items)) {
-                    childCopy.items = childCopy.items.map((subchild) => prependPathToItem(subchild, childCopy.path));
-                  }
-                  return childCopy;
-                });
-              }
-              return updatedItem;
-            }),
-          };
-          grouped.push(sectionObj);
-          console.log(`  - ${section.title} (${itemsInSection.length})`);
-        }
+                if (childCopy.items && Array.isArray(childCopy.items)) {
+                  childCopy.items = childCopy.items.map((subchild) => prependPathToItem(subchild, childCopy.path));
+                }
+                return childCopy;
+              });
+            }
+            return updatedItem;
+          }),
+        };
+        grouped.push(sectionObj);
+        console.log(`  - ${section.title} (${itemsInSection.length})`);
       }
+    }
+  });
+
+  // Include items that didn't match any JCR section
+  const unmatchedItems = items.filter((item) => !matchedItems.has(item));
+  if (unmatchedItems.length > 0) {
+    console.log(`⚠️  Found ${unmatchedItems.length} unmatched items (no JCR section metadata):`);
+    unmatchedItems.forEach((item) => {
+      console.log(`  - ${item.title} (type: ${item.type})`);
+      // Remove __jcrSection metadata if present
+      const cleanItem = { ...item };
+      delete cleanItem.__jcrSection;
+      grouped.push(cleanItem);
     });
-
-    console.log(`  - ${grouped.map((s) => `${s.title} (${s.items.length})`).join(', ')}\n`);
-
-    return grouped;
   }
 
-  // Helper function to prepend parent path to items recursively
-  function prependPathToItem(item, parentPath) {
-    const updatedItem = { ...item };
+  console.log(`  - ${grouped.map((s) => `${s.title} (${s.items?.length || 0})`).join(', ')}\n`);
 
-    if (!item.path.startsWith(parentPath)) {
-      updatedItem.path = `${parentPath}${PATH_SEPARATOR}${item.path}`;
-    }
+  return grouped;
+}
 
-    if (item.items && Array.isArray(item.items)) {
-      updatedItem.items = item.items.map((child) => {
-        const childCopy = { ...child };
+// Helper function to prepend parent path to items recursively
+function prependPathToItem(item, parentPath) {
+  const updatedItem = { ...item };
 
-        // Check if child path already starts with the updated parent path
-        if (childCopy.path && childCopy.path.startsWith(updatedItem.path)) {
-          // Path already correct, no changes needed
-        } else if (childCopy.path) {
-          // Child path needs to be updated to include the parent prefix
-          childCopy.path = `${updatedItem.path}${PATH_SEPARATOR}${childCopy.path}`;
-        }
-
-        if (childCopy.items && Array.isArray(childCopy.items)) {
-          childCopy.items = childCopy.items.map((subchild) => prependPathToItem(subchild, childCopy.path));
-        }
-        return childCopy;
-      });
-    }
-
-    return updatedItem;
+  if (!item.path.startsWith(parentPath)) {
+    updatedItem.path = `${parentPath}${PATH_SEPARATOR}${item.path}`;
   }
 
-  // Fallback: group items by first-level path component (data-driven auto-detection)
-  function groupByFirstPathComponent(items) {
-    const sectionMap = new Map();
+  if (item.items && Array.isArray(item.items)) {
+    updatedItem.items = item.items.map((child) => {
+      const childCopy = { ...child };
 
-    items.forEach((item) => {
-      let sectionKey = null;
-      let sectionTitle = null;
+      // Check if child path already starts with the updated parent path
+      if (childCopy.path && childCopy.path.startsWith(updatedItem.path)) {
+        // Path already correct, no changes needed
+      } else if (childCopy.path) {
+        // Child path needs to be updated to include the parent prefix
+        childCopy.path = `${updatedItem.path}${PATH_SEPARATOR}${childCopy.path}`;
+      }
 
-      if (item.path) {
-        const pathParts = item.path.split(PATH_SEPARATOR);
-        if (pathParts.length > 1) {
-          sectionKey = pathParts[0];
-          sectionTitle = pathParts[0];
-        } else {
-          sectionKey = item.title;
-          sectionTitle = item.title;
-        }
+      if (childCopy.items && Array.isArray(childCopy.items)) {
+        childCopy.items = childCopy.items.map((subchild) => prependPathToItem(subchild, childCopy.path));
+      }
+      return childCopy;
+    });
+  }
+
+  return updatedItem;
+}
+
+// Fallback: group items by first-level path component (data-driven auto-detection)
+function groupByFirstPathComponent(items) {
+  const sectionMap = new Map();
+
+  items.forEach((item) => {
+    let sectionKey = null;
+    let sectionTitle = null;
+
+    if (item.path) {
+      const pathParts = item.path.split(PATH_SEPARATOR);
+      if (pathParts.length > 1) {
+        sectionKey = pathParts[0];
+        sectionTitle = pathParts[0];
       } else {
         sectionKey = item.title;
         sectionTitle = item.title;
       }
+    } else {
+      sectionKey = item.title;
+      sectionTitle = item.title;
+    }
 
-      if (!sectionMap.has(sectionKey)) {
-        sectionMap.set(sectionKey, {
-          title: sectionTitle,
-          items: [],
-        });
-      }
+    if (!sectionMap.has(sectionKey)) {
+      sectionMap.set(sectionKey, {
+        title: sectionTitle,
+        items: [],
+      });
+    }
 
-      sectionMap.get(sectionKey).items.push(item);
-    });
+    sectionMap.get(sectionKey).items.push(item);
+  });
 
-    const grouped = Array.from(sectionMap.values()).map((section) => {
-      // Check if section contains only one item with the same title (redundant nesting)
-      if (section.items.length === 1
+  const grouped = Array.from(sectionMap.values()).map((section) => {
+    // Check if section contains only one item with the same title (redundant nesting)
+    if (section.items.length === 1
           && section.items[0].title
           && section.items[0].title.trim() === section.title.trim()) {
-        // Flatten: use the container directly, preserving its original type
-        const flattenedItem = { ...section.items[0] };
-        // Keep the original type instead of forcing 'section'
-        return flattenedItem;
-      }
-      // Normal section with multiple items or different titles
-      return {
-        title: section.title,
-        path: section.title,
-        type: 'section',
-        items: section.items,
-      };
-    });
+      // Flatten: use the container directly, preserving its original type
+      const flattenedItem = { ...section.items[0] };
+      // Keep the original type instead of forcing 'section'
+      return flattenedItem;
+    }
+    // Normal section with multiple items or different titles
+    return {
+      title: section.title,
+      path: section.title,
+      type: 'section',
+      items: section.items,
+    };
+  });
 
-    console.log('\n📋 Auto-detected sections (data-driven from path):');
-    grouped.forEach((section) => {
-      const itemCount = section.items ? section.items.length : 0;
-      const flattened = !section.items ? ' [flattened duplicate]' : '';
-      console.log(`  - ${section.title} (${itemCount} items)${flattened}`);
-    });
-    console.log();
+  console.log('\n📋 Auto-detected sections (data-driven from path):');
+  grouped.forEach((section) => {
+    const itemCount = section.items ? section.items.length : 0;
+    const flattened = !section.items ? ' [flattened duplicate]' : '';
+    console.log(`  - ${section.title} (${itemCount} items)${flattened}`);
+  });
+  console.log();
 
-    return grouped.map((section) => {
-      // If section was flattened (no items array), return as-is
-      if (!section.items) {
-        return section;
-      }
+  return grouped.map((section) => {
+    // If section was flattened (no items array), return as-is
+    if (!section.items) {
+      return section;
+    }
 
-      // Normal section processing
-      return {
-        ...section,
-        items: section.items.map((item) => {
-          if (!item.path.startsWith(section.title)) {
-            return prependPathToItem(item, section.title);
-          }
-          return item;
-        }),
-      };
-    });
-  }
-
-  // Extract banner image from JCR
-  function extractBannerImage(jcrData, contentPath) {
-    function findImageComponents(obj, path = '') {
-      const results = [];
-
-      for (const [key, value] of Object.entries(obj)) {
-        const currentPath = path ? `${path}/${key}` : key;
-
-        if (typeof value === 'object' && value !== null) {
-          // Check if this is an image component with fileName
-          if (value['sling:resourceType'] === 'tccc-dam/components/image' && value.fileName) {
-            const lastModified = value['jcr:lastModified'] || value.file?.['jcr:lastModified'] || value.file?.['jcr:created'];
-            const timestamp = lastModified ? new Date(lastModified).getTime() : null;
-
-            if (timestamp) {
-              // Fix path construction: ensure /root is included
-              const jcrPath = currentPath.replace(/^root/, '_jcr_content/root');
-
-              // Extract extension from filename and use it in coreimg format
-              const lastDotIndex = value.fileName.lastIndexOf('.');
-              const fileExt = lastDotIndex > 0 ? value.fileName.slice(lastDotIndex + 1) : 'png';
-              const imageFormat = `coreimg.${fileExt}`;
-
-              // Sanitize filename using utility function
-              const sanitizedFileName = sanitizeFileName(value.fileName);
-
-              const imageUrl = `${contentPath}/${jcrPath}.${imageFormat}/${timestamp}/${sanitizedFileName}`;
-
-              results.push({
-                path: currentPath,
-                fileName: value.fileName,
-                imageUrl,
-                alt: value.alt,
-                resourceType: value['sling:resourceType'],
-                lastModified,
-                timestamp,
-              });
-            }
-          }
-
-          // Recurse into nested objects
-          results.push(...findImageComponents(value, currentPath));
+    // Normal section processing
+    return {
+      ...section,
+      items: section.items.map((item) => {
+        if (!item.path.startsWith(section.title)) {
+          return prependPathToItem(item, section.title);
         }
-      }
+        return item;
+      }),
+    };
+  });
+}
 
-      return results;
-    }
+// Extract banner image from JCR
+function extractBannerImage(jcrData, contentPath) {
+  function findImageComponents(obj, path = '') {
+    const results = [];
 
-    return findImageComponents(jcrData);
-  }
+    for (const [key, value] of Object.entries(obj)) {
+      const currentPath = path ? `${path}/${key}` : key;
 
-  // Extract content from JCR containers outside tabs (e.g., standalone sections with buttons)
-  function extractNonTabsContent(jcrData) {
-    const sections = [];
+      if (typeof value === 'object' && value !== null) {
+        // Check if this is an image component with fileName
+        if (value['sling:resourceType'] === 'tccc-dam/components/image' && value.fileName) {
+          const lastModified = value['jcr:lastModified'] || value.file?.['jcr:lastModified'] || value.file?.['jcr:created'];
+          const timestamp = lastModified ? new Date(lastModified).getTime() : null;
 
-    if (!jcrData.root || !jcrData.root.container) {
-      return sections;
-    }
+          if (timestamp) {
+            // Fix path construction: ensure /root is included
+            const jcrPath = currentPath.replace(/^root/, '_jcr_content/root');
 
-    // Scan all containers at root/container level
-    const rootContainer = jcrData.root.container;
+            // Extract extension from filename and use it in coreimg format
+            const lastDotIndex = value.fileName.lastIndexOf('.');
+            const fileExt = lastDotIndex > 0 ? value.fileName.slice(lastDotIndex + 1) : 'png';
+            const imageFormat = `coreimg.${fileExt}`;
 
-    for (const containerKey in rootContainer) {
-      if (Object.prototype.hasOwnProperty.call(rootContainer, containerKey)) {
-        const container = rootContainer[containerKey];
+            // Sanitize filename using utility function
+            const sanitizedFileName = sanitizeFileName(value.fileName);
 
-        // Skip if not an object or is a tabs component
-        const shouldSkip = !container
-          || typeof container !== 'object'
-          || container['sling:resourceType'] === 'tccc-dam/components/tabs'
-          || containerKey.startsWith('jcr:')
-          || containerKey.startsWith('cq:')
-          || containerKey.startsWith('sling:');
+            const imageUrl = `${contentPath}/${jcrPath}.${imageFormat}/${timestamp}/${sanitizedFileName}`;
 
-        if (!shouldSkip) {
-          // Look for title components and their associated content
-          const titleComponent = findTitleComponent(container);
-          if (titleComponent) {
-            // Found a title component - extract its type from JCR
-            const sectionTitle = titleComponent['jcr:title'];
-            const sectionType = getItemTypeFromResourceType(titleComponent);
-            const sectionItems = [];
-
-            // Extract buttons and other components from this container
-            extractComponentsFromContainer(container, sectionItems, sectionTitle);
-
-            if (sectionItems.length > 0) {
-              sections.push({
-                title: sectionTitle,
-                path: sectionTitle,
-                type: sectionType,
-                items: sectionItems,
-              });
-            }
+            results.push({
+              path: currentPath,
+              fileName: value.fileName,
+              imageUrl,
+              alt: value.alt,
+              resourceType: value['sling:resourceType'],
+              lastModified,
+              timestamp,
+            });
           }
         }
+
+        // Recurse into nested objects
+        results.push(...findImageComponents(value, currentPath));
       }
     }
 
+    return results;
+  }
+
+  return findImageComponents(jcrData);
+}
+
+// Extract content from JCR containers outside tabs (e.g., standalone sections with buttons)
+// Helper to detect if a container has a carousel component
+function hasCarouselComponent(container) {
+  if (!container || typeof container !== 'object') {
+    return false;
+  }
+
+  // eslint-disable-next-line guard-for-in
+  for (const key in container) {
+    const item = container[key];
+    if (item && typeof item === 'object') {
+      if (item['sling:resourceType'] === 'tccc-dam/components/carousel') {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
+  const sections = [];
+
+  if (!jcrData.root || !jcrData.root.container) {
     return sections;
   }
 
-  // Helper to find a title component in a container (searches recursively)
-  function findTitleComponent(obj, depth = 0, maxDepth = 3) {
-    if (depth > maxDepth) return null;
+  // Helper to recursively find containers with title components and their subsequent sibling containers
+  function scanForSections(parentContainer, depth = 0, maxDepth = 5) {
+    if (depth > maxDepth) return [];
 
-    for (const key in obj) {
-      if (!key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
-        const item = obj[key];
-        if (item && typeof item === 'object') {
-          // Check if this is a title component
-          if (item['sling:resourceType'] === 'tccc-dam/components/title' && item['jcr:title']) {
-            return item;
-          }
+    const foundSections = [];
 
-          // Recursively search in nested containers
-          if (item['sling:resourceType'] === 'tccc-dam/components/container') {
-            const found = findTitleComponent(item, depth + 1, maxDepth);
-            if (found) return found;
-          }
-        }
-      }
-    }
-    return null;
-  }
-
-  // Helper to extract components (buttons, etc.) from a container
-  function extractComponentsFromContainer(container, items, sectionTitle) {
-    for (const key in container) {
-      if (!key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
-        const component = container[key];
-        if (component && typeof component === 'object') {
-          const resourceType = component['sling:resourceType'];
-
-          // Extract buttons
-          if (resourceType === 'tccc-dam/components/button') {
-            const buttonTitle = component['jcr:title'] || key;
-            const buttonItem = {
-              title: buttonTitle,
-              path: `${sectionTitle}${PATH_SEPARATOR}${buttonTitle}`,
-              type: 'button',
-              key,
-              id: `button-${createDeterministicId(buttonTitle + key)}`,
-            };
-
-            // Extract URL sources
-            // For button components, linkURL should be treated as clickableUrl
-            if (component.linkURL) {
-              buttonItem.linkSources = {
-                clickableUrl: stripHostOnly(component.linkURL),
-              };
-            }
-
-            items.push(buttonItem);
-          }
-
-          // Recursively search nested containers
-          if (resourceType === 'tccc-dam/components/container') {
-            extractComponentsFromContainer(component, items, sectionTitle);
-          }
-        }
-      }
-    }
-  }
-
-  // Extract non-tabs content and merge with main hierarchy
-  const nonTabsSections = extractNonTabsContent(jcrData);
-  if (nonTabsSections.length > 0) {
-    console.log(`\n📦 Found ${nonTabsSections.length} section(s) outside tabs:`);
-    nonTabsSections.forEach((section) => {
-      console.log(`   - ${section.title} (${section.items.length} items)`);
+    // Get all child keys in order
+    const childKeys = Object.keys(parentContainer).filter((key) => {
+      const item = parentContainer[key];
+      return item
+        && typeof item === 'object'
+        && !key.startsWith('jcr:')
+        && !key.startsWith('cq:')
+        && !key.startsWith('sling:');
     });
-    // Prepend non-tabs sections to the beginning of the hierarchy
-    mainHierarchy = [...nonTabsSections, ...mainHierarchy];
-  }
 
-  // Find banner images
-  const bannerImages = extractBannerImage(jcrData, CONTENT_PATH);
+    let currentTitle = null;
+    let contentContainers = [];
 
-  // Unwrap accordion items but keep their children
-  function unwrapAccordionItems(items) {
-    if (!items || !Array.isArray(items)) return items;
+    for (const key of childKeys) {
+      const child = parentContainer[key];
+      const resourceType = child['sling:resourceType'];
 
-    const result = [];
-
-    items.forEach((item) => {
-      // If item title starts with 'accordion_' or equals 'accordion', skip it but keep its children
-      if (item.title && (item.title.startsWith('accordion_') || item.title === 'accordion')) {
-        if (item.items && item.items.length > 0) {
-          // Recursively unwrap children and add them directly
-          const unwrappedChildren = unwrapAccordionItems(item.items);
-          result.push(...unwrappedChildren);
+      // Check if this child container has a DIRECT title component child (not recursive)
+      let titleComp = null;
+      if (child && resourceType === 'tccc-dam/components/container') {
+        // Look for immediate child title component(s)
+        const titleCandidates = [];
+        // eslint-disable-next-line guard-for-in
+        for (const childKey in child) {
+          const grandchild = child[childKey];
+          if (grandchild && typeof grandchild === 'object'
+              && grandchild['sling:resourceType'] === 'tccc-dam/components/title'
+              && grandchild['jcr:title']) {
+            titleCandidates.push(grandchild);
+          }
         }
-        // Skip the accordion item itself
+
+        // If multiple titles, prefer non-uppercase ones
+        if (titleCandidates.length === 1) {
+          titleComp = titleCandidates[0];
+        } else if (titleCandidates.length > 1) {
+          // Prefer titles that are NOT mostly uppercase
+          const nonUppercaseTitles = titleCandidates.filter((t) => {
+            const title = t['jcr:title'];
+            const uppercaseChars = (title.match(/[A-Z]/g) || []).length;
+            const totalLetters = (title.match(/[a-zA-Z]/g) || []).length;
+            return totalLetters === 0 || (uppercaseChars / totalLetters) < 0.7;
+          });
+
+          titleComp = nonUppercaseTitles.length > 0 ? nonUppercaseTitles[0] : titleCandidates[0];
+        }
+      }
+
+      if (titleComp && titleComp['jcr:title']) {
+        // Found a new title - save previous section if exists
+        if (currentTitle && contentContainers.length > 0) {
+          foundSections.push({
+            title: currentTitle,
+            containers: contentContainers,
+          });
+        }
+
+        // Start new section
+        currentTitle = titleComp;
+        contentContainers = [child]; // Include the container itself that has the title
+      } else if (currentTitle) {
+        // This is content after a title - add to current section
+        if (resourceType === 'tccc-dam/components/container') {
+          contentContainers.push(child);
+        }
       } else {
-        // Keep the item and recursively process its children
-        if (item.items) {
-          item.items = unwrapAccordionItems(item.items);
+        // No title yet - search recursively in this child
+        if (resourceType === 'tccc-dam/components/container') {
+          const nested = scanForSections(child, depth + 1, maxDepth);
+          foundSections.push(...nested);
         }
-        result.push(item);
       }
-    });
+    }
 
-    return result;
-  }
-
-  // Function to detect and convert accordion items (containers with only text content)
-  function convertAccordionContainers(items) {
-    if (!items || !Array.isArray(items)) return items;
-
-    return items.map((item) => {
-      const updatedItem = { ...item };
-
-      // Pattern detection: Convert container to accordion if:
-      // 1. Type is "container"
-      // 2. Has text content
-      // 3. Key matches accordion item patterns (item_1, item_copy, etc.)
-      // 4. No nested items or only text items
-      if (
-        updatedItem.type === 'container'
-        && updatedItem.text
-        && updatedItem.key
-        && (updatedItem.key.match(/^item_\d+$/) || updatedItem.key.match(/^item_copy/))
-        && (!updatedItem.items || updatedItem.items.length === 0)
-      ) {
-        updatedItem.type = 'accordion';
-      }
-
-      // Recursively process children
-      if (updatedItem.items) {
-        updatedItem.items = convertAccordionContainers(updatedItem.items);
-      }
-
-      return updatedItem;
-    });
-  }
-
-  // Function to detect and convert tab panel items (containers with nested items)
-  function convertTabContainers(items) {
-    if (!items || !Array.isArray(items)) return items;
-
-    return items.map((item) => {
-      const updatedItem = { ...item };
-
-      // Pattern detection: Convert container to tab if:
-      // 1. Type is "container"
-      // 2. Has nested items (structural grouping)
-      // 3. Has children (not a leaf node)
-      // Note: No key pattern restriction - any container with nested items is a structural tab
-      if (
-        updatedItem.type === 'container'
-        && updatedItem.items
-        && updatedItem.items.length > 0
-      ) {
-        updatedItem.type = 'tab';
-      }
-
-      // Recursively process children
-      if (updatedItem.items) {
-        updatedItem.items = convertTabContainers(updatedItem.items);
-      }
-
-      return updatedItem;
-    });
-  }
-
-  // Function to filter out empty containers (no items, no text, no meaningful content)
-  function filterEmptyContainers(items) {
-    if (!items || !Array.isArray(items)) return items;
-
-    return items
-      .filter((item) => {
-        // Keep if not a container
-        if (item.type !== 'container') return true;
-
-        // Filter out empty containers (no items, no text)
-        if (
-          (!item.items || item.items.length === 0)
-          && !item.text
-        ) {
-          console.log(`⚠️  Filtering out empty container: "${item.title}" (key: ${item.key})`);
-          return false;
-        }
-
-        return true;
-      })
-      .map((item) => {
-        // Recursively filter children
-        if (item.items) {
-          return { ...item, items: filterEmptyContainers(item.items) };
-        }
-        return item;
+    // Don't forget last section
+    if (currentTitle && contentContainers.length > 0) {
+      foundSections.push({
+        title: currentTitle,
+        containers: contentContainers,
       });
+    }
+
+    return foundSections;
   }
 
-  const unwrappedHierarchy = unwrapAccordionItems(mainHierarchy);
-  const accordionConverted = convertAccordionContainers(unwrappedHierarchy);
-  const tabConverted = convertTabContainers(accordionConverted);
-  const convertedHierarchy = filterEmptyContainers(tabConverted);
+  // Scan for all sections
+  const detectedSections = scanForSections(jcrData.root.container);
 
-  // Save to file
-  const jsonOutputPath = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
-  const hierarchyStructure = {
-    title: jcrData['jcr:title'] || '',
-    items: convertedHierarchy,
-    linkUrl: CONTENT_PATH,
+  // Convert to hierarchy format
+  for (const section of detectedSections) {
+    const titleText = section.title['jcr:title'];
+
+    // Skip sections that contain carousel components (e.g., "What's New")
+    const hasCarousel = section.containers.some((container) => hasCarouselComponent(container));
+    if (hasCarousel) {
+      console.log(`⏭️  Skipping carousel section: "${titleText}"`);
+      continue;
+    }
+
+    const sectionItems = [];
+
+    // Extract content from all containers in this section
+    for (const container of section.containers) {
+      extractComponentsFromContainer(container, sectionItems, titleText, jcrTeaserImageMap);
+    }
+
+    // Always add the section, even if it has no items (may be a header separator)
+    console.log(`📦 Completed section "${titleText}" with ${sectionItems.length} item(s)`);
+    sections.push({
+      title: titleText,
+      path: titleText,
+      type: getItemTypeFromResourceType(section.title),
+      items: sectionItems,
+    });
+  }
+
+  return sections;
+}
+
+// Extract missing top-level sections from JCR that aren't in Sling Model
+function extractMissingSectionsFromJCR(jcrData, existingSectionTitles = [], mainHierarchy = [], jcrTeaserImageMap = {}) {
+  const missingSections = [];
+
+  if (!jcrData.root || !jcrData.root.container) {
+    return missingSections;
+  }
+
+  // Find all title components at depth 2 (section level)
+  const rootContainer = jcrData.root.container;
+  const processedContainers = new Set();
+
+  for (const containerKey in rootContainer) {
+    const container = rootContainer[containerKey];
+
+    if (!container || typeof container !== 'object') continue;
+    if (containerKey.startsWith('jcr:') || containerKey.startsWith('cq:') || containerKey.startsWith('sling:')) continue;
+
+    // Look for nested container with title
+    for (const nestedKey in container) {
+      const nestedContainer = container[nestedKey];
+
+      if (!nestedContainer || typeof nestedContainer !== 'object') continue;
+      if (nestedKey.startsWith('jcr:') || nestedKey.startsWith('cq:') || nestedKey.startsWith('sling:')) continue;
+
+      // Look for title component in this nested container
+      for (const titleKey in nestedContainer) {
+        const titleComp = nestedContainer[titleKey];
+
+        if (titleComp && typeof titleComp === 'object'
+              && titleComp['sling:resourceType'] === 'tccc-dam/components/title'
+              && titleComp['jcr:title']) {
+          const sectionTitle = titleComp['jcr:title'];
+
+          // Skip if this section already exists in Sling Model
+          if (existingSectionTitles.includes(sectionTitle)) {
+            console.log(`  ⏭️  Skipping "${sectionTitle}" (already in Sling Model)`);
+            processedContainers.add(containerKey);
+            continue;
+          }
+
+          // Skip if this section contains a carousel component
+          if (hasCarouselComponent(nestedContainer)) {
+            console.log(`  ⏭️  Skipping carousel section: "${sectionTitle}"`);
+            processedContainers.add(containerKey);
+            continue;
+          }
+
+          console.log(`  📦 Extracting missing section from JCR: "${sectionTitle}"`);
+
+          // Extract all content from the parent container
+          const sectionItems = [];
+          extractContentFromContainer(container, sectionItems, sectionTitle, jcrTeaserImageMap);
+
+          if (sectionItems.length > 0) {
+            missingSections.push({
+              title: sectionTitle,
+              path: sectionTitle,
+              type: 'title', // Section type
+              items: sectionItems,
+            });
+          }
+          processedContainers.add(containerKey);
+        }
+      }
+    }
+  }
+
+  // Extract standalone components (buttons, teasers) that aren't within any titled section
+  // Skip this if we already have non-tabs sections (from extractNonTabsContent)
+  // as those sections have already been fully extracted
+  const hasNonTabsSections = existingSectionTitles.length > 0
+      && mainHierarchy.some((s) => s.type === 'title');
+
+  if (hasNonTabsSections) {
+    console.log('  ⏭️  Skipping standalone component extraction (non-tabs sections already extracted)');
+  } else {
+    console.log('  🔍 Checking for standalone components in JCR...');
+
+    // Build a set of all keys/IDs AND unique signatures that already exist in the hierarchy to avoid duplicates
+    const existingKeys = new Set();
+    const existingSignatures = new Set(); // For buttons: key+url signature
+    function collectExistingKeys(items) {
+      if (!items || !Array.isArray(items)) return;
+      items.forEach((item) => {
+        if (item.key) existingKeys.add(item.key);
+        if (item.id) existingKeys.add(item.id);
+        // For buttons, create a unique signature from key + URL
+        if (item.type === 'button' && item.linkSources) {
+          const url = item.linkSources.clickableUrl || item.linkSources.searchLink || '';
+          if (url) {
+            existingSignatures.add(`${item.key}-${url}`);
+          }
+        }
+        if (item.items) collectExistingKeys(item.items);
+      });
+    }
+    collectExistingKeys(mainHierarchy);
+
+    const standaloneItems = [];
+    for (const containerKey in rootContainer) {
+      const container = rootContainer[containerKey];
+
+      if (!container || typeof container !== 'object') continue;
+      if (containerKey.startsWith('jcr:') || containerKey.startsWith('cq:') || containerKey.startsWith('sling:')) continue;
+      if (processedContainers.has(containerKey)) continue; // Skip containers we already processed as sections
+
+      // Extract any buttons or teasers from this container
+      const items = [];
+      extractContentFromContainer(container, items, 'Other Content', jcrTeaserImageMap);
+
+      // Filter out items that already exist in the hierarchy
+      const uniqueItems = items.filter((item) => {
+        const itemKey = item.key || item.id;
+
+        // For buttons, check both key and unique signature (key+URL)
+        if (item.type === 'button' && item.linkSources) {
+          const url = item.linkSources.clickableUrl || item.linkSources.searchLink || '';
+          if (url) {
+            const signature = `${item.key}-${url}`;
+            if (existingSignatures.has(signature)) {
+              console.log(`  ⏭️  Skipping duplicate standalone component: "${item.title}" (key: ${itemKey}, signature matched)`);
+              return false;
+            }
+          }
+        }
+
+        // For non-buttons or buttons without URLs, check by key/ID only
+        if (itemKey && existingKeys.has(itemKey)) {
+        // Additional check for tabs/teasers: they should have been in tabs model if they're real duplicates
+          if (item.type === 'tab' || item.type === 'teaser') {
+            console.log(`  ⏭️  Skipping duplicate standalone component: "${item.title}" (key: ${itemKey})`);
+            return false;
+          }
+        }
+        return true;
+      });
+
+      if (uniqueItems.length > 0) {
+        console.log(`  📦 Found ${uniqueItems.length} unique standalone component(s) in container "${containerKey}" (${items.length - uniqueItems.length} duplicates skipped)`);
+        standaloneItems.push(...uniqueItems);
+      }
+    }
+
+    // If we found any standalone items, add them as a section
+    if (standaloneItems.length > 0) {
+      missingSections.push({
+        title: 'Other Content',
+        path: 'Other Content',
+        type: 'container',
+        items: standaloneItems,
+      });
+    }
+  } // End of else block for standalone component extraction
+
+  return missingSections;
+}
+
+// Extract all content (tabs, accordions, buttons, teasers, text) from a JCR container
+function extractContentFromContainer(container, items, parentTitle, jcrTeaserImageMap = {}) {
+  if (!container || typeof container !== 'object') return;
+
+  for (const key in container) {
+    if (key.startsWith('jcr:') || key.startsWith('cq:') || key.startsWith('sling:')) continue;
+
+    const component = container[key];
+    if (!component || typeof component !== 'object') continue;
+
+    const resourceType = component['sling:resourceType'];
+    if (!resourceType) continue;
+
+    // Handle tabs components
+    if (resourceType === 'tccc-dam/components/tabs') {
+      const tabs = extractTabsFromTabsComponent(component, parentTitle, jcrTeaserImageMap);
+      items.push(...tabs);
+    }
+    // Handle accordion components
+    else if (resourceType === 'tccc-dam/components/accordion') {
+      const accordion = extractAccordionFromComponent(component, key, parentTitle);
+      if (accordion) items.push(accordion);
+    }
+    // Handle button components (both button and custom-button)
+    else if (resourceType === 'tccc-dam/components/button' || resourceType === 'tccc-dam/components/custom-button') {
+      const button = extractButtonFromComponent(component, key, parentTitle);
+      if (button) items.push(button);
+    }
+    // Handle teaser components
+    else if (resourceType === 'tccc-dam/components/teaser') {
+      const teaser = extractTeaserFromComponent(component, key, parentTitle, jcrTeaserImageMap);
+      if (teaser) items.push(teaser);
+    }
+    // Handle text components (standalone text with embedded links)
+    else if (resourceType === 'tccc-dam/components/text') {
+      const textContent = component.text;
+      if (textContent && textContent.trim()) {
+        // Append text to the last item in the array, or create a text-only item
+        if (items.length > 0) {
+          const lastItem = items[items.length - 1];
+          if (!lastItem.text) {
+            lastItem.text = textContent;
+          } else {
+            lastItem.text += `\n${textContent}`;
+          }
+        } else {
+          // No items yet, create a standalone text item
+          items.push({
+            title: key,
+            path: `${parentTitle} >>> ${key}`,
+            type: 'text',
+            key,
+            text: textContent,
+          });
+        }
+      }
+    }
+    // Handle container components (recurse)
+    else if (resourceType === 'tccc-dam/components/container') {
+      extractContentFromContainer(component, items, parentTitle, jcrTeaserImageMap);
+    }
+  }
+}
+
+// Extract tabs from a tabs component
+function extractTabsFromTabsComponent(tabsComponent, parentTitle, jcrTeaserImageMap = {}) {
+  const tabs = [];
+
+  for (const key in tabsComponent) {
+    if (key.startsWith('jcr:') || key.startsWith('cq:') || key.startsWith('sling:')) continue;
+    if (key === ':type' || key === ':itemsOrder') continue;
+
+    const tabItem = tabsComponent[key];
+    if (!tabItem || typeof tabItem !== 'object') continue;
+
+    const tabTitle = tabItem['cq:panelTitle'] || tabItem['jcr:title'] || key;
+    const tabPath = `${parentTitle} >>> ${tabTitle}`;
+
+    const tabItems = [];
+    extractContentFromContainer(tabItem, tabItems, tabPath, jcrTeaserImageMap);
+
+    tabs.push({
+      title: tabTitle,
+      path: tabPath,
+      type: 'tab',
+      key,
+      items: tabItems,
+    });
+  }
+
+  return tabs;
+}
+
+// Extract accordion from component
+function extractAccordionFromComponent(accordionComp, key, parentTitle) {
+  const accordionTitle = accordionComp['cq:panelTitle'] || accordionComp['jcr:title'] || key;
+  const accordionItems = [];
+
+  // Extract text from accordion panels
+  for (const panelKey in accordionComp) {
+    if (panelKey.startsWith('jcr:') || panelKey.startsWith('cq:') || panelKey.startsWith('sling:')) continue;
+    if (panelKey === ':type' || panelKey === ':itemsOrder') continue;
+
+    const panel = accordionComp[panelKey];
+    if (!panel || typeof panel !== 'object') continue;
+
+    const panelTitle = panel['cq:panelTitle'] || panel['jcr:title'] || panelKey;
+
+    // Extract text from panel
+    let panelText = '';
+    for (const textKey in panel) {
+      const textComp = panel[textKey];
+      if (textComp && typeof textComp === 'object'
+            && textComp['sling:resourceType'] === 'tccc-dam/components/text'
+            && textComp.text) {
+        panelText += (panelText ? '\n' : '') + textComp.text;
+      }
+    }
+
+    if (panelText) {
+      accordionItems.push({
+        title: panelTitle,
+        path: `${parentTitle} >>> ${accordionTitle} >>> ${panelTitle}`,
+        type: 'accordion',
+        key: panelKey,
+        text: panelText,
+      });
+    }
+  }
+
+  if (accordionItems.length > 0) {
+    return {
+      title: accordionTitle,
+      path: `${parentTitle} >>> ${accordionTitle}`,
+      type: 'accordion',
+      key,
+      items: accordionItems,
+    };
+  }
+
+  return null;
+}
+
+// Extract button from component
+function extractButtonFromComponent(buttonComp, key, parentTitle) {
+  const buttonText = buttonComp.text || buttonComp['jcr:title'] || 'Button';
+  const linkURL = buttonComp.linkURL || buttonComp.searchLink; // custom-button uses searchLink
+
+  const button = {
+    title: buttonText,
+    path: `${parentTitle} >>> ${buttonText}`,
+    type: 'button',
+    key,
   };
 
-  // Add banner images to root level if any found
-  if (bannerImages.length > 0) {
-    hierarchyStructure.bannerImages = bannerImages;
-    console.log(`🖼️  Found ${bannerImages.length} banner image(s):`);
-    bannerImages.forEach((img, index) => {
-      console.log(`   ${index + 1}. ${img.fileName} (${img.alt || 'No alt text'})`);
-    });
+  if (linkURL) {
+    button.linkSources = {
+      clickableUrl: stripHostOnly(linkURL),
+    };
   }
 
-  fs.writeFileSync(jsonOutputPath, JSON.stringify(hierarchyStructure, null, 2));
-  console.log('✅ Hierarchy extracted successfully!');
-  console.log(`💾 JSON structure saved to: ${jsonOutputPath}`);
+  return button;
+}
 
-  console.log('\n📋 OUTPUTS SAVED');
-  console.log('===============');
-  console.log(`📋 JSON structure: ${jsonOutputPath}`);
+// Extract teaser from component
+function extractTeaserFromComponent(teaserComp, key, parentTitle, jcrTeaserImageMap = {}) {
+  const teaserTitle = teaserComp['jcr:title'] || key;
+  const linkURL = teaserComp.linkURL;
 
-  // Display summary
-  function countItems(items) {
-    let count = items.length;
-    items.forEach((item) => {
-      if (item.items) {
-        count += countItems(item.items);
+  const teaser = {
+    title: teaserTitle,
+    path: `${parentTitle} >>> ${teaserTitle}`,
+    type: 'teaser',
+    key,
+    id: `teaser-${createDeterministicId(teaserTitle + key)}`,
+  };
+
+  if (linkURL) {
+    teaser.linkSources = {
+      clickableUrl: stripHostOnly(linkURL),
+    };
+  }
+
+  // Construct imageUrl from jcrTeaserImageMap
+  let imageUrl = null;
+  // Find this teaser in the map by matching the key
+  for (const [jcrPath, teaserData] of Object.entries(jcrTeaserImageMap)) {
+    if (teaserData.teaserKey === key && teaserData.fileName) {
+      const { fileName, lastModified } = teaserData;
+      const fileExtension = fileName.substring(fileName.lastIndexOf('.') + 1);
+      const imageFormat = `coreimg.85.1600.${fileExtension}`;
+
+      // Build full JCR path
+      const fullJcrPath = `${CONTENT_PATH}/_jcr_content/root${teaserData.jcrPath}`;
+
+      // Build filename with item ID for uniqueness
+      const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
+      const ext = fileName.substring(fileName.lastIndexOf('.'));
+      const finalFileName = `${teaser.id}-${nameWithoutExt}${ext}`;
+
+      imageUrl = `${fullJcrPath}.${imageFormat}/${lastModified}/${finalFileName}`;
+      break;
+    }
+  }
+
+  if (imageUrl) {
+    teaser.imageUrl = imageUrl;
+  }
+
+  return teaser;
+}
+
+// Helper to find a title component in a container (searches recursively)
+function findTitleComponent(obj, depth = 0, maxDepth = 3) {
+  if (depth > maxDepth) return null;
+
+  for (const key in obj) {
+    if (!key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
+      const item = obj[key];
+      if (item && typeof item === 'object') {
+        // Check if this is a title component
+        if (item['sling:resourceType'] === 'tccc-dam/components/title' && item['jcr:title']) {
+          return item;
+        }
+
+        // Recursively search in nested containers
+        if (item['sling:resourceType'] === 'tccc-dam/components/container') {
+          const found = findTitleComponent(item, depth + 1, maxDepth);
+          if (found) return found;
+        }
       }
-    });
-    return count;
+    }
+  }
+  return null;
+}
+
+// Find section-level title component (one with cq:styleIds, not generic headers)
+function findSectionTitleComponent(obj, depth = 0, maxDepth = 3) {
+  if (depth > maxDepth) return null;
+
+  const GENERIC_TITLE_PATTERN = /^[A-Z\s]+$/; // Match all-caps titles like "TEA STOREs"
+  const foundTitles = [];
+
+  for (const key in obj) {
+    if (!key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
+      const item = obj[key];
+      if (item && typeof item === 'object') {
+        // Check if this is a title component
+        if (item['sling:resourceType'] === 'tccc-dam/components/title' && item['jcr:title']) {
+          foundTitles.push(item);
+        }
+
+        // Recursively search in nested containers (but don't go too deep)
+        if (depth < 1 && item['sling:resourceType'] === 'tccc-dam/components/container') {
+          const found = findSectionTitleComponent(item, depth + 1, maxDepth);
+          if (found) foundTitles.push(found);
+        }
+      }
+    }
   }
 
-  const totalItems = countItems(mainHierarchy);
-  console.log('\n📊 Hierarchy Summary:');
-  console.log(`  Total items (including nested): ${totalItems}`);
-  console.log(`  Root level items: ${mainHierarchy.length}`);
-  if (mainHierarchy.length > 0) {
-    console.log(`  First item: "${mainHierarchy[0].title}" (${mainHierarchy[0].type})`);
+  // Prefer titles with cq:styleIds and non-generic text
+  // Generic = mostly uppercase (e.g., "TEA STOREs", "GLOBAL ASSETS")
+  const titlesWithStyle = foundTitles.filter((title) => {
+    const titleStyleIds = title['cq:styleIds'];
+    return titleStyleIds && Array.isArray(titleStyleIds) && titleStyleIds.length > 0;
+  });
+
+  if (titlesWithStyle.length > 0) {
+    // Among styled titles, prefer ones that are NOT mostly uppercase
+    const nonGenericTitles = titlesWithStyle.filter((title) => {
+      const titleText = title['jcr:title'];
+      // Check if title is mostly uppercase (>70% uppercase letters)
+      const letters = titleText.replace(/[^a-zA-Z]/g, '');
+      const uppercaseCount = (titleText.match(/[A-Z]/g) || []).length;
+      const isMostlyUppercase = letters.length > 0 && (uppercaseCount / letters.length) > 0.7;
+      return !isMostlyUppercase;
+    });
+
+    if (nonGenericTitles.length > 0) {
+      return nonGenericTitles[0]; // Return first non-generic styled title
+    }
+
+    // If all styled titles are generic, return the last one (often more specific)
+    return titlesWithStyle[titlesWithStyle.length - 1];
   }
+
+  // Fallback: return first title found
+  return foundTitles.length > 0 ? foundTitles[0] : null;
+}
+
+// Helper to extract components (buttons, teasers, etc.) from a container
+function extractComponentsFromContainer(container, items, sectionTitle, jcrTeaserImageMap = {}) {
+  for (const key in container) {
+    if (!key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
+      const component = container[key];
+      if (component && typeof component === 'object') {
+        const resourceType = component['sling:resourceType'];
+
+        // Extract buttons (both button and custom-button)
+        if (resourceType === 'tccc-dam/components/button' || resourceType === 'tccc-dam/components/custom-button') {
+          const buttonTitle = component['jcr:title'] || key;
+          const buttonItem = {
+            title: buttonTitle,
+            path: `${sectionTitle}${PATH_SEPARATOR}${buttonTitle}`,
+            type: 'button',
+            key,
+            id: `button-${createDeterministicId(buttonTitle + key)}`,
+          };
+
+          // Extract URL sources
+          // For button components, linkURL should be treated as clickableUrl
+          // For custom-button components, use searchLink
+          const buttonUrl = component.searchLink || component.linkURL;
+          if (buttonUrl) {
+            buttonItem.linkSources = {
+              clickableUrl: stripHostOnly(buttonUrl),
+            };
+          }
+
+          items.push(buttonItem);
+        }
+
+        // Extract accordions
+        if (resourceType === 'tccc-dam/components/accordion') {
+          // Extract accordion panels
+          for (const panelKey in component) {
+            if (panelKey.startsWith('item_') && component[panelKey]) {
+              const panel = component[panelKey];
+              const panelTitle = panel['cq:panelTitle'] || panel['jcr:title'] || panelKey;
+              const accordionItem = {
+                title: panelTitle,
+                path: `${sectionTitle}${PATH_SEPARATOR}${panelTitle}`,
+                type: 'accordion',
+                key: panelKey,
+                id: `accordion-${createDeterministicId(panelTitle + panelKey)}`,
+              };
+
+              // Extract text from the panel (look for text components)
+              let panelText = '';
+              for (const textKey in panel) {
+                if (textKey.startsWith('text') && panel[textKey] && panel[textKey].text) {
+                  if (panelText) panelText += '\n';
+                  panelText += panel[textKey].text;
+                }
+              }
+              if (panelText) {
+                accordionItem.text = panelText;
+              }
+
+              items.push(accordionItem);
+            }
+          }
+        }
+
+        // Extract teasers
+        if (resourceType === 'tccc-dam/components/teaser') {
+          const teaserTitle = component['jcr:title'] || key;
+          const teaserItem = {
+            title: teaserTitle,
+            path: `${sectionTitle}${PATH_SEPARATOR}${teaserTitle}`,
+            type: 'teaser',
+            key,
+            id: `teaser-${createDeterministicId(teaserTitle + key)}`,
+          };
+
+          // Extract URL sources from teaser
+          const linkSources = {};
+          if (component.linkURL) {
+            linkSources.clickableUrl = stripHostOnly(component.linkURL);
+          }
+          if (Object.keys(linkSources).length > 0) {
+            teaserItem.linkSources = linkSources;
+          }
+
+          // Construct imageUrl from jcrTeaserImageMap
+          let imageUrl = null;
+          // Find this teaser in the map by matching the key
+          for (const [jcrPath, teaserData] of Object.entries(jcrTeaserImageMap)) {
+            if (teaserData.teaserKey === key && teaserData.fileName) {
+              const { fileName, lastModified } = teaserData;
+              const fileExtension = fileName.substring(fileName.lastIndexOf('.') + 1);
+              const imageFormat = `coreimg.85.1600.${fileExtension}`;
+
+              // Build full JCR path
+              const fullJcrPath = `${CONTENT_PATH}/_jcr_content/root${teaserData.jcrPath}`;
+
+              // Build filename with item ID for uniqueness
+              const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.'));
+              const ext = fileName.substring(fileName.lastIndexOf('.'));
+              const finalFileName = `${teaserItem.id}-${nameWithoutExt}${ext}`;
+
+              imageUrl = `${fullJcrPath}.${imageFormat}/${lastModified}/${finalFileName}`;
+              break;
+            }
+          }
+
+          if (imageUrl) {
+            teaserItem.imageUrl = imageUrl;
+          }
+
+          items.push(teaserItem);
+        }
+
+        // Extract text components (for JCR-only text with embedded links)
+        if (resourceType === 'tccc-dam/components/text') {
+          const textContent = component.text;
+          if (textContent && textContent.trim()) {
+            // Find a parent item to attach this text to
+            // Look for the last added item that can have text
+            if (items.length > 0) {
+              const lastItem = items[items.length - 1];
+              // Append text to the last item (accordion, tab, or container)
+              if (!lastItem.text) {
+                lastItem.text = textContent;
+              } else {
+                lastItem.text += `\n${textContent}`;
+              }
+            } else {
+              // No items yet - create a standalone text item
+              items.push({
+                title: key,
+                path: `${sectionTitle}${PATH_SEPARATOR}${key}`,
+                type: 'text',
+                key,
+                text: textContent,
+              });
+            }
+          }
+        }
+
+        // Recursively search nested containers
+        if (resourceType === 'tccc-dam/components/container') {
+          extractComponentsFromContainer(component, items, sectionTitle, jcrTeaserImageMap);
+        }
+      }
+    }
+  }
+}
+
+// Helper function to remove a parent title from paths
+function removeParentFromPath(path, parentTitle) {
+  if (!path || !parentTitle) return path;
+
+  const separator = ' >>> ';
+  const pathParts = path.split(separator);
+
+  // Filter out the parent title from the path
+  const filteredParts = pathParts.filter((part) => part !== parentTitle);
+
+  return filteredParts.join(separator);
+}
+
+// Unwrap accordion items but keep their children
+function unwrapAccordionItems(items, depth = 0) {
+  if (!items || !Array.isArray(items)) return items;
+
+  // Safeguard against infinite recursion
+  if (depth > 100) {
+    console.warn(`⚠️  unwrapAccordionItems: Stopping recursion at depth ${depth}`);
+    return items;
+  }
+
+  const result = [];
+
+  items.forEach((item) => {
+    // Skip items with specific titles that should not be included
+    const skipTitles = ['Content Store Request Form'];
+    if (item.title && skipTitles.includes(item.title)) {
+      // Skip this item entirely (don't add to result)
+      return;
+    }
+
+    // Skip items with specific text content (boilerplate/instructional text)
+    if (item.text && item.text.includes('Explore tabs below to access various content')) {
+      // Skip this item entirely (don't add to result)
+      return;
+    }
+
+    // If item title starts with '{type}_', 'item_', or equals '{type}', skip it but keep its children
+    // This handles wrappers like 'accordion_', 'button_', 'teaser_', 'item_*', etc.
+    const shouldUnwrap = item.title
+        && (item.title.startsWith('item_')
+            || (item.type && (item.title.startsWith(`${item.type}_`) || item.title === item.type)));
+
+    if (shouldUnwrap) {
+      if (item.items && item.items.length > 0) {
+        // Recursively unwrap children and add them directly
+        const unwrappedChildren = unwrapAccordionItems(item.items, depth + 1);
+
+        // Remove the skipped parent's title from all children's paths
+        const updatedChildren = unwrappedChildren.map((child) => {
+          const updatedChild = { ...child };
+
+          // Update the child's path to remove the parent title
+          if (updatedChild.path) {
+            updatedChild.path = removeParentFromPath(updatedChild.path, item.title);
+          }
+
+          // Recursively update paths of nested children
+          if (updatedChild.items && Array.isArray(updatedChild.items)) {
+            const updateNestedPaths = (nestedItems) => nestedItems.map((nestedItem) => {
+              const updated = { ...nestedItem };
+              if (updated.path) {
+                updated.path = removeParentFromPath(updated.path, item.title);
+              }
+              if (updated.items && Array.isArray(updated.items)) {
+                updated.items = updateNestedPaths(updated.items);
+              }
+              return updated;
+            });
+            updatedChild.items = updateNestedPaths(updatedChild.items);
+          }
+
+          return updatedChild;
+        });
+
+        // If the wrapper itself had text, preserve it by adding to the first child
+        if (item.text && updatedChildren.length > 0) {
+          if (!updatedChildren[0].text) {
+            updatedChildren[0].text = item.text;
+          } else {
+            updatedChildren[0].text = `${item.text}\n${updatedChildren[0].text}`;
+          }
+        }
+
+        result.push(...updatedChildren);
+      } else if (item.text && item.text.trim()) {
+        // Keep text-only items even if they're named like wrappers (e.g., "text_copy_copy_copy_")
+        // because they contain meaningful content
+        result.push(item);
+      }
+      // Skip wrapper items with no children and no text entirely
+      // These are structural metadata with no content
+    } else {
+      // Keep the item and recursively process its children
+      if (item.items) {
+        item.items = unwrapAccordionItems(item.items, depth + 1);
+      }
+      result.push(item);
+    }
+  });
+
+  return result;
+}
+
+// Function to detect and convert accordion items (containers with only text content)
+function convertAccordionContainers(items, depth = 0) {
+  if (!items || !Array.isArray(items)) return items;
+
+  // Safeguard against infinite recursion
+  if (depth > 100) {
+    console.warn(`⚠️  convertAccordionContainers: Stopping recursion at depth ${depth}`);
+    return items;
+  }
+
+  return items.map((item) => {
+    const updatedItem = { ...item };
+
+    // Pattern detection: Convert container to accordion if:
+    // 1. Type is "container"
+    // 2. Has text content
+    // 3. Key matches accordion item patterns (item_1, item_copy, etc.)
+    // 4. No nested items or only text items
+    if (
+      updatedItem.type === 'container'
+      && updatedItem.text
+      && updatedItem.key
+      && (updatedItem.key.match(/^item_\d+$/) || updatedItem.key.match(/^item_copy/))
+      && (!updatedItem.items || updatedItem.items.length === 0)
+    ) {
+      updatedItem.type = 'accordion';
+    }
+
+    // Recursively process children
+    if (updatedItem.items) {
+      updatedItem.items = convertAccordionContainers(updatedItem.items, depth + 1);
+    }
+
+    return updatedItem;
+  });
+}
+
+// Function to detect and convert tab panel items (containers with nested items or with cq:panelTitle)
+function convertTabContainers(items, depth = 0) {
+  if (!items || !Array.isArray(items)) return items;
+
+  // Safeguard against infinite recursion
+  if (depth > 100) {
+    console.warn(`⚠️  convertTabContainers: Stopping recursion at depth ${depth}`);
+    return items;
+  }
+
+  return items.map((item) => {
+    const updatedItem = { ...item };
+
+    // Pattern detection: Convert container to tab if:
+    // 1. Type is "container"
+    // 2. Has nested items (structural grouping), OR
+    // 3. Has cq:panelTitle metadata (indicates it's a tab panel, even if empty now - items might be added from JCR)
+    // Note: No key pattern restriction - any container with nested items is a structural tab
+    if (
+      updatedItem.type === 'container'
+      && (
+        (updatedItem.items && updatedItem.items.length > 0)
+        || updatedItem['cq:panelTitle']
+      )
+    ) {
+      updatedItem.type = 'tab';
+    }
+
+    // Recursively process children
+    if (updatedItem.items) {
+      updatedItem.items = convertTabContainers(updatedItem.items, depth + 1);
+    }
+
+    return updatedItem;
+  });
+}
+
+// Function to filter out empty containers (no items, no text, no meaningful content)
+function filterEmptyContainers(items, depth = 0) {
+  if (!items || !Array.isArray(items)) return items;
+
+  // Safeguard against infinite recursion
+  if (depth > 100) {
+    console.warn(`⚠️  filterEmptyContainers: Stopping recursion at depth ${depth}`);
+    return items;
+  }
+
+  return items
+    .filter((item) => {
+      // Keep if not a container
+      if (item.type !== 'container') return true;
+
+      // Filter out empty containers (no items, no text)
+      if (
+        (!item.items || item.items.length === 0)
+        && !item.text
+      ) {
+        console.log(`⚠️  Filtering out empty container: "${item.title}" (key: ${item.key})`);
+        return false;
+      }
+
+      return true;
+    })
+    .map((item) => {
+      // Recursively filter children
+      if (item.items) {
+        return { ...item, items: filterEmptyContainers(item.items, depth + 1) };
+      }
+      return item;
+    });
 }
 
 // Find all tabs paths in JCR recursively
@@ -2741,7 +4146,7 @@ function findAllTabsPaths(node, currentPath = '', found = []) {
   return found;
 }
 
-// Function to find containers that contain button components (for sections like "Toolkits & Internal Documents")
+// Function to find containers that contain button components (for sections like "Brand Materials")
 function findAllButtonContainerPaths(node, currentPath = '', found = []) {
   if (!node || typeof node !== 'object') {
     return found;
@@ -2758,10 +4163,11 @@ function findAllButtonContainerPaths(node, currentPath = '', found = []) {
     const resourceType = item['sling:resourceType'] || '';
     const newPath = currentPath ? `${currentPath}/${key}` : key;
 
-    // Found a container component - check if it contains buttons
+    // Found a container component - check if it contains buttons (including custom-button)
     if (resourceType === 'tccc-dam/components/container') {
       const hasButtons = Object.values(item).some((child) => child && typeof child === 'object'
-        && child['sling:resourceType'] === 'tccc-dam/components/button');
+        && (child['sling:resourceType'] === 'tccc-dam/components/button'
+            || child['sling:resourceType'] === 'tccc-dam/components/custom-button'));
 
       if (hasButtons) {
         const fullPath = `/jcr:content/${newPath}`;
@@ -2779,8 +4185,10 @@ function findAllButtonContainerPaths(node, currentPath = '', found = []) {
 // Function to extract button components from JCR containers
 function extractButtonsFromContainer(jcrData, containerPath) {
   // Navigate to the container in JCR data
+  // Path format: /jcr:content/container/... but jcrData structure is { root: { container: ... } }
+  // So we need to start from jcrData.root
   const pathParts = containerPath.replace('/jcr:content/', '').split('/');
-  let current = jcrData;
+  let current = jcrData.root || jcrData; // Start from root if it exists
 
   for (const part of pathParts) {
     if (current && current[part]) {
@@ -2807,15 +4215,15 @@ function extractButtonsFromContainer(jcrData, containerPath) {
       const resourceType = item['sling:resourceType'] || '';
       const newPath = currentPath ? `${currentPath}/${key}` : key;
 
-      // Found a button component
-      if (resourceType === 'tccc-dam/components/button') {
+      // Found a button or custom-button component
+      if (resourceType === 'tccc-dam/components/button' || resourceType === 'tccc-dam/components/custom-button') {
         // Create deterministic ID based on button properties
         const title = item['jcr:title'] || key;
         const idSource = `${title}-${key}-${containerPath}`;
         const deterministicId = createDeterministicId(idSource);
 
         const button = {
-          id: `button-${deterministicId}`,
+          id: `custom-button-${deterministicId}`,
           title,
           type: 'button',
           key,
@@ -2823,9 +4231,11 @@ function extractButtonsFromContainer(jcrData, containerPath) {
 
         // Add URL sources if present and valid
         // For button components, linkURL should be treated as clickableUrl
-        if (item.linkURL && isValidLinkURL(item.linkURL)) {
+        // For custom-button components, use searchLink
+        const buttonUrl = item.searchLink || item.linkURL;
+        if (buttonUrl && isValidLinkURL(buttonUrl)) {
           button.linkSources = {
-            clickableUrl: stripHostOnly(item.linkURL),
+            clickableUrl: stripHostOnly(buttonUrl),
           };
         }
 
@@ -2839,6 +4249,104 @@ function extractButtonsFromContainer(jcrData, containerPath) {
 
   extractButtonsRecursively(current);
   return buttons;
+}
+
+// Helper to find all accordion paths in JCR
+function findAllAccordionPaths(jcrRoot) {
+  const accordionPaths = [];
+
+  function traverse(obj, currentPath = '/jcr:content') {
+    if (!obj || typeof obj !== 'object') return;
+
+    for (const key in obj) {
+      const item = obj[key];
+      if (!item || typeof item !== 'object') continue;
+
+      const newPath = `${currentPath}/${key}`;
+      const resourceType = item['sling:resourceType'] || '';
+
+      // Check if this is an accordion component
+      if (resourceType === 'tccc-dam/components/accordion') {
+        accordionPaths.push(newPath);
+      }
+
+      // Recurse into children
+      if (!key.startsWith(':') && !key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
+        traverse(item, newPath);
+      }
+    }
+  }
+
+  traverse(jcrRoot);
+  return accordionPaths;
+}
+
+// Helper to extract accordion panels with their titles and text from JCR
+function extractTextFromAccordion(jcrData, accordionPath) {
+  // Navigate to the accordion in JCR data
+  const pathParts = accordionPath.replace('/jcr:content/', '').split('/');
+  let current = jcrData.root || jcrData;
+
+  for (const part of pathParts) {
+    if (current && current[part]) {
+      current = current[part];
+    } else {
+      return null;
+    }
+  }
+
+  if (!current || typeof current !== 'object') {
+    return null;
+  }
+
+  // Extract each accordion panel separately
+  const panels = [];
+
+  Object.keys(current).forEach((key) => {
+    const item = current[key];
+    if (!item || typeof item !== 'object') return;
+
+    // Skip metadata properties
+    if (key.startsWith(':') || key.startsWith('jcr:') || key.startsWith('cq:') || key.startsWith('sling:')) return;
+
+    // Check if this is an accordion panel (container with cq:panelTitle)
+    const panelTitle = item['cq:panelTitle'] || item['jcr:title'];
+    if (panelTitle) {
+      // Extract all text from this panel
+      const textParts = [];
+
+      function extractTextRecursively(obj) {
+        if (!obj || typeof obj !== 'object') return;
+
+        Object.keys(obj).forEach((subKey) => {
+          const subItem = obj[subKey];
+          if (!subItem || typeof subItem !== 'object') return;
+
+          const resourceType = subItem['sling:resourceType'] || '';
+
+          // Found a text component
+          if (resourceType === 'tccc-dam/components/text' && subItem.text) {
+            textParts.push(subItem.text);
+          }
+
+          // Recurse into nested objects
+          extractTextRecursively(subItem);
+        });
+      }
+
+      extractTextRecursively(item);
+
+      if (textParts.length > 0) {
+        panels.push({
+          title: panelTitle,
+          text: textParts.join('\n'),
+          key,
+        });
+      }
+    }
+  });
+
+  return panels.length > 0 ? panels : null;
 }
 
 // Function to download all imageUrls
@@ -2880,15 +4388,18 @@ async function downloadAllImages(hierarchyData, outputDir) {
   // Download function with fallback mechanism
   function downloadImage(imageUrl, index) {
     return new Promise((resolve) => {
+      // Extract original filename once at the start
+      const originalUrlParts = imageUrl.split('/');
+      const originalFilename = originalUrlParts[originalUrlParts.length - 1];
+      const originalSafeFilename = sanitizeFileName(originalFilename);
+
       // Helper function to attempt download with a specific URL
       function attemptDownload(urlToTry, isRetry = false) {
         // Prepend AEM_AUTHOR to the imageUrl
         const fullUrl = AEM_AUTHOR + urlToTry;
 
-        // Extract filename from URL
-        const urlParts = urlToTry.split('/');
-        const filename = urlParts[urlParts.length - 1];
-        const safeFilename = sanitizeFileName(filename);
+        // Always use the original filename, even when using fallback URL
+        const safeFilename = originalSafeFilename;
         const filePath = path.join(imagesDir, safeFilename);
 
         // Skip if file already exists
@@ -2942,6 +4453,22 @@ async function downloadAllImages(hierarchyData, outputDir) {
                   resolve();
                 });
               } else {
+                // If redirect failed with 404 and this is the first attempt, try fallback URL
+                if (!isRetry && redirectResponse.statusCode === 404) {
+                  console.log(`❌ Failed redirect ${redirectUrl} (HTTP ${redirectResponse.statusCode}) - trying fallback...`);
+
+                  // Create fallback URL by removing teaser-{id}- prefix from filename
+                  const fallbackUrl = createFallbackUrl(urlToTry);
+                  if (fallbackUrl && fallbackUrl !== urlToTry) {
+                    console.log(`🔄 Trying fallback: ${fallbackUrl}`);
+                    attemptDownload(fallbackUrl, true);
+                    return;
+                  }
+
+                  // No fallback available, log final failure
+                  console.log(`❌ No fallback available for ${redirectUrl}`);
+                }
+
                 failed++;
                 failedUrls.push({ url: redirectUrl, reason: `HTTP ${redirectResponse.statusCode} (after redirect)`, filename: safeFilename });
                 console.log(`❌ Failed redirect ${redirectUrl} (HTTP ${redirectResponse.statusCode})`);
@@ -3050,9 +4577,13 @@ async function downloadAllImages(hierarchyData, outputDir) {
         });
       }
 
-      // Helper function to create fallback URL by removing teaser-{id}- prefix
+      // Helper function to create fallback URL by removing teaser-{id}- prefix and 85.1600. pattern
       function createFallbackUrl(originalUrl) {
-        const urlParts = originalUrl.split('/');
+        // First, remove 85.1600. from the entire URL path
+        let fallbackUrl = originalUrl.replace(/85\.1600\./g, '');
+
+        // Then, try to remove teaser-{id}- prefix from filename
+        const urlParts = fallbackUrl.split('/');
         const filename = urlParts[urlParts.length - 1];
 
         // Check if filename has teaser-{id}- prefix pattern
@@ -3060,12 +4591,12 @@ async function downloadAllImages(hierarchyData, outputDir) {
         if (teaserMatch) {
           // Replace the filename with the version without teaser prefix
           const fallbackFilename = teaserMatch[1];
-          const fallbackUrlParts = [...urlParts];
-          fallbackUrlParts[fallbackUrlParts.length - 1] = fallbackFilename;
-          return fallbackUrlParts.join('/');
+          urlParts[urlParts.length - 1] = fallbackFilename;
+          fallbackUrl = urlParts.join('/');
         }
 
-        return null; // No fallback possible
+        // Return the fallback URL if it's different from the original
+        return fallbackUrl !== originalUrl ? fallbackUrl : null;
       }
 
       // Start with the original URL
@@ -3086,7 +4617,9 @@ async function downloadAllImages(hierarchyData, outputDir) {
 
   console.log('\n🎉 Download complete!');
   console.log(`   ✅ Successfully downloaded: ${downloaded}`);
-  console.log(`   ❌ Failed: ${failed}`);
+  if (failed > 0) {
+    console.log(`   ❌ Failed: ${failed}`);
+  }
   console.log(`   📁 Images saved to: ${imagesDir}`);
 
   // Log all failed URLs
@@ -3102,7 +4635,43 @@ async function downloadAllImages(hierarchyData, outputDir) {
   }
 }
 
-// Run the main function
+// If multiple paths, execute script recursively for each one
+if (CONTENT_PATHS.length > 1) {
+  console.log(`\n📋 Processing ${CONTENT_PATHS.length} stores from input file...\n`);
+
+  const { execSync } = require('child_process');
+  const scriptPath = __filename;
+
+  // Build additional flags to pass to child processes
+  const additionalFlags = [];
+  if (flags.debug) additionalFlags.push('--debug');
+  if (flags.recursive) additionalFlags.push('--recursive');
+
+  for (let i = 0; i < CONTENT_PATHS.length; i++) {
+    const currentPath = CONTENT_PATHS[i];
+    console.log(`\n\n${'='.repeat(120)}`);
+    console.log(`🔄 Processing store ${i + 1}/${CONTENT_PATHS.length}: ${currentPath}`);
+    console.log('='.repeat(120));
+
+    try {
+      // Execute this script with the current content path
+      const command = `node "${scriptPath}" "${currentPath}" ${additionalFlags.join(' ')}`;
+      execSync(command, { stdio: 'inherit' });
+      console.log(`✅ Completed store ${i + 1}/${CONTENT_PATHS.length}: ${currentPath}`);
+    } catch (error) {
+      console.error(`❌ Failed to process store ${i + 1}/${CONTENT_PATHS.length}: ${currentPath}`);
+      console.error(error.message);
+      process.exit(1);
+    }
+  }
+
+  console.log(`\n\n${'='.repeat(120)}`);
+  console.log(`✅ All ${CONTENT_PATHS.length} stores processed successfully!`);
+  console.log('='.repeat(120));
+  process.exit(0);
+}
+
+// Run the main function (single path execution)
 main().then(async () => {
   // After successful extraction, download all images
   const fs = require('fs');
@@ -3126,9 +4695,13 @@ main().then(async () => {
     await downloadAllImages(allImagesToDownload, OUTPUT_DIR);
   }
 
-  // After successful extraction, check for linked content stores
-  const hierarchyFile = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
-  await extractLinkedContentStores(hierarchyFile);
+  // After successful extraction, check for linked content stores (only when --recursive flag is provided)
+  if (flags.recursive) {
+    const hierarchyFile = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
+    console.log('------------------------------------------ Starting recursive extraction of linked content stores... ------------------------------------------');
+    await extractLinkedContentStores(hierarchyFile, flags.debug);
+    console.log('------------------------------------------ Recursive extraction of linked content stores completed. ------------------------------------------');
+  }
 
   // Force clean exit
   process.exit(0);

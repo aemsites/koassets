@@ -26,16 +26,16 @@ OPTIONS:
 
  ARGUMENTS:
    CHILD-DIR-NAME      Optional. Specific child directory to merge.
-                       If omitted, all directories matching "all-content-stores__*"
-                       or "bottler-content-stores__*" will be merged.
+                       If omitted, all directories matching "all-content-stores-*"
+                       or "bottler-content-stores-*" will be merged.
 
  EXAMPLES:
 
    1. Merge a single child directory:
-      $ node merge-hierarchy-json.js all-content-stores__global-coca-cola-uplift
+      $ node merge-hierarchy-json.js all-content-stores-global-coca-cola-uplift
 
    2. Merge a bottler content store:
-      $ node merge-hierarchy-json.js bottler-content-stores__north-america
+      $ node merge-hierarchy-json.js bottler-content-stores-north-america
 
    3. Merge ALL child directories (auto-discover):
       $ node merge-hierarchy-json.js
@@ -45,8 +45,8 @@ OPTIONS:
 
  INPUT FILES:
    • Parent:   all-content-stores/extracted-results/hierarchy-structure.json
-   • Children: all-content-stores__*/extracted-results/hierarchy-structure.json
-               bottler-content-stores__*/extracted-results/hierarchy-structure.json
+   • Children: all-content-stores-*/extracted-results/hierarchy-structure.json
+               bottler-content-stores-*/extracted-results/hierarchy-structure.json
 
 OUTPUT FILES:
   • Merged:   all-content-stores/derived-results/hierarchy-structure.merged.json
@@ -55,7 +55,7 @@ HOW IT WORKS:
   1. Reads the parent hierarchy structure
   2. Reads one or more child hierarchy structures
   3. Derives linkURL from child directory name
-     Example: "all-content-stores__global-coca-cola-uplift"
+     Example: "all-content-stores-global-coca-cola-uplift"
            → "/content/share/us/en/all-content-stores/global-coca-cola-uplift"
   4. Finds matching item in parent hierarchy by linkURL
   5. Merges child items into parent item's items array
@@ -90,8 +90,8 @@ console.log('🔀 Merging hierarchy JSON files...\n');
 
 const childDirArg = args[0];
 
-// Paths
-const projectRoot = path.join(__dirname, '');
+// Paths - go up one level from _for-debug directory
+const projectRoot = path.join(__dirname, '..');
 const parentPath = path.join(projectRoot, 'all-content-stores/extracted-results/hierarchy-structure.json');
 
 // Verify parent file exists
@@ -107,17 +107,19 @@ if (childDirArg) {
   childDirs = [childDirArg];
   console.log(`📂 Processing single directory: ${childDirArg}\n`);
 } else {
-  // Find all directories matching "all-content-stores__*" or "bottler-content-stores__*"
+  // Find all directories matching "all-content-stores-*" or "bottler-content-stores-*"
+  // Exclude the base "all-content-stores" and "bottler-content-stores" directories
   console.log('📂 No directory specified, searching for content store directories...\n');
   const allEntries = fs.readdirSync(projectRoot, { withFileTypes: true });
   childDirs = allEntries
     .filter((entry) => entry.isDirectory()
-      && (entry.name.startsWith('all-content-stores__') || entry.name.startsWith('bottler-content-stores__')))
+      && ((entry.name.startsWith('all-content-stores-') && entry.name !== 'all-content-stores')
+        || (entry.name.startsWith('bottler-content-stores-') && entry.name !== 'bottler-content-stores')))
     .map((entry) => entry.name)
     .sort();
 
   if (childDirs.length === 0) {
-    console.error('❌ ERROR: No directories matching "all-content-stores__*" or "bottler-content-stores__*" found!');
+    console.error('❌ ERROR: No directories matching "all-content-stores-*" or "bottler-content-stores-*" found!');
     process.exit(1);
   }
 
@@ -157,8 +159,9 @@ for (const childDirName of childDirs) {
     console.log(`   ✓ Child: ${childData.items.length} top-level items`);
 
     // Derive the content path from the child directory name
-    // e.g., "all-content-stores__global-coca-cola-uplift" → "/content/share/us/en/all-content-stores/global-coca-cola-uplift"
-    const contentPathFromDir = `/content/share/us/en/${childDirName.replace(/__/g, '/')}`;
+    // e.g., "all-content-stores-global-coca-cola-uplift" → "/content/share/us/en/all-content-stores/global-coca-cola-uplift"
+    const urlPath = childDirName.replace(/^((?:all|bottler)-content-stores)-/, '$1/');
+    const contentPathFromDir = `/content/share/us/en/${urlPath}`;
     const contentPathWithHtml = `${contentPathFromDir}.html`;
     console.log('\n📍 Derived linkURL patterns:');
     console.log(`   - ${contentPathFromDir}`);

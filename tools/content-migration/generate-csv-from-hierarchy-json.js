@@ -14,9 +14,11 @@
 const fs = require('fs');
 const path = require('path');
 const { globSync } = require('glob');
-const { PATH_SEPARATOR } = require('./constants.js');
+const { PATH_SEPARATOR, DATA_DIR } = require('./constants.js');
 const { sanitizeFileName } = require('./sanitize-utils.js');
-const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client.js');
+const {
+  DA_ORG, DA_REPO, DA_DEST, IMAGES_BASE,
+} = require('./da-admin-client.js');
 
 /**
  * Transforms search-assets.html URLs to new search format
@@ -82,6 +84,35 @@ function transformSearchUrlsInText(text) {
     return text;
   }
 
+  // For very large text fields, use a more efficient approach to avoid regex catastrophic backtracking
+  if (text.length > 100000) {
+    console.log(`   ⚠️  Processing large text field (${text.length} chars) with optimized approach...`);
+
+    // Process text in chunks to avoid regex performance issues
+    const chunkSize = 50000; // Process 50KB at a time
+    let result = '';
+
+    for (let i = 0; i < text.length; i += chunkSize) {
+      const chunk = text.substring(i, Math.min(i + chunkSize, text.length));
+
+      // Use a simpler, more efficient regex that matches href="...search-assets.html..."
+      // This avoids the problematic [^"'\s]* pattern that causes backtracking
+      const urlPattern = /href=(["'])([^"']*search-assets\.html[^"']*)["']/gi;
+
+      const transformedChunk = chunk.replace(urlPattern, (match, quote, url) => {
+        // Decode HTML entities in URL
+        const decodedUrl = url.replace(/&amp;/g, '&');
+        const transformedUrl = transformSearchUrl(decodedUrl);
+        return `href=${quote}${transformedUrl}${quote}`;
+      });
+
+      result += transformedChunk;
+    }
+
+    return result;
+  }
+
+  // For normal-sized text, use the original pattern
   // Match URLs in href attributes and standalone URLs
   // Pattern matches: href="URL" or href='URL' or standalone https://...search-assets.html...
   const urlPattern = /((?:href=["'])?)([^"'\s]*search-assets\.html[^"'\s]*)(["']?)/gi;
@@ -95,35 +126,35 @@ function transformSearchUrlsInText(text) {
 }
 
 /**
- * Extracts link URL and type from item, supporting both old and new formats
- * Type priority:
- * 1. item.type if it's 'button' or 'accordion'
- * 2. item.linkSources.clickableUrl (type: 'link')
- * 3. item.linkURL or item.linkUrl (type: '')
- * @returns {Object} { url: string, type: string }
+ * Transforms type name for CSV output
+ * Renames 'title' to 'section-title' for clarity
+ * @param {string} type - The original type
+ * @returns {string} - The transformed type
+ */
+function transformType(type) {
+  if (type === 'title') {
+    return 'section-title';
+  }
+  return type || '';
+}
+
+/**
+ * Extracts link URL from item, supporting both old and new formats
+ * @returns {string} The link URL
  */
 function extractLinkUrl(item) {
   let url = '';
-  let type = '';
 
-  // Determine type - prioritize item.type if it's 'button' or 'accordion'
-  if (item.type === 'button' || item.type === 'accordion') {
-    type = item.type;
-  } else if (item.linkSources && typeof item.linkSources === 'object') {
-    if (item.linkSources.clickableUrl) {
-      type = 'link';
-    }
-  }
-
-  // Determine URL
+  // Check linkSources first (new format)
   if (item.linkSources && typeof item.linkSources === 'object') {
     if (item.linkSources.clickableUrl) {
       url = item.linkSources.clickableUrl;
     }
   }
 
+  // Fallback to linkURL (old format)
   if (!url) {
-    url = item.linkURL ?? item.linkUrl ?? '';
+    url = item.linkURL ?? '';
   }
 
   // Transform search-assets.html URLs to new format
@@ -132,7 +163,7 @@ function extractLinkUrl(item) {
   // Transform content store URLs to new format
   url = transformContentStoreUrl(url);
 
-  return { url, type };
+  return url;
 }
 
 /**
@@ -293,12 +324,12 @@ function formatImageUrl(imageUrl, destPath, storeName) {
   const sanitizedFilename = sanitizeFileName(filename);
 
   // Check if the sanitized file exists in the images directory
-  const imagePath = path.join(__dirname, storeName, 'extracted-results', 'images', sanitizedFilename);
+  const imagePath = path.join(__dirname, DATA_DIR, storeName, 'extracted-results', 'images', sanitizedFilename);
   if (!fs.existsSync(imagePath)) {
     return '';
   }
 
-  return `https://content.da.live/${destPath}/fragments/.${storeName}/${sanitizedFilename}`;
+  return `https://content.da.live/${destPath}/${IMAGES_BASE}${storeName}/${sanitizedFilename}`;
 }
 
 /**
@@ -321,16 +352,17 @@ function escapeCsvField(value) {
  * Converts an item to a CSV row
  */
 function itemToRow(item, destPath, storeName) {
-  const linkData = extractLinkUrl(item);
+  const linkUrl = extractLinkUrl(item);
   // Transform search URLs in text content
   const transformedText = transformSearchUrlsInText(item.text || '');
   return [
     escapeCsvField(formatPath(item.path || '')),
     escapeCsvField(item.title || ''),
     escapeCsvField(formatImageUrl(item.imageUrl || '', destPath, storeName)),
-    escapeCsvField(linkData.url),
-    escapeCsvField(item.type || ''),
+    escapeCsvField(linkUrl),
+    escapeCsvField(transformType(item.type)),
     escapeCsvField(transformedText),
+    escapeCsvField(item.synonym || ''),
   ].join(',');
 }
 
@@ -379,7 +411,7 @@ function processFile(inputFile, outputFile) {
   // No sorting needed - maintain the original order
 
   // Create CSV content
-  const headers = ['path', 'title', 'imageUrl', 'linkURL', 'type', 'text'];
+  const headers = ['path', 'title', 'imageUrl', 'linkURL', 'type', 'text', 'synonym'];
   const csvLines = [headers.join(',')];
 
   items.forEach((item) => {
@@ -400,7 +432,7 @@ function processFile(inputFile, outputFile) {
  * Finds all matching hierarchy-structure.json files
  */
 function findInputFiles() {
-  const pattern = '*-content-stores*/extracted-results/hierarchy-structure.json';
+  const pattern = `${DATA_DIR}/*-content-stores*/extracted-results/hierarchy-structure.json`;
   const matches = globSync(pattern, { cwd: __dirname });
   return matches.map((f) => path.join(__dirname, f));
 }

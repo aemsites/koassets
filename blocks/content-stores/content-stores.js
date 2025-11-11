@@ -38,9 +38,10 @@ const ROW_SCHEMA = {
   path: { type: 'string', default: '' },
   title: { type: 'string', default: '' },
   imageUrl: { type: 'string', default: '' },
-  linkURL: { type: 'string', default: '', aliases: ['linkUrl'] },
+  linkURL: { type: 'string', default: '' },
   type: { type: 'string', default: '' },
   text: { type: 'string', default: '' },
+  synonym: { type: 'string', default: '' },
 };
 
 /**
@@ -110,7 +111,7 @@ function normalizeRow(row) {
     const schema = ROW_SCHEMA[key];
     let value = row[key];
 
-    // Handle aliases (e.g., linkUrl -> linkURL)
+    // Handle aliases if defined in schema
     if (!value && schema.aliases) {
       schema.aliases.some((alias) => {
         if (row[alias]) {
@@ -288,7 +289,7 @@ function createViewerElement(contentStoresData) {
       return { ...item, hadChildren };
     }
 
-    // Check if item matches in title or text content
+    // Check if item matches in title, text content, or synonym
     const titleMatches = item.title && item.title.toLowerCase().includes(searchTerm);
 
     // Strip HTML tags from text before searching (only search visible text)
@@ -300,7 +301,14 @@ function createViewerElement(contentStoresData) {
     }
     const textMatches = visibleText && visibleText.toLowerCase().includes(searchTerm);
 
-    const matchesSearch = titleMatches || textMatches;
+    // Check if synonym matches - split by comma and check each term
+    let synonymMatches = false;
+    if (item.synonym) {
+      const synonymTerms = item.synonym.split(',').map((term) => term.trim().toLowerCase());
+      synonymMatches = synonymTerms.some((term) => term.includes(searchTerm));
+    }
+
+    const matchesSearch = titleMatches || textMatches || synonymMatches;
 
     // Recursively filter children
     const filteredChildren = item.items
@@ -385,14 +393,27 @@ function createViewerElement(contentStoresData) {
       treeItem.dataset.itemType = item.type;
     }
 
+    // For type 'text', only display the text content without title
+    if (item.type === 'text') {
+      if (item.text) {
+        const richContent = document.createElement('div');
+        richContent.className = 'rich-content';
+        richContent.innerHTML = item.text;
+        treeItem.appendChild(richContent);
+      }
+      return treeItem;
+    }
+
     const hasChildren = item.items && item.items.length > 0;
     const hasTextList = item.text && (item.text.includes('<a') || (item.text.match(/<p>/g) || []).length > 1);
+    // Accordion type items should always be expandable if they have text content
+    const isAccordionWithText = item.type === 'accordion' && item.text && item.text.trim() !== '';
     // Use hadChildren to preserve original parent status even when filtered
     const wasParent = item.hadChildren || false;
-    const hasExpandable = hasChildren || hasTextList || wasParent;
+    const hasExpandable = hasChildren || hasTextList || isAccordionWithText || wasParent;
     // Title type items are expanded by default
     let isExpanded;
-    if (item.type === 'title') {
+    if (item.type === 'section-title') {
       isExpanded = true;
     } else if (expandAllMode) {
       isExpanded = hasExpandable;
@@ -422,17 +443,21 @@ function createViewerElement(contentStoresData) {
       if (!hasLink) {
         treeNode.classList.add('disabled');
       }
-    } else if (item.type === 'title') {
-      treeNode.classList.add('type-title');
+    } else if (item.type === 'section-title') {
+      treeNode.classList.add('type-section-title');
     }
 
     treeNode.dataset.path = item.path;
     treeNode.dataset.hasChildren = hasExpandable ? 'true' : 'false';
     treeNode.dataset.hasTextList = hasTextList ? 'true' : 'false';
-    treeNode.dataset.linkUrl = hasLink ? item.linkURL : '';
+    treeNode.dataset.linkURL = hasLink ? item.linkURL : '';
+    // Add synonym as hidden data attribute for search
+    if (item.synonym) {
+      treeNode.dataset.synonym = item.synonym;
+    }
 
-    // Only create expand icon if item has expandable content (but not for title type)
-    if (hasExpandable && item.type !== 'title') {
+    // Only create expand icon if item has expandable content (but not for section-title type)
+    if (hasExpandable && item.type !== 'section-title') {
       const expandIcon = document.createElement('span');
       expandIcon.className = 'expand-icon';
       if (isExpanded) expandIcon.classList.add('expanded');
@@ -449,9 +474,9 @@ function createViewerElement(contentStoresData) {
       treeNode.appendChild(picture);
     }
 
-    // Create title element - h2 for title type, span or anchor for others
+    // Create title element - h2 for section-title type, span or anchor for others
     let nodeTitle;
-    if (item.type === 'title') {
+    if (item.type === 'section-title') {
       nodeTitle = document.createElement('h2');
       nodeTitle.className = 'node-title';
       // Create id from title (lowercase, replace spaces/special chars with hyphens)
@@ -479,8 +504,8 @@ function createViewerElement(contentStoresData) {
     }
     treeNode.appendChild(nodeTitle);
 
-    // Don't add click handler for title type items (they're always expanded)
-    if (item.type !== 'title') {
+    // Don't add click handler for section-title type items (they're always expanded)
+    if (item.type !== 'section-title') {
       treeNode.addEventListener('click', (event) => {
         const selection = window.getSelection();
         if (selection && selection.toString().trim().length > 0) {
@@ -517,7 +542,7 @@ function createViewerElement(contentStoresData) {
     if (item.text) {
       const richContent = document.createElement('div');
       richContent.className = 'rich-content';
-      if (hasTextList) {
+      if (hasTextList || isAccordionWithText) {
         richContent.classList.add('tree-children');
         if (isExpanded) richContent.classList.add('expanded');
       }
@@ -530,11 +555,12 @@ function createViewerElement(contentStoresData) {
       childrenContainer.className = 'tree-children';
       if (isExpanded) childrenContainer.classList.add('expanded');
 
-      // Check if all children are leaf items (no grandchildren)
-      const allChildrenAreLeaves = item.items.every(
+      // Check if all children are leaf items (no grandchildren), excluding text type items
+      const nonTextChildren = item.items.filter((child) => child.type !== 'text');
+      const allChildrenAreLeaves = nonTextChildren.length > 0 && nonTextChildren.every(
         (child) => !child.items || child.items.length === 0,
       );
-      // Apply grid layout if all children are leaf items
+      // Apply grid layout if all non-text children are leaf items
       if (allChildrenAreLeaves) {
         childrenContainer.classList.add('has-grid');
       }
@@ -573,7 +599,8 @@ function createViewerElement(contentStoresData) {
     items.forEach((item) => {
       const hasChildren = item.items && item.items.length > 0;
       const hasTextList = item.text && (item.text.includes('<a') || (item.text.match(/<p>/g) || []).length > 1);
-      if (hasChildren || hasTextList) {
+      const isAccordionWithText = item.type === 'accordion' && item.text && item.text.trim() !== '';
+      if (hasChildren || hasTextList || isAccordionWithText) {
         expandedNodes.add(item.path);
       }
       if (hasChildren) expandAllItems(item.items);

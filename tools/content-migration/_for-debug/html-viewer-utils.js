@@ -325,6 +325,43 @@ function deriveViewerTitle(inputPath, sourceType, options = {}) {
   return `${baseTitle} (from ${sourceLabel})`;
 }
 
+function convertDirNameToAemPath(dirName) {
+  if (!dirName) return '';
+
+  // Convert directory name to AEM path
+  // e.g., "all-content-stores-2023-horeca-global-charter"
+  //    -> "/content/share/us/en/all-content-stores/2023-horeca-global-charter"
+  // e.g., "all-content-stores" -> "/content/share/us/en/all-content-stores"
+  // e.g., "bottler-content-stores-coke-holiday-2025"
+  //    -> "/content/share/us/en/bottler-content-stores/coke-holiday-2025"
+
+  const parts = dirName.split('-');
+
+  // Find if it contains "-content-stores"
+  const storesIndex = parts.findIndex((part, i) => i < parts.length - 1 && part === 'content' && parts[i + 1] === 'stores');
+
+  if (storesIndex === -1) {
+    // No content-stores pattern found, just return as-is
+    return `/content/share/us/en/${dirName}`;
+  }
+
+  // Get the base store name (everything up to and including "stores")
+  const baseStoreParts = parts.slice(0, storesIndex + 2);
+  const baseStore = baseStoreParts.join('-');
+
+  // Get the sub-store name (everything after "stores")
+  const subStoreParts = parts.slice(storesIndex + 2);
+
+  if (subStoreParts.length === 0) {
+    // Main store only
+    return `/content/share/us/en/${baseStore}`;
+  }
+
+  // Sub-store
+  const subStore = subStoreParts.join('-');
+  return `/content/share/us/en/${baseStore}/${subStore}`;
+}
+
 function buildViewerHtml(templatePath, hierarchyData, viewerTitle, dirName = '') {
   const template = fs.readFileSync(templatePath, 'utf8');
   const dataStart = template.indexOf('let hierarchyData = ');
@@ -339,10 +376,17 @@ function buildViewerHtml(templatePath, hierarchyData, viewerTitle, dirName = '')
 
   const newHtml = `${beforeData}let hierarchyData = ${JSON.stringify(hierarchyData, null, 0)};${afterData}`;
 
+  // Generate AEM author link
+  const aemPath = convertDirNameToAemPath(dirName);
+  const aemAuthorUrl = `https://author-p64403-e544653.adobeaemcloud.com${aemPath}.html?wcmmode=disabled`;
+  const aemLinkHtml = aemPath
+    ? `<p id="viewer-subtitle">${dirName} | <a href="${aemAuthorUrl}" onclick="window.open(this.href, '_blank', 'popup=yes,width=1500,height=1200,left=1000,top=10,menubar=yes,toolbar=yes,location=yes,status=yes,scrollbars=yes,resizable=yes'); return false;" style="color: #0066cc; cursor: pointer;">🔗 View in AEM Author</a></p>`
+    : `<p id="viewer-subtitle">${dirName}</p>`;
+
   return newHtml
     .replace(/<title>.*?<\/title>/, `<title>${viewerTitle}</title>`)
     .replace(/<h1>.*?<\/h1>/, `<h1>🗂️ ${viewerTitle}</h1>`)
-    .replace(/<p id="viewer-subtitle">.*?<\/p>/, `<p id="viewer-subtitle">${dirName}</p>`);
+    .replace(/<p id="viewer-subtitle">.*?<\/p>/, aemLinkHtml);
 }
 
 function getOutputHtmlPath(inputPath, sourceType, options = {}) {
