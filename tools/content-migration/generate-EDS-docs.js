@@ -502,7 +502,7 @@ if (require.main === module) {
     // Get output file from remaining args
     const otherArgs = args.filter((arg, i) => i !== inputIndex && i !== inputIndex + 1);
     if (otherArgs.length > 0) {
-      outputFileName = otherArgs[0];
+      [outputFileName] = otherArgs;
     }
   } else {
     // No --input flag, check for output file name as first arg

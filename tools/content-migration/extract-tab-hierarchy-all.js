@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-/* eslint-disable no-console, no-shadow, no-restricted-syntax, no-inner-declarations, no-underscore-dangle, no-plusplus, no-await-in-loop, no-undef, no-unused-vars, global-require, no-lonely-if, prefer-destructuring, radix, max-len */
+/* eslint-disable no-console, no-shadow, no-restricted-syntax, no-inner-declarations, no-underscore-dangle, no-plusplus, no-await-in-loop, no-undef, no-unused-vars, global-require, no-lonely-if, prefer-destructuring, radix, max-len, guard-for-in, no-continue, brace-style */
 
 const fs = require('fs');
 const path = require('path');

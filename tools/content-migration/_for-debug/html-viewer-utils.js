@@ -329,9 +329,11 @@ function convertDirNameToAemPath(dirName) {
   if (!dirName) return '';
 
   // Convert directory name to AEM path
-  // e.g., "all-content-stores-2023-horeca-global-charter" -> "/content/share/us/en/all-content-stores/2023-horeca-global-charter"
+  // e.g., "all-content-stores-2023-horeca-global-charter"
+  //    -> "/content/share/us/en/all-content-stores/2023-horeca-global-charter"
   // e.g., "all-content-stores" -> "/content/share/us/en/all-content-stores"
-  // e.g., "bottler-content-stores-coke-holiday-2025" -> "/content/share/us/en/bottler-content-stores/coke-holiday-2025"
+  // e.g., "bottler-content-stores-coke-holiday-2025"
+  //    -> "/content/share/us/en/bottler-content-stores/coke-holiday-2025"
 
   const parts = dirName.split('-');
 
