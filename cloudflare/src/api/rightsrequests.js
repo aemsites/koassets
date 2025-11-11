@@ -8,8 +8,11 @@ import { json, error } from 'itty-router';
 import { sendMessage, sendMessageToMultiple } from '../util/notifications-helpers.js';
 
 // Rights Reviewers - users who receive notifications for new requests
+// TODO pull from sheet or some other dynamic way
 const RIGHTS_REVIEWERS = [
   'jfait@adobe.com',
+  'pkoch@adobe.com',
+  'inedoviesov@adobe.com'
   // Add more reviewers here
 ];
 
@@ -89,10 +92,10 @@ export async function rightsRequestsApi(request, env) {
  */
 function formatDateToGMT(date) {
   if (!date) return '';
-  
+
   try {
     let dateObj;
-    
+
     // Handle different input types
     if (date instanceof Date) {
       dateObj = date;
@@ -104,12 +107,12 @@ function formatDateToGMT(date) {
     } else {
       return '';
     }
-    
+
     // Check if date is valid
     if (Number.isNaN(dateObj.getTime())) {
       return '';
     }
-    
+
     // Convert to UTC string (e.g., "Mon Jan 05 2026 00:00:00 GMT+0000")
     return dateObj.toUTCString().replace('GMT', 'GMT+0000');
   } catch (error) {
