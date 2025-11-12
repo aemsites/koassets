@@ -11,15 +11,17 @@ const {
 const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client.js');
 
 // Parse command line arguments
-// Usage: ./upload-to-EDS.js <localPath> [daFullPath] [--preview] [--publish] [--debug] [--input <file>]
+// Usage: ./upload-to-EDS.js <localPath> [daFullPath] [--preview] [--publish] [--debug] [--force] [--input <file>]
 // Example: ./upload-to-EDS.js 'all-content-stores-sheet.json' 'aemsites/koassets/{DA_DEST}/all-content-stores-sheet.json' --preview --publish
 // Example: ./upload-to-EDS.js --input stores.txt --preview --publish --debug
+// Example: ./upload-to-EDS.js --input stores.txt --preview --publish --force
 const args = process.argv.slice(2);
 let localPath;
 let daFullPath;
 let previewFlag = false;
 let publishFlag = false;
 let debugFlag = false;
+let forceFlag = false;
 let inputFile;
 
 // Parse arguments
@@ -32,6 +34,8 @@ for (let i = 0; i < args.length; i += 1) {
     publishFlag = true;
   } else if (arg === '--debug' || arg === '-db') {
     debugFlag = true;
+  } else if (arg === '--force' || arg === '-f') {
+    forceFlag = true;
   } else if (arg === '--input' || arg === '-i') {
     inputFile = args[i + 1];
     i += 1; // Skip next argument since we consumed it
@@ -120,7 +124,6 @@ const debugStats = {
   skippedUploads: [],
   skippedPreviews: [],
   skippedPublishes: [],
-  sheetJsonFiles: [],
 };
 
 /**
@@ -131,13 +134,6 @@ function displayDebugSummary() {
   console.log('║                    🐛 DEBUG MODE SUMMARY                               ║');
   console.log('╚════════════════════════════════════════════════════════════════════════╝');
   console.log(`\n📊 Total files processed: ${debugStats.totalFiles}`);
-
-  if (debugStats.sheetJsonFiles.length > 0) {
-    console.log(`\n📄 Sheet JSON files (${debugStats.sheetJsonFiles.length}) - uploaded without checks:`);
-    debugStats.sheetJsonFiles.forEach((file) => {
-      console.log(`   • ${file}`);
-    });
-  }
 
   console.log('\n📤 Upload Operations:');
   if (debugStats.uploads.length > 0) {
@@ -212,9 +208,10 @@ function displayDebugSummary() {
  *                                If not provided, constructed as: {DA_ORG}/{DA_REPO}/{DA_DEST}/{filename}
  * @param {boolean} [previewFlag=false] - Trigger preview after upload
  * @param {boolean} [publishFlag=false] - Trigger publish after preview
+ * @param {boolean} [forceFlag=false] - Force upload/preview/publish without status checks
  */
 // eslint-disable-next-line no-shadow
-async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFlag = false) {
+async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFlag = false, forceFlag = false) {
   // Check if path exists
   if (!fs.existsSync(localPath)) {
     console.error(`❌ Path not found: ${localPath}`);
@@ -269,11 +266,11 @@ async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFl
       if (entry.isDirectory()) {
         // Recursively process subdirectory
         const subDaPath = `${baseDaPath}/${entry.name}`;
-        await uploadToEDS(entryPath, subDaPath, previewFlag, publishFlag);
+        await uploadToEDS(entryPath, subDaPath, previewFlag, publishFlag, forceFlag);
       } else {
         // Process file
         const fileDaPath = `${baseDaPath}/${entry.name}`;
-        await uploadToEDS(entryPath, fileDaPath, previewFlag, publishFlag);
+        await uploadToEDS(entryPath, fileDaPath, previewFlag, publishFlag, forceFlag);
       }
     }, Promise.resolve());
 
@@ -293,10 +290,30 @@ async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFl
       const relativePath = normalizedLocalPath.substring(
         normalizedLocalPath.indexOf(dataGenDocsPrefix) + dataGenDocsPrefix.length,
       );
+
+      // Check if this is a file from a store subdirectory (not root files)
+      // Root files: all-content-stores-sheet.json, all-content-stores.html
+      // Store subdirectory files: all-content-stores-{name}/all-content-stores-{name}-sheet.json
+      const pathParts = relativePath.split('/');
+      const dirName = pathParts[0];
+      const isStoreSubdir = pathParts.length === 2
+        && dirName !== 'all-content-stores'
+        && (dirName.startsWith('all-content-stores-') || dirName.startsWith('bottler-content-stores-'));
+
       // Use DA_DEST if available
       if (DA_DEST) {
         const normalizedDest = DA_DEST.startsWith('/') ? DA_DEST.substring(1) : DA_DEST;
-        targetDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/${relativePath}`;
+        if (isStoreSubdir) {
+          // For store files, flatten to content-stores/filename
+          const filename = pathParts[1];
+          targetDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/content-stores/${filename}`;
+        } else {
+          // For root files, keep at root level
+          targetDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/${relativePath}`;
+        }
+      } else if (isStoreSubdir) {
+        const filename = pathParts[1];
+        targetDaPath = `${DA_ORG}/${DA_REPO}/content-stores/${filename}`;
       } else {
         targetDaPath = `${DA_ORG}/${DA_REPO}/${relativePath}`;
       }
@@ -322,13 +339,6 @@ async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFl
   }
 
   try {
-    // Check if file is a -sheet.json file (always upload these without checks)
-    const isSheetJson = path.basename(localFilePath).endsWith('-sheet.json');
-
-    if (debugFlag && isSheetJson) {
-      debugStats.sheetJsonFiles.push(targetDaPath);
-    }
-
     // Build full path with branch for preview/publish checks: org/repo/branch/dest
     const orgRepo = targetDaPath.split('/').slice(0, 2).join('/');
     let destOnly = targetDaPath.split('/').slice(2).join('/');
@@ -345,14 +355,20 @@ async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFl
     const previewArg = previewFlag ? ' --preview' : '';
     const publishArg = publishFlag ? ' --publish' : '';
     const debugArg = debugFlag ? ' --debug' : '';
-    console.log(`   Command: node upload-to-EDS.js '${localFilePath}' '${targetDaPath}'${previewArg}${publishArg}${debugArg}`);
+    const forceArg = forceFlag ? ' --force' : '';
+    console.log(`   Command: node upload-to-EDS.js '${localFilePath}' '${targetDaPath}'${previewArg}${publishArg}${debugArg}${forceArg}`);
 
     let needsUpload = true;
     let alreadyPreviewed = false;
     let alreadyPublished = false;
 
-    // Check status for non-sheet.json files
-    if (!isSheetJson) {
+    // Check status for all files (unless force flag is set)
+    if (forceFlag) {
+      console.log('⚡ Force mode enabled - skipping status checks');
+      needsUpload = true;
+      alreadyPreviewed = false;
+      alreadyPublished = false;
+    } else {
       console.log('🔍 Checking source status...');
       // isSourceUploaded needs targetDaPath (with extension, without branch)
       needsUpload = !(await isSourceUploaded(targetDaPath));
@@ -372,8 +388,6 @@ async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFl
           }
         }
       }
-    } else {
-      console.log('   ℹ️  Sheet JSON file - uploading without status check');
     }
 
     // Track statistics and show summary in debug mode
@@ -483,8 +497,8 @@ if (require.main === module) {
     console.error('  Uploads files or directories to DA (Digital Assets) with optional preview and publish.');
     console.error('');
     console.error('Usage:');
-    console.error('  ./upload-to-EDS.js <localPath> [daFullPath] [--preview] [--publish] [--debug]');
-    console.error('  ./upload-to-EDS.js --input <file> [--preview] [--publish] [--debug]');
+    console.error('  ./upload-to-EDS.js <localPath> [daFullPath] [--preview] [--publish] [--debug] [--force]');
+    console.error('  ./upload-to-EDS.js --input <file> [--preview] [--publish] [--debug] [--force]');
     console.error('');
     console.error('Arguments:');
     console.error('  localPath     - Path to local file or directory (e.g., "./file.json" or "./my-folder")');
@@ -500,6 +514,7 @@ if (require.main === module) {
     console.error('  -pr, --preview             Trigger preview after upload (default: false)');
     console.error('  -pb, --publish             Trigger publish after upload (default: false)');
     console.error('  -db, --debug               Debug mode: skip actual DA operations (default: false)');
+    console.error('  -f, --force                Force mode: skip status checks, always upload/preview/publish (default: false)');
     console.error('  -h, --help                 Show this help message');
     console.error('');
     console.error('Examples (single file):');
@@ -525,10 +540,15 @@ if (require.main === module) {
     console.error('  ./upload-to-EDS.js "file.html" "aemsites/koassets/{DA_DEST}/file.html"');
     console.error('  ./upload-to-EDS.js "file.html" "aemsites/koassets/{DA_DEST}/file.html" --preview --publish');
     console.error('');
+    console.error('Examples (force mode):');
+    console.error('  ./upload-to-EDS.js "file.html" --preview --publish --force');
+    console.error('  ./upload-to-EDS.js --input stores.txt --preview --publish --force');
+    console.error('');
     console.error('Notes:');
     console.error('  - By default, files are uploaded without preview/publish (use flags to enable)');
     console.error('  - Preview and publish are independent - either or both can be enabled');
     console.error('  - Debug mode skips all DA operations - useful for testing without actual uploads');
+    console.error('  - Force mode skips status checks and always performs upload/preview/publish operations');
     console.error('  - For HTML files, extensions are stripped during preview/publish path construction');
     console.error('  - Configuration loaded from da.config file (DA_ORG, DA_REPO, DA_DEST)');
     console.error('');
@@ -543,6 +563,7 @@ if (require.main === module) {
     console.log(`   Preview: ${previewFlag}`);
     console.log(`   Publish: ${publishFlag}`);
     console.log(`   Debug: ${debugFlag}`);
+    console.log(`   Force: ${forceFlag}`);
 
     const contentPaths = readInputFile(inputFile);
     console.log(`\n📋 Found ${contentPaths.length} content path(s) in input file\n`);
@@ -559,47 +580,51 @@ if (require.main === module) {
           // Convert content path to directory name
           const dirName = contentPathToDirectoryName(contentPath);
 
-          // Determine if this is a main store or sub-store
-          const parts = contentPath.replace(/^\/+|\/+$/g, '').split('/');
-          const mainStoreIndex = parts.findIndex((part) => part.includes('-content-stores'));
-          const isMainStore = mainStoreIndex === parts.length - 1;
+          // Determine if this is all-content-stores or another store
+          const isAllContentStores = dirName === 'all-content-stores';
+          const generatedDocsDir = path.join(__dirname, 'DATA', 'generated-eds-docs');
 
+          let targetPath;
           let matchingFiles = [];
-          let searchDir;
 
-          if (isMainStore) {
-            // Main store: look in DATA/generated-eds-docs/{dirName}*
-            searchDir = path.join(__dirname, 'DATA', 'generated-eds-docs');
+          if (isAllContentStores) {
+            // all-content-stores: files at root of generated-eds-docs/
+            // Look for: all-content-stores-sheet.json and all-content-stores.html
+            targetPath = generatedDocsDir;
+            if (fs.existsSync(targetPath)) {
+              const entries = fs.readdirSync(targetPath, { withFileTypes: true });
+              matchingFiles = entries
+                .filter((entry) => entry.isFile() && entry.name.startsWith('all-content-stores'))
+                .map((entry) => path.join(targetPath, entry.name));
+            }
           } else {
-            // Sub-store: look in DATA/generated-eds-docs/content-stores/{dirName}*
-            searchDir = path.join(__dirname, 'DATA', 'generated-eds-docs', 'content-stores');
-          }
-
-          // Find matching files
-          if (fs.existsSync(searchDir)) {
-            const entries = fs.readdirSync(searchDir, { withFileTypes: true });
-            matchingFiles = entries
-              .filter((entry) => entry.isFile() && entry.name.startsWith(dirName))
-              .map((entry) => path.join(searchDir, entry.name));
+            // Other stores: look in subdirectory DATA/generated-eds-docs/{dirName}/
+            targetPath = path.join(generatedDocsDir, dirName);
+            if (fs.existsSync(targetPath) && fs.statSync(targetPath).isDirectory()) {
+              const entries = fs.readdirSync(targetPath, { withFileTypes: true });
+              matchingFiles = entries
+                .filter((entry) => entry.isFile())
+                .map((entry) => path.join(targetPath, entry.name));
+            }
           }
 
           // Check if files were found
           if (matchingFiles.length === 0) {
-            const searchPath = isMainStore
-              ? 'DATA/generated-eds-docs/{dirName}*'
-              : 'DATA/generated-eds-docs/content-stores/{dirName}*';
-            console.log(`   ⚠️  Skipping: No files found matching: ${searchPath.replace('{dirName}', dirName)}`);
+            const searchPath = isAllContentStores
+              ? 'DATA/generated-eds-docs/all-content-stores*'
+              : `DATA/generated-eds-docs/${dirName}/`;
+            console.log(`   ⚠️  Skipping: No files found at: ${searchPath}`);
             continue; // eslint-disable-line no-continue
           }
 
-          console.log(`   📁 Found ${matchingFiles.length} file(s) matching ${dirName}*`);
+          console.log(`   📁 Found ${matchingFiles.length} file(s) in ${isAllContentStores ? 'root' : `${dirName}/`}`);
 
           // Upload each matching file
           await matchingFiles.reduce(async (promise, filePath) => {
             await promise;
             const fileName = path.basename(filePath);
             console.log(`      📄 ${fileName}`);
-            await uploadToEDS(filePath, null, previewFlag, publishFlag);
+            await uploadToEDS(filePath, null, previewFlag, publishFlag, forceFlag);
           }, Promise.resolve());
         } catch (error) {
           console.error(`   ❌ Error processing ${contentPath}: ${error.message}`);
@@ -627,8 +652,9 @@ if (require.main === module) {
     console.log(`   Preview: ${previewFlag}`);
     console.log(`   Publish: ${publishFlag}`);
     console.log(`   Debug: ${debugFlag}`);
+    console.log(`   Force: ${forceFlag}`);
 
-    uploadToEDS(localPath, daFullPath, previewFlag, publishFlag).then(() => {
+    uploadToEDS(localPath, daFullPath, previewFlag, publishFlag, forceFlag).then(() => {
       // Display debug summary if in debug mode
       if (debugFlag) {
         displayDebugSummary();
@@ -641,7 +667,7 @@ if (require.main === module) {
     console.error('❌ Error: Missing required arguments');
     console.error('');
     console.error('Usage:');
-    console.error('  ./upload-to-EDS.js <localPath> [daFullPath] [--preview] [--publish] [--debug]');
+    console.error('  ./upload-to-EDS.js <localPath> [daFullPath] [--preview] [--publish] [--debug] [--force]');
     console.error('');
     console.error('Arguments:');
     console.error('  localPath     - Path to local file or directory (e.g., "./file.json" or "./my-folder")');
@@ -655,6 +681,7 @@ if (require.main === module) {
     console.error('  -pr, --preview             Trigger preview after upload (default: false)');
     console.error('  -pb, --publish             Trigger publish after upload (default: false)');
     console.error('  -db, --debug               Debug mode: skip actual DA operations (default: false)');
+    console.error('  -f, --force                Force mode: skip status checks, always upload/preview/publish (default: false)');
     console.error('  -h, --help                 Show this help message');
     console.error('');
     console.error('Examples (single file):');

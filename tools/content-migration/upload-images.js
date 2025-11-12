@@ -56,7 +56,7 @@ const debugStats = {
  */
 function displayDebugSummary() {
   console.log('\n╔════════════════════════════════════════════════════════════════════════╗');
-  console.log('║                    🐛 DEBUG MODE SUMMARY                              ║');
+  console.log('║                    🐛 DEBUG MODE SUMMARY                               ║');
   console.log('╚════════════════════════════════════════════════════════════════════════╝');
   console.log(`\n📊 Total images processed: ${debugStats.totalImages}`);
 
@@ -122,9 +122,10 @@ function extractStoreNameFromPath(contentPath) {
  * @param {number} [concurrency=1] - Number of concurrent uploads (1 = sequential, higher = more parallel)
  * @param {string[]} [storesList] - Optional: List of store paths/names to process (from --input file)
  * @param {boolean} [debug=false] - Debug mode: check status but skip actual uploads
+ * @param {boolean} [isTopLevel=true] - Internal: whether this is the top-level call (for summary display)
  */
 // eslint-disable-next-line no-shadow
-async function uploadAllImages(imagesPath, concurrency = 1, storesList = null, debug = false) {
+async function uploadAllImages(imagesPath, concurrency = 1, storesList = null, debug = false, isTopLevel = true) {
   // If no imagesPath provided, auto-discover all content stores with images
   if (!imagesPath) {
     console.log('\n📸 Auto-discovering content stores with images...');
@@ -162,8 +163,8 @@ async function uploadAllImages(imagesPath, concurrency = 1, storesList = null, d
 
         console.log(`   Target DA path: ${targetDaBasePath}`);
 
-        // Recursively call uploadAllImages with the specific path
-        await uploadAllImages(imagesDir, concurrency, storesList, debug);
+        // Recursively call uploadAllImages with the specific path (not top level)
+        await uploadAllImages(imagesDir, concurrency, storesList, debug, false);
       } else {
         console.log(`   ⚠️ Skipping ${contentStoreDir}: no images directory found`);
       }
@@ -320,8 +321,8 @@ async function uploadAllImages(imagesPath, concurrency = 1, storesList = null, d
 
   console.log(`\n✅ All uploads completed: ${totalUploaded} uploaded, ${totalSkipped} skipped, ${totalFailed} failed out of ${imageFiles.length} total`);
 
-  // Display debug summary if in debug mode (only for non-recursive calls)
-  if (debug) {
+  // Display debug summary if in debug mode (only for top-level calls)
+  if (debug && isTopLevel) {
     displayDebugSummary();
   }
 }

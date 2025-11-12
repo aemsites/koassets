@@ -680,8 +680,8 @@ export default async function decorate(block) {
     return;
   }
 
-  const contentStores = await fetchSpreadsheetData(sheetPath, sheetName);
-  const contentStoresData = Array.isArray(contentStores?.data) ? contentStores.data : [];
+  const contentStores = await fetchSpreadsheetData(sheetPath);
+  const contentStoresData = contentStores?.[sheetName]?.data || contentStores?.data || [];
 
   const viewerElement = createViewerElement(contentStoresData);
 
