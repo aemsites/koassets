@@ -165,14 +165,15 @@ async function createSource(daFullPath, localFilePath) {
 }
 
 /**
- * Make a HLX action request (preview or publish)
+ * Make a HLX action request (preview, publish, or status)
  * @param {string} fullPath - Full path including org/repo/branch, e.g.
  * 'aemsites/koassets/main/drafts/tphan/all-content-stores'. SHOULD HAVE NO HTML EXTENSION.
- * @param {string} action - The action type ('preview' or 'live')
+ * @param {string} action - The action type ('preview', 'live', or 'status')
  * @param {string} actionName - Human-readable action name for logging
+ * @param {string} method - HTTP method to use ('POST' or 'GET'), defaults to 'POST'
  * @returns {Promise<Object>} Response from HLX endpoint
  */
-async function makeHlxRequest(fullPath, action, actionName) {
+async function makeHlxRequest(fullPath, action, actionName, method = 'POST') {
   return new Promise((resolve, reject) => {
     // Build URL - fullPath already includes org/repo/branch
     const url = new URL(`${PREVIEW_BASE}/${action}/${fullPath}`);
@@ -180,7 +181,7 @@ async function makeHlxRequest(fullPath, action, actionName) {
 
     // Make request
     const options = {
-      method: 'POST',
+      method,
       headers: {
         Authorization: DA_BEARER_TOKEN,
       },
@@ -237,6 +238,110 @@ async function publishSource(fullPath) {
   return makeHlxRequest(fullPath, 'live', 'Publishing');
 }
 
+/**
+ * Get the status of a source in HLX
+ * @param {string} fullPath - Full path including org/repo/branch, e.g.
+ * 'aemsites/koassets/main/drafts/tphan/all-content-stores'. SHOULD HAVE NO HTML EXTENSION.
+ * @returns {Promise<Object>} Response from status endpoint
+ */
+async function getSourceStatus(fullPath) {
+  return makeHlxRequest(fullPath, 'status', 'Get Source Status', 'GET');
+}
+
+/**
+ * Check if a source has been previewed (preview status is 200)
+ * @param {string} fullPath - Full path including org/repo/branch, e.g.
+ * 'aemsites/koassets/main/drafts/tphan/all-content-stores'. SHOULD HAVE NO HTML EXTENSION.
+ * @returns {Promise<boolean>} True if preview status is 200, false otherwise
+ */
+async function isSourcePreviewed(fullPath) {
+  try {
+    const response = await getSourceStatus(fullPath);
+    return response.data?.preview?.status === 200;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Check if a source has been published (publish/live status is 200)
+ * @param {string} fullPath - Full path including org/repo/branch, e.g.
+ * 'aemsites/koassets/main/drafts/tphan/all-content-stores'. SHOULD HAVE NO HTML EXTENSION.
+ * @returns {Promise<boolean>} True if publish status is 200, false otherwise
+ */
+async function isSourcePublished(fullPath) {
+  try {
+    const response = await getSourceStatus(fullPath);
+    return response.data?.live?.status === 200;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Check if an image/file has been uploaded to DA content storage
+ * @param {string} fullPath - Full path including org/repo, e.g.
+ * 'aemsites/koassets/drafts/tphan/image.png'
+ * @returns {Promise<boolean>} True if the file exists (HEAD request returns 200), false otherwise
+ */
+async function isImageUploaded(fullPath) {
+  return new Promise((resolve) => {
+    const url = new URL(`https://content.da.live/${fullPath}`);
+    console.debug(`Checking if file exists: ${url}`);
+
+    const options = {
+      method: 'HEAD',
+      headers: {
+        Authorization: DA_BEARER_TOKEN,
+      },
+    };
+
+    const req = https.request(url, options, (res) => {
+      // File exists if status is 200
+      resolve(res.statusCode === 200);
+    });
+
+    req.on('error', () => {
+      // If request fails, assume file doesn't exist
+      resolve(false);
+    });
+
+    req.end();
+  });
+}
+
+/**
+ * Check if a source has been uploaded to DA admin
+ * @param {string} daFullPath - Full DA path including org/repo (with extension), e.g.
+ * 'aemsites/koassets/drafts/tphan/all-content-stores.html'
+ * @returns {Promise<boolean>} True if the source exists in DA admin, false otherwise
+ */
+async function isSourceUploaded(daFullPath) {
+  return new Promise((resolve) => {
+    const url = new URL(`${DA_ADMIN_BASE}/source/${daFullPath}`);
+    console.debug(`Checking if source exists: ${url}`);
+
+    const options = {
+      method: 'HEAD',
+      headers: {
+        Authorization: DA_BEARER_TOKEN,
+      },
+    };
+
+    const req = https.request(url, options, (res) => {
+      // Source exists if status is 200
+      resolve(res.statusCode === 200);
+    });
+
+    req.on('error', () => {
+      // If request fails, assume source doesn't exist
+      resolve(false);
+    });
+
+    req.end();
+  });
+}
+
 module.exports = {
   DA_ORG,
   DA_REPO,
@@ -247,4 +352,9 @@ module.exports = {
   createSource,
   previewSource,
   publishSource,
+  getSourceStatus,
+  isSourcePreviewed,
+  isSourcePublished,
+  isImageUploaded,
+  isSourceUploaded,
 };
