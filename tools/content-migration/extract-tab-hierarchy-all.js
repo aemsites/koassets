@@ -1782,7 +1782,29 @@ async function main() {
             }
 
             if (tabsToNest.length > 0) {
-              titleSection.items.push(...tabsToNest);
+              // Update paths to include the parent title
+              const updatedTabs = tabsToNest.map((tab) => {
+                const updated = { ...tab };
+                updated.path = `${titleSection.path}${PATH_SEPARATOR}${tab.title}`;
+
+                // Recursively update paths of all nested children
+                if (updated.items && Array.isArray(updated.items)) {
+                  const updateNestedPaths = (items, parentPath) => items.map((item) => {
+                    const updatedItem = { ...item };
+                    updatedItem.path = `${parentPath}${PATH_SEPARATOR}${item.title}`;
+
+                    if (updatedItem.items && Array.isArray(updatedItem.items)) {
+                      updatedItem.items = updateNestedPaths(updatedItem.items, updatedItem.path);
+                    }
+                    return updatedItem;
+                  });
+                  updated.items = updateNestedPaths(updated.items, updated.path);
+                }
+
+                return updated;
+              });
+
+              titleSection.items.push(...updatedTabs);
               console.log(`  📁 Grouped ${tabsToNest.length} tab(s) [${tabsToNest.map((t) => t.title).join(', ')}] under title "${current.title}"`);
               grouped = true;
             }
@@ -2004,6 +2026,29 @@ async function main() {
       return orderA - orderB;
     });
     console.log('✅ Sections sorted to preserve JCR file order');
+
+    // Final pass: Recalculate all paths to ensure consistency
+    console.log('\n🔄 Recalculating all paths for consistency...');
+    function recalculateAllPaths(items, parentPath = '') {
+      return items.map((item) => {
+        const updatedItem = { ...item };
+        // Build full path from root
+        if (parentPath) {
+          updatedItem.path = `${parentPath}${PATH_SEPARATOR}${item.title}`;
+        } else {
+          updatedItem.path = item.title;
+        }
+
+        // Recursively update children
+        if (updatedItem.items && Array.isArray(updatedItem.items)) {
+          updatedItem.items = recalculateAllPaths(updatedItem.items, updatedItem.path);
+        }
+
+        return updatedItem;
+      });
+    }
+    convertedHierarchy = recalculateAllPaths(convertedHierarchy);
+    console.log('✅ All paths recalculated');
 
     // Save to file
     const jsonOutputPath = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
@@ -2396,12 +2441,12 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
 
       let currentDisplayPath = title;
       if (displayPath) {
-        const pathParts = displayPath.split(PATH_SEPARATOR);
-        // Only add the title if it's not already in the path AND is not a structural key
-        if (!pathParts.includes(title) && !isStructuralKey) {
+        // Always append the title to create a full path for this item, unless it's a structural key
+        // This ensures every item has its complete path from root, even if it shares a name with ancestors
+        if (!isStructuralKey) {
           currentDisplayPath = `${displayPath}${PATH_SEPARATOR}${title}`;
         } else {
-          // Skip adding duplicate title or structural segments to path
+          // Skip adding structural segments to path
           currentDisplayPath = displayPath;
         }
       } else {
@@ -2410,6 +2455,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
           currentDisplayPath = '';
         }
       }
+
       // Build JCR key path for logic (context matching, hierarchy tracking)
       // Make sure it matches the format used in extractTimestampsFromModel
       const currentKeyPath = `${parentKeyPath}/${key}`;
@@ -2494,22 +2540,55 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         }
       }
 
+      // searchLink - for custom-button components, assign to clickableUrl
+      // Check Sling Model first, then fall back to JCR if needed
+      if (item.searchLink && isValidLinkURL(item.searchLink)) {
+        // For custom-button components, searchLink is the clickable URL
+        if (!itemLinkSources.clickableUrl) {
+          itemLinkSources.clickableUrl = stripHostOnly(item.searchLink);
+        }
+      } else if (itemType === 'button' && item[':type'] === 'tccc-dam/components/custom-button' && !itemLinkSources.clickableUrl) {
+        // For custom-button components, if searchLink is not in Sling Model, check JCR
+        // Search for the button by BOTH key AND title in JCR (keys can be reused in different sections)
+        function findButtonInJCR(obj, targetKey, targetTitle) {
+          if (obj && typeof obj === 'object') {
+            if (obj[targetKey]
+                && obj[targetKey]['sling:resourceType'] === 'tccc-dam/components/custom-button'
+                && obj[targetKey]['jcr:title'] === targetTitle) {
+              return obj[targetKey];
+            }
+            for (const key of Object.keys(obj)) {
+              if (typeof obj[key] === 'object') {
+                const result = findButtonInJCR(obj[key], targetKey, targetTitle);
+                if (result) return result;
+              }
+            }
+          }
+          return null;
+        }
+
+        const jcrButton = findButtonInJCR(jcrData.root, key, title);
+        if (jcrButton && jcrButton.searchLink && isValidLinkURL(jcrButton.searchLink)) {
+          itemLinkSources.clickableUrl = stripHostOnly(jcrButton.searchLink);
+        }
+      }
+
       // Always check jcrTeaserImageMap for imageResourceUrl (don't overwrite if already exists)
-      for (const [jcrPath, jcrData] of Object.entries(jcrTeaserImageMap)) {
-        if (jcrData.modelPath === currentKeyPath && jcrData.linkSources) {
+      for (const [jcrPath, teaserData] of Object.entries(jcrTeaserImageMap)) {
+        if (teaserData.modelPath === currentKeyPath && teaserData.linkSources) {
           // Merge imageResourceUrl if it exists and we don't already have it
-          if (jcrData.linkSources.imageResourceUrl && !itemLinkSources.imageResourceUrl) {
-            itemLinkSources.imageResourceUrl = jcrData.linkSources.imageResourceUrl;
+          if (teaserData.linkSources.imageResourceUrl && !itemLinkSources.imageResourceUrl) {
+            itemLinkSources.imageResourceUrl = teaserData.linkSources.imageResourceUrl;
           }
           // Only use jcrTeaserImageMap as fallback for other fields if not found yet
-          if (!itemLinkSources.clickableUrl && jcrData.linkSources.clickableUrl) {
-            itemLinkSources.clickableUrl = jcrData.linkSources.clickableUrl;
+          if (!itemLinkSources.clickableUrl && teaserData.linkSources.clickableUrl) {
+            itemLinkSources.clickableUrl = teaserData.linkSources.clickableUrl;
           }
-          if (!itemLinkSources.analyticsUrl && jcrData.linkSources.analyticsUrl) {
-            itemLinkSources.analyticsUrl = jcrData.linkSources.analyticsUrl;
+          if (!itemLinkSources.analyticsUrl && teaserData.linkSources.analyticsUrl) {
+            itemLinkSources.analyticsUrl = teaserData.linkSources.analyticsUrl;
           }
-          if (!itemLinkSources.storageUrl && jcrData.linkSources.storageUrl) {
-            itemLinkSources.storageUrl = jcrData.linkSources.storageUrl;
+          if (!itemLinkSources.storageUrl && teaserData.linkSources.storageUrl) {
+            itemLinkSources.storageUrl = teaserData.linkSources.storageUrl;
           }
           break;
         }
