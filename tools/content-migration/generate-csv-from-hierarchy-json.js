@@ -126,19 +126,6 @@ function transformSearchUrlsInText(text) {
 }
 
 /**
- * Transforms type name for CSV output
- * Renames 'title' to 'section-title' for clarity
- * @param {string} type - The original type
- * @returns {string} - The transformed type
- */
-function transformType(type) {
-  if (type === 'title') {
-    return 'section-title';
-  }
-  return type || '';
-}
-
-/**
  * Extracts link URL from item, supporting both old and new formats
  * @returns {string} The link URL
  */
@@ -360,7 +347,7 @@ function itemToRow(item, destPath, storeName) {
     escapeCsvField(item.title || ''),
     escapeCsvField(formatImageUrl(item.imageUrl || '', destPath, storeName)),
     escapeCsvField(linkUrl),
-    escapeCsvField(transformType(item.type)),
+    escapeCsvField(item.type || ''),
     escapeCsvField(transformedText),
     escapeCsvField(item.synonym || ''),
   ].join(',');

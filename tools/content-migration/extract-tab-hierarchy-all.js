@@ -1683,7 +1683,7 @@ async function main() {
       const afterUnwrap = JSON.stringify(convertedHierarchy).length;
       console.log(`✅ Unwrapped JCR accordions (${beforeUnwrap} -> ${afterUnwrap} bytes)`);
 
-      // Remove "Other Content" section if it became empty after unwrapping
+      // Remove "Other Content" section if it became empty or only contains duplicates after unwrapping
       const otherContentIndex = convertedHierarchy.findIndex(
         (section) => section.title === 'Other Content',
       );
@@ -1692,6 +1692,68 @@ async function main() {
         if (!otherContent.items || otherContent.items.length === 0) {
           console.log('⚠️  Removing empty "Other Content" section');
           convertedHierarchy.splice(otherContentIndex, 1);
+        } else {
+          // Build a set of title+key combinations from all other sections
+          const existingItemSignatures = new Set();
+          function collectSignatures(items, skipSection = null) {
+            if (!items || !Array.isArray(items)) return;
+            items.forEach((section) => {
+              if (section === skipSection) return; // Don't collect from "Other Content" itself
+              if (section.items && Array.isArray(section.items)) {
+                section.items.forEach((item) => {
+                  if (item.type === 'button' || item.type === 'accordion' || item.type === 'teaser') {
+                    const signature = `${item.type}|${item.title}|${item.key || ''}`;
+                    existingItemSignatures.add(signature);
+                  }
+                  if (item.items) {
+                    collectSignatures([item]);
+                  }
+                });
+              }
+            });
+          }
+          collectSignatures(convertedHierarchy, otherContent);
+
+          // Check if "Other Content" has any truly unique items
+          const uniqueItems = [];
+          const duplicateItems = [];
+          otherContent.items.forEach((item) => {
+            const signature = `${item.type}|${item.title}|${item.key || ''}`;
+
+            // If this item exists elsewhere in the hierarchy, it's a duplicate
+            if (existingItemSignatures.has(signature)) {
+              duplicateItems.push(`${item.title} (${item.type})`);
+              return;
+            }
+
+            // Buttons, teasers with URLs are considered unique (if not duplicates)
+            if ((item.type === 'button' || item.type === 'teaser') && item.linkSources) {
+              uniqueItems.push(`${item.title} (${item.type})`);
+              return;
+            }
+
+            // Text items with substantive content are considered unique
+            // But skip generic instructional/boilerplate text
+            if (item.type === 'text') {
+              const text = (item.text || '').trim();
+              const isBoilerplate = text.includes('Bold and underlined text are links')
+                                  || text.includes('Explore tabs below to access various content');
+              if (text.length > 50 && !isBoilerplate) {
+                uniqueItems.push(`${item.title} (${item.type})`);
+                return;
+              }
+            }
+
+            // Other items are not considered unique
+            duplicateItems.push(`${item.title} (${item.type})`);
+          });
+
+          const hasUniqueContent = uniqueItems.length > 0;
+
+          if (!hasUniqueContent) {
+            console.log(`⚠️  Removing "Other Content" section (${otherContent.items.length} duplicate/low-value item(s))`);
+            convertedHierarchy.splice(otherContentIndex, 1);
+          }
         }
       }
     } else {
@@ -1782,7 +1844,29 @@ async function main() {
             }
 
             if (tabsToNest.length > 0) {
-              titleSection.items.push(...tabsToNest);
+              // Update paths to include the parent title
+              const updatedTabs = tabsToNest.map((tab) => {
+                const updated = { ...tab };
+                updated.path = `${titleSection.path}${PATH_SEPARATOR}${tab.title}`;
+
+                // Recursively update paths of all nested children
+                if (updated.items && Array.isArray(updated.items)) {
+                  const updateNestedPaths = (items, parentPath) => items.map((item) => {
+                    const updatedItem = { ...item };
+                    updatedItem.path = `${parentPath}${PATH_SEPARATOR}${item.title}`;
+
+                    if (updatedItem.items && Array.isArray(updatedItem.items)) {
+                      updatedItem.items = updateNestedPaths(updatedItem.items, updatedItem.path);
+                    }
+                    return updatedItem;
+                  });
+                  updated.items = updateNestedPaths(updated.items, updated.path);
+                }
+
+                return updated;
+              });
+
+              titleSection.items.push(...updatedTabs);
               console.log(`  📁 Grouped ${tabsToNest.length} tab(s) [${tabsToNest.map((t) => t.title).join(', ')}] under title "${current.title}"`);
               grouped = true;
             }
@@ -1937,6 +2021,9 @@ async function main() {
           // Multiple items with same path - pick the one with content
           let bestItem = groupItems[0];
 
+          // Preserve __jcrOrder from any item that has it
+          const itemWithOrder = groupItems.find((item) => typeof item.__jcrOrder === 'number');
+
           for (const item of groupItems) {
             // Prefer items that have non-empty items array
             const currentHasItems = item.items && Array.isArray(item.items) && item.items.length > 0;
@@ -1947,6 +2034,11 @@ async function main() {
               bestItem = item;
             }
             // If both have items or both don't have items, keep the first one (bestItem)
+          }
+
+          // Preserve __jcrOrder if any item had it
+          if (itemWithOrder && typeof itemWithOrder.__jcrOrder === 'number') {
+            bestItem.__jcrOrder = itemWithOrder.__jcrOrder;
           }
 
           // Log if we're removing an empty duplicate
@@ -1988,6 +2080,38 @@ async function main() {
       console.log('✅ No duplicates found');
     }
 
+    // Sort sections by JCR order to preserve the exact order from the file
+    console.log('\n🔀 Sorting sections by JCR order...');
+    convertedHierarchy.sort((a, b) => {
+      const orderA = typeof a.__jcrOrder === 'number' ? a.__jcrOrder : 9999;
+      const orderB = typeof b.__jcrOrder === 'number' ? b.__jcrOrder : 9999;
+      return orderA - orderB;
+    });
+    console.log('✅ Sections sorted to preserve JCR file order');
+
+    // Final pass: Recalculate all paths to ensure consistency
+    console.log('\n🔄 Recalculating all paths for consistency...');
+    function recalculateAllPaths(items, parentPath = '') {
+      return items.map((item) => {
+        const updatedItem = { ...item };
+        // Build full path from root
+        if (parentPath) {
+          updatedItem.path = `${parentPath}${PATH_SEPARATOR}${item.title}`;
+        } else {
+          updatedItem.path = item.title;
+        }
+
+        // Recursively update children
+        if (updatedItem.items && Array.isArray(updatedItem.items)) {
+          updatedItem.items = recalculateAllPaths(updatedItem.items, updatedItem.path);
+        }
+
+        return updatedItem;
+      });
+    }
+    convertedHierarchy = recalculateAllPaths(convertedHierarchy);
+    console.log('✅ All paths recalculated');
+
     // Save to file
     const jsonOutputPath = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
     const hierarchyStructure = {
@@ -2011,6 +2135,7 @@ async function main() {
       items.forEach((item) => {
         delete item['cq:panelTitle']; // Internal metadata only, not needed in output
         delete item.__jcrSection; // Internal metadata only
+        delete item.__jcrOrder; // Internal metadata only, used for sorting
         if (item.items) {
           removeInternalMetadata(item.items);
         }
@@ -2026,6 +2151,11 @@ async function main() {
     fs.writeFileSync(jsonOutputPath, JSON.stringify(hierarchyStructure, null, 2));
     console.log('✅ Hierarchy extracted successfully!');
     console.log(`💾 JSON structure saved to: ${jsonOutputPath}`);
+
+    // Apply post-processing transformations to the saved hierarchy
+    console.log('\n🔄 Applying post-processing transformations...');
+    rewriteHierarchyStructure(jsonOutputPath);
+    console.log('✅ Post-processing complete!');
 
     console.log('\n📋 OUTPUTS SAVED');
     console.log('===============');
@@ -2378,12 +2508,12 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
 
       let currentDisplayPath = title;
       if (displayPath) {
-        const pathParts = displayPath.split(PATH_SEPARATOR);
-        // Only add the title if it's not already in the path AND is not a structural key
-        if (!pathParts.includes(title) && !isStructuralKey) {
+        // Always append the title to create a full path for this item, unless it's a structural key
+        // This ensures every item has its complete path from root, even if it shares a name with ancestors
+        if (!isStructuralKey) {
           currentDisplayPath = `${displayPath}${PATH_SEPARATOR}${title}`;
         } else {
-          // Skip adding duplicate title or structural segments to path
+          // Skip adding structural segments to path
           currentDisplayPath = displayPath;
         }
       } else {
@@ -2392,6 +2522,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
           currentDisplayPath = '';
         }
       }
+
       // Build JCR key path for logic (context matching, hierarchy tracking)
       // Make sure it matches the format used in extractTimestampsFromModel
       const currentKeyPath = `${parentKeyPath}/${key}`;
@@ -2476,22 +2607,55 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         }
       }
 
+      // searchLink - for custom-button components, assign to clickableUrl
+      // Check Sling Model first, then fall back to JCR if needed
+      if (item.searchLink && isValidLinkURL(item.searchLink)) {
+        // For custom-button components, searchLink is the clickable URL
+        if (!itemLinkSources.clickableUrl) {
+          itemLinkSources.clickableUrl = stripHostOnly(item.searchLink);
+        }
+      } else if (itemType === 'button' && item[':type'] === 'tccc-dam/components/custom-button' && !itemLinkSources.clickableUrl) {
+        // For custom-button components, if searchLink is not in Sling Model, check JCR
+        // Search for the button by BOTH key AND title in JCR (keys can be reused in different sections)
+        function findButtonInJCR(obj, targetKey, targetTitle) {
+          if (obj && typeof obj === 'object') {
+            if (obj[targetKey]
+                && obj[targetKey]['sling:resourceType'] === 'tccc-dam/components/custom-button'
+                && obj[targetKey]['jcr:title'] === targetTitle) {
+              return obj[targetKey];
+            }
+            for (const key of Object.keys(obj)) {
+              if (typeof obj[key] === 'object') {
+                const result = findButtonInJCR(obj[key], targetKey, targetTitle);
+                if (result) return result;
+              }
+            }
+          }
+          return null;
+        }
+
+        const jcrButton = findButtonInJCR(jcrData.root, key, title);
+        if (jcrButton && jcrButton.searchLink && isValidLinkURL(jcrButton.searchLink)) {
+          itemLinkSources.clickableUrl = stripHostOnly(jcrButton.searchLink);
+        }
+      }
+
       // Always check jcrTeaserImageMap for imageResourceUrl (don't overwrite if already exists)
-      for (const [jcrPath, jcrData] of Object.entries(jcrTeaserImageMap)) {
-        if (jcrData.modelPath === currentKeyPath && jcrData.linkSources) {
+      for (const [jcrPath, teaserData] of Object.entries(jcrTeaserImageMap)) {
+        if (teaserData.modelPath === currentKeyPath && teaserData.linkSources) {
           // Merge imageResourceUrl if it exists and we don't already have it
-          if (jcrData.linkSources.imageResourceUrl && !itemLinkSources.imageResourceUrl) {
-            itemLinkSources.imageResourceUrl = jcrData.linkSources.imageResourceUrl;
+          if (teaserData.linkSources.imageResourceUrl && !itemLinkSources.imageResourceUrl) {
+            itemLinkSources.imageResourceUrl = teaserData.linkSources.imageResourceUrl;
           }
           // Only use jcrTeaserImageMap as fallback for other fields if not found yet
-          if (!itemLinkSources.clickableUrl && jcrData.linkSources.clickableUrl) {
-            itemLinkSources.clickableUrl = jcrData.linkSources.clickableUrl;
+          if (!itemLinkSources.clickableUrl && teaserData.linkSources.clickableUrl) {
+            itemLinkSources.clickableUrl = teaserData.linkSources.clickableUrl;
           }
-          if (!itemLinkSources.analyticsUrl && jcrData.linkSources.analyticsUrl) {
-            itemLinkSources.analyticsUrl = jcrData.linkSources.analyticsUrl;
+          if (!itemLinkSources.analyticsUrl && teaserData.linkSources.analyticsUrl) {
+            itemLinkSources.analyticsUrl = teaserData.linkSources.analyticsUrl;
           }
-          if (!itemLinkSources.storageUrl && jcrData.linkSources.storageUrl) {
-            itemLinkSources.storageUrl = jcrData.linkSources.storageUrl;
+          if (!itemLinkSources.storageUrl && teaserData.linkSources.storageUrl) {
+            itemLinkSources.storageUrl = teaserData.linkSources.storageUrl;
           }
           break;
         }
@@ -3272,7 +3436,10 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
   // Scan for all sections
   const detectedSections = scanForSections(jcrData.root.container);
 
-  // Convert to hierarchy format
+  // Convert to hierarchy format with JCR order
+  // The detectedSections array is already in the correct order from the JCR file,
+  // so we just assign __jcrOrder sequentially
+  let orderIndex = 0;
   for (const section of detectedSections) {
     const titleText = section.title['jcr:title'];
 
@@ -3297,6 +3464,7 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
       path: titleText,
       type: getItemTypeFromResourceType(section.title),
       items: sectionItems,
+      __jcrOrder: orderIndex++, // Assign JCR order sequentially
     });
   }
 
@@ -3372,91 +3540,85 @@ function extractMissingSectionsFromJCR(jcrData, existingSectionTitles = [], main
   }
 
   // Extract standalone components (buttons, teasers) that aren't within any titled section
-  // Skip this if we already have non-tabs sections (from extractNonTabsContent)
-  // as those sections have already been fully extracted
-  const hasNonTabsSections = existingSectionTitles.length > 0
-      && mainHierarchy.some((s) => s.type === 'title');
+  // Always check for orphaned standalone components (teasers, buttons in containers without titles)
+  // even if non-tabs sections exist, as there may be content in untitled containers
+  console.log('  🔍 Checking for standalone components in JCR...');
 
-  if (hasNonTabsSections) {
-    console.log('  ⏭️  Skipping standalone component extraction (non-tabs sections already extracted)');
-  } else {
-    console.log('  🔍 Checking for standalone components in JCR...');
-
-    // Build a set of all keys/IDs AND unique signatures that already exist in the hierarchy to avoid duplicates
-    const existingKeys = new Set();
-    const existingSignatures = new Set(); // For buttons: key+url signature
-    function collectExistingKeys(items) {
-      if (!items || !Array.isArray(items)) return;
-      items.forEach((item) => {
-        if (item.key) existingKeys.add(item.key);
-        if (item.id) existingKeys.add(item.id);
-        // For buttons, create a unique signature from key + URL
-        if (item.type === 'button' && item.linkSources) {
-          const url = item.linkSources.clickableUrl || item.linkSources.searchLink || '';
-          if (url) {
-            existingSignatures.add(`${item.key}-${url}`);
-          }
+  // Build a set of all keys/IDs AND unique signatures that already exist in the hierarchy to avoid duplicates
+  const existingKeys = new Set();
+  const existingSignatures = new Set(); // For buttons: key+url signature
+  function collectExistingKeys(items) {
+    if (!items || !Array.isArray(items)) return;
+    items.forEach((item) => {
+      if (item.key) existingKeys.add(item.key);
+      if (item.id) existingKeys.add(item.id);
+      // For buttons, create a unique signature from key + URL
+      if (item.type === 'button' && item.linkSources) {
+        const url = item.linkSources.clickableUrl || item.linkSources.searchLink || '';
+        if (url) {
+          existingSignatures.add(`${item.key}-${url}`);
         }
-        if (item.items) collectExistingKeys(item.items);
-      });
-    }
-    collectExistingKeys(mainHierarchy);
+      }
+      if (item.items) collectExistingKeys(item.items);
+    });
+  }
+  collectExistingKeys(mainHierarchy);
+  collectExistingKeys(missingSections); // Also collect from sections just extracted in this function
 
-    const standaloneItems = [];
-    for (const containerKey in rootContainer) {
-      const container = rootContainer[containerKey];
+  const standaloneItems = [];
+  for (const containerKey in rootContainer) {
+    const container = rootContainer[containerKey];
 
-      if (!container || typeof container !== 'object') continue;
-      if (containerKey.startsWith('jcr:') || containerKey.startsWith('cq:') || containerKey.startsWith('sling:')) continue;
-      if (processedContainers.has(containerKey)) continue; // Skip containers we already processed as sections
+    if (!container || typeof container !== 'object') continue;
+    if (containerKey.startsWith('jcr:') || containerKey.startsWith('cq:') || containerKey.startsWith('sling:')) continue;
+    if (processedContainers.has(containerKey)) continue; // Skip containers we already processed as sections
 
-      // Extract any buttons or teasers from this container
-      const items = [];
-      extractContentFromContainer(container, items, 'Other Content', jcrTeaserImageMap);
+    // Extract any buttons or teasers from this container
+    const items = [];
+    extractContentFromContainer(container, items, 'Other Content', jcrTeaserImageMap);
 
-      // Filter out items that already exist in the hierarchy
-      const uniqueItems = items.filter((item) => {
-        const itemKey = item.key || item.id;
+    // Filter out items that already exist in the hierarchy
+    const uniqueItems = items.filter((item) => {
+      const itemKey = item.key || item.id;
 
-        // For buttons, check both key and unique signature (key+URL)
-        if (item.type === 'button' && item.linkSources) {
-          const url = item.linkSources.clickableUrl || item.linkSources.searchLink || '';
-          if (url) {
-            const signature = `${item.key}-${url}`;
-            if (existingSignatures.has(signature)) {
-              console.log(`  ⏭️  Skipping duplicate standalone component: "${item.title}" (key: ${itemKey}, signature matched)`);
-              return false;
-            }
-          }
-        }
-
-        // For non-buttons or buttons without URLs, check by key/ID only
-        if (itemKey && existingKeys.has(itemKey)) {
-        // Additional check for tabs/teasers: they should have been in tabs model if they're real duplicates
-          if (item.type === 'tab' || item.type === 'teaser') {
-            console.log(`  ⏭️  Skipping duplicate standalone component: "${item.title}" (key: ${itemKey})`);
+      // For buttons, check both key and unique signature (key+URL)
+      if (item.type === 'button' && item.linkSources) {
+        const url = item.linkSources.clickableUrl || item.linkSources.searchLink || '';
+        if (url) {
+          const signature = `${item.key}-${url}`;
+          if (existingSignatures.has(signature)) {
+            console.log(`  ⏭️  Skipping duplicate standalone component: "${item.title}" (key: ${itemKey}, signature matched)`);
             return false;
           }
         }
-        return true;
-      });
-
-      if (uniqueItems.length > 0) {
-        console.log(`  📦 Found ${uniqueItems.length} unique standalone component(s) in container "${containerKey}" (${items.length - uniqueItems.length} duplicates skipped)`);
-        standaloneItems.push(...uniqueItems);
       }
-    }
 
-    // If we found any standalone items, add them as a section
-    if (standaloneItems.length > 0) {
-      missingSections.push({
-        title: 'Other Content',
-        path: 'Other Content',
-        type: 'container',
-        items: standaloneItems,
-      });
+      // For non-buttons or buttons without URLs, check by key/ID only
+      if (itemKey && existingKeys.has(itemKey)) {
+      // Additional check for tabs/teasers/accordions: they should have been extracted already if they're real duplicates
+        if (item.type === 'tab' || item.type === 'teaser' || item.type === 'accordion') {
+          console.log(`  ⏭️  Skipping duplicate standalone component: "${item.title}" (key: ${itemKey})`);
+          return false;
+        }
+      }
+      return true;
+    });
+
+    if (uniqueItems.length > 0) {
+      console.log(`  📦 Found ${uniqueItems.length} unique standalone component(s) in container "${containerKey}" (${items.length - uniqueItems.length} duplicates skipped)`);
+      standaloneItems.push(...uniqueItems);
     }
-  } // End of else block for standalone component extraction
+  }
+
+  // If we found any standalone items, add them as a section
+  if (standaloneItems.length > 0) {
+    missingSections.push({
+      title: 'Other Content',
+      path: 'Other Content',
+      type: 'container',
+      items: standaloneItems,
+    });
+  }
 
   return missingSections;
 }
@@ -4436,6 +4598,15 @@ async function downloadAllImages(hierarchyData, outputDir) {
 
             console.log(`🔄 Following redirect: ${fullUrl} -> ${redirectUrl}`);
 
+            // Check if redirect is to a login page (authentication expired)
+            if (redirectUrl.includes('/libs/granite/core/content/login')) {
+              failed++;
+              failedUrls.push({ url: fullUrl, reason: 'Authentication expired (redirected to login page)', filename: safeFilename });
+              console.log('❌ Authentication expired - redirect to login page detected');
+              resolve();
+              return;
+            }
+
             // Follow the redirect
             const redirectRequest = https.get(redirectUrl, {
               headers: {
@@ -4626,14 +4797,117 @@ async function downloadAllImages(hierarchyData, outputDir) {
   if (failedUrls.length > 0) {
     console.log('\n❌ FAILED DOWNLOADS:');
     console.log('==================');
+
+    // Check if any failures are due to authentication expiration
+    const authFailures = failedUrls.filter((f) => f.reason.includes('Authentication expired'));
+
     failedUrls.forEach((failure, index) => {
       console.log(`${index + 1}. ${failure.url}`);
       console.log(`   Reason: ${failure.reason}`);
       console.log(`   File: ${failure.filename}`);
       console.log('');
     });
+
+    // If authentication expired, exit with error
+    if (authFailures.length > 0) {
+      console.log('\n🔐 AUTHENTICATION ERROR');
+      console.log('======================');
+      console.log(`❌ ${authFailures.length} download(s) failed due to expired authentication.`);
+      console.log('📋 Your AEM authentication cookie has expired.');
+      console.log('🔄 Please refresh your session cookie and try again.');
+      console.log('');
+      throw new Error('Authentication expired - please refresh your AEM session cookie');
+    }
   }
 }
+
+// ==============================================================================
+// POST-PROCESSING: REWRITE HIERARCHY STRUCTURE
+// ==============================================================================
+
+/**
+ * Rewrites the hierarchy-structure.json file with transformations:
+ * 1. Renames type "title" to "section-title"
+ * 2. Unwraps "Other Content" containers (promotes children to parent level)
+ *
+ * @param {string} jsonFilePath - Path to the hierarchy-structure.json file
+ */
+function rewriteHierarchyStructure(jsonFilePath) {
+  try {
+    console.log(`📖 Reading hierarchy from: ${jsonFilePath}`);
+    const hierarchyData = JSON.parse(fs.readFileSync(jsonFilePath, 'utf-8'));
+
+    let titleCount = 0;
+    let otherContentUnwrapped = 0;
+
+    // Recursive function to transform items
+    function transformItems(items) {
+      if (!items || !Array.isArray(items)) return items;
+
+      const transformed = items.map((item) => {
+        const transformedItem = { ...item };
+
+        // Transform type "title" to "section-title"
+        if (transformedItem.type === 'title') {
+          transformedItem.type = 'section-title';
+          titleCount++;
+        }
+
+        // Recursively transform nested items
+        if (transformedItem.items && Array.isArray(transformedItem.items)) {
+          transformedItem.items = transformItems(transformedItem.items);
+        }
+
+        return transformedItem;
+      });
+
+      // Unwrap "Other Content" containers - replace container with its children
+      const unwrapped = [];
+      for (const item of transformed) {
+        if (item.type === 'container' && item.title === 'Other Content') {
+          // Skip the container itself, but add all its children
+          if (item.items && Array.isArray(item.items) && item.items.length > 0) {
+            // Fix paths: remove "Other Content >>> " from the beginning of paths
+            const promotedChildren = item.items.map((child) => {
+              const updatedChild = { ...child };
+              if (updatedChild.path && updatedChild.path.startsWith('Other Content >>> ')) {
+                updatedChild.path = updatedChild.path.replace('Other Content >>> ', '');
+              }
+              return updatedChild;
+            });
+            unwrapped.push(...promotedChildren);
+            otherContentUnwrapped++;
+            console.log(`  🔄 Unwrapping "Other Content" container (promoting ${item.items.length} child(ren))`);
+          }
+        } else {
+          unwrapped.push(item);
+        }
+      }
+
+      return unwrapped;
+    }
+
+    // Transform all items in the hierarchy
+    if (hierarchyData.items) {
+      hierarchyData.items = transformItems(hierarchyData.items);
+    }
+
+    // Write back to file
+    fs.writeFileSync(jsonFilePath, JSON.stringify(hierarchyData, null, 2));
+
+    console.log(`  ✅ Renamed ${titleCount} "title" type(s) to "section-title"`);
+    if (otherContentUnwrapped > 0) {
+      console.log(`  ✅ Unwrapped ${otherContentUnwrapped} "Other Content" container(s)`);
+    }
+  } catch (error) {
+    console.error(`❌ Error rewriting hierarchy structure: ${error.message}`);
+    throw error;
+  }
+}
+
+// ==============================================================================
+// MAIN EXECUTION
+// ==============================================================================
 
 // If multiple paths, execute script recursively for each one
 if (CONTENT_PATHS.length > 1) {
