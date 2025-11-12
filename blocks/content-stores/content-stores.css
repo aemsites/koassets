@@ -361,6 +361,15 @@
   transform: translateY(-50%);
 }
 
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node {
+  cursor: pointer;
+  padding: 0 20px 0 0;
+  height: 110px;
+  width: max-content;
+  border: none;
+  box-shadow: 0 0 0 2px rgb(237 0 0 / 10%);
+}
+
 /* Teaser hover - only change text color to primary */
 .content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node {
   cursor: pointer;
@@ -371,31 +380,38 @@
   box-shadow: 0 0 0 2px rgb(237 0 0 / 10%);
 }
 
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node .node-title {
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node .node-title,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node .node-title {
   font-size: 15px;
   padding-left: 10px;
   text-decoration: none;
 }
 
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:hover .node-title {
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:hover .node-title,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:hover .node-title {
   text-decoration: none;
   color: var(--primary-color) !important;
 }
 
 .content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node .item-image,
 .content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node picture,
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node img {
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node img,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node .item-image,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node picture,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node img {
   height: 100%;
   width: 110px;
   object-fit: cover;
 }
 
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:hover {
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:hover,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:hover {
   background-color: transparent !important;
   color: inherit;
 }
 
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:hover .expand-icon {
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:hover .expand-icon,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:hover .expand-icon {
   color: var(--primary-color) !important;
 }
 

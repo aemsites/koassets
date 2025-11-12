@@ -2152,6 +2152,11 @@ async function main() {
     console.log('✅ Hierarchy extracted successfully!');
     console.log(`💾 JSON structure saved to: ${jsonOutputPath}`);
 
+    // Apply post-processing transformations to the saved hierarchy
+    console.log('\n🔄 Applying post-processing transformations...');
+    rewriteHierarchyStructure(jsonOutputPath);
+    console.log('✅ Post-processing complete!');
+
     console.log('\n📋 OUTPUTS SAVED');
     console.log('===============');
     console.log(`📋 JSON structure: ${jsonOutputPath}`);
@@ -4593,6 +4598,15 @@ async function downloadAllImages(hierarchyData, outputDir) {
 
             console.log(`🔄 Following redirect: ${fullUrl} -> ${redirectUrl}`);
 
+            // Check if redirect is to a login page (authentication expired)
+            if (redirectUrl.includes('/libs/granite/core/content/login')) {
+              failed++;
+              failedUrls.push({ url: fullUrl, reason: 'Authentication expired (redirected to login page)', filename: safeFilename });
+              console.log('❌ Authentication expired - redirect to login page detected');
+              resolve();
+              return;
+            }
+
             // Follow the redirect
             const redirectRequest = https.get(redirectUrl, {
               headers: {
@@ -4783,14 +4797,117 @@ async function downloadAllImages(hierarchyData, outputDir) {
   if (failedUrls.length > 0) {
     console.log('\n❌ FAILED DOWNLOADS:');
     console.log('==================');
+
+    // Check if any failures are due to authentication expiration
+    const authFailures = failedUrls.filter((f) => f.reason.includes('Authentication expired'));
+
     failedUrls.forEach((failure, index) => {
       console.log(`${index + 1}. ${failure.url}`);
       console.log(`   Reason: ${failure.reason}`);
       console.log(`   File: ${failure.filename}`);
       console.log('');
     });
+
+    // If authentication expired, exit with error
+    if (authFailures.length > 0) {
+      console.log('\n🔐 AUTHENTICATION ERROR');
+      console.log('======================');
+      console.log(`❌ ${authFailures.length} download(s) failed due to expired authentication.`);
+      console.log('📋 Your AEM authentication cookie has expired.');
+      console.log('🔄 Please refresh your session cookie and try again.');
+      console.log('');
+      throw new Error('Authentication expired - please refresh your AEM session cookie');
+    }
   }
 }
+
+// ==============================================================================
+// POST-PROCESSING: REWRITE HIERARCHY STRUCTURE
+// ==============================================================================
+
+/**
+ * Rewrites the hierarchy-structure.json file with transformations:
+ * 1. Renames type "title" to "section-title"
+ * 2. Unwraps "Other Content" containers (promotes children to parent level)
+ *
+ * @param {string} jsonFilePath - Path to the hierarchy-structure.json file
+ */
+function rewriteHierarchyStructure(jsonFilePath) {
+  try {
+    console.log(`📖 Reading hierarchy from: ${jsonFilePath}`);
+    const hierarchyData = JSON.parse(fs.readFileSync(jsonFilePath, 'utf-8'));
+
+    let titleCount = 0;
+    let otherContentUnwrapped = 0;
+
+    // Recursive function to transform items
+    function transformItems(items) {
+      if (!items || !Array.isArray(items)) return items;
+
+      const transformed = items.map((item) => {
+        const transformedItem = { ...item };
+
+        // Transform type "title" to "section-title"
+        if (transformedItem.type === 'title') {
+          transformedItem.type = 'section-title';
+          titleCount++;
+        }
+
+        // Recursively transform nested items
+        if (transformedItem.items && Array.isArray(transformedItem.items)) {
+          transformedItem.items = transformItems(transformedItem.items);
+        }
+
+        return transformedItem;
+      });
+
+      // Unwrap "Other Content" containers - replace container with its children
+      const unwrapped = [];
+      for (const item of transformed) {
+        if (item.type === 'container' && item.title === 'Other Content') {
+          // Skip the container itself, but add all its children
+          if (item.items && Array.isArray(item.items) && item.items.length > 0) {
+            // Fix paths: remove "Other Content >>> " from the beginning of paths
+            const promotedChildren = item.items.map((child) => {
+              const updatedChild = { ...child };
+              if (updatedChild.path && updatedChild.path.startsWith('Other Content >>> ')) {
+                updatedChild.path = updatedChild.path.replace('Other Content >>> ', '');
+              }
+              return updatedChild;
+            });
+            unwrapped.push(...promotedChildren);
+            otherContentUnwrapped++;
+            console.log(`  🔄 Unwrapping "Other Content" container (promoting ${item.items.length} child(ren))`);
+          }
+        } else {
+          unwrapped.push(item);
+        }
+      }
+
+      return unwrapped;
+    }
+
+    // Transform all items in the hierarchy
+    if (hierarchyData.items) {
+      hierarchyData.items = transformItems(hierarchyData.items);
+    }
+
+    // Write back to file
+    fs.writeFileSync(jsonFilePath, JSON.stringify(hierarchyData, null, 2));
+
+    console.log(`  ✅ Renamed ${titleCount} "title" type(s) to "section-title"`);
+    if (otherContentUnwrapped > 0) {
+      console.log(`  ✅ Unwrapped ${otherContentUnwrapped} "Other Content" container(s)`);
+    }
+  } catch (error) {
+    console.error(`❌ Error rewriting hierarchy structure: ${error.message}`);
+    throw error;
+  }
+}
+
+// ==============================================================================
+// MAIN EXECUTION
+// ==============================================================================
 
 // If multiple paths, execute script recursively for each one
 if (CONTENT_PATHS.length > 1) {
