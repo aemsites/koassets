@@ -1683,7 +1683,7 @@ async function main() {
       const afterUnwrap = JSON.stringify(convertedHierarchy).length;
       console.log(`✅ Unwrapped JCR accordions (${beforeUnwrap} -> ${afterUnwrap} bytes)`);
 
-      // Remove "Other Content" section if it became empty after unwrapping
+      // Remove "Other Content" section if it became empty or only contains duplicates after unwrapping
       const otherContentIndex = convertedHierarchy.findIndex(
         (section) => section.title === 'Other Content',
       );
@@ -1692,6 +1692,68 @@ async function main() {
         if (!otherContent.items || otherContent.items.length === 0) {
           console.log('⚠️  Removing empty "Other Content" section');
           convertedHierarchy.splice(otherContentIndex, 1);
+        } else {
+          // Build a set of title+key combinations from all other sections
+          const existingItemSignatures = new Set();
+          function collectSignatures(items, skipSection = null) {
+            if (!items || !Array.isArray(items)) return;
+            items.forEach((section) => {
+              if (section === skipSection) return; // Don't collect from "Other Content" itself
+              if (section.items && Array.isArray(section.items)) {
+                section.items.forEach((item) => {
+                  if (item.type === 'button' || item.type === 'accordion' || item.type === 'teaser') {
+                    const signature = `${item.type}|${item.title}|${item.key || ''}`;
+                    existingItemSignatures.add(signature);
+                  }
+                  if (item.items) {
+                    collectSignatures([item]);
+                  }
+                });
+              }
+            });
+          }
+          collectSignatures(convertedHierarchy, otherContent);
+
+          // Check if "Other Content" has any truly unique items
+          const uniqueItems = [];
+          const duplicateItems = [];
+          otherContent.items.forEach((item) => {
+            const signature = `${item.type}|${item.title}|${item.key || ''}`;
+
+            // If this item exists elsewhere in the hierarchy, it's a duplicate
+            if (existingItemSignatures.has(signature)) {
+              duplicateItems.push(`${item.title} (${item.type})`);
+              return;
+            }
+
+            // Buttons, teasers with URLs are considered unique (if not duplicates)
+            if ((item.type === 'button' || item.type === 'teaser') && item.linkSources) {
+              uniqueItems.push(`${item.title} (${item.type})`);
+              return;
+            }
+
+            // Text items with substantive content are considered unique
+            // But skip generic instructional/boilerplate text
+            if (item.type === 'text') {
+              const text = (item.text || '').trim();
+              const isBoilerplate = text.includes('Bold and underlined text are links')
+                                  || text.includes('Explore tabs below to access various content');
+              if (text.length > 50 && !isBoilerplate) {
+                uniqueItems.push(`${item.title} (${item.type})`);
+                return;
+              }
+            }
+
+            // Other items are not considered unique
+            duplicateItems.push(`${item.title} (${item.type})`);
+          });
+
+          const hasUniqueContent = uniqueItems.length > 0;
+
+          if (!hasUniqueContent) {
+            console.log(`⚠️  Removing "Other Content" section (${otherContent.items.length} duplicate/low-value item(s))`);
+            convertedHierarchy.splice(otherContentIndex, 1);
+          }
         }
       }
     } else {
@@ -3473,91 +3535,85 @@ function extractMissingSectionsFromJCR(jcrData, existingSectionTitles = [], main
   }
 
   // Extract standalone components (buttons, teasers) that aren't within any titled section
-  // Skip this if we already have non-tabs sections (from extractNonTabsContent)
-  // as those sections have already been fully extracted
-  const hasNonTabsSections = existingSectionTitles.length > 0
-      && mainHierarchy.some((s) => s.type === 'title');
+  // Always check for orphaned standalone components (teasers, buttons in containers without titles)
+  // even if non-tabs sections exist, as there may be content in untitled containers
+  console.log('  🔍 Checking for standalone components in JCR...');
 
-  if (hasNonTabsSections) {
-    console.log('  ⏭️  Skipping standalone component extraction (non-tabs sections already extracted)');
-  } else {
-    console.log('  🔍 Checking for standalone components in JCR...');
-
-    // Build a set of all keys/IDs AND unique signatures that already exist in the hierarchy to avoid duplicates
-    const existingKeys = new Set();
-    const existingSignatures = new Set(); // For buttons: key+url signature
-    function collectExistingKeys(items) {
-      if (!items || !Array.isArray(items)) return;
-      items.forEach((item) => {
-        if (item.key) existingKeys.add(item.key);
-        if (item.id) existingKeys.add(item.id);
-        // For buttons, create a unique signature from key + URL
-        if (item.type === 'button' && item.linkSources) {
-          const url = item.linkSources.clickableUrl || item.linkSources.searchLink || '';
-          if (url) {
-            existingSignatures.add(`${item.key}-${url}`);
-          }
+  // Build a set of all keys/IDs AND unique signatures that already exist in the hierarchy to avoid duplicates
+  const existingKeys = new Set();
+  const existingSignatures = new Set(); // For buttons: key+url signature
+  function collectExistingKeys(items) {
+    if (!items || !Array.isArray(items)) return;
+    items.forEach((item) => {
+      if (item.key) existingKeys.add(item.key);
+      if (item.id) existingKeys.add(item.id);
+      // For buttons, create a unique signature from key + URL
+      if (item.type === 'button' && item.linkSources) {
+        const url = item.linkSources.clickableUrl || item.linkSources.searchLink || '';
+        if (url) {
+          existingSignatures.add(`${item.key}-${url}`);
         }
-        if (item.items) collectExistingKeys(item.items);
-      });
-    }
-    collectExistingKeys(mainHierarchy);
+      }
+      if (item.items) collectExistingKeys(item.items);
+    });
+  }
+  collectExistingKeys(mainHierarchy);
+  collectExistingKeys(missingSections); // Also collect from sections just extracted in this function
 
-    const standaloneItems = [];
-    for (const containerKey in rootContainer) {
-      const container = rootContainer[containerKey];
+  const standaloneItems = [];
+  for (const containerKey in rootContainer) {
+    const container = rootContainer[containerKey];
 
-      if (!container || typeof container !== 'object') continue;
-      if (containerKey.startsWith('jcr:') || containerKey.startsWith('cq:') || containerKey.startsWith('sling:')) continue;
-      if (processedContainers.has(containerKey)) continue; // Skip containers we already processed as sections
+    if (!container || typeof container !== 'object') continue;
+    if (containerKey.startsWith('jcr:') || containerKey.startsWith('cq:') || containerKey.startsWith('sling:')) continue;
+    if (processedContainers.has(containerKey)) continue; // Skip containers we already processed as sections
 
-      // Extract any buttons or teasers from this container
-      const items = [];
-      extractContentFromContainer(container, items, 'Other Content', jcrTeaserImageMap);
+    // Extract any buttons or teasers from this container
+    const items = [];
+    extractContentFromContainer(container, items, 'Other Content', jcrTeaserImageMap);
 
-      // Filter out items that already exist in the hierarchy
-      const uniqueItems = items.filter((item) => {
-        const itemKey = item.key || item.id;
+    // Filter out items that already exist in the hierarchy
+    const uniqueItems = items.filter((item) => {
+      const itemKey = item.key || item.id;
 
-        // For buttons, check both key and unique signature (key+URL)
-        if (item.type === 'button' && item.linkSources) {
-          const url = item.linkSources.clickableUrl || item.linkSources.searchLink || '';
-          if (url) {
-            const signature = `${item.key}-${url}`;
-            if (existingSignatures.has(signature)) {
-              console.log(`  ⏭️  Skipping duplicate standalone component: "${item.title}" (key: ${itemKey}, signature matched)`);
-              return false;
-            }
-          }
-        }
-
-        // For non-buttons or buttons without URLs, check by key/ID only
-        if (itemKey && existingKeys.has(itemKey)) {
-        // Additional check for tabs/teasers: they should have been in tabs model if they're real duplicates
-          if (item.type === 'tab' || item.type === 'teaser') {
-            console.log(`  ⏭️  Skipping duplicate standalone component: "${item.title}" (key: ${itemKey})`);
+      // For buttons, check both key and unique signature (key+URL)
+      if (item.type === 'button' && item.linkSources) {
+        const url = item.linkSources.clickableUrl || item.linkSources.searchLink || '';
+        if (url) {
+          const signature = `${item.key}-${url}`;
+          if (existingSignatures.has(signature)) {
+            console.log(`  ⏭️  Skipping duplicate standalone component: "${item.title}" (key: ${itemKey}, signature matched)`);
             return false;
           }
         }
-        return true;
-      });
-
-      if (uniqueItems.length > 0) {
-        console.log(`  📦 Found ${uniqueItems.length} unique standalone component(s) in container "${containerKey}" (${items.length - uniqueItems.length} duplicates skipped)`);
-        standaloneItems.push(...uniqueItems);
       }
-    }
 
-    // If we found any standalone items, add them as a section
-    if (standaloneItems.length > 0) {
-      missingSections.push({
-        title: 'Other Content',
-        path: 'Other Content',
-        type: 'container',
-        items: standaloneItems,
-      });
+      // For non-buttons or buttons without URLs, check by key/ID only
+      if (itemKey && existingKeys.has(itemKey)) {
+      // Additional check for tabs/teasers/accordions: they should have been extracted already if they're real duplicates
+        if (item.type === 'tab' || item.type === 'teaser' || item.type === 'accordion') {
+          console.log(`  ⏭️  Skipping duplicate standalone component: "${item.title}" (key: ${itemKey})`);
+          return false;
+        }
+      }
+      return true;
+    });
+
+    if (uniqueItems.length > 0) {
+      console.log(`  📦 Found ${uniqueItems.length} unique standalone component(s) in container "${containerKey}" (${items.length - uniqueItems.length} duplicates skipped)`);
+      standaloneItems.push(...uniqueItems);
     }
-  } // End of else block for standalone component extraction
+  }
+
+  // If we found any standalone items, add them as a section
+  if (standaloneItems.length > 0) {
+    missingSections.push({
+      title: 'Other Content',
+      path: 'Other Content',
+      type: 'container',
+      items: standaloneItems,
+    });
+  }
 
   return missingSections;
 }
