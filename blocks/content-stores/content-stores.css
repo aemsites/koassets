@@ -152,7 +152,7 @@
   border-radius: 8px;
   transition: all 0.2s ease;
   user-select: text;
-  border: 1px solid var(--primary-color);
+  border: .0625rem solid #e4e4e4;
   width: 100%;
   box-sizing: border-box;
 }
@@ -185,6 +185,7 @@
 
 .content-stores .tree-node.expanded:not(.type-button, .type-section-title) {
   color: var(--primary-color);
+  border: 2px solid var(--primary-color);
 }
 
 .content-stores .tree-node.expanded:not(.type-button, .type-section-title) .node-title {
