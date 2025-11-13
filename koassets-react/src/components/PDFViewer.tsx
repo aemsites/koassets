@@ -3,6 +3,7 @@ import type { Asset, Rendition } from '../types';
 import { useAppConfig } from '../hooks/useAppConfig';
 import { isPdfPreview } from '../constants/filetypes';
 import { AuthorizationStatus } from '../clients/fadel-client';
+import PDFModal from './PDFModal';
 import './PDFViewer.css';
 
 interface PDFViewerProps {
@@ -19,6 +20,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ selectedImage, renditions, fallba
     const { dynamicMediaClient } = useAppConfig();
     const [pdfFailed, setPdfFailed] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [showPdfModal, setShowPdfModal] = useState(false);
 
     // Calculate all values before any early returns with useMemo
     const isPdf = useMemo(() => isPdfPreview(selectedImage.format as string), [selectedImage.format]);
@@ -114,22 +116,44 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ selectedImage, renditions, fallba
     }
 
     return (
-        <div className="pdf-viewer-container">
-            {isLoading && (
-                <div className="pdf-spinner-overlay">
-                    <div className="pdf-spinner" />
-                </div>
-            )}
-            <object
-                data={pdfUrl}
-                width="100%"
-                height="100%"
-                aria-label={selectedImage.title}
-                onLoad={() => {
-                    setIsLoading(false);
-                }}
+        <>
+            <div className="pdf-viewer-container">
+                {isLoading && (
+                    <div className="pdf-spinner-overlay">
+                        <div className="pdf-spinner" />
+                    </div>
+                )}
+                
+                {/* Magnifying glass button to open modal */}
+                <button
+                    className="pdf-preview-button"
+                    onClick={() => setShowPdfModal(true)}
+                    title="View PDF in full screen"
+                    type="button"
+                    aria-label={`View ${selectedImage.title} in full screen`}
+                >
+                    <img src="/icons/zoom.svg" alt="View PDF" />
+                </button>
+
+                <object
+                    data={pdfUrl}
+                    width="100%"
+                    height="100%"
+                    aria-label={selectedImage.title}
+                    onLoad={() => {
+                        setIsLoading(false);
+                    }}
+                />
+            </div>
+
+            {/* PDF Modal */}
+            <PDFModal
+                showModal={showPdfModal}
+                pdfUrl={pdfUrl || ''}
+                title={selectedImage.title || 'PDF Document'}
+                onClose={() => setShowPdfModal(false)}
             />
-        </div>
+        </>
     );
 };
 

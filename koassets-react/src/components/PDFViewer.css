@@ -30,3 +30,36 @@
         transform: rotate(360deg);
     }
 }
+
+/* PDF Preview Button (Magnifying Glass) */
+.pdf-viewer-container .pdf-preview-button {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 32px;
+    height: 32px;
+    background-color: rgb(74 74 74 / 90%);
+    border: 1px solid rgb(0 0 0 / 10%);
+    border-radius: 6px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s ease, background-color 0.2s ease;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
+    padding: 0;
+}
+
+.pdf-viewer-container .pdf-preview-button:hover {
+    opacity: 1;
+    background-color: #c8102e;
+}
+
+.pdf-viewer-container .pdf-preview-button img {
+    width: 18px;
+    height: 18px;
+    filter: brightness(0) invert(1); /* Make icon white */
+}

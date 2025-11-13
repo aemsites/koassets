@@ -64,7 +64,7 @@
     cursor: pointer;
     opacity: 0.8;
     transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease;
-    z-index: 10;
+    z-index: 30;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     font-size: 16px;
 }

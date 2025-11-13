@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AuthorizationStatus } from '../clients/fadel-client';
 import { EAGER_LOAD_IMAGE_COUNT } from '../constants/images';
 import { useAppConfig } from '../hooks/useAppConfig';
-import type { AssetCardProps } from '../types';
+import type { AssetCardProps, Rendition } from '../types';
 import { formatCategory, getFileExtension } from '../utils/formatters';
 import { getAssetFieldDisplayFacetName } from '../utils/displayUtils';
+import { isPdfPreview } from '../constants/filetypes';
 import ActionButton from './ActionButton';
 import { BUTTON_CONFIGS } from './ActionButtonConfigs';
 import ShareAssetButton from './ShareAssetButton.jsx';
 import Picture from './Picture';
+import PDFModal from './PDFModal';
 import './AssetCard.css';
 
 export type ViewMode = 'grid' | 'list';
@@ -37,8 +39,18 @@ const AssetCard: React.FC<AssetCardBaseProps> = ({
     // Get dynamicMediaClient from context
     const { dynamicMediaClient } = useAppConfig();
     
+    // State for PDF modal
+    const [showPdfModal, setShowPdfModal] = useState(false);
+    const [pdfUrl, setPdfUrl] = useState<string>('');
+    const [fetchingPdf, setFetchingPdf] = useState(false);
+    
     // Check if this item is already in the cart
     const isInCart = cartAssetItems.some(cartAssetItem => cartAssetItem.assetId === image.assetId);
+    
+    // Check if this is a rights-free PDF
+    const isPdf = isPdfPreview(image.format as string);
+    const isRightsFree = image.readyToUse?.toLowerCase() === 'yes';
+    const shouldShowPdfModal = isPdf && isRightsFree;
 
     // Handle button click - either add or remove from cart
     const handleAddRemoveCart = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -86,6 +98,44 @@ const AssetCard: React.FC<AssetCardBaseProps> = ({
             }
         });
         window.dispatchEvent(event);
+    };
+
+    // Handle PDF preview click (fetch PDF URL and open modal)
+    const handlePdfPreviewClick = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        
+        if (!dynamicMediaClient || !image.assetId || !image.name) {
+            console.warn('Cannot fetch PDF: missing required data');
+            return;
+        }
+
+        setFetchingPdf(true);
+
+        try {
+            // Fetch renditions to get PDF URL
+            const renditions = await dynamicMediaClient.getAssetRenditions(image);
+            
+            // Find PDF rendition
+            const pdfRendition = renditions?.items
+                ?.filter((item: Rendition) => isPdfPreview(item.format as string))
+                ?.sort((a: Rendition, b: Rendition) => (a.size ?? 0) - (b.size ?? 0))?.[0];
+
+            if (pdfRendition) {
+                const url = dynamicMediaClient.getPreviewPdfUrl(
+                    image.assetId,
+                    image.name,
+                    pdfRendition.name as string
+                );
+                setPdfUrl(url);
+                setShowPdfModal(true);
+            } else {
+                console.warn('No PDF rendition found for:', image.title);
+            }
+        } catch (error) {
+            console.error('Failed to fetch PDF:', error);
+        } finally {
+            setFetchingPdf(false);
+        }
     };
 
     // Dynamic classes and elements based on view mode
@@ -154,8 +204,16 @@ const AssetCard: React.FC<AssetCardBaseProps> = ({
 
                     <button
                         className="image-preview-button"
-                        onClick={(e) => handlePreviewClick(image, e)}
-                        title="View larger image"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (shouldShowPdfModal) {
+                                handlePdfPreviewClick(e);
+                            } else {
+                                handlePreviewClick(image, e);
+                            }
+                        }}
+                        title={shouldShowPdfModal ? "View PDF" : "View larger image"}
+                        disabled={fetchingPdf}
                     >
                         <svg viewBox="0 0 256.001 256.001" xmlns="http://www.w3.org/2000/svg">
                             <path d="M159.997 116a12 12 0 0 1-12 12h-20v20a12 12 0 0 1-24 0v-20h-20a12 12 0 0 1 0-24h20V84a12 12 0 0 1 24 0v20h20a12 12 0 0 1 12 12Zm72.48 116.482a12 12 0 0 1-16.971 0l-40.679-40.678a96.105 96.105 0 1 1 16.972-16.97l40.678 40.678a12 12 0 0 1 0 16.97Zm-116.48-44.486a72 72 0 1 0-72-72 72.081 72.081 0 0 0 72 72Z" />
@@ -258,6 +316,16 @@ const AssetCard: React.FC<AssetCardBaseProps> = ({
                     </div>
                 </div>
             </div>
+
+            {/* PDF Modal for rights-free PDFs */}
+            {shouldShowPdfModal && (
+                <PDFModal
+                    showModal={showPdfModal}
+                    pdfUrl={pdfUrl}
+                    title={image.title || 'PDF Document'}
+                    onClose={() => setShowPdfModal(false)}
+                />
+            )}
         </div>
     );
 };
