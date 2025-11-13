@@ -356,6 +356,24 @@ function createViewerElement(contentStoresData) {
     };
   }
 
+  function cleanRichContent(html) {
+    // Create a temporary container to parse HTML
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+
+    // Remove empty paragraphs and elements with only whitespace
+    const paragraphs = temp.querySelectorAll('p');
+    paragraphs.forEach((p) => {
+      const textContent = p.textContent.trim();
+      const hasOnlyWhitespace = textContent === '';
+      if (hasOnlyWhitespace) {
+        p.remove();
+      }
+    });
+
+    return temp.innerHTML;
+  }
+
   function toggleNode(path, nodeElement) {
     const expandIcon = nodeElement.querySelector('.expand-icon');
     const willExpand = !expandedNodes.has(path);
@@ -398,7 +416,7 @@ function createViewerElement(contentStoresData) {
       if (item.text) {
         const richContent = document.createElement('div');
         richContent.className = 'rich-content';
-        richContent.innerHTML = item.text;
+        richContent.innerHTML = cleanRichContent(item.text);
         treeItem.appendChild(richContent);
       }
       return treeItem;
@@ -546,7 +564,9 @@ function createViewerElement(contentStoresData) {
         richContent.classList.add('tree-children');
         if (isExpanded) richContent.classList.add('expanded');
       }
-      richContent.innerHTML = item.text;
+      // Clean empty lines from accordion content
+      const cleanedText = (item.type === 'accordion') ? cleanRichContent(item.text) : item.text;
+      richContent.innerHTML = cleanedText;
       treeItem.appendChild(richContent);
     }
 

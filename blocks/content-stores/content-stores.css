@@ -258,7 +258,7 @@
   border: 1px solid var(--primary-color);
   background-color: rgb(255 255 255);
   position: relative;
-  min-height: 44px;
+  min-height: 50px;
   width: 100%;
   box-sizing: inherit;
   font-family: var(--heading-font-family);
@@ -557,7 +557,7 @@
 /* Grid container for leaf items - responsive to parent width */
 .content-stores .tree-children.has-grid {
   display: none;
-  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), max-content));
+  grid-template-columns: repeat(auto-fit, minmax(min(330px, 100%), max-content));
   gap: 20px;
   padding: 20px 0 0;
   border: none;
@@ -622,26 +622,157 @@
   outline-offset: 2px;
 }
 
-.content-stores .tree-item[data-item-type="accordion"] .rich-content {
-  margin: 12px 0 12px 32px;
-  padding: 16px;
-  background: var(--background-color);
-  border-radius: 8px;
-  font-size: var(--body-font-size-xs);
-  line-height: 1.6;
-  border-left: 4px solid var(--primary-color);
-  font-family: var(--body-font-family);
-  color: var(--text-color);
+/* Accordion Items Styling */
+.content-stores .tree-item[data-item-type="accordion"] {
+  margin-bottom: 1rem;
 }
 
-.content-stores .tree-item[data-item-type="accordion"] .rich-content a {
-  color: var(--link-color);
-  text-decoration: none;
-  transition: color 0.2s ease;
+/* Disable all transitions on accordion and its children */
+.content-stores .tree-item[data-item-type="accordion"],
+.content-stores .tree-item[data-item-type="accordion"] *,
+.content-stores .tree-item[data-item-type="accordion"] *::before,
+.content-stores .tree-item[data-item-type="accordion"] *::after {
+  transition: none !important;
+}
+
+/* Accordion node styling - collapsed state */
+.content-stores .tree-item[data-item-type="accordion"] .tree-node {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 30px;
+  cursor: pointer;
+  position: relative;
+  transition: none;
+  min-height: 50px;
+}
+
+.content-stores .tree-item[data-item-type="accordion"] .tree-node:hover {
+  background: white;
+  border-color: #c0c0c0;
+}
+
+/* Hide the default expand icon for accordion items */
+.content-stores .tree-item[data-item-type="accordion"] .expand-icon {
+  display: none;
+  transition: none;
+}
+
+/* Accordion title - default (collapsed) state */
+.content-stores .tree-item[data-item-type="accordion"] .node-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #000;
+  font-family: "TCCC UnityText Medium", roboto-condensed-fallback, sans-serif;
+  transition: none;
+}
+
+/* Add down arrow for collapsed accordion */
+.content-stores .tree-item[data-item-type="accordion"] .tree-node::before {
+  content: '';
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  background-image: url('/icons/arrow-down-nav-menu.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+/* Red down arrow on hover (collapsed state) */
+.content-stores .tree-item[data-item-type="accordion"] .tree-node:hover::before {
+  background-image: url('/icons/down-arrow-icon-red.svg');
+}
+
+/* Expanded state - red text and up caret */
+.content-stores .tree-item[data-item-type="accordion"] .tree-node.expanded {
+  background: white;
+  border-color: #e0e0e0;
+  border-radius: 30px 30px 0 0;
+}
+
+.content-stores .tree-item[data-item-type="accordion"] .tree-node.expanded .node-title {
+  color: var(--primary-color);
+}
+
+/* Red up arrow when expanded (overrides hover) */
+.content-stores .tree-item[data-item-type="accordion"] .tree-node.expanded::before {
+  background-image: url('/icons/up-arrow-red-icon.svg');
+}
+
+/* Rich content area - shown when expanded */
+.content-stores .tree-item[data-item-type="accordion"] .rich-content {
+  margin: 0;
+  padding: 20px 24px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-top: none;
+  border-radius: 0 0 30px 30px;
+  font-size: 14px;
+  line-height: 2.5;
+  font-family: var(--body-font-family);
+  color: var(--text-color);
+  max-height: 300px;
+  overflow-y: auto;
+  transition: none;
+}
+
+/* Custom scrollbar styling */
+.content-stores .tree-item[data-item-type="accordion"] .rich-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.content-stores .tree-item[data-item-type="accordion"] .rich-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.content-stores .tree-item[data-item-type="accordion"] .rich-content::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 3px;
+}
+
+.content-stores .tree-item[data-item-type="accordion"] .rich-content::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color-hover);
+}
+
+/* List styling inside accordion */
+.content-stores .tree-item[data-item-type="accordion"] .rich-content ul {
+  list-style: disc;
+  padding-left: 20px;
+  margin: 0;
+}
+
+.content-stores .tree-item[data-item-type="accordion"] .rich-content li {
+  margin-bottom: 8px;
+}
+
+/* Paragraph tags with links displayed as bullet points */
+.content-stores .tree-item[data-item-type="accordion"] .rich-content p {
+  margin: 0 0 8px;
+  padding-left: 20px;
+  position: relative;
+}
+
+.content-stores .tree-item[data-item-type="accordion"] .rich-content p::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  font-weight: bold;
+}
+
+/* Link styling inside accordion - underlined by default */
+.content-stores .tree-item[data-item-type="accordion"] .rich-content a,
+.content-stores .tree-item[data-item-type="accordion"] .rich-content a * {
+  color: var(--text-color);
+  text-decoration: underline;
+  font-weight: 500;
+  font-family: "TCCC UnityText Medium", roboto-condensed-fallback, sans-serif;
 }
 
 .content-stores .tree-item[data-item-type="accordion"] .rich-content a:hover {
-  color: var(--link-hover-color);
+  color: var(--primary-color);
   text-decoration: underline;
 }
 
