@@ -129,6 +129,7 @@ async function createSource(daFullPath, localFilePath) {
         Authorization: DA_BEARER_TOKEN,
         'Content-Type': `multipart/form-data; boundary=${boundary}`,
         'Content-Length': body.length,
+        Connection: 'close',
       },
     };
 
@@ -184,6 +185,7 @@ async function makeHlxRequest(fullPath, action, actionName, method = 'POST') {
       method,
       headers: {
         Authorization: DA_BEARER_TOKEN,
+        Connection: 'close',
       },
     };
 
@@ -293,6 +295,7 @@ async function isImageUploaded(fullPath) {
       method: 'HEAD',
       headers: {
         Authorization: DA_BEARER_TOKEN,
+        Connection: 'close',
       },
     };
 
@@ -325,6 +328,7 @@ async function isSourceUploaded(daFullPath) {
       method: 'HEAD',
       headers: {
         Authorization: DA_BEARER_TOKEN,
+        Connection: 'close',
       },
     };
 

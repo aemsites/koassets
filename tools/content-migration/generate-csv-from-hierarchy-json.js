@@ -20,30 +20,48 @@ const {
   DA_ORG, DA_REPO, DA_DEST, IMAGES_BASE,
 } = require('./da-admin-client.js');
 
+// ==============================================================================
+// TRANSFORMATION FUNCTIONS
+// ==============================================================================
+
 /**
  * Transforms search-assets.html URLs to new search format
  * Extracts 'fulltext' parameter, decodes it, and creates new URL
+ * Also handles /content/share/us/en/search-assets/details URLs
  * @param {string} url - The original URL
- * @returns {string} - Transformed URL or original if not a search-assets.html URL
+ * @returns {string} - Transformed URL or original if not a search URL
  */
 function transformSearchUrl(url) {
-  if (!url || !url.includes('search-assets.html')) {
-    return url;
+  if (!url) return url;
+
+  // Handle /content/share/us/en/search-assets/details URLs
+  // Example: /content/share/us/en/search-assets/details/document.html/view/marketing/mixed-brand/none/none/ICPG_Section_D_2025.pdf
+  if (url.startsWith('/content/share/us/en/search-assets/details')) {
+    // Extract the last segment (filename) from the path
+    const pathParts = url.split('/');
+    const filename = pathParts[pathParts.length - 1];
+
+    if (filename) {
+      return `/search/all?query=${encodeURIComponent(decodeURIComponent(filename))}`;
+    }
   }
 
-  try {
-    // Parse the URL to extract query parameters
-    const urlObj = new URL(url, 'https://dummy.com'); // Need base URL for relative URLs
-    const fulltext = urlObj.searchParams.get('fulltext');
+  // Handle search-assets.html URLs with fulltext parameter
+  if (url.includes('search-assets.html')) {
+    try {
+      // Parse the URL to extract query parameters
+      const urlObj = new URL(url, 'https://dummy.com'); // Need base URL for relative URLs
+      const fulltext = urlObj.searchParams.get('fulltext');
 
-    if (fulltext) {
-      // URL decode the fulltext parameter (handle &amp; in HTML)
-      const decodedFullText = decodeURIComponent(fulltext.replace(/&amp;/g, '&'));
-      return `/search/all?query=${encodeURIComponent(decodedFullText)}`;
+      if (fulltext) {
+        // URL decode the fulltext parameter (handle &amp; in HTML)
+        const decodedFullText = decodeURIComponent(fulltext.replace(/&amp;/g, '&'));
+        return `/search/all?query=${encodeURIComponent(decodedFullText)}`;
+      }
+    } catch (error) {
+      // If URL parsing fails, return original URL
+      console.warn(`Failed to parse URL: ${url}`);
     }
-  } catch (error) {
-    // If URL parsing fails, return original URL
-    console.warn(`Failed to parse URL: ${url}`);
   }
 
   return url;
@@ -52,14 +70,15 @@ function transformSearchUrl(url) {
 /**
  * Transforms content store URLs from old format to new format
  * /content/share/us/en/bottler-content-stores/coke-holiday-2025.html → ${DA_DEST}/content-stores/bottler-content-stores-coke-holiday-2025
+ * /content/share/us/en/all-content-stores/made-of-fusion → ${DA_DEST}/content-stores/all-content-stores-made-of-fusion
  * @param {string} url - The original URL
  * @returns {string} - Transformed URL or original if not a content store URL
  */
 function transformContentStoreUrl(url) {
   if (!url) return url;
 
-  // Match /content/share/us/en/*-content-stores/*.html
-  const contentStorePattern = /^\/content\/share\/us\/en\/((?:all|bottler)-content-stores\/[^.]+)\.html$/;
+  // Match /content/share/us/en/*-content-stores/* (with or without .html)
+  const contentStorePattern = /^\/content\/share\/us\/en\/((?:all|bottler)-content-stores\/[^.?#]+)(?:\.html)?$/;
   const match = url.match(contentStorePattern);
 
   if (match) {
@@ -124,6 +143,92 @@ function transformSearchUrlsInText(text) {
     return prefix + transformedUrl + suffix;
   });
 }
+
+/**
+ * Rewrites the hierarchy-structure.json with transformations:
+ * 1. Renames type "title" to "section-title"
+ * 2. Unwraps "Other Content" containers (promotes children to parent level)
+ *
+ * @param {string} jsonFilePath - Path to the hierarchy-structure.json file
+ * @returns {object} The transformed hierarchy data
+ */
+function rewriteHierarchyStructure(jsonFilePath) {
+  try {
+    console.log(`📖 Reading hierarchy from: ${jsonFilePath}`);
+    const hierarchyData = JSON.parse(fs.readFileSync(jsonFilePath, 'utf-8'));
+
+    let titleCount = 0;
+    let otherContentUnwrapped = 0;
+
+    // Recursive function to transform items
+    // eslint-disable-next-line no-inner-declarations
+    function transformItems(items) {
+      if (!items || !Array.isArray(items)) return items;
+
+      const transformed = items.map((item) => {
+        const transformedItem = { ...item };
+
+        // Transform type "title" to "section-title"
+        if (transformedItem.type === 'title') {
+          transformedItem.type = 'section-title';
+          titleCount += 1;
+        }
+
+        // Recursively transform nested items
+        if (transformedItem.items && Array.isArray(transformedItem.items)) {
+          transformedItem.items = transformItems(transformedItem.items);
+        }
+
+        return transformedItem;
+      });
+
+      // Unwrap "Other Content" containers - replace container with its children
+      const unwrapped = [];
+      for (const item of transformed) {
+        if (item.type === 'container' && item.title === 'Other Content') {
+          // Skip the container itself, but add all its children
+          if (item.items && Array.isArray(item.items) && item.items.length > 0) {
+            // Fix paths: remove "Other Content >>> " from the beginning of paths
+            const promotedChildren = item.items.map((child) => {
+              const updatedChild = { ...child };
+              if (updatedChild.path && updatedChild.path.startsWith('Other Content >>> ')) {
+                updatedChild.path = updatedChild.path.replace('Other Content >>> ', '');
+              }
+              return updatedChild;
+            });
+            unwrapped.push(...promotedChildren);
+            otherContentUnwrapped += 1;
+            console.log(`  🔄 Unwrapping "Other Content" container (promoting ${item.items.length} child(ren))`);
+          }
+        } else {
+          unwrapped.push(item);
+        }
+      }
+
+      return unwrapped;
+    }
+
+    // Transform all items in the hierarchy
+    if (hierarchyData.items) {
+      hierarchyData.items = transformItems(hierarchyData.items);
+    }
+
+    console.log(`  ✅ Renamed ${titleCount} "title" type(s) to "section-title"`);
+    if (otherContentUnwrapped > 0) {
+      console.log(`  ✅ Unwrapped ${otherContentUnwrapped} "Other Content" container(s)`);
+    }
+
+    // Return the transformed data instead of writing to file
+    return hierarchyData;
+  } catch (error) {
+    console.error(`❌ Error rewriting hierarchy structure: ${error.message}`);
+    throw error;
+  }
+}
+
+// ==============================================================================
+// UTILITY FUNCTIONS
+// ==============================================================================
 
 /**
  * Extracts link URL from item, supporting both old and new formats
@@ -335,6 +440,10 @@ function escapeCsvField(value) {
   return strValue;
 }
 
+// ==============================================================================
+// CSV PROCESSING FUNCTIONS
+// ==============================================================================
+
 /**
  * Converts an item to a CSV row
  */
@@ -387,7 +496,10 @@ function processFile(inputFile, outputFile) {
   console.log(`   Store name: ${storeName}`);
   console.log(`   Destination path: ${destPath}`);
 
-  const jsonData = JSON.parse(fs.readFileSync(inputFile, 'utf8'));
+  // Apply transformations to the hierarchy structure
+  console.log('\n🔄 Applying post-processing transformations...');
+  const jsonData = rewriteHierarchyStructure(inputFile);
+  console.log('✅ Post-processing complete!\n');
 
   console.log('   Traversing hierarchy in original order...');
   const items = traverseInOrder(jsonData.items || []);
@@ -423,6 +535,10 @@ function findInputFiles() {
   const matches = globSync(pattern, { cwd: __dirname });
   return matches.map((f) => path.join(__dirname, f));
 }
+
+// ==============================================================================
+// MAIN EXECUTION
+// ==============================================================================
 
 /**
  * Main function
@@ -519,4 +635,8 @@ module.exports = {
   traverseInOrder,
   processFile,
   findInputFiles,
+  rewriteHierarchyStructure,
+  transformSearchUrl,
+  transformContentStoreUrl,
+  transformSearchUrlsInText,
 };

@@ -12,7 +12,8 @@ const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client.js');
 
 // Parse command line arguments
 // Usage: ./upload-to-EDS.js <localPath> [daFullPath] [--preview] [--publish] [--debug] [--force] [--input <file>]
-// Example: ./upload-to-EDS.js 'all-content-stores-sheet.json' 'aemsites/koassets/{DA_DEST}/all-content-stores-sheet.json' --preview --publish
+// Example: ./upload-to-EDS.js DATA/generated-eds-docs/all-content-stores --preview --publish
+// Example: ./upload-to-EDS.js DATA/generated-eds-docs/all-content-stores-sprite --preview
 // Example: ./upload-to-EDS.js --input stores.txt --preview --publish --debug
 // Example: ./upload-to-EDS.js --input stores.txt --preview --publish --force
 const args = process.argv.slice(2);
@@ -237,10 +238,32 @@ async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFl
         );
         // Remove trailing slash if present
         const cleanRelativePath = relativePath.replace(/\/$/, '');
+
+        // Check if this is a main store (all-content-stores or bottler-content-stores)
+        const isMainStore = cleanRelativePath === 'all-content-stores'
+                           || cleanRelativePath === 'bottler-content-stores';
+
+        // Check if this is a sub-store subdirectory that should be flattened to content-stores/
+        const isSubStore = (cleanRelativePath.startsWith('all-content-stores-')
+                           || cleanRelativePath.startsWith('bottler-content-stores-'))
+                           && !isMainStore;
+
         // Use DA_DEST if available
         if (DA_DEST) {
           const normalizedDest = DA_DEST.startsWith('/') ? DA_DEST.substring(1) : DA_DEST;
-          baseDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/${cleanRelativePath}`;
+          if (isMainStore) {
+            // Main stores go to root of destination
+            baseDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}`;
+          } else if (isSubStore) {
+            // Sub-stores are flattened to content-stores/
+            baseDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/content-stores`;
+          } else {
+            baseDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/${cleanRelativePath}`;
+          }
+        } else if (isMainStore) {
+          baseDaPath = `${DA_ORG}/${DA_REPO}`;
+        } else if (isSubStore) {
+          baseDaPath = `${DA_ORG}/${DA_REPO}/content-stores`;
         } else {
           baseDaPath = `${DA_ORG}/${DA_REPO}/${cleanRelativePath}`;
         }
@@ -291,27 +314,40 @@ async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFl
         normalizedLocalPath.indexOf(dataGenDocsPrefix) + dataGenDocsPrefix.length,
       );
 
-      // Check if this is a file from a store subdirectory (not root files)
-      // Root files: all-content-stores-sheet.json, all-content-stores.html
-      // Store subdirectory files: all-content-stores-{name}/all-content-stores-{name}-sheet.json
+      // Check if this is a file from a store subdirectory
+      // Main store files: all-content-stores/all-content-stores-sheet.json
+      // Sub-store files: all-content-stores-{name}/all-content-stores-{name}-sheet.json
       const pathParts = relativePath.split('/');
       const dirName = pathParts[0];
-      const isStoreSubdir = pathParts.length === 2
-        && dirName !== 'all-content-stores'
+
+      // Check if this is a main store
+      const isMainStore = pathParts.length === 2
+        && (dirName === 'all-content-stores' || dirName === 'bottler-content-stores');
+
+      // Check if this is a sub-store
+      const isSubStore = pathParts.length === 2
+        && !isMainStore
         && (dirName.startsWith('all-content-stores-') || dirName.startsWith('bottler-content-stores-'));
 
       // Use DA_DEST if available
       if (DA_DEST) {
         const normalizedDest = DA_DEST.startsWith('/') ? DA_DEST.substring(1) : DA_DEST;
-        if (isStoreSubdir) {
-          // For store files, flatten to content-stores/filename
+        if (isMainStore) {
+          // Main store files go to root level
+          const filename = pathParts[1];
+          targetDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/${filename}`;
+        } else if (isSubStore) {
+          // Sub-store files are flattened to content-stores/filename
           const filename = pathParts[1];
           targetDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/content-stores/${filename}`;
         } else {
-          // For root files, keep at root level
+          // Other files keep their relative path
           targetDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/${relativePath}`;
         }
-      } else if (isStoreSubdir) {
+      } else if (isMainStore) {
+        const filename = pathParts[1];
+        targetDaPath = `${DA_ORG}/${DA_REPO}/${filename}`;
+      } else if (isSubStore) {
         const filename = pathParts[1];
         targetDaPath = `${DA_ORG}/${DA_REPO}/content-stores/${filename}`;
       } else {
@@ -527,21 +563,26 @@ if (require.main === module) {
     console.error('  ./upload-to-EDS.js "generated-docs" "aemsites/koassets/{DA_DEST}/docs"');
     console.error('  ./upload-to-EDS.js "my-folder" --preview');
     console.error('');
+    console.error('Examples (store directories):');
+    console.error('  ./upload-to-EDS.js DATA/generated-eds-docs/all-content-stores --preview --publish');
+    console.error('  ./upload-to-EDS.js DATA/generated-eds-docs/all-content-stores-sprite --preview');
+    console.error('  ./upload-to-EDS.js DATA/generated-eds-docs/bottler-content-stores --preview --publish');
+    console.error('');
     console.error('Examples (debug mode):');
-    console.error('  ./upload-to-EDS.js "file.html" --debug');
-    console.error('  ./upload-to-EDS.js "file.html" --preview --publish --debug');
+    console.error('  ./upload-to-EDS.js DATA/generated-eds-docs/all-content-stores --debug');
+    console.error('  ./upload-to-EDS.js DATA/generated-eds-docs/all-content-stores --preview --publish --debug');
     console.error('');
     console.error('Examples (input file):');
     console.error('  ./upload-to-EDS.js --input stores.txt --preview --publish');
     console.error('  ./upload-to-EDS.js -i stores.txt --preview --publish --debug');
     console.error('');
-    console.error('Examples (positional arguments):');
+    console.error('Examples (individual files):');
     console.error('  ./upload-to-EDS.js "file.html"');
     console.error('  ./upload-to-EDS.js "file.html" "aemsites/koassets/{DA_DEST}/file.html"');
     console.error('  ./upload-to-EDS.js "file.html" "aemsites/koassets/{DA_DEST}/file.html" --preview --publish');
     console.error('');
     console.error('Examples (force mode):');
-    console.error('  ./upload-to-EDS.js "file.html" --preview --publish --force');
+    console.error('  ./upload-to-EDS.js DATA/generated-eds-docs/all-content-stores --preview --publish --force');
     console.error('  ./upload-to-EDS.js --input stores.txt --preview --publish --force');
     console.error('');
     console.error('Notes:');
@@ -580,44 +621,27 @@ if (require.main === module) {
           // Convert content path to directory name
           const dirName = contentPathToDirectoryName(contentPath);
 
-          // Determine if this is all-content-stores or another store
-          const isAllContentStores = dirName === 'all-content-stores';
+          // All stores (including main stores) are now in subdirectories
           const generatedDocsDir = path.join(__dirname, 'DATA', 'generated-eds-docs');
+          const targetPath = path.join(generatedDocsDir, dirName);
 
-          let targetPath;
           let matchingFiles = [];
 
-          if (isAllContentStores) {
-            // all-content-stores: files at root of generated-eds-docs/
-            // Look for: all-content-stores-sheet.json and all-content-stores.html
-            targetPath = generatedDocsDir;
-            if (fs.existsSync(targetPath)) {
-              const entries = fs.readdirSync(targetPath, { withFileTypes: true });
-              matchingFiles = entries
-                .filter((entry) => entry.isFile() && entry.name.startsWith('all-content-stores'))
-                .map((entry) => path.join(targetPath, entry.name));
-            }
-          } else {
-            // Other stores: look in subdirectory DATA/generated-eds-docs/{dirName}/
-            targetPath = path.join(generatedDocsDir, dirName);
-            if (fs.existsSync(targetPath) && fs.statSync(targetPath).isDirectory()) {
-              const entries = fs.readdirSync(targetPath, { withFileTypes: true });
-              matchingFiles = entries
-                .filter((entry) => entry.isFile())
-                .map((entry) => path.join(targetPath, entry.name));
-            }
+          // Look in subdirectory DATA/generated-eds-docs/{dirName}/
+          if (fs.existsSync(targetPath) && fs.statSync(targetPath).isDirectory()) {
+            const entries = fs.readdirSync(targetPath, { withFileTypes: true });
+            matchingFiles = entries
+              .filter((entry) => entry.isFile())
+              .map((entry) => path.join(targetPath, entry.name));
           }
 
           // Check if files were found
           if (matchingFiles.length === 0) {
-            const searchPath = isAllContentStores
-              ? 'DATA/generated-eds-docs/all-content-stores*'
-              : `DATA/generated-eds-docs/${dirName}/`;
-            console.log(`   ⚠️  Skipping: No files found at: ${searchPath}`);
+            console.log(`   ⚠️  Skipping: No files found at: DATA/generated-eds-docs/${dirName}/`);
             continue; // eslint-disable-line no-continue
           }
 
-          console.log(`   📁 Found ${matchingFiles.length} file(s) in ${isAllContentStores ? 'root' : `${dirName}/`}`);
+          console.log(`   📁 Found ${matchingFiles.length} file(s) in ${dirName}/`);
 
           // Upload each matching file
           await matchingFiles.reduce(async (promise, filePath) => {
@@ -705,21 +729,29 @@ if (require.main === module) {
 // ============================================ FUNCTION USAGE EXAMPLES ============================================
 // uploadToEDS(localPath, daFullPath, previewFlag, publishFlag)
 //
+// Store directory examples (all stores now in subdirectories):
+// uploadToEDS('DATA/generated-eds-docs/all-content-stores', null, true, true); // Main store with preview and publish
+// uploadToEDS('DATA/generated-eds-docs/bottler-content-stores', null, true, false); // Main store with preview only
+// uploadToEDS('DATA/generated-eds-docs/all-content-stores-sprite', null, true, true); // Sub-store with preview and publish
+//
 // Single file examples:
 // uploadToEDS('file.html', 'aemsites/koassets/{DA_DEST}/file.html', true, true); // With preview and publish
 // uploadToEDS('file.html', 'aemsites/koassets/{DA_DEST}/file.html', true, false); // With preview only
 // uploadToEDS('image.png', 'aemsites/koassets/{DA_DEST}/image.png', false, false); // Upload only (no preview/publish)
 //
-// Directory examples (uploads all files recursively):
+// Directory examples (uploads all files non-recursively):
 // uploadToEDS('generated-docs', 'aemsites/koassets/{DA_DEST}/docs', false, false); // Upload directory
 // uploadToEDS('my-folder', 'aemsites/koassets/{DA_DEST}/my-folder', true, false); // Upload with preview
 
 // ============================================ DRAFTS ============================================
-// uploadToEDS('/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/all-content-stores.html', 'aemsites/koassets/{DA_DEST}/all-content-stores.html');
-// uploadToEDS('/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/global-initiatives.html', 'aemsites/koassets/{DA_DEST}/fragments/all-content-stores/global-initiatives/global-initiatives.html');
-// uploadToEDS('/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/coca-cola/coca-cola.html', 'aemsites/koassets/{DA_DEST}/fragments/all-content-stores/global-initiatives/coca-cola/coca-cola.html');
-// uploadToEDS('/Users/tphan/Work/Git/aem/assets/ASTRA/koassets/tools/content-migration/all-content-stores/generated-documents/global-initiatives/fanta/fanta.html', 'aemsites/koassets/{DA_DEST}/fragments/all-content-stores/global-initiatives/fanta/fanta.html');
-// uploadToEDS('all-content-stores-sheet.json', 'aemsites/koassets/{DA_DEST}/all-content-stores-sheet.json');
+// All stores now in subdirectories - auto-constructed paths:
+// uploadToEDS('DATA/generated-eds-docs/all-content-stores', null, true, true);
+// uploadToEDS('DATA/generated-eds-docs/bottler-content-stores', null, true, true);
+// uploadToEDS('DATA/generated-eds-docs/all-content-stores-sprite', null, true, false);
+//
+// Individual file examples (manual paths):
+// uploadToEDS('DATA/generated-eds-docs/all-content-stores/all-content-stores.html', 'aemsites/koassets/{DA_DEST}/all-content-stores.html');
+// uploadToEDS('DATA/generated-eds-docs/all-content-stores/all-content-stores-sheet.json', 'aemsites/koassets/{DA_DEST}/all-content-stores-sheet.json');
 
 // ============================================ LIVE ============================================
 

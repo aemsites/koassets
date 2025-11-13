@@ -440,11 +440,18 @@ console.log(`   Debug: ${debugFlag}`);
 
 uploadAllImages(imagesPath, concurrency, storesList, debugFlag)
   .then(() => {
-    process.exit(0);
+    console.log('\n✅ Process complete. Exiting...');
+    // Force exit after brief delay to allow console output to flush
+    setTimeout(() => {
+      process.exit(0);
+    }, 100);
   })
   .catch((error) => {
     console.error('❌ Error:', error.message);
-    process.exit(1);
+    // Force exit after brief delay to allow console output to flush
+    setTimeout(() => {
+      process.exit(1);
+    }, 100);
   });
 
 // ============================================ USAGE EXAMPLES ============================================
