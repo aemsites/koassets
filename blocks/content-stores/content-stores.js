@@ -700,8 +700,11 @@ export default async function decorate(block) {
     return;
   }
 
-  const contentStores = await fetchSpreadsheetData(sheetPath);
-  const contentStoresData = contentStores?.[sheetName]?.data || contentStores?.data || [];
+  const contentStores = await fetchSpreadsheetData(sheetPath.toLowerCase().trim());
+  const normalizedSheetName = sheetName?.toLowerCase()?.trim();
+  const contentStoresData = contentStores?.[normalizedSheetName]?.data
+    || contentStores?.data
+    || [];
 
   const viewerElement = createViewerElement(contentStoresData);
 
