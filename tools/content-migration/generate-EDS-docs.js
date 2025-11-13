@@ -6,9 +6,9 @@
  * This script:
  * 1. Finds all content-stores derived-results/hierarchy-structure.csv files
  * 2. Converts each CSV to JSON format
- * 3. Creates individual JSON sheet files for each store:
- *    - For 'all-content-stores': creates all-content-stores-sheet.json at root
- *    - For other stores: creates storeName/storeName-sheet.json in subdirectories
+ * 3. Creates individual JSON sheet files for each store in subdirectories:
+ *    - Creates storeName/storeName-sheet.json for all stores (including main stores)
+ *    - All stores follow the same pattern for consistency
  * 4. Generates corresponding HTML files with proper sheetPath references
  *
  * USAGE:
@@ -27,8 +27,9 @@
  *
  * OUTPUT STRUCTURE:
  *   generated-eds-docs/
- *     ├── all-content-stores-sheet.json
- *     ├── all-content-stores.html
+ *     ├── all-content-stores/
+ *     │   ├── all-content-stores-sheet.json
+ *     │   └── all-content-stores.html
  *     ├── all-content-stores-made-of-fusion-2025/
  *     │   ├── all-content-stores-made-of-fusion-2025-sheet.json
  *     │   └── all-content-stores-made-of-fusion-2025.html
@@ -336,7 +337,7 @@ function generateIndividualStoreFiles(storesList = null) {
     // Process each CSV file
     csvFiles.forEach((csvPath) => {
       const storeName = extractStoreName(csvPath);
-      const isAllContentStores = storeName === 'all-content-stores';
+      const isMainStore = storeName === 'all-content-stores' || storeName === 'bottler-content-stores';
 
       console.log(`   Processing: ${storeName}`);
 
@@ -348,23 +349,19 @@ function generateIndividualStoreFiles(storesList = null) {
       const sheetData = createSingleSheetJson(storeName, jsonData);
 
       // Determine output paths
-      let outputDir;
-      let jsonFileName;
-      let htmlFileName;
-      let sheetPath;
+      // All stores: create subdirectory with store name (local)
+      // Main stores (all-content-stores, bottler-content-stores): upload to root
+      // Sub-stores: upload to content-stores/ (DA path)
+      const outputDir = path.join(EDS_DOCS_DIR, storeName);
+      const jsonFileName = `${storeName}-sheet.json`;
+      const htmlFileName = `${storeName}.html`;
 
-      if (isAllContentStores) {
-        // all-content-stores: files at root of generated-eds-docs
-        outputDir = EDS_DOCS_DIR;
-        jsonFileName = 'all-content-stores-sheet.json';
-        htmlFileName = 'all-content-stores.html';
-        sheetPath = daDest ? `${daDest}/all-content-stores-sheet` : 'all-content-stores-sheet';
+      let sheetPath;
+      if (isMainStore) {
+        // Main stores go to root of destination
+        sheetPath = daDest ? `${daDest}/${storeName}-sheet` : `${storeName}-sheet`;
       } else {
-        // Other stores: create subdirectory with store name (local)
-        // but upload to content-stores/ (DA path)
-        outputDir = path.join(EDS_DOCS_DIR, storeName);
-        jsonFileName = `${storeName}-sheet.json`;
-        htmlFileName = `${storeName}.html`;
+        // Sub-stores go to content-stores/
         sheetPath = daDest ? `${daDest}/content-stores/${storeName}-sheet` : `content-stores/${storeName}-sheet`;
       }
 
@@ -383,12 +380,12 @@ function generateIndividualStoreFiles(storesList = null) {
         .replace(/\$\{SHEET_PATH\}/g, sheetPath)
         .replace(/\$\{SHEET_NAME\}/g, storeName);
 
-      let pageTemplate = isAllContentStores
+      let pageTemplate = isMainStore
         ? allContentStoresTemplate
         : individualStoreTemplate;
 
       // For individual stores, add title and banner
-      if (!isAllContentStores) {
+      if (!isMainStore) {
         const hierarchyFile = path.join(
           __dirname,
           DATA_DIR,
