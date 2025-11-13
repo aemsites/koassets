@@ -95,7 +95,7 @@ export interface Agreement {
     agreementNumber?: string;
     number?: string;
     id?: string;
-    [key: string]: any; // Allow for additional properties
+    [key: string]: unknown; // Allow for additional properties
 }
 
 export interface AgreementDetail {
@@ -105,7 +105,7 @@ export interface AgreementDetail {
     dealId?: number;
     dealType?: string;
     status?: string;
-    [key: string]: any; // Allow for additional properties
+    [key: string]: unknown; // Allow for additional properties
 }
 
 // Utility function to create a map of externalId to right.description from MarketRightsResponse
