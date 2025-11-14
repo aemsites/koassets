@@ -226,6 +226,54 @@ function rewriteHierarchyStructure(jsonFilePath) {
   }
 }
 
+/**
+ * Removes section-title paths from their children's paths
+ * When a section-title is encountered, all subsequent items (until the next section-title)
+ * have the section-title's path prefix removed from their paths
+ * Also adds 2 empty rows before each section-title (starting from the 2nd one)
+ */
+function removeParentSectionTitleFromPaths(items) {
+  const result = [];
+  let currentSectionPath = null;
+  let isFirstSectionTitle = true;
+
+  for (const item of items) {
+    const newItem = { ...item };
+
+    if (item.type === 'section-title') {
+      // Add 2 empty rows before section-title (except for the first one)
+      if (!isFirstSectionTitle) {
+        // Create empty row objects with all fields empty
+        const emptyRow = {
+          type: '',
+          path: '',
+          title: '',
+          imageUrl: '',
+          linkURL: '',
+          text: '',
+          synonym: '',
+        };
+        result.push({ ...emptyRow });
+        result.push({ ...emptyRow });
+      }
+      isFirstSectionTitle = false;
+
+      // This is a section title - update current section path for future children
+      currentSectionPath = item.path;
+      result.push(newItem);
+    } else {
+      // Check if this item is a child of the current section-title
+      if (currentSectionPath && item.path && item.path.startsWith(currentSectionPath + PATH_SEPARATOR)) {
+        // Remove the section path prefix
+        newItem.path = item.path.substring(currentSectionPath.length + PATH_SEPARATOR.length);
+      }
+      result.push(newItem);
+    }
+  }
+
+  return result;
+}
+
 // ==============================================================================
 // UTILITY FUNCTIONS
 // ==============================================================================
@@ -302,12 +350,13 @@ EXAMPLES:
 
 OUTPUT:
   CSV file with columns:
+  - type: Item/Link type ('accordion', 'button', 'link', 'section-title', or '' for legacy)
   - path: Navigation path (using '>>>' separator)
   - title: Item title
   - imageUrl: DA Live URL for the image
   - linkURL: Link URL if present
-  - type: Item/Link type ('accordion', 'button', 'link', or '' for legacy)
   - text: Plain text content (HTML stripped)
+  - synonym: Alternative search terms
 
 CONFIGURATION:
   Imports configuration from: ./da-admin-client.js
@@ -452,11 +501,11 @@ function itemToRow(item, destPath, storeName) {
   // Transform search URLs in text content
   const transformedText = transformSearchUrlsInText(item.text || '');
   return [
+    escapeCsvField(item.type || ''),
     escapeCsvField(formatPath(item.path || '')),
     escapeCsvField(item.title || ''),
     escapeCsvField(formatImageUrl(item.imageUrl || '', destPath, storeName)),
     escapeCsvField(linkUrl),
-    escapeCsvField(item.type || ''),
     escapeCsvField(transformedText),
     escapeCsvField(item.synonym || ''),
   ].join(',');
@@ -502,15 +551,19 @@ function processFile(inputFile, outputFile) {
   console.log('✅ Post-processing complete!\n');
 
   console.log('   Traversing hierarchy in original order...');
-  const items = traverseInOrder(jsonData.items || []);
+  let items = traverseInOrder(jsonData.items || []);
 
   console.log(`   Found ${items.length} items`);
+
+  // Remove section-title paths from their children
+  console.log('   Removing section-title paths from children...');
+  items = removeParentSectionTitleFromPaths(items);
 
   // Items are already in the order from the JSON hierarchy (top-down traversal)
   // No sorting needed - maintain the original order
 
   // Create CSV content
-  const headers = ['path', 'title', 'imageUrl', 'linkURL', 'type', 'text', 'synonym'];
+  const headers = ['type', 'path', 'title', 'imageUrl', 'linkURL', 'text', 'synonym'];
   const csvLines = [headers.join(',')];
 
   items.forEach((item) => {
@@ -633,6 +686,7 @@ module.exports = {
   formatPath,
   formatImageUrl,
   traverseInOrder,
+  removeParentSectionTitleFromPaths,
   processFile,
   findInputFiles,
   rewriteHierarchyStructure,

@@ -135,12 +135,32 @@ function normalizeRow(row) {
 
 function reconstructHierarchyFromRows(rows) {
   const root = { items: [] };
+  let currentSection = null; // Track the current section-title
 
   rows.forEach((row) => {
+    // If this is a section-title, create it at root level and set as current section
+    if (row.type === 'section-title') {
+      const sectionItem = {
+        title: row.title || row.path,
+        path: row.path,
+        items: [],
+      };
+      // Copy all schema properties
+      copySchemaProperties(row, sectionItem, { onlyIfTruthy: true });
+      sectionItem.title = row.title || row.path;
+
+      root.items.push(sectionItem);
+      currentSection = sectionItem;
+      return;
+    }
+
+    // For non-section-title items, determine where to place them
     const pathSegments = splitPathSegments(row.path);
     if (pathSegments.length === 0) return;
 
-    let currentLevel = root;
+    // If we have a current section, add items as children of that section
+    // Otherwise, add to root
+    let currentLevel = currentSection || root;
 
     pathSegments.forEach((segment, index) => {
       const isLastSegment = index === pathSegments.length - 1;
@@ -560,7 +580,8 @@ function createViewerElement(contentStoresData) {
     if (item.text) {
       const richContent = document.createElement('div');
       richContent.className = 'rich-content';
-      if (hasTextList || isAccordionWithText) {
+      // Always make text expandable/collapsible (add tree-children class)
+      if (hasTextList || isAccordionWithText || item.type === 'tab') {
         richContent.classList.add('tree-children');
         if (isExpanded) richContent.classList.add('expanded');
       }
