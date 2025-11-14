@@ -317,16 +317,15 @@ async function getAssetAgreementList(assetId) {
   }
 
   // Extract unique agreement numbers from rights list
-  const agreements = [];
   const seen = new Set();
-
-  for (const right of data.assetRightLst) {
+  const agreements = data.assetRightLst.reduce((acc, right) => {
     const agreementNumber = right.assetRightExtId;
     if (agreementNumber && !seen.has(agreementNumber)) {
       seen.add(agreementNumber);
-      agreements.push({ agreementNumber, assetRightExtId: agreementNumber, ...right });
+      acc.push({ agreementNumber, assetRightExtId: agreementNumber, ...right });
     }
-  }
+    return acc;
+  }, []);
 
   return agreements;
 }

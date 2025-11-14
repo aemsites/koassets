@@ -61,7 +61,8 @@ if [ "$ci" = "true" ]; then
     echo "CI deployment (branch)"
   fi
 
-  tag="$branch"
+  # Sanitize branch name for Cloudflare alias (replace / with -)
+  tag="${branch//\//-}"
   # last commit message
   message=$(git log -1 --pretty="%aL: %s")
 
@@ -78,7 +79,9 @@ else
   echo "Manual deployment"
   user=$(git config user.email | cut -d@ -f 1)
   branch=$(git branch --show-current)
-  tag="$user-$branch"
+  # Sanitize branch name for Cloudflare alias (replace / with -)
+  sanitized_branch="${branch//\//-}"
+  tag="$user-$sanitized_branch"
   if [ -z "$message" ]; then
     if git diff --quiet .; then
       # no local changes, use last commit message
