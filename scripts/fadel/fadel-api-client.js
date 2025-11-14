@@ -287,3 +287,96 @@ export function matchClearanceToAssets(assets, clearanceResults) {
 
   return updatedAssets;
 }
+
+/**
+ * Get asset data with rights from FADEL API and extract unique agreements
+ * @param {string} assetId - Asset UUID (without prefix)
+ * @returns {Promise<Object[]>} - Array of unique agreements
+ */
+async function getAssetAgreementList(assetId) {
+  const url = `${window.location.origin}/api/fadel/rc-api/assets/externalassets/${assetId}`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Fadel API error: ${response.status} ${response.statusText}`);
+  }
+
+  if (response.status === 204) {
+    return [];
+  }
+
+  const data = await response.json();
+
+  if (!data?.assetRightLst || !Array.isArray(data.assetRightLst)) {
+    return [];
+  }
+
+  // Extract unique agreement numbers from rights list
+  const seen = new Set();
+  const agreements = data.assetRightLst.reduce((acc, right) => {
+    const agreementNumber = right.assetRightExtId;
+    if (agreementNumber && !seen.has(agreementNumber)) {
+      seen.add(agreementNumber);
+      acc.push({ agreementNumber, assetRightExtId: agreementNumber, ...right });
+    }
+    return acc;
+  }, []);
+
+  return agreements;
+}
+
+/**
+ * Get agreement details by agreement number
+ * @param {string} agreementNumber - Agreement number
+ * @returns {Promise<Object|null>} - Agreement details including rights profile information
+ */
+async function getAgreementDetails(agreementNumber) {
+  const url = `${window.location.origin}/api/fadel/rc-api/agreements/number/${agreementNumber}?loadAttachmentFile=false&loadAttachments=false`;
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Fadel API error: ${response.status} ${response.statusText}`);
+  }
+
+  return response.status === 204 ? null : response.json();
+}
+
+/**
+ * Get rights profile data for an asset
+ * Fetches asset agreements and their details in parallel
+ * @param {string} assetId - Asset ID (can include 'urn:aaid:aem:' prefix)
+ * @returns {Promise<Object[]>} - Array of agreement details with rights profile information
+ */
+export async function getAssetRightsProfile(assetId) {
+  try {
+    const strippedAssetId = stripAssetIdPrefix(assetId);
+    const agreements = await getAssetAgreementList(strippedAssetId);
+
+    if (!agreements.length) {
+      return [];
+    }
+
+    // Fetch all agreement details in parallel
+    const detailsPromises = agreements
+      .map((agreement) => agreement.assetRightExtId)
+      .filter((num) => !!num)
+      .map((num) => getAgreementDetails(num).catch(() => null));
+
+    const details = await Promise.all(detailsPromises);
+    return details.filter((detail) => detail !== null);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error fetching asset rights profile:', error);
+    throw error;
+  }
+}
