@@ -61,7 +61,8 @@ if [ "$ci" = "true" ]; then
     echo "CI deployment (branch)"
   fi
 
-  tag="$branch"
+  # Convert tag to lowercase for Cloudflare alias compatibility
+  tag=$(echo "$branch" | tr '[:upper:]' '[:lower:]')
   # last commit message
   message=$(git log -1 --pretty="%aL: %s")
 
@@ -78,7 +79,8 @@ else
   echo "Manual deployment"
   user=$(git config user.email | cut -d@ -f 1)
   branch=$(git branch --show-current)
-  tag="$user-$branch"
+  # Convert tag to lowercase for Cloudflare alias compatibility
+  tag=$(echo "$user-$branch" | tr '[:upper:]' '[:lower:]')
   if [ -z "$message" ]; then
     if git diff --quiet .; then
       # no local changes, use last commit message
