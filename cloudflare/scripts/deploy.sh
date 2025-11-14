@@ -61,8 +61,8 @@ if [ "$ci" = "true" ]; then
     echo "CI deployment (branch)"
   fi
 
-  # Sanitize branch name for Cloudflare alias (replace / with -)
-  tag="${branch//\//-}"
+  # Sanitize branch name for Cloudflare alias (lowercase, replace / with -)
+  tag=$(echo "$branch" | tr '[:upper:]' '[:lower:]' | tr '/' '-')
   # last commit message
   message=$(git log -1 --pretty="%aL: %s")
 
@@ -79,8 +79,8 @@ else
   echo "Manual deployment"
   user=$(git config user.email | cut -d@ -f 1)
   branch=$(git branch --show-current)
-  # Sanitize branch name for Cloudflare alias (replace / with -)
-  sanitized_branch="${branch//\//-}"
+  # Sanitize branch name for Cloudflare alias (lowercase, replace / with -)
+  sanitized_branch=$(echo "$branch" | tr '[:upper:]' '[:lower:]' | tr '/' '-')
   tag="$user-$sanitized_branch"
   if [ -z "$message" ]; then
     if git diff --quiet .; then
