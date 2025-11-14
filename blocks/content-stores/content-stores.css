@@ -126,7 +126,6 @@
 }
 
 .content-stores .tree-item {
-  margin-bottom: 0.5rem;
   width: 100%;
   box-sizing: border-box;
 }
@@ -134,8 +133,6 @@
 /* Make leaf items (no children) display inline */
 .content-stores .tree-item.leaf-item {
   display: inline-block;
-  margin-right: 0.5rem;
-  margin-bottom: 0.5rem;
   vertical-align: top;
 }
 
@@ -177,10 +174,11 @@
 
 /* Narrower styling for leaf nodes */
 .content-stores .tree-item.leaf-item .tree-node {
-  padding: 0 15px;
+  padding: 10px 15px;
   min-width: auto;
   width: auto;
   display: inline-flex;
+  white-space: nowrap;
 }
 
 .content-stores .tree-node.expanded:not(.type-button, .type-section-title) {
@@ -277,9 +275,6 @@
   text-align: left;
   text-decoration: none;
   font-family: "TCCC UnityText Medium", roboto-condensed-fallback, sans-serif;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* Ensure no underline on button titles even when they have links */
@@ -541,12 +536,12 @@
   margin-top: 10px;
 }
 
-/* Grid container for leaf items - responsive to parent width */
+/* Flex container for leaf items - responsive to parent width */
 .content-stores .tree-children.has-grid {
   display: none;
-  grid-template-columns: repeat(auto-fit, minmax(min(330px, 100%), max-content));
+  flex-flow: row wrap;
   gap: 20px;
-  padding: 20px 0 20px 20px;
+  padding: 20px 0 30px 20px;
   border: none;
   box-sizing: border-box;
   width: 100%;
@@ -555,24 +550,24 @@
 
 /* Exclude text type items from grid layout */
 .content-stores .tree-children.has-grid .tree-item[data-item-type="text"] {
-  grid-column: 1 / -1;
   width: 100%;
 }
 
 .content-stores .tree-children.has-grid.expanded {
-  display: grid;
+  display: flex;
 }
 
-/* Item wrapper in grid - fill grid cell */
+/* Item wrapper in flex - auto width based on content */
 .content-stores .tree-children.has-grid .tree-item {
   display: block;
   box-sizing: border-box;
-  width: 100%;
+  width: auto;
+  min-width: 320px;
 }
 
-/* Override inline styles for items in grid */
+/* Override inline styles for items in flex */
 .content-stores .tree-children.has-grid .tree-item .tree-node {
-  width: 100%;
+  width: auto;
   display: flex;
   box-sizing: border-box;
 }
@@ -793,7 +788,7 @@
   }
 
   .content-stores .tree-children.has-grid {
-    grid-template-columns: 1fr;
+    flex-direction: column;
   }
 
   .content-stores .tree-item[data-item-type="section-title"] {
