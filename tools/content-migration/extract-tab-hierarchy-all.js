@@ -203,6 +203,27 @@ function stripHostOnly(url) {
   return pathname + search + hash;
 }
 
+// Strip hosts from URLs within rich text/HTML content
+function stripHostsFromText(text) {
+  if (!text || typeof text !== 'string') return text;
+
+  // Pattern to match href attributes with full URLs
+  // Matches: href="https://domain.com/path" or href='https://domain.com/path'
+  const hrefPattern = /href=["']([^"']+)["']/gi;
+
+  return text.replace(hrefPattern, (match, url) => {
+    // Only process URLs that look like full URLs (http:// or https://)
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      const strippedUrl = stripHostOnly(url);
+      // Preserve the original quote style
+      const quote = match.includes('href="') ? '"' : "'";
+      return `href=${quote}${strippedUrl}${quote}`;
+    }
+    // Return unchanged if not a full URL
+    return match;
+  });
+}
+
 const AEM_AUTHOR = 'https://author-p64403-e544653.adobeaemcloud.com';
 // Default content path
 const DEFAULT_CONTENT_PATH = '/content/share/us/en/all-content-stores';
@@ -1469,12 +1490,13 @@ async function main() {
               const shouldMerge = (item.type === 'accordion' && item.key === accordionKeyInPath);
 
               if (shouldMerge && text) {
-              // Append text if not already present
+                const strippedText = stripHostsFromText(text);
+                // Append text if not already present
                 if (!item.text) {
-                  item.text = text;
-                } else if (!item.text.includes(text.substring(0, 300))) {
-                // Only append if this text isn't already present (check first 300 chars as signature for better uniqueness)
-                  item.text += `\n${text}`;
+                  item.text = strippedText;
+                } else if (!item.text.includes(strippedText.substring(0, 300))) {
+                  // Only append if this text isn't already present (check first 300 chars as signature for better uniqueness)
+                  item.text += `\n${strippedText}`;
                 }
                 // Mark as matched
                 accordionPath.matched = true;
@@ -1603,7 +1625,7 @@ async function main() {
                         path: item.path ? `${item.path}${PATH_SEPARATOR}${panel.title}` : panel.title,
                         type: 'accordion',
                         key: panel.panelKey,
-                        text: panel.text || '',
+                        text: stripHostsFromText(panel.text || ''),
                       };
 
                       if (!item.items) {
@@ -2328,7 +2350,7 @@ function extractTabsFromJCR(jcrData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcr
 
             // Extract text content
             if (contentItem.text) {
-              item.text = contentItem.text;
+              item.text = stripHostsFromText(contentItem.text);
             }
 
             // Recursively extract nested items
@@ -2663,14 +2685,14 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
 
       // First, check if text content exists directly in the model item
       if (item.text && itemType === 'text') {
-        hierarchyItem.text = item.text;
+        hierarchyItem.text = stripHostsFromText(item.text);
       } else if (item[':items'] && item[':itemsOrder']) {
         // For containers, extract and concatenate text from ALL child text components
         const textComponents = [];
         for (const childKey of item[':itemsOrder']) {
           const child = item[':items'][childKey];
           if (child && (childKey === 'text' || childKey.startsWith('text_')) && child.text) {
-            textComponents.push(child.text);
+            textComponents.push(stripHostsFromText(child.text));
           }
         }
         if (textComponents.length > 0) {
@@ -2724,24 +2746,24 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         }
 
         if (textContent) {
-          hierarchyItem.text = textContent;
+          hierarchyItem.text = stripHostsFromText(textContent);
         } else {
         // Fallback: check if text was stored by key (for text components without titles)
           const textByKey = jcrTextMap[key];
           if (textByKey) {
-            hierarchyItem.text = textByKey;
+            hierarchyItem.text = stripHostsFromText(textByKey);
           } else {
           // Also try the key with parent context
             const keyContextKey = `${key}|${immediateParentKey}`;
             const textByKeyContext = jcrTextMap[keyContextKey];
             if (textByKeyContext) {
-              hierarchyItem.text = textByKeyContext;
+              hierarchyItem.text = stripHostsFromText(textByKeyContext);
             } else if ((itemType === 'container' || key.startsWith('container')) && (key.startsWith('container') || key === 'container')) {
             // Last fallback: for structural containers, check if this key has orphaned text children
             // e.g., "text_copy_copy_copy__1538611243|container_copy_copy_" when looking for "container_copy_copy_"
               const childrenTextKey = Object.keys(jcrTextMap).find((k) => k.endsWith(`|${key}`));
               if (childrenTextKey) {
-                hierarchyItem.text = jcrTextMap[childrenTextKey];
+                hierarchyItem.text = stripHostsFromText(jcrTextMap[childrenTextKey]);
               }
             }
           }
@@ -2792,7 +2814,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         // Check if there are text or text_copy children and extract their text content to parent
         const textChild = item[':items'].text || item[':items'].text_copy;
         if (textChild && textChild.text && !hierarchyItem.text) {
-          hierarchyItem.text = textChild.text;
+          hierarchyItem.text = stripHostsFromText(textChild.text);
         }
 
         // Filter out ALL text children (text, text_copy, text_copy_copy, etc.) to avoid duplication
@@ -3655,13 +3677,14 @@ function extractContentFromContainer(container, items, parentTitle, jcrTeaserIma
     else if (resourceType === 'tccc-dam/components/text') {
       const textContent = component.text;
       if (textContent && textContent.trim()) {
+        const strippedText = stripHostsFromText(textContent);
         // Append text to the last item in the array, or create a text-only item
         if (items.length > 0) {
           const lastItem = items[items.length - 1];
           if (!lastItem.text) {
-            lastItem.text = textContent;
+            lastItem.text = strippedText;
           } else {
-            lastItem.text += `\n${textContent}`;
+            lastItem.text += `\n${strippedText}`;
           }
         } else {
           // No items yet, create a standalone text item
@@ -3670,7 +3693,7 @@ function extractContentFromContainer(container, items, parentTitle, jcrTeaserIma
             path: `${parentTitle} >>> ${key}`,
             type: 'text',
             key,
-            text: textContent,
+            text: strippedText,
           });
         }
       }
@@ -3965,7 +3988,7 @@ function extractComponentsFromContainer(container, items, sectionTitle, jcrTease
                 }
               }
               if (panelText) {
-                accordionItem.text = panelText;
+                accordionItem.text = stripHostsFromText(panelText);
               }
 
               items.push(accordionItem);
@@ -4026,15 +4049,16 @@ function extractComponentsFromContainer(container, items, sectionTitle, jcrTease
         if (resourceType === 'tccc-dam/components/text') {
           const textContent = component.text;
           if (textContent && textContent.trim()) {
+            const strippedText = stripHostsFromText(textContent);
             // Find a parent item to attach this text to
             // Look for the last added item that can have text
             if (items.length > 0) {
               const lastItem = items[items.length - 1];
               // Append text to the last item (accordion, tab, or container)
               if (!lastItem.text) {
-                lastItem.text = textContent;
+                lastItem.text = strippedText;
               } else {
-                lastItem.text += `\n${textContent}`;
+                lastItem.text += `\n${strippedText}`;
               }
             } else {
               // No items yet - create a standalone text item
@@ -4043,7 +4067,7 @@ function extractComponentsFromContainer(container, items, sectionTitle, jcrTease
                 path: `${sectionTitle}${PATH_SEPARATOR}${key}`,
                 type: 'text',
                 key,
-                text: textContent,
+                text: strippedText,
               });
             }
           }
@@ -4137,10 +4161,11 @@ function unwrapAccordionItems(items, depth = 0) {
 
         // If the wrapper itself had text, preserve it by adding to the first child
         if (item.text && updatedChildren.length > 0) {
+          const strippedWrapperText = stripHostsFromText(item.text);
           if (!updatedChildren[0].text) {
-            updatedChildren[0].text = item.text;
+            updatedChildren[0].text = strippedWrapperText;
           } else {
-            updatedChildren[0].text = `${item.text}\n${updatedChildren[0].text}`;
+            updatedChildren[0].text = `${strippedWrapperText}\n${updatedChildren[0].text}`;
           }
         }
 
@@ -4496,7 +4521,7 @@ function extractTextFromAccordion(jcrData, accordionPath) {
       if (textParts.length > 0) {
         panels.push({
           title: panelTitle,
-          text: textParts.join('\n'),
+          text: stripHostsFromText(textParts.join('\n')),
           key,
         });
       }

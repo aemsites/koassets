@@ -153,6 +153,7 @@ async function uploadAllImages(imagesPath, concurrency = 1, storesList = null, d
       const absoluteImagesDir = path.resolve(__dirname, imagesDir);
 
       if (fs.existsSync(absoluteImagesDir)) {
+        console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>');
         console.log(`\n   📁 Processing: ${imagesDir}`);
 
         // Derive targetDaBasePath: ${DA_ORG}/${DA_REPO}/${DA_DEST}/${FRAGMENTS_BASE}${contentStoreDir}
