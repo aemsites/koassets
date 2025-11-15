@@ -8,6 +8,7 @@ import type { Asset, ImageGalleryProps } from '../types';
 import { populateAssetFromHit } from '../utils/assetTransformers';
 import { calendarDateToEpoch } from '../utils/formatters';
 import buildSavedSearchUrl from '../../../scripts/saved-searches/saved-search-utils.js';
+import { isPdfModalHandlingEscape } from '../../../blocks/pdfviewer/pdfviewer.js';
 import AssetCard from './AssetCard';
 import AssetDetails from './AssetDetails/';
 import AssetPreview from './AssetPreview';
@@ -154,6 +155,12 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
+                // Check if PDF modal is handling the escape - if so, don't close the underlying modal
+                if (isPdfModalHandlingEscape()) {
+                    // PDF modal is handling this escape, don't close React modals
+                    return;
+                }
+                
                 if (showDetailsModal) {
                     // Don't close if this is a deep link asset
                     if (!isDeepLinkAsset) {

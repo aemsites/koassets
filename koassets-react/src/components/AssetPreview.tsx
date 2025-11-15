@@ -7,8 +7,9 @@ import ActionButton from './ActionButton';
 import { BUTTON_CONFIGS } from './ActionButtonConfigs';
 import './AssetPreview.css';
 import Picture from './Picture';
-import PDFViewer from './PDFViewer';
 import { isPdfPreview } from '../constants/filetypes';
+import { openPdfModal } from '../../../blocks/pdfviewer/pdfviewer.js';
+import '../../../blocks/pdfviewer/pdfviewer.css';
 
 const AssetPreview: React.FC<AssetPreviewProps> = ({
     showModal,
@@ -99,6 +100,44 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
         }
     };
 
+    const handlePdfPreviewClick = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        
+        if (!selectedImage || !dynamicMediaClient) {
+            return;
+        }
+
+        // Check if this is a PDF
+        if (!isPdfPreview(selectedImage.format as string)) {
+            return;
+        }
+
+        // Find the PDF rendition
+        const pdfRendition = renditions.items
+            ?.filter((item: Rendition) => isPdfPreview(item.format as string))
+            ?.sort((a: Rendition, b: Rendition) => (a.size ?? 0) - (b.size ?? 0))?.[0];
+
+        if (!pdfRendition) {
+            console.warn('No PDF rendition found');
+            return;
+        }
+
+        // Get the PDF URL
+        const pdfUrl = dynamicMediaClient.getPreviewPdfUrl(
+            selectedImage.assetId as string,
+            selectedImage.name as string,
+            pdfRendition.name as string
+        );
+        
+        if (pdfUrl) {
+            try {
+                await openPdfModal(selectedImage.title as string || 'PDF Preview', pdfUrl);
+            } catch (error) {
+                console.error('Error opening PDF modal:', error);
+            }
+        }
+    };
+
     return (
         <div className="asset-preview-modal portal-modal" onClick={handleOverlayClick}>
             <div className="asset-preview-modal-inner" onClick={handleModalClick}>
@@ -118,28 +157,19 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                         </h3>
                     </div>
 
-                    <div className="modal-image-container">
-                        {(() => {
-                            const pictureComponent = (
-                                <Picture
-                                    key={selectedImage?.assetId}
-                                    asset={selectedImage as Asset}
-                                    width={350}
-                                    className="modal-image"
-                                    eager={true}
-                                    fetchPriority="high"
-                                />
-                            );
-                            return isPdfPreview(selectedImage?.format as string) ? (
-                                <PDFViewer 
-                                    selectedImage={selectedImage as Asset} 
-                                    renditions={renditions}
-                                    fallbackComponent={pictureComponent}
-                                />
-                            ) : (
-                                pictureComponent
-                            );
-                        })()}
+                    <div 
+                        className="modal-image-container"
+                        onClick={isPdfPreview(selectedImage?.format as string) && selectedImage?.readyToUse?.toLowerCase() === 'yes' ? handlePdfPreviewClick : undefined}
+                        style={isPdfPreview(selectedImage?.format as string) && selectedImage?.readyToUse?.toLowerCase() === 'yes' ? { cursor: 'pointer' } : undefined}
+                    >
+                        <Picture
+                            key={selectedImage?.assetId}
+                            asset={selectedImage as Asset}
+                            width={350}
+                            className="modal-image"
+                            eager={true}
+                            fetchPriority="high"
+                        />
                     </div>
 
                     <div className="preview-modal-details">
