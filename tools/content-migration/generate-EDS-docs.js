@@ -339,6 +339,7 @@ function generateIndividualStoreFiles(storesList = null) {
       const storeName = extractStoreName(csvPath);
       const isMainStore = storeName === 'all-content-stores' || storeName === 'bottler-content-stores';
 
+      console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>');
       console.log(`   Processing: ${storeName}`);
 
       // Convert CSV to JSON

@@ -34,7 +34,7 @@ export const DEFAULT_FACETS: ExcFacets = {
     },
     "tccc-assetCategoryAndType": {
         "type": "tags",
-        "label": "Asset Category & Asset Type Execution",
+        "label": "Asset Category and Asset Type Execution",
         "displayOrder": 3,
         "rootPaths": {
             "TCCC : Asset Category and Asset Type Execution": {
@@ -64,7 +64,7 @@ export const DEFAULT_FACETS: ExcFacets = {
     },
     "tccc-intendedChannel": {
         "label": "Intended Channel",
-        "type": "string",
+        "type": "tags",
         "displayOrder": 7,
         "rootPaths": {
             "TCCC : Intended Channel": {
