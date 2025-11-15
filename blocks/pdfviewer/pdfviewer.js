@@ -93,8 +93,9 @@ let pdfModalHandledEscape = false;
         return false;
       }
     }
+    return true;
   }, { capture: true, passive: false }); // Capture phase, non-passive to allow preventDefault
-})();
+}());
 
 // Export function to check if PDF modal is handling escape
 export function isPdfModalHandlingEscape() {
@@ -194,7 +195,7 @@ export function createPdfModal() {
   });
 
   // Note: Escape key handler is now added/removed dynamically in openPdfModal/closePdfModal
-  
+
   return modal;
 }
 
@@ -223,7 +224,7 @@ export default async function decorate(block) {
         title: divs[0].textContent.trim(),
         pdfLink: divs[1].textContent.trim(),
       };
-      
+
       // Check for optional preview image in third column
       if (divs.length >= 3) {
         // Look for img tag in the third column
@@ -232,7 +233,7 @@ export default async function decorate(block) {
           pdfData.previewImage = img.src;
         }
       }
-      
+
       pdfLinks.push(pdfData);
     }
   });
