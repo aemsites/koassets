@@ -2,9 +2,10 @@
  * Create a PDF card with thumbnail and preview button
  * @param {string} title - PDF title
  * @param {string} pdfLink - PDF URL
+ * @param {string} previewImage - Optional preview image URL
  * @returns {HTMLElement} Card element
  */
-function createPdfCard(title, pdfLink) {
+function createPdfCard(title, pdfLink, previewImage) {
   const card = document.createElement('div');
   card.className = 'pdf-card';
 
@@ -16,12 +17,20 @@ function createPdfCard(title, pdfLink) {
   const thumbnailArea = document.createElement('div');
   thumbnailArea.className = 'pdf-card-thumbnail';
 
-  // PDF icon placeholder
-  const pdfIcon = document.createElement('img');
-  pdfIcon.src = '/icons/pdf-icon.svg';
-  pdfIcon.alt = 'PDF Document';
-  pdfIcon.className = 'pdf-card-icon';
-  thumbnailArea.appendChild(pdfIcon);
+  // Preview image or PDF icon
+  const thumbnail = document.createElement('img');
+  if (previewImage) {
+    // Use custom preview image
+    thumbnail.src = previewImage;
+    thumbnail.alt = title;
+    thumbnail.className = 'pdf-card-preview-image';
+  } else {
+    // Use default PDF icon
+    thumbnail.src = '/icons/pdf-icon.svg';
+    thumbnail.alt = 'PDF Document';
+    thumbnail.className = 'pdf-card-icon';
+  }
+  thumbnailArea.appendChild(thumbnail);
 
   // Magnifying glass preview button
   const previewButton = document.createElement('button');
@@ -210,10 +219,21 @@ export default async function decorate(block) {
   [...block.children].forEach((row) => {
     const divs = row.children;
     if (divs.length >= 2) {
-      pdfLinks.push({
+      const pdfData = {
         title: divs[0].textContent.trim(),
         pdfLink: divs[1].textContent.trim(),
-      });
+      };
+      
+      // Check for optional preview image in third column
+      if (divs.length >= 3) {
+        // Look for img tag in the third column
+        const img = divs[2].querySelector('img');
+        if (img && img.src) {
+          pdfData.previewImage = img.src;
+        }
+      }
+      
+      pdfLinks.push(pdfData);
     }
   });
 
@@ -224,8 +244,8 @@ export default async function decorate(block) {
   cardsContainer.className = 'pdf-cards-container';
 
   // Create cards for each PDF
-  pdfLinks.forEach(({ title, pdfLink }) => {
-    const card = createPdfCard(title, pdfLink);
+  pdfLinks.forEach(({ title, pdfLink, previewImage }) => {
+    const card = createPdfCard(title, pdfLink, previewImage);
     cardsContainer.appendChild(card);
   });
 
