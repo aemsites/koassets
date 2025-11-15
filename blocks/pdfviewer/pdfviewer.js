@@ -60,7 +60,7 @@ function createPdfCard(title, pdfLink) {
  * @param {string} title - PDF title
  * @param {string} pdfLink - PDF URL
  */
-async function openPdfModal(title, pdfLink) {
+export async function openPdfModal(title, pdfLink) {
   // Create modal if it doesn't exist
   let modal = document.getElementById('pdf-viewer-modal');
   if (!modal) {
@@ -113,7 +113,7 @@ async function openPdfModal(title, pdfLink) {
  * Create the PDF modal structure
  * @returns {HTMLElement} Modal element
  */
-function createPdfModal() {
+export function createPdfModal() {
   const modal = document.createElement('div');
   modal.id = 'pdf-viewer-modal';
   modal.className = 'pdf-viewer-modal';
@@ -165,7 +165,7 @@ function createPdfModal() {
 /**
  * Close the PDF modal
  */
-function closePdfModal() {
+export function closePdfModal() {
   const modal = document.getElementById('pdf-viewer-modal');
   if (modal) {
     modal.style.display = 'none';

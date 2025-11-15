@@ -229,6 +229,54 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
+/* PDF Preview Magnifying Glass Button */
+.asset-details-image-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.asset-details-image-wrapper {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.pdf-preview-magnify-button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    background-color: rgba(74, 74, 74, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 6px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s ease, background-color 0.2s ease;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 0;
+}
+
+.pdf-preview-magnify-button:hover {
+    opacity: 1;
+    background-color: #c8102e;
+}
+
+.pdf-preview-magnify-button img {
+    width: 18px;
+    height: 18px;
+    filter: brightness(0) invert(1); /* Make icon white */
+}
+
 @keyframes spin {
     0% {
         transform: rotate(0deg);

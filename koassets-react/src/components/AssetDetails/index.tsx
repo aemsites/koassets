@@ -23,8 +23,9 @@ import AssetDetailsSystem from './AssetDetailsSystem';
 import AssetDetailsSystemInfoLegacy from './AssetDetailsSystemInfoLegacy';
 import AssetDetailsTechnicalInfo from './AssetDetailsTechnicalInfo';
 import { isPdfPreview } from '../../constants/filetypes';
-import PDFViewer from '../PDFViewer';
 import { populateAssetFromMetadata } from '../../utils/assetTransformers';
+import { openPdfModal } from '../../../../blocks/pdfviewer/pdfviewer.js';
+import '../../../../blocks/pdfviewer/pdfviewer.css';
 
 /* Displayed on the asset details modal header section
 campaignName 
@@ -125,6 +126,45 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
         }
     };
 
+    const handlePdfPreviewClick = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!populatedImage || !dynamicMediaClient) {
+            return;
+        }
+
+        // Check if this is a PDF
+        if (!isPdfPreview(populatedImage.format as string)) {
+            return;
+        }
+
+        // Find the PDF rendition
+        const pdfRendition = renditions.items
+            ?.filter((item: Rendition) => isPdfPreview(item.format as string))
+            ?.sort((a: Rendition, b: Rendition) => (a.size ?? 0) - (b.size ?? 0))?.[0];
+
+        if (!pdfRendition) {
+            console.warn('No PDF rendition found');
+            return;
+        }
+
+        // Get the PDF URL
+        const pdfUrl = dynamicMediaClient.getPreviewPdfUrl(
+            populatedImage.assetId as string,
+            populatedImage.name as string,
+            pdfRendition.name as string
+        );
+        
+        if (pdfUrl) {
+            try {
+                await openPdfModal(populatedImage.title as string || 'PDF Preview', pdfUrl);
+            } catch (error) {
+                console.error('Error opening PDF modal:', error);
+            }
+        }
+    };
+
     const handleCloseDownloadRenditionsModal = () => {
         setShowDownloadRenditionsModal(false);
     };
@@ -221,27 +261,33 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     <span>Add to Collection</span>
                                 </div>
                             </div>
-                            {(() => {
-                                const pictureComponent = (
+                            <div className="asset-details-image-container">
+                                <div 
+                                    className="asset-details-image-wrapper"
+                                    onClick={isPdfPreview(populatedImage?.format as string) && populatedImage?.readyToUse?.toLowerCase() === 'yes' ? handlePdfPreviewClick : undefined}
+                                    style={isPdfPreview(populatedImage?.format as string) && populatedImage?.readyToUse?.toLowerCase() === 'yes' ? { cursor: 'pointer' } : undefined}
+                                >
                                     <Picture
-                                        key={selectedImage?.assetId}
-                                        asset={selectedImage as Asset}
+                                        key={populatedImage?.assetId}
+                                        asset={populatedImage as Asset}
                                         width={1200}
                                         className="asset-details-main-image"
                                         eager={true}
                                         fetchPriority="high"
                                     />
-                                );
-                                return isPdfPreview(selectedImage?.format as string) ? (
-                                    <PDFViewer 
-                                        selectedImage={selectedImage as Asset} 
-                                        renditions={renditions}
-                                        fallbackComponent={pictureComponent}
-                                    />
-                                ) : (
-                                    pictureComponent
-                                );
-                            })()}
+                                    {/* Magnifying Glass Overlay for Rights Free PDFs only */}
+                                    {isPdfPreview(populatedImage?.format as string) && populatedImage?.readyToUse?.toLowerCase() === 'yes' && (
+                                        <button 
+                                            className="pdf-preview-magnify-button"
+                                            onClick={handlePdfPreviewClick}
+                                            aria-label="View PDF in full screen"
+                                            title="View PDF"
+                                        >
+                                            <img src="/icons/zoom.svg" alt="View PDF" />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
