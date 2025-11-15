@@ -60,6 +60,38 @@ function createPdfCard(title, pdfLink) {
  * @param {string} title - PDF title
  * @param {string} pdfLink - PDF URL
  */
+// Flag to track if PDF modal just handled escape (prevents React modals from closing)
+let pdfModalHandledEscape = false;
+
+// Global escape key handler that runs at the highest priority
+// This is added once when the module loads, not when modal opens
+(function setupGlobalEscapeHandler() {
+  // Add to window in capture phase for earliest possible interception
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('pdf-viewer-modal');
+      if (modal && modal.style.display === 'flex') {
+        // PDF modal is open, intercept the escape key completely
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        pdfModalHandledEscape = true;
+        closePdfModal();
+        // Clear flag after a brief delay
+        setTimeout(() => {
+          pdfModalHandledEscape = false;
+        }, 100);
+        return false;
+      }
+    }
+  }, { capture: true, passive: false }); // Capture phase, non-passive to allow preventDefault
+})();
+
+// Export function to check if PDF modal is handling escape
+export function isPdfModalHandlingEscape() {
+  return pdfModalHandledEscape;
+}
+
 export async function openPdfModal(title, pdfLink) {
   // Create modal if it doesn't exist
   let modal = document.getElementById('pdf-viewer-modal');
@@ -152,13 +184,8 @@ export function createPdfModal() {
     if (e.target === modal) closePdfModal();
   });
 
-  // Close on Escape key
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && modal.style.display === 'flex') {
-      closePdfModal();
-    }
-  });
-
+  // Note: Escape key handler is now added/removed dynamically in openPdfModal/closePdfModal
+  
   return modal;
 }
 
@@ -175,6 +202,7 @@ export function closePdfModal() {
       URL.revokeObjectURL(iframe.src);
     }
   }
+  // Note: Escape handler is now global and always active, no need to remove
 }
 
 export default async function decorate(block) {

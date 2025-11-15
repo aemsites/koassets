@@ -261,32 +261,30 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     <span>Add to Collection</span>
                                 </div>
                             </div>
-                            <div className="asset-details-image-container">
-                                <div 
-                                    className="asset-details-image-wrapper"
-                                    onClick={isPdfPreview(populatedImage?.format as string) && populatedImage?.readyToUse?.toLowerCase() === 'yes' ? handlePdfPreviewClick : undefined}
-                                    style={isPdfPreview(populatedImage?.format as string) && populatedImage?.readyToUse?.toLowerCase() === 'yes' ? { cursor: 'pointer' } : undefined}
-                                >
-                                    <Picture
-                                        key={populatedImage?.assetId}
-                                        asset={populatedImage as Asset}
-                                        width={1200}
-                                        className="asset-details-main-image"
-                                        eager={true}
-                                        fetchPriority="high"
-                                    />
-                                    {/* Magnifying Glass Overlay for Rights Free PDFs only */}
-                                    {isPdfPreview(populatedImage?.format as string) && populatedImage?.readyToUse?.toLowerCase() === 'yes' && (
-                                        <button 
-                                            className="pdf-preview-magnify-button"
-                                            onClick={handlePdfPreviewClick}
-                                            aria-label="View PDF in full screen"
-                                            title="View PDF"
-                                        >
-                                            <img src="/icons/zoom.svg" alt="View PDF" />
-                                        </button>
-                                    )}
-                                </div>
+                            <div 
+                                className="asset-details-image-container"
+                                onClick={isPdfPreview(populatedImage?.format as string) && populatedImage?.readyToUse?.toLowerCase() === 'yes' ? handlePdfPreviewClick : undefined}
+                                style={isPdfPreview(populatedImage?.format as string) && populatedImage?.readyToUse?.toLowerCase() === 'yes' ? { cursor: 'pointer' } : undefined}
+                            >
+                                <Picture
+                                    key={populatedImage?.assetId}
+                                    asset={populatedImage as Asset}
+                                    width={1200}
+                                    className="asset-details-main-image"
+                                    eager={true}
+                                    fetchPriority="high"
+                                />
+                                {/* Magnifying Glass Overlay for Rights Free PDFs only */}
+                                {isPdfPreview(populatedImage?.format as string) && populatedImage?.readyToUse?.toLowerCase() === 'yes' && (
+                                    <button 
+                                        className="pdf-preview-magnify-button"
+                                        onClick={handlePdfPreviewClick}
+                                        aria-label="View PDF in full screen"
+                                        title="View PDF"
+                                    >
+                                        <img src="/icons/zoom.svg" alt="View PDF" />
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
