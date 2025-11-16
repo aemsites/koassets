@@ -224,6 +224,25 @@ function stripHostsFromText(text) {
   });
 }
 
+// Strip HTML tags from text and return plain text for use as title
+function stripHtmlToText(html) {
+  if (!html || typeof html !== 'string') return html;
+  // Remove HTML tags
+  const text = html.replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\r\n/g, ' ')
+    .replace(/\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  // Truncate to reasonable title length
+  return text.length > 100 ? `${text.substring(0, 100)}...` : text;
+}
+
 const AEM_AUTHOR = 'https://author-p64403-e544653.adobeaemcloud.com';
 // Default content path
 const DEFAULT_CONTENT_PATH = '/content/share/us/en/all-content-stores';
@@ -979,6 +998,7 @@ async function main() {
               lastModified,
               jcrPath: `${parentPath}/${key}`,
               teaserKey: key,
+              teaserTitle: obj[key]['jcr:title'], // Store title for disambiguation
               // Mark as pending - will be confirmed when checking model
               hasImageResource: false,
             };
@@ -1261,8 +1281,18 @@ async function main() {
 
     // Button container processing disabled - buttons are already part of regular tabs structure
     let mainHierarchy = [];
+    // =========================================================================
+    // PHASE 1: EXTRACTION
+    // =========================================================================
+    // Extract content from Sling Model and JCR separately
+    // Sling Model: tabs, buttons, teasers with URLs and structured data
+    // JCR: non-tabs sections, standalone content, text components
+    // NO merging or deduplication at this stage
+    // =========================================================================
+    console.log('\n📥 PHASE 1: Extracting from Sling Model and JCR...\n');
+
     if (mainTabsData) {
-      console.log(`📌 Using ${mainTabsData[':itemsOrder'].length} tabs items\n`);
+      console.log(`📌 Extracting ${mainTabsData[':itemsOrder'].length} items from Sling Model\n`);
 
       // Continue with parsing
       // eslint-disable-next-line no-use-before-define
@@ -1273,7 +1303,8 @@ async function main() {
       mainHierarchy = extractTabsFromJCR(jcrData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrPathMap, jcrTeaserImageMap);
     }
 
-    // Extract non-tabs content and merge with main hierarchy
+    // Extract non-tabs content from JCR (separate extraction, no merging yet)
+    console.log('\n📥 Extracting non-tabs content from JCR...\n');
     // eslint-disable-next-line no-use-before-define
     const nonTabsSections = extractNonTabsContent(jcrData, jcrTeaserImageMap);
     if (nonTabsSections.length > 0) {
@@ -1379,7 +1410,16 @@ async function main() {
         buildGlobalItemRegistry(mainHierarchy);
         console.log(`📋 Global item registry: ${globalItemRegistry.size} unique item(s) from Sling Model`);
 
-        // Merge JCR buttons and accordion text into hierarchy by matching tab titles
+        // =========================================================================
+        // PHASE 2: MERGE (Part 1 - Merge JCR into Sling)
+        // =========================================================================
+        // Merge JCR content (buttons, text) into Sling Model hierarchy
+        // Merge rules:
+        //   - Sling wins for: linkURL, searchLink, structured data
+        //   - JCR adds: missing items, text content, image paths
+        //   - Match by: key + title (strongest), key only, or title only
+        // =========================================================================
+        console.log('\n🔀 PHASE 2A: Merging JCR content into Sling Model hierarchy...\n');
         const mergedContainers = new Set(); // Track which JCR containers we've already merged
 
         function mergeJCRContentIntoHierarchy(items, depth = 0) {
@@ -1667,8 +1707,17 @@ async function main() {
       }
     } // End of else block for JCR button/accordion extraction
 
-    // NOW apply transformations AFTER JCR content is merged
-    console.log('\n🔄 Applying hierarchy transformations...');
+    // =========================================================================
+    // PHASE 3: TYPE RESOLUTION
+    // =========================================================================
+    // Apply type conversions to correctly identify accordions, tabs, and containers
+    // Rules (priority order):
+    //   1. Unwrap accordion wrapper containers (title starts with 'accordion_')
+    //   2. Convert items with cq:panelTitle + text → 'accordion'
+    //   3. Convert items with cq:panelTitle + children → 'tab'
+    //   4. Filter out empty containers
+    // =========================================================================
+    console.log('\n🔄 PHASE 3: Resolving item types (accordion/tab/container/text)...');
     // eslint-disable-next-line no-use-before-define
     const unwrappedHierarchy = unwrapAccordionItems(mainHierarchy);
     // eslint-disable-next-line no-use-before-define
@@ -1676,10 +1725,19 @@ async function main() {
     // eslint-disable-next-line no-use-before-define
     const tabConverted = convertTabContainers(accordionConverted);
     // eslint-disable-next-line no-use-before-define
-    let convertedHierarchy = filterEmptyContainers(tabConverted);
+    const textConverted = convertTextContainers(tabConverted);
+    // eslint-disable-next-line no-use-before-define
+    let convertedHierarchy = filterEmptyContainers(textConverted);
 
-    // Extract missing sections from JCR that aren't in Sling Model
-    console.log('\n🔍 Checking for missing sections in JCR...');
+    // =========================================================================
+    // PHASE 2: MERGE (Part 2 - Add missing JCR content)
+    // =========================================================================
+    // Extract sections from JCR that weren't found in Sling Model
+    // This includes:
+    //   - Non-tabs content (titled sections, standalone teasers/buttons)
+    //   - Orphaned content in "Other Content" section
+    // =========================================================================
+    console.log('\n🔍 PHASE 2B: Checking for missing sections in JCR...');
     const existingSectionTitles = convertedHierarchy.map((section) => section.title);
     const missingSections = extractMissingSectionsFromJCR(jcrData, existingSectionTitles, convertedHierarchy, jcrTeaserImageMap);
 
@@ -1721,47 +1779,51 @@ async function main() {
             if (!items || !Array.isArray(items)) return;
             items.forEach((section) => {
               if (section === skipSection) return; // Don't collect from "Other Content" itself
+
+              // Collect signature for this item itself (if it's a button/accordion/teaser)
+              if (section.type === 'button' || section.type === 'accordion' || section.type === 'teaser') {
+                const signature = `${section.type}|${section.title}|${section.key || ''}`;
+                existingItemSignatures.add(signature);
+              }
+
+              // Recursively collect from children
               if (section.items && Array.isArray(section.items)) {
-                section.items.forEach((item) => {
-                  if (item.type === 'button' || item.type === 'accordion' || item.type === 'teaser') {
-                    const signature = `${item.type}|${item.title}|${item.key || ''}`;
-                    existingItemSignatures.add(signature);
-                  }
-                  if (item.items) {
-                    collectSignatures([item]);
-                  }
-                });
+                collectSignatures(section.items);
               }
             });
           }
           collectSignatures(convertedHierarchy, otherContent);
 
-          // Check if "Other Content" has any truly unique items
+          // Check if "Other Content" has any truly unique items and filter out duplicates
           const uniqueItems = [];
           const duplicateItems = [];
+          const filteredItems = [];
+
           otherContent.items.forEach((item) => {
             const signature = `${item.type}|${item.title}|${item.key || ''}`;
 
             // If this item exists elsewhere in the hierarchy, it's a duplicate
             if (existingItemSignatures.has(signature)) {
               duplicateItems.push(`${item.title} (${item.type})`);
-              return;
+              return; // Skip this item
             }
 
             // Buttons, teasers with URLs are considered unique (if not duplicates)
             if ((item.type === 'button' || item.type === 'teaser') && item.linkSources) {
               uniqueItems.push(`${item.title} (${item.type})`);
+              filteredItems.push(item);
               return;
             }
 
-            // Text items with substantive content are considered unique
+            // Text items or containers with substantive text content are considered unique
             // But skip generic instructional/boilerplate text
-            if (item.type === 'text') {
+            if (item.type === 'text' || (item.type === 'container' && item.text)) {
               const text = (item.text || '').trim();
               const isBoilerplate = text.includes('Bold and underlined text are links')
                                   || text.includes('Explore tabs below to access various content');
               if (text.length > 50 && !isBoilerplate) {
                 uniqueItems.push(`${item.title} (${item.type})`);
+                filteredItems.push(item);
                 return;
               }
             }
@@ -1770,11 +1832,20 @@ async function main() {
             duplicateItems.push(`${item.title} (${item.type})`);
           });
 
+          if (duplicateItems.length > 0) {
+            console.log(`⚠️  Filtering out ${duplicateItems.length} duplicate(s) from "Other Content":`);
+            duplicateItems.forEach((dup) => console.log(`   - ${dup}`));
+          }
+
           const hasUniqueContent = uniqueItems.length > 0;
 
           if (!hasUniqueContent) {
             console.log(`⚠️  Removing "Other Content" section (${otherContent.items.length} duplicate/low-value item(s))`);
             convertedHierarchy.splice(otherContentIndex, 1);
+          } else {
+            // Update "Other Content" to only include unique items
+            otherContent.items = filteredItems;
+            console.log(`✅ Keeping "Other Content" with ${filteredItems.length} unique item(s)`);
           }
         }
       }
@@ -1922,8 +1993,20 @@ async function main() {
       console.log('✅ No JCR-based proximity grouping needed (no tabs found in JCR)');
     }
 
-    // Final deduplication pass: Remove any buttons or accordions that appear multiple times
-    console.log('\n🔍 Running final deduplication pass...');
+    // =========================================================================
+    // PHASE 4: CLEANUP & DEDUPLICATION
+    // =========================================================================
+    // Idempotent transformations:
+    //   1. Deduplicate items (prefer items with more content)
+    //   2. Filter out "Other Content" duplicates
+    //   3. Sort sections by __jcrOrder
+    //   4. Recalculate all paths for consistency
+    // Deduplication rules:
+    //   - ONLY deduplicate between JCR and Sling (keep Sling version)
+    //   - Within same source: keep ALL if in different parent sections
+    //   - Same parent + same content: keep first only
+    // =========================================================================
+    console.log('\n🔍 PHASE 4: Deduplication and cleanup...');
 
     // Pass 1: Collect all button/accordion items
     const allItems = new Map(); // uniqueKey -> array of {item, path}
@@ -1961,6 +2044,20 @@ async function main() {
           // All duplicates are at the same path - this is a bug, just keep the first one
           console.log(`  ⚠️  WARNING: Multiple instances of ${occurrences[0].item.type} "${occurrences[0].item.title}" at same path "${uniquePaths[0]}" - keeping only first instance`);
           // Don't remove any via path matching - instead deduplicate the array directly
+          return;
+        }
+
+        // Extract parent sections from paths (everything before the last ">>>")
+        const parentSections = occurrences.map((o) => {
+          const parts = (o.path || '').split(' >>> ');
+          return parts.length > 1 ? parts.slice(0, -1).join(' >>> ') : parts[0];
+        });
+        const uniqueParentSections = [...new Set(parentSections)];
+
+        // If items are in different parent sections, keep all (even if they have identical content)
+        // This honors the source data structure where the same button/accordion appears in multiple sections
+        if (uniqueParentSections.length > 1) {
+          console.log(`  ℹ️  Keeping all ${occurrences.length} instances of ${occurrences[0].item.type} "${occurrences[0].item.title}" (in ${uniqueParentSections.length} different sections)`);
           return;
         }
 
@@ -2381,6 +2478,25 @@ function extractTabsFromJCR(jcrData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcr
   return hierarchy;
 }
 
+// =============================================================================
+// PHASE 1: SLING MODEL EXTRACTION FUNCTIONS
+// =============================================================================
+
+/**
+ * PHASE 1: Extract hierarchy from Sling Model (tabs.model.json)
+ *
+ * Extracts structured data from AEM Sling Model:
+ * - Tabs and tab panels
+ * - Buttons with linkURL/searchLink
+ * - Teasers with imageResource
+ * - Containers and nested items
+ *
+ * Rules:
+ * - Use :itemsOrder to preserve exact sequence
+ * - Extract linkURL and searchLink (priority: Sling > JCR)
+ * - Text components: assign text to parent, don't create separate item
+ * - NO deduplication at this stage
+ */
 function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrData, jcrPathMap, jcrTeaserImageMap) {
   console.log('📖 Parsing hierarchy from combined-tabs.model.json...\n');
 
@@ -2658,8 +2774,13 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       }
 
       // Always check jcrTeaserImageMap for imageResourceUrl (don't overwrite if already exists)
+      // For teasers with duplicate keys, also match by title to disambiguate
       for (const [jcrPath, teaserData] of Object.entries(jcrTeaserImageMap)) {
         if (teaserData.modelPath === currentKeyPath && teaserData.linkSources) {
+          // If teaser has a title in JCR, ensure it matches the item title
+          if (teaserData.teaserTitle && title && teaserData.teaserTitle !== title) {
+            continue; // Skip if titles don't match
+          }
           // Merge imageResourceUrl if it exists and we don't already have it
           if (teaserData.linkSources.imageResourceUrl && !itemLinkSources.imageResourceUrl) {
             itemLinkSources.imageResourceUrl = teaserData.linkSources.imageResourceUrl;
@@ -2778,10 +2899,20 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         let teaserImageInfo = null;
 
         // Find JCR entry that has this model path stored
-        for (const [jcrPath, jcrData] of Object.entries(jcrTeaserImageMap)) {
-          if (jcrData.modelPath === currentKeyPath && (jcrData.hasImageResource || jcrData.linkSources)) {
-            teaserImageInfo = jcrData;
-            break;
+        // First, collect all teasers with matching model path
+        const matchingTeasers = Object.entries(jcrTeaserImageMap).filter(
+          ([, jcrData]) => jcrData.modelPath === currentKeyPath && (jcrData.hasImageResource || jcrData.linkSources),
+        );
+
+        if (matchingTeasers.length > 0) {
+          // If only one teaser with this path, use it (even if title doesn't match exactly)
+          if (matchingTeasers.length === 1) {
+            teaserImageInfo = matchingTeasers[0][1];
+          } else {
+            // Multiple teasers with same path - use title to disambiguate
+            const exactMatch = matchingTeasers.find(([, jcrData]) => jcrData.teaserTitle === title);
+            // If exact title match found, use it; otherwise use first one
+            teaserImageInfo = exactMatch ? exactMatch[1] : matchingTeasers[0][1];
           }
         }
 
@@ -2811,20 +2942,29 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       }
 
       if (item[':items']) {
-        // Check if there are text or text_copy children and extract their text content to parent
-        const textChild = item[':items'].text || item[':items'].text_copy;
+        // Check if there's a direct text component child and extract its text to parent
+        // Look for ANY child with :type or sling:resourceType = tccc-dam/components/text
+        let textChild = null;
+        for (const childKey in item[':items']) {
+          const child = item[':items'][childKey];
+          const childType = child && (child[':type'] || child['sling:resourceType']);
+          if (childType === 'tccc-dam/components/text' && child.text) {
+            textChild = child;
+            break; // Use the first text component found
+          }
+        }
+
         if (textChild && textChild.text && !hierarchyItem.text) {
           hierarchyItem.text = stripHostsFromText(textChild.text);
         }
 
-        // Filter out ALL text children (text, text_copy, text_copy_copy, etc.) to avoid duplication
-        // Text content is now on parent, so we don't need separate text children
+        // Filter out text components - they're now assigned to parent's text field
         const filteredItems = { ...item[':items'] };
         Object.keys(filteredItems).forEach((childKey) => {
           const childItem = filteredItems[childKey];
-          // Remove any child that is a text component
-          if (childItem && (childItem['sling:resourceType'] === 'tccc-dam/components/text'
-            || childKey === 'text' || childKey.startsWith('text_'))) {
+          // Remove any child that is a text component (check both :type and sling:resourceType)
+          const childType = childItem && (childItem[':type'] || childItem['sling:resourceType']);
+          if (childType === 'tccc-dam/components/text') {
             delete filteredItems[childKey];
           }
         });
@@ -2835,9 +2975,10 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         }
       }
 
-      // Skip containers with titles starting with "container_" but still process their children
-      if (itemType === 'container' && title && String(title).startsWith('container_')) {
-      // Don't add this container to result, but add its children directly
+      // Skip containers with titles starting with "container_" or exactly "container" but still process their children
+      // EXCEPTION: If container has text content, keep it (don't unwrap) so text stays assigned to container
+      if (itemType === 'container' && title && (String(title).startsWith('container_') || String(title).toLowerCase() === 'container') && !hierarchyItem.text) {
+        // Don't add this container to result, but add its children directly (only if no text)
         if (hierarchyItem.items && hierarchyItem.items.length > 0) {
           result.push(...hierarchyItem.items);
         }
@@ -3333,8 +3474,13 @@ function extractBannerImage(jcrData, contentPath) {
   return findImageComponents(jcrData);
 }
 
-// Extract content from JCR containers outside tabs (e.g., standalone sections with buttons)
-// Helper to detect if a container has a carousel component
+// =============================================================================
+// PHASE 1: JCR EXTRACTION FUNCTIONS
+// =============================================================================
+
+/**
+ * Helper: Detect if a container has a carousel component
+ */
 function hasCarouselComponent(container) {
   if (!container || typeof container !== 'object') {
     return false;
@@ -3352,6 +3498,20 @@ function hasCarouselComponent(container) {
   return false;
 }
 
+/**
+ * PHASE 1: Extract non-tabs content from JCR
+ *
+ * Extracts standalone sections that exist outside tabs components:
+ * - Title components → section headers
+ * - Buttons, teasers, containers → section items
+ * - Text components → assigned to parent container (not as separate items)
+ *
+ * Rules:
+ * - Preserve exact order using __jcrOrder
+ * - Skip carousel and tabs containers (handled separately)
+ * - Group orphaned content into "Other Content" section
+ * - NO deduplication at this stage
+ */
 function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
   const sections = [];
 
@@ -3475,13 +3635,14 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
     }
 
     // Always add the section, even if it has no items (may be a header separator)
-    console.log(`📦 Completed section "${titleText}" with ${sectionItems.length} item(s)`);
+    const jcrOrder = orderIndex++;
+    console.log(`📦 Completed section "${titleText}" with ${sectionItems.length} item(s) (__jcrOrder: ${jcrOrder})`);
     sections.push({
       title: titleText,
       path: titleText,
       type: getItemTypeFromResourceType(section.title),
       items: sectionItems,
-      __jcrOrder: orderIndex++, // Assign JCR order sequentially
+      __jcrOrder: jcrOrder, // Assign JCR order sequentially
     });
   }
 
@@ -3580,9 +3741,22 @@ function extractMissingSectionsFromJCR(jcrData, existingSectionTitles = [], main
     });
   }
   collectExistingKeys(mainHierarchy);
-  collectExistingKeys(missingSections); // Also collect from sections just extracted in this function
+  // Note: We DON'T collect from missingSections here because we want to allow
+  // duplicate keys/signatures WITHIN JCR (only deduplicate between JCR and Sling Model)
+
+  // Build a map of container keys to their JCR order
+  const containerOrder = {};
+  let orderIndex = 0;
+  for (const containerKey in rootContainer) {
+    const container = rootContainer[containerKey];
+    if (!container || typeof container !== 'object') continue;
+    if (containerKey.startsWith('jcr:') || containerKey.startsWith('cq:') || containerKey.startsWith('sling:')) continue;
+    containerOrder[containerKey] = orderIndex++;
+  }
 
   const standaloneItems = [];
+  let firstOrphanedContainerOrder = null; // Track the order of the first container with orphaned content
+
   for (const containerKey in rootContainer) {
     const container = rootContainer[containerKey];
 
@@ -3624,16 +3798,40 @@ function extractMissingSectionsFromJCR(jcrData, existingSectionTitles = [], main
     if (uniqueItems.length > 0) {
       console.log(`  📦 Found ${uniqueItems.length} unique standalone component(s) in container "${containerKey}" (${items.length - uniqueItems.length} duplicates skipped)`);
       standaloneItems.push(...uniqueItems);
+
+      // Track the order of the first container with orphaned content
+      if (firstOrphanedContainerOrder === null && containerOrder[containerKey] !== undefined) {
+        firstOrphanedContainerOrder = containerOrder[containerKey];
+      }
     }
   }
 
-  // If we found any standalone items, add them as a section
+  // If we found any standalone items, add them as a section with proper JCR order
+  // Use fractional order to ensure it sorts correctly relative to titled sections in the same container group
   if (standaloneItems.length > 0) {
+    const otherContentOrder = firstOrphanedContainerOrder !== null ? (firstOrphanedContainerOrder - 0.5) : 9999;
+    console.log(`  📦 Creating "Other Content" section with ${standaloneItems.length} item(s) (__jcrOrder: ${otherContentOrder})`);
+
+    // DEBUG: Check all items in standaloneItems
+    console.log('     📋 Other Content items:');
+    standaloneItems.forEach((item, idx) => {
+      console.log(`       ${idx + 1}. ${item.title} (${item.type})`);
+      if (item.items) {
+        item.items.forEach((child, childIdx) => {
+          console.log(`          ${childIdx + 1}. ${child.title} (${child.type})`);
+          if (child.title === 'Airplane') {
+            console.log(`             Text starts: ${(child.text || '').substring(0, 120)}...`);
+          }
+        });
+      }
+    });
+
     missingSections.push({
       title: 'Other Content',
       path: 'Other Content',
       type: 'container',
       items: standaloneItems,
+      __jcrOrder: otherContentOrder,
     });
   }
 
@@ -3673,34 +3871,56 @@ function extractContentFromContainer(container, items, parentTitle, jcrTeaserIma
       const teaser = extractTeaserFromComponent(component, key, parentTitle, jcrTeaserImageMap);
       if (teaser) items.push(teaser);
     }
-    // Handle text components (standalone text with embedded links)
-    else if (resourceType === 'tccc-dam/components/text') {
-      const textContent = component.text;
-      if (textContent && textContent.trim()) {
-        const strippedText = stripHostsFromText(textContent);
-        // Append text to the last item in the array, or create a text-only item
-        if (items.length > 0) {
-          const lastItem = items[items.length - 1];
-          if (!lastItem.text) {
-            lastItem.text = strippedText;
-          } else {
-            lastItem.text += `\n${strippedText}`;
+    // Extract text components as standalone items with type 'text'
+    else if (resourceType === 'tccc-dam/components/text' && component.text) {
+      items.push({
+        title: 'Text',
+        path: `${parentTitle}${PATH_SEPARATOR}Text`,
+        type: 'text',
+        key,
+        text: stripHostsFromText(component.text),
+      });
+      continue;
+    }
+    // Handle container components
+    else if (resourceType === 'tccc-dam/components/container') {
+      // Check if container has text children - if so, extract container with text assigned
+      let containerText = null;
+      let hasNonTextChildren = false;
+      for (const childKey in component) {
+        if (childKey.startsWith('jcr:') || childKey.startsWith('cq:') || childKey.startsWith('sling:')) continue;
+        const child = component[childKey];
+        if (child && typeof child === 'object') {
+          const childResourceType = child['sling:resourceType'];
+          if (childResourceType === 'tccc-dam/components/text' && child.text) {
+            if (!containerText) {
+              containerText = child.text;
+            } else {
+              containerText += `\n${child.text}`;
+            }
+          } else if (childResourceType) {
+            // Container has non-text children (buttons, accordions, etc.)
+            hasNonTextChildren = true;
           }
-        } else {
-          // No items yet, create a standalone text item
-          items.push({
-            title: key,
-            path: `${parentTitle} >>> ${key}`,
-            type: 'text',
-            key,
-            text: strippedText,
-          });
         }
       }
-    }
-    // Handle container components (recurse)
-    else if (resourceType === 'tccc-dam/components/container') {
-      extractContentFromContainer(component, items, parentTitle, jcrTeaserImageMap);
+
+      if (containerText && !hasNonTextChildren) {
+        // Container has ONLY text - extract as type 'text' not 'container'
+        const strippedText = stripHostsFromText(containerText);
+        items.push({
+          title: 'Text',
+          path: `${parentTitle}${PATH_SEPARATOR}Text`,
+          type: 'text',
+          key,
+          text: strippedText,
+        });
+      } else {
+        // Container has no text OR has mixed content - recursively process children
+        // NOTE: If container has mixed content, each child will be extracted separately
+        // Text children will be extracted as Text items, non-text children as their respective types
+        extractContentFromContainer(component, items, parentTitle, jcrTeaserImageMap);
+      }
     }
   }
 }
@@ -3721,6 +3941,16 @@ function extractTabsFromTabsComponent(tabsComponent, parentTitle, jcrTeaserImage
 
     const tabItems = [];
     extractContentFromContainer(tabItem, tabItems, tabPath, jcrTeaserImageMap);
+
+    if (tabTitle === ':06') {
+      console.log(`  🔍 :06 tab extracted ${tabItems.length} items:`);
+      tabItems.forEach((item, idx) => {
+        console.log(`     ${idx + 1}. ${item.title} (${item.type}) - has text: ${!!item.text}`);
+        if (item.text) {
+          console.log(`        Text starts: ${item.text.substring(0, 80)}...`);
+        }
+      });
+    }
 
     tabs.push({
       title: tabTitle,
@@ -3751,23 +3981,36 @@ function extractAccordionFromComponent(accordionComp, key, parentTitle) {
 
     // Extract text from panel
     let panelText = '';
+    let textComponentCount = 0;
     for (const textKey in panel) {
+      // Skip JCR/CQ/Sling properties
+      if (textKey.startsWith('jcr:') || textKey.startsWith('cq:') || textKey.startsWith('sling:')) continue;
       const textComp = panel[textKey];
       if (textComp && typeof textComp === 'object'
             && textComp['sling:resourceType'] === 'tccc-dam/components/text'
             && textComp.text) {
-        panelText += (panelText ? '\n' : '') + textComp.text;
+        textComponentCount++;
+        const textPreview = textComp.text.substring(0, 80);
+        console.log(`  🔍 Accordion panel "${panelTitle}" collecting text #${textComponentCount} from child "${textKey}": ${textPreview}...`);
+        panelText += (panelText ? '\n\n' : '') + textComp.text;
       }
+    }
+    if (panelTitle === 'Airplane') {
+      console.log(`  📊 Airplane panel collected ${textComponentCount} text component(s), total length: ${panelText.length}`);
     }
 
     if (panelText) {
-      accordionItems.push({
+      const accordionItem = {
         title: panelTitle,
         path: `${parentTitle} >>> ${accordionTitle} >>> ${panelTitle}`,
         type: 'accordion',
         key: panelKey,
         text: panelText,
-      });
+      };
+      if (panelTitle === 'Airplane') {
+        console.log(`  ✅ Created Airplane accordion with text starting: ${panelText.substring(0, 100)}...`);
+      }
+      accordionItems.push(accordionItem);
     }
   }
 
@@ -3826,9 +4069,29 @@ function extractTeaserFromComponent(teaserComp, key, parentTitle, jcrTeaserImage
 
   // Construct imageUrl from jcrTeaserImageMap
   let imageUrl = null;
-  // Find this teaser in the map by matching the key
-  for (const [jcrPath, teaserData] of Object.entries(jcrTeaserImageMap)) {
-    if (teaserData.teaserKey === key && teaserData.fileName) {
+  // Find this teaser in the map by matching the key AND title (to handle duplicate keys)
+  // First, collect all teasers with matching key
+  const matchingTeasers = Object.entries(jcrTeaserImageMap).filter(
+    ([, teaserData]) => teaserData.teaserKey === key && teaserData.fileName,
+  );
+
+  if (matchingTeasers.length > 0) {
+    let selectedTeaser = null;
+
+    // If only one teaser with this key, use it (even if title doesn't match exactly)
+    if (matchingTeasers.length === 1) {
+      selectedTeaser = matchingTeasers[0];
+    } else {
+      // Multiple teasers with same key - use title to disambiguate
+      selectedTeaser = matchingTeasers.find(([, teaserData]) => teaserData.teaserTitle === teaser.title);
+      // If no exact title match, use the first one as fallback
+      if (!selectedTeaser) {
+        selectedTeaser = matchingTeasers[0];
+      }
+    }
+
+    if (selectedTeaser) {
+      const [jcrPath, teaserData] = selectedTeaser;
       const { fileName, lastModified } = teaserData;
       const fileExtension = fileName.substring(fileName.lastIndexOf('.') + 1);
       const imageFormat = `coreimg.85.1600.${fileExtension}`;
@@ -3842,7 +4105,6 @@ function extractTeaserFromComponent(teaserComp, key, parentTitle, jcrTeaserImage
       const finalFileName = `${teaser.id}-${nameWithoutExt}${ext}`;
 
       imageUrl = `${fullJcrPath}.${imageFormat}/${lastModified}/${finalFileName}`;
-      break;
     }
   }
 
@@ -4018,9 +4280,29 @@ function extractComponentsFromContainer(container, items, sectionTitle, jcrTease
 
           // Construct imageUrl from jcrTeaserImageMap
           let imageUrl = null;
-          // Find this teaser in the map by matching the key
-          for (const [jcrPath, teaserData] of Object.entries(jcrTeaserImageMap)) {
-            if (teaserData.teaserKey === key && teaserData.fileName) {
+          // Find this teaser in the map by matching the key AND title (to handle duplicate keys)
+          // First, collect all teasers with matching key
+          const matchingTeasers = Object.entries(jcrTeaserImageMap).filter(
+            ([, teaserData]) => teaserData.teaserKey === key && teaserData.fileName,
+          );
+
+          if (matchingTeasers.length > 0) {
+            let selectedTeaser = null;
+
+            // If only one teaser with this key, use it (even if title doesn't match exactly)
+            if (matchingTeasers.length === 1) {
+              selectedTeaser = matchingTeasers[0];
+            } else {
+              // Multiple teasers with same key - use title to disambiguate
+              selectedTeaser = matchingTeasers.find(([, teaserData]) => teaserData.teaserTitle === teaserItem.title);
+              // If no exact title match, use the first one as fallback
+              if (!selectedTeaser) {
+                selectedTeaser = matchingTeasers[0];
+              }
+            }
+
+            if (selectedTeaser) {
+              const [jcrPath, teaserData] = selectedTeaser;
               const { fileName, lastModified } = teaserData;
               const fileExtension = fileName.substring(fileName.lastIndexOf('.') + 1);
               const imageFormat = `coreimg.85.1600.${fileExtension}`;
@@ -4034,7 +4316,6 @@ function extractComponentsFromContainer(container, items, sectionTitle, jcrTease
               const finalFileName = `${teaserItem.id}-${nameWithoutExt}${ext}`;
 
               imageUrl = `${fullJcrPath}.${imageFormat}/${lastModified}/${finalFileName}`;
-              break;
             }
           }
 
@@ -4045,37 +4326,56 @@ function extractComponentsFromContainer(container, items, sectionTitle, jcrTease
           items.push(teaserItem);
         }
 
-        // Extract text components (for JCR-only text with embedded links)
-        if (resourceType === 'tccc-dam/components/text') {
-          const textContent = component.text;
-          if (textContent && textContent.trim()) {
-            const strippedText = stripHostsFromText(textContent);
-            // Find a parent item to attach this text to
-            // Look for the last added item that can have text
-            if (items.length > 0) {
-              const lastItem = items[items.length - 1];
-              // Append text to the last item (accordion, tab, or container)
-              if (!lastItem.text) {
-                lastItem.text = strippedText;
-              } else {
-                lastItem.text += `\n${strippedText}`;
-              }
-            } else {
-              // No items yet - create a standalone text item
-              items.push({
-                title: key,
-                path: `${sectionTitle}${PATH_SEPARATOR}${key}`,
-                type: 'text',
-                key,
-                text: strippedText,
-              });
-            }
-          }
+        // Extract text components as standalone items with type 'text'
+        if (resourceType === 'tccc-dam/components/text' && component.text) {
+          items.push({
+            title: 'Text',
+            path: `${sectionTitle}${PATH_SEPARATOR}Text`,
+            type: 'text',
+            key,
+            text: stripHostsFromText(component.text),
+          });
+          continue;
         }
 
-        // Recursively search nested containers
+        // Handle container components
         if (resourceType === 'tccc-dam/components/container') {
-          extractComponentsFromContainer(component, items, sectionTitle, jcrTeaserImageMap);
+          // Check if container has text children - if so, extract container with text assigned
+          let containerText = null;
+          let hasNonTextChildren = false;
+          for (const childKey in component) {
+            if (!childKey.startsWith('jcr:') && !childKey.startsWith('cq:') && !childKey.startsWith('sling:')) {
+              const child = component[childKey];
+              if (child && typeof child === 'object') {
+                const childResourceType = child['sling:resourceType'];
+                if (childResourceType === 'tccc-dam/components/text' && child.text) {
+                  if (!containerText) {
+                    containerText = child.text;
+                  } else {
+                    containerText += `\n${child.text}`;
+                  }
+                } else if (childResourceType) {
+                  // Container has non-text children (buttons, accordions, etc.)
+                  hasNonTextChildren = true;
+                }
+              }
+            }
+          }
+
+          if (containerText && !hasNonTextChildren) {
+            // Container has ONLY text - extract as type 'text' not 'container'
+            const strippedText = stripHostsFromText(containerText);
+            items.push({
+              title: 'Text',
+              path: `${sectionTitle}${PATH_SEPARATOR}Text`,
+              type: 'text',
+              key,
+              text: strippedText,
+            });
+          } else {
+            // Container has no text OR has mixed content - recursively search for other content
+            extractComponentsFromContainer(component, items, sectionTitle, jcrTeaserImageMap);
+          }
         }
       }
     }
@@ -4159,16 +4459,8 @@ function unwrapAccordionItems(items, depth = 0) {
           return updatedChild;
         });
 
-        // If the wrapper itself had text, preserve it by adding to the first child
-        if (item.text && updatedChildren.length > 0) {
-          const strippedWrapperText = stripHostsFromText(item.text);
-          if (!updatedChildren[0].text) {
-            updatedChildren[0].text = strippedWrapperText;
-          } else {
-            updatedChildren[0].text = `${strippedWrapperText}\n${updatedChildren[0].text}`;
-          }
-        }
-
+        // If the wrapper itself had text, it should have been extracted as a separate item during JCR extraction
+        // Unwrap the children without merging wrapper text into them
         result.push(...updatedChildren);
       } else if (item.text && item.text.trim()) {
         // Keep text-only items even if they're named like wrappers (e.g., "text_copy_copy_copy_")
@@ -4204,15 +4496,15 @@ function convertAccordionContainers(items, depth = 0) {
 
     // Pattern detection: Convert container to accordion if:
     // 1. Type is "container"
-    // 2. Has text content
+    // 2. Has cq:panelTitle (strong indicator of accordion panel)
     // 3. Key matches accordion item patterns (item_1, item_copy, etc.)
-    // 4. No nested items or only text items
+    // 4. Has direct text content (text components are merged into parent)
     if (
       updatedItem.type === 'container'
-      && updatedItem.text
+      && updatedItem['cq:panelTitle']
       && updatedItem.key
       && (updatedItem.key.match(/^item_\d+$/) || updatedItem.key.match(/^item_copy/))
-      && (!updatedItem.items || updatedItem.items.length === 0)
+      && updatedItem.text
     ) {
       updatedItem.type = 'accordion';
     }
@@ -4243,6 +4535,7 @@ function convertTabContainers(items, depth = 0) {
     // 1. Type is "container"
     // 2. Has nested items (structural grouping), OR
     // 3. Has cq:panelTitle metadata (indicates it's a tab panel, even if empty now - items might be added from JCR)
+    // EXCEPTION: Don't convert if it has text content and matches accordion patterns (it's an accordion, not a tab)
     // Note: No key pattern restriction - any container with nested items is a structural tab
     if (
       updatedItem.type === 'container'
@@ -4251,12 +4544,56 @@ function convertTabContainers(items, depth = 0) {
         || updatedItem['cq:panelTitle']
       )
     ) {
-      updatedItem.type = 'tab';
+      // Check if this looks like an accordion panel (has text + cq:panelTitle + accordion key pattern)
+      const isAccordionPattern = updatedItem['cq:panelTitle']
+        && updatedItem.key
+        && (updatedItem.key.match(/^item_\d+$/) || updatedItem.key.match(/^item_copy/))
+        && updatedItem.text;
+
+      if (!isAccordionPattern) {
+        updatedItem.type = 'tab';
+      }
     }
 
     // Recursively process children
     if (updatedItem.items) {
       updatedItem.items = convertTabContainers(updatedItem.items, depth + 1);
+    }
+
+    return updatedItem;
+  });
+}
+
+// Function to convert containers with only text (and no children) to type 'text'
+// This runs AFTER accordion and tab resolution, so we don't accidentally convert those
+function convertTextContainers(items, depth = 0) {
+  if (!items || !Array.isArray(items)) return items;
+
+  // Safeguard against infinite recursion
+  if (depth > 100) {
+    console.warn(`⚠️  convertTextContainers: Stopping recursion at depth ${depth}`);
+    return items;
+  }
+
+  return items.map((item) => {
+    const updatedItem = { ...item };
+
+    // Convert container to 'text' if:
+    // 1. Still type 'container' (not already converted to accordion/tab)
+    // 2. Has text content
+    // 3. Has no children (or empty children array)
+    if (
+      updatedItem.type === 'container'
+      && updatedItem.text
+      && (!updatedItem.items || updatedItem.items.length === 0)
+    ) {
+      updatedItem.type = 'text';
+      updatedItem.title = 'Text';
+    }
+
+    // Recursively process children
+    if (updatedItem.items) {
+      updatedItem.items = convertTextContainers(updatedItem.items, depth + 1);
     }
 
     return updatedItem;

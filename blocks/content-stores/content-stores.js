@@ -570,6 +570,12 @@ function createViewerElement(contentStoresData) {
           event.preventDefault();
         }
 
+        // For button items with links but no children, open the link
+        if (item.type === 'button' && hasLink && !hasExpandable) {
+          window.open(item.linkURL, '_blank');
+          return;
+        }
+
         if (!hasExpandable) return;
         toggleNode(item.path, treeNode);
       });

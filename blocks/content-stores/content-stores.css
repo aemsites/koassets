@@ -551,6 +551,7 @@
 /* Exclude text type items from grid layout */
 .content-stores .tree-children.has-grid .tree-item[data-item-type="text"] {
   width: 100%;
+  max-width: none;
 }
 
 .content-stores .tree-children.has-grid.expanded {
@@ -563,6 +564,7 @@
   box-sizing: border-box;
   width: auto;
   min-width: 320px;
+  max-width: 450px;
 }
 
 /* Override inline styles for items in flex */
@@ -653,7 +655,7 @@
 .content-stores .tree-item[data-item-type="accordion"] .tree-node::before {
   content: '';
   position: absolute;
-  right: 24px;
+  right: 14px;
   top: 50%;
   transform: translateY(-50%);
   width: 20px;
