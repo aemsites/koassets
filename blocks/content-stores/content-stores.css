@@ -358,7 +358,6 @@
 }
 
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node {
-  cursor: pointer;
   padding: 0 20px 0 0;
   height: 110px;
   width: max-content;
@@ -366,9 +365,12 @@
   box-shadow: 0 0 0 2px rgb(237 0 0 / 10%);
 }
 
+.content-stores .content .tree-item[data-item-type="tab"] > .tree-node {
+  width: 100%
+}
+
 /* Teaser hover - only change text color to primary */
 .content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node {
-  cursor: pointer;
   padding: 0;
   height: 110px;
   width: 100%;
@@ -381,12 +383,9 @@
   font-size: 15px;
   padding-left: 10px;
   text-decoration: none;
-}
-
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:hover .node-title,
-.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:hover .node-title {
-  text-decoration: none;
-  color: var(--primary-color) !important;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node .item-image,
@@ -400,14 +399,21 @@
   object-fit: cover;
 }
 
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:hover,
-.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:hover {
+/* Teaser hover effects - only for teasers with links */
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover {
   background-color: transparent !important;
   color: inherit;
 }
 
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:hover .expand-icon,
-.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:hover .expand-icon {
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .node-title,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .node-title {
+  text-decoration: none;
+  color: var(--primary-color) !important;
+}
+
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .expand-icon,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .expand-icon {
   color: var(--primary-color) !important;
 }
 
@@ -504,20 +510,54 @@
   text-decoration: underline;
 }
 
-/* Disabled styling for leaf nodes without links (excluding buttons and section-titles) */
-.content-stores .tree-node:not(.type-button, .type-section-title)[data-has-children="false"] .node-title:not(.has-link) {
+/* Disabled styling for leaf nodes without links (excluding buttons, section-titles, tabs, and teasers) */
+.content-stores .tree-item:not([data-item-type="teaser"]) .tree-node:not(.type-button, .type-section-title, .type-tab)[data-has-children="false"] .node-title:not(.has-link) {
   color: var(--dark-color);
   opacity: 0.5;
   cursor: default;
 }
 
-/* Underline links in leaf nodes (excluding buttons) */
-.content-stores .tree-node:not(.type-button)[data-has-children="false"] .node-title.has-link {
+/* Ensure teaser node titles are never disabled */
+.content-stores .tree-item[data-item-type="teaser"] .tree-node .node-title {
+  color: var(--text-color) !important;
+  opacity: 1 !important;
+}
+
+/* Teaser with links should have pointer cursor on entire node and title */
+.content-stores .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link),
+.content-stores .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link) .node-title {
+  cursor: pointer !important;
+}
+
+/* Teaser without links should have not-allowed cursor on entire node and title (like disabled button) */
+.content-stores .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)),
+.content-stores .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)) .node-title {
+  cursor: not-allowed !important;
+}
+
+/* Prevent hover effects on teasers without links (like disabled buttons) */
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover {
+  background-color: transparent !important;
+}
+
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .node-title,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .node-title {
+  color: var(--text-color) !important;
+}
+
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .expand-icon,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .expand-icon {
+  color: var(--text-color) !important;
+}
+
+/* Underline links in leaf nodes (excluding buttons and tabs) */
+.content-stores .tree-node:not(.type-button, .type-tab)[data-has-children="false"] .node-title.has-link {
   color: var(--link-color);
   text-decoration: underline;
 }
 
-.content-stores .tree-node:not(.type-button)[data-has-children="false"] .node-title.has-link:hover {
+.content-stores .tree-node:not(.type-button, .type-tab)[data-has-children="false"] .node-title.has-link:hover {
   color: var(--link-hover-color);
   text-decoration: underline;
 }
@@ -563,8 +603,7 @@
   display: block;
   box-sizing: border-box;
   width: auto;
-  min-width: 320px;
-  max-width: 450px;
+  min-width: 350px;
 }
 
 /* Override inline styles for items in flex */
@@ -694,6 +733,18 @@
   color: var(--text-color);
   overflow-y: auto;
   transition: none;
+}
+
+/* Text items with links should look clickable */
+.content-stores .tree-item[data-item-type="text"] .rich-content.has-link {
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 0.1s ease;
+}
+
+.content-stores .tree-item[data-item-type="text"] .rich-content.has-link:hover {
+  color: var(--primary-color);
+  text-decoration: underline;
 }
 
 /* Rich content area - shown when expanded */

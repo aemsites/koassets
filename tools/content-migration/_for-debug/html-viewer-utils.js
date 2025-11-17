@@ -185,6 +185,34 @@ function reconstructHierarchyFromRows(rows) {
 
     // For type='text' items, always create a new item (no deduplication)
     if (row.type === 'text') {
+      const pathSegments = splitPathSegments(row.path);
+      if (pathSegments.length === 0) return;
+
+      // Navigate to the correct parent based on the path
+      let currentLevel = currentSection || root;
+
+      // Navigate through path segments to find the parent (all segments except the last one)
+      for (let i = 0; i < pathSegments.length - 1; i += 1) {
+        const segment = pathSegments[i].trim();
+        let existingItem = currentLevel.items.find(
+          (item) => item.title && item.title.trim() === segment,
+        );
+
+        if (!existingItem) {
+          // Create intermediate parent if it doesn't exist
+          existingItem = {
+            title: segment,
+            path: pathSegments.slice(0, i + 1).join(PATH_SEPARATOR),
+            items: [],
+          };
+          currentLevel.items.push(existingItem);
+        }
+
+        if (!existingItem.items) existingItem.items = [];
+        currentLevel = existingItem;
+      }
+
+      // Now create the text item and add it to the correct parent
       const textItem = {
         title: row.title || row.path,
         path: row.path,
@@ -198,9 +226,7 @@ function reconstructHierarchyFromRows(rows) {
       if (row.synonym) textItem.synonym = row.synonym;
       textItem.title = row.title || row.path;
 
-      // Add to current section or root
-      const targetLevel = currentSection || root;
-      targetLevel.items.push(textItem);
+      currentLevel.items.push(textItem);
       return;
     }
 
@@ -216,9 +242,14 @@ function reconstructHierarchyFromRows(rows) {
       const isLastSegment = index === pathSegments.length - 1;
       const trimmedSegment = segment.trim();
 
-      let existingItem = currentLevel.items.find(
-        (item) => item.title && item.title.trim() === trimmedSegment,
-      );
+      // For leaf items (last segment), always create new item (allow duplicates)
+      // For intermediate segments, try to find existing item (deduplicate containers)
+      let existingItem = null;
+      if (!isLastSegment) {
+        existingItem = currentLevel.items.find(
+          (item) => item.title && item.title.trim() === trimmedSegment,
+        );
+      }
 
       if (!existingItem) {
         const newItem = {
@@ -240,15 +271,6 @@ function reconstructHierarchyFromRows(rows) {
 
         currentLevel.items.push(newItem);
         existingItem = newItem;
-      } else if (isLastSegment) {
-        // Copy all properties from row to existingItem (only if truthy)
-        if (row.imageUrl) existingItem.imageUrl = row.imageUrl;
-        if (row.linkURL) existingItem.linkURL = row.linkURL;
-        if (row.text) existingItem.text = row.text;
-        if (row.type) existingItem.type = row.type;
-        if (row.synonym) existingItem.synonym = row.synonym;
-        // Ensure title is set correctly
-        existingItem.title = row.title || trimmedSegment;
       }
 
       if (!existingItem.items) existingItem.items = [];
