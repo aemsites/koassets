@@ -1740,7 +1740,20 @@ async function main() {
     //   - Orphaned content in "Other Content" section
     // =========================================================================
     console.log('\n🔍 PHASE 2B: Checking for missing sections in JCR...');
-    const existingSectionTitles = convertedHierarchy.map((section) => section.title);
+
+    // Collect all titles (including nested ones) to prevent re-extraction
+    const collectAllTitles = (items) => {
+      const titles = [];
+      for (const item of items) {
+        if (item.title) titles.push(item.title);
+        if (item.items && item.items.length > 0) {
+          titles.push(...collectAllTitles(item.items));
+        }
+      }
+      return titles;
+    };
+    const existingSectionTitles = collectAllTitles(convertedHierarchy);
+
     const missingSections = extractMissingSectionsFromJCR(jcrData, existingSectionTitles, convertedHierarchy, jcrTeaserImageMap);
 
     if (missingSections.length > 0) {
@@ -3560,32 +3573,28 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
 
       // Check if this child container has a DIRECT title component child (not recursive)
       let titleComp = null;
+      const allTitlesInContainer = [];
       if (child && resourceType === 'tccc-dam/components/container') {
-        // Look for immediate child title component(s)
-        const titleCandidates = [];
-        // eslint-disable-next-line guard-for-in
-        for (const childKey in child) {
+        // Look for immediate child title component(s) in their JCR order
+        const childKeys = Object.keys(child).filter(
+          (k) => !k.startsWith('jcr:') && !k.startsWith('cq:') && !k.startsWith('sling:'),
+        );
+
+        for (const childKey of childKeys) {
           const grandchild = child[childKey];
           if (grandchild && typeof grandchild === 'object'
               && grandchild['sling:resourceType'] === 'tccc-dam/components/title'
               && grandchild['jcr:title']) {
-            titleCandidates.push(grandchild);
+            allTitlesInContainer.push(grandchild);
           }
         }
 
-        // If multiple titles, prefer non-uppercase ones
-        if (titleCandidates.length === 1) {
-          titleComp = titleCandidates[0];
-        } else if (titleCandidates.length > 1) {
-          // Prefer titles that are NOT mostly uppercase
-          const nonUppercaseTitles = titleCandidates.filter((t) => {
-            const title = t['jcr:title'];
-            const uppercaseChars = (title.match(/[A-Z]/g) || []).length;
-            const totalLetters = (title.match(/[a-zA-Z]/g) || []).length;
-            return totalLetters === 0 || (uppercaseChars / totalLetters) < 0.7;
-          });
-
-          titleComp = nonUppercaseTitles.length > 0 ? nonUppercaseTitles[0] : titleCandidates[0];
+        // Set titleComp to the first title for backward compatibility
+        if (allTitlesInContainer.length === 1) {
+          titleComp = allTitlesInContainer[0];
+        } else if (allTitlesInContainer.length > 1) {
+          // Multiple titles found - will create nested structure
+          titleComp = allTitlesInContainer[0];
         }
       }
 
@@ -3613,6 +3622,19 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
         // Start new section - include the container WITH the title PLUS containers after
         currentTitle = titleComp;
         contentContainers = [child]; // Include the container that has the title
+
+        // Handle nested titles (multiple titles in same container)
+        if (allTitlesInContainer.length > 1) {
+          // Store nested titles for special handling during conversion
+          currentTitle.nestedTitles = allTitlesInContainer.slice(1); // All titles except the first
+
+          // Mark nested titles so they won't be extracted as separate items
+          for (const nestedTitle of currentTitle.nestedTitles) {
+            nestedTitle.__isNestedTitle = true;
+          }
+
+          console.log(`  🔗 Found ${allTitlesInContainer.length} nested titles: ${allTitlesInContainer.map((t) => t['jcr:title']).join(' > ')}`);
+        }
       } else if (currentTitle) {
         // This is content after a title - add to current section
         if (resourceType === 'tccc-dam/components/container') {
@@ -3691,16 +3713,49 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
       extractComponentsFromContainer(container, sectionItems, titleText, jcrTeaserImageMap);
     }
 
-    // Always add the section, even if it has no items (may be a header separator)
-    const jcrOrder = orderIndex++;
-    console.log(`📦 Completed section "${titleText}" with ${sectionItems.length} item(s) (__jcrOrder: ${jcrOrder})`);
-    sections.push({
-      title: titleText,
-      path: titleText,
-      type: getItemTypeFromResourceType(section.title),
-      items: sectionItems,
-      __jcrOrder: jcrOrder, // Assign JCR order sequentially
-    });
+    // Handle nested titles (e.g., "Meals With Fanta" > "Snacks")
+    if (section.title.nestedTitles && section.title.nestedTitles.length > 0) {
+      // Create nested structure: outer title -> inner title(s) -> content
+      let currentNested = null;
+
+      // Build from innermost to outermost
+      for (let i = section.title.nestedTitles.length - 1; i >= 0; i--) {
+        const nestedTitle = section.title.nestedTitles[i];
+        const nestedTitleText = nestedTitle['jcr:title'];
+        const nestedPath = currentNested
+          ? `${titleText} >>> ${nestedTitleText}`
+          : nestedTitleText;
+
+        currentNested = {
+          title: nestedTitleText,
+          path: currentNested ? `${titleText} >>> ${currentNested.path}` : `${titleText} >>> ${nestedTitleText}`,
+          type: getItemTypeFromResourceType(nestedTitle),
+          items: currentNested ? [currentNested] : sectionItems,
+        };
+      }
+
+      // Outer section contains the nested structure
+      const jcrOrder = orderIndex++;
+      console.log(`📦 Completed nested section "${titleText}" > "${section.title.nestedTitles.map((t) => t['jcr:title']).join(' > ')}" with ${sectionItems.length} item(s) (__jcrOrder: ${jcrOrder})`);
+      sections.push({
+        title: titleText,
+        path: titleText,
+        type: getItemTypeFromResourceType(section.title),
+        items: currentNested ? [currentNested] : [],
+        __jcrOrder: jcrOrder,
+      });
+    } else {
+      // Normal section (no nested titles)
+      const jcrOrder = orderIndex++;
+      console.log(`📦 Completed section "${titleText}" with ${sectionItems.length} item(s) (__jcrOrder: ${jcrOrder})`);
+      sections.push({
+        title: titleText,
+        path: titleText,
+        type: getItemTypeFromResourceType(section.title),
+        items: sectionItems,
+        __jcrOrder: jcrOrder, // Assign JCR order sequentially
+      });
+    }
   }
 
   return sections;
