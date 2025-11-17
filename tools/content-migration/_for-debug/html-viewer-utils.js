@@ -160,63 +160,131 @@ function readCsv(filePath) {
 
 function reconstructHierarchyFromRows(rows) {
   const root = { items: [] };
+  let currentSection = null; // Track the current section-title
 
   rows.forEach((row) => {
-    const pathSegments = splitPathSegments(row.path);
+    // If this is a section-title, create it at root level and set as current section
+    if (row.type === 'section-title') {
+      const sectionItem = {
+        title: row.title || row.path,
+        path: row.path,
+        items: [],
+      };
+      // Copy all properties from row
+      if (row.imageUrl) sectionItem.imageUrl = row.imageUrl;
+      if (row.linkURL) sectionItem.linkURL = row.linkURL;
+      if (row.text) sectionItem.text = row.text;
+      if (row.type) sectionItem.type = row.type;
+      if (row.synonym) sectionItem.synonym = row.synonym;
+      sectionItem.title = row.title || row.path;
 
+      root.items.push(sectionItem);
+      currentSection = sectionItem;
+      return;
+    }
+
+    // For type='text' items, always create a new item (no deduplication)
+    if (row.type === 'text') {
+      const pathSegments = splitPathSegments(row.path);
+      if (pathSegments.length === 0) return;
+
+      // Navigate to the correct parent based on the path
+      let currentLevel = currentSection || root;
+
+      // Navigate through path segments to find the parent (all segments except the last one)
+      for (let i = 0; i < pathSegments.length - 1; i += 1) {
+        const segment = pathSegments[i].trim();
+        let existingItem = currentLevel.items.find(
+          (item) => item.title && item.title.trim() === segment,
+        );
+
+        if (!existingItem) {
+          // Create intermediate parent if it doesn't exist
+          existingItem = {
+            title: segment,
+            path: pathSegments.slice(0, i + 1).join(PATH_SEPARATOR),
+            items: [],
+          };
+          currentLevel.items.push(existingItem);
+        }
+
+        if (!existingItem.items) existingItem.items = [];
+        currentLevel = existingItem;
+      }
+
+      // Now create the text item and add it to the correct parent
+      const textItem = {
+        title: row.title || row.path,
+        path: row.path,
+        items: [],
+      };
+      // Copy all properties from row
+      if (row.imageUrl) textItem.imageUrl = row.imageUrl;
+      if (row.linkURL) textItem.linkURL = row.linkURL;
+      if (row.text) textItem.text = row.text;
+      if (row.type) textItem.type = row.type;
+      if (row.synonym) textItem.synonym = row.synonym;
+      textItem.title = row.title || row.path;
+
+      currentLevel.items.push(textItem);
+      return;
+    }
+
+    // For non-section-title, non-text items, determine where to place them
+    const pathSegments = splitPathSegments(row.path);
     if (pathSegments.length === 0) return;
 
-    let currentLevel = root;
+    // If we have a current section, add items as children of that section
+    // Otherwise, add to root
+    let currentLevel = currentSection || root;
 
     pathSegments.forEach((segment, index) => {
       const isLastSegment = index === pathSegments.length - 1;
       const trimmedSegment = segment.trim();
 
-      let existingItem = currentLevel.items.find(
-        (item) => item.title && item.title.trim() === trimmedSegment,
-      );
+      // For leaf items (last segment), always create new item (allow duplicates)
+      // For intermediate segments, try to find existing item (deduplicate containers)
+      let existingItem = null;
+      if (!isLastSegment) {
+        existingItem = currentLevel.items.find(
+          (item) => item.title && item.title.trim() === trimmedSegment,
+        );
+      }
 
       if (!existingItem) {
         const newItem = {
-          title: isLastSegment ? row.title : segment,
+          title: isLastSegment ? (row.title || trimmedSegment) : segment,
           path: pathSegments.slice(0, index + 1).join(PATH_SEPARATOR),
           items: [],
         };
 
         if (isLastSegment) {
+          // Copy all properties from row to newItem (only if truthy)
           if (row.imageUrl) newItem.imageUrl = row.imageUrl;
           if (row.linkURL) newItem.linkURL = row.linkURL;
           if (row.text) newItem.text = row.text;
           if (row.type) newItem.type = row.type;
+          if (row.synonym) newItem.synonym = row.synonym;
+          // Ensure title is set correctly
+          newItem.title = row.title || trimmedSegment;
         }
 
         currentLevel.items.push(newItem);
         existingItem = newItem;
-      } else if (isLastSegment) {
-        existingItem.title = row.title;
-        if (row.imageUrl) existingItem.imageUrl = row.imageUrl;
-        if (row.linkURL) existingItem.linkURL = row.linkURL;
-        if (row.text) existingItem.text = row.text;
-        if (row.type) existingItem.type = row.type;
       }
 
-      if (!existingItem.items) {
-        existingItem.items = [];
-      }
-
+      if (!existingItem.items) existingItem.items = [];
       currentLevel = existingItem;
     });
   });
 
-  function cleanEmptyItems(obj) {
-    if (!obj || !obj.items) return;
-
-    if (obj.items.length === 0) {
-      delete obj.items;
+  function cleanEmptyItems(item) {
+    if (!item || !item.items) return;
+    if (item.items.length === 0) {
+      delete item.items;
       return;
     }
-
-    obj.items.forEach((item) => cleanEmptyItems(item));
+    item.items.forEach((child) => cleanEmptyItems(child));
   }
 
   root.items.forEach((item) => cleanEmptyItems(item));
