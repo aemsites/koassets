@@ -79,7 +79,7 @@ echo "=========================================="
 echo ""
 
 # Extract all-content-stores & stores
-#node extract-tab-hierarchy-all.js --recursive --debug ### ==> will fetch '/content/share/us/en/*-content-stores'
+#node extract-stores-hierarchy.js --recursive --debug ### ==> will fetch '/content/share/us/en/*-content-stores'
 
 # Use --input flag to pass stores file to Node.js script
 if [[ -n "$single_store" ]]; then
@@ -87,7 +87,7 @@ if [[ -n "$single_store" ]]; then
 else
     echo "📄 Using stores from file: $stores_file"
 fi
-node extract-tab-hierarchy-all.js --input "$stores_file"
+node extract-stores-hierarchy.js --input "$stores_file"
 
 
 echo "=========================================="

@@ -8,6 +8,7 @@ const https = require('https');
 const { URL } = require('url');
 const { sanitizeFileName, buildFileNameWithId } = require('./sanitize-utils.js');
 const { PATH_SEPARATOR, DATA_DIR } = require('./constants.js');
+const { AEM_AUTHOR } = require('./da-admin-client.js');
 
 // Help and usage information
 function showHelp() {
@@ -20,37 +21,45 @@ DESCRIPTION:
   Creates a clean JSON hierarchy with all teaser images and banner images downloaded.
 
 USAGE:
-  node extract-tab-hierarchy-all.js [CONTENT_PATH] [OPTIONS]
+  node extract-stores-hierarchy.js [CONTENT_PATH] [OPTIONS]
 
   OPTIONS:
-  --recursive       Automatically extract linked content stores found in clickableURLs
-  --debug           Skip recursive extractions (only discover and list them)
-  --input <file>    Read content paths from file (one per line, # for comments)
+  --recursive          Automatically extract linked content stores found in clickableURLs
+  --debug              Skip recursive extractions (only discover and list them)
+  --input <file>       Read content paths from file (one per line, # for comments)
+  --fetch-store-links  Discover all store links from default path and save to all-store-links.txt
+  --store <path>       Specify content store path to use with --fetch-store-links
 
-  DEFAULT (no parameters):
-  When no CONTENT_PATH is provided, defaults to: /content/share/us/en/all-content-stores
+  NO PARAMETERS:
+  Running with no parameters shows this help message.
 
 EXAMPLES:
+  # Show help
+  node extract-stores-hierarchy.js
+  
+  # Extract default content store
+  node extract-stores-hierarchy.js /content/share/us/en/all-content-stores
+  
   # Extract default content store with recursive extraction
-  node extract-tab-hierarchy-all.js --recursive
-  
-  # Extract default content store with recursive extraction and debug output
-  node extract-tab-hierarchy-all.js --recursive --debug
-  
-  # Extract specific content store (no recursive extraction)
-  node extract-tab-hierarchy-all.js /content/share/us/en/all-content-stores
+  node extract-stores-hierarchy.js /content/share/us/en/all-content-stores --recursive
   
   # Extract specific campaign
-  node extract-tab-hierarchy-all.js /content/share/us/en/all-content-stores/global-coca-cola-uplift
+  node extract-stores-hierarchy.js /content/share/us/en/all-content-stores/global-coca-cola-uplift
   
   # Extract specific content store with recursive extraction
-  node extract-tab-hierarchy-all.js /content/share/us/en/bottler-content-stores --recursive
+  node extract-stores-hierarchy.js /content/share/us/en/bottler-content-stores --recursive
   
   # Extract multiple stores from a file
-  node extract-tab-hierarchy-all.js --input stores.txt
+  node extract-stores-hierarchy.js --input stores.txt
   
   # Extract stores from file with recursive extraction
-  node extract-tab-hierarchy-all.js --input stores.txt --recursive
+  node extract-stores-hierarchy.js --input stores.txt --recursive
+  
+  # Discover and save all store links from default path (no extraction)
+  node extract-stores-hierarchy.js --fetch-store-links
+  
+  # Discover and save all store links from a specific store
+  node extract-stores-hierarchy.js --fetch-store-links --store /content/share/us/en/bottler-content-stores
 
 OUTPUTS:
   📁 {hierarchical-dir-name}/extracted-results/
@@ -90,7 +99,7 @@ AUTOMATIC DISCOVERY:
   4. Recursively extracts each discovered base content store
   
   Example:
-    Running: node extract-tab-hierarchy-all.js /content/share/us/en/all-content-stores
+    Running: node extract-stores-hierarchy.js /content/share/us/en/all-content-stores
     
     Will extract:
     • all-content-stores/                          (main extraction - specified)
@@ -101,7 +110,7 @@ AUTOMATIC DISCOVERY:
     
   Note: Child campaigns (e.g., global-coca-cola-uplift) are NOT automatically
         extracted. You must manually run the script for each child campaign:
-        node extract-tab-hierarchy-all.js /content/share/us/en/all-content-stores/global-coca-cola-uplift
+        node extract-stores-hierarchy.js /content/share/us/en/all-content-stores/global-coca-cola-uplift
 
 REQUIREMENTS:
   - AEM authentication cookie in da.config file
@@ -243,7 +252,6 @@ function stripHtmlToText(html) {
   return text.length > 100 ? `${text.substring(0, 100)}...` : text;
 }
 
-const AEM_AUTHOR = 'https://author-p64403-e544653.adobeaemcloud.com';
 // Default content path
 const DEFAULT_CONTENT_PATH = '/content/share/us/en/all-content-stores';
 
@@ -252,7 +260,21 @@ const args = process.argv.slice(2);
 const flags = {
   debug: args.includes('--debug'),
   recursive: args.includes('--recursive'),
+  fetchStoreLinks: args.includes('--fetch-store-links'),
 };
+
+// Parse --store flag
+const storeFlagIndex = args.indexOf('--store');
+let storePathArg = null;
+if (storeFlagIndex !== -1 && args[storeFlagIndex + 1]) {
+  storePathArg = args[storeFlagIndex + 1];
+}
+
+// If no arguments provided, show help and exit
+if (args.length === 0) {
+  showHelp();
+  process.exit(0);
+}
 
 // Check for --input flag
 const inputFlagIndex = args.indexOf('--input');
@@ -298,6 +320,123 @@ try {
 } catch (error) {
   console.error(`❌ Error loading AUTHOR_AUTH_COOKIE from da.config: ${error.message}`);
   process.exit(1);
+}
+
+// Handle --fetch-store-links mode (discover and save store links, then exit)
+if (flags.fetchStoreLinks) {
+  (async () => {
+    const { execSync } = require('child_process');
+
+    // Use --store argument if provided, otherwise use default
+    const contentPathArg = storePathArg || DEFAULT_CONTENT_PATH;
+
+    console.log('🔍 FETCH STORE LINKS MODE');
+    console.log('='.repeat(80));
+    console.log(`📋 Extracting content store: ${contentPathArg}`);
+    console.log('   This is required to discover all linked stores\n');
+
+    try {
+      // Extract the specified content store to get hierarchy-structure.json
+      // Set environment variable to skip images in the child process
+      execSync(`node "${__filename}" "${contentPathArg}"`, {
+        cwd: __dirname,
+        stdio: 'inherit',
+        env: { ...process.env, SKIP_IMAGES: 'true' },
+      });
+
+      console.log('\n🔍 Analyzing extracted hierarchy for linked stores...');
+
+      // Build the path to the hierarchy file based on the extracted content path
+      const pathParts = contentPathArg.split('/').filter((p) => p);
+      const contentName = pathParts[pathParts.length - 1];
+      const parentName = pathParts[pathParts.length - 2];
+
+      // Determine the directory name (same logic as createHierarchicalDirName)
+      let dirName;
+      if (contentName.endsWith('-content-stores') || contentName === 'all-content-stores') {
+        dirName = contentName;
+      } else if (parentName && (parentName.endsWith('-content-stores') || parentName === 'all-content-stores')) {
+        dirName = `${parentName}-${contentName}`;
+      } else {
+        dirName = contentName;
+      }
+
+      const hierarchyFile = path.join(__dirname, DATA_DIR, dirName, 'extracted-results', 'hierarchy-structure.json');
+
+      if (!fs.existsSync(hierarchyFile)) {
+        console.error(`❌ Error: Hierarchy file not found: ${hierarchyFile}`);
+        process.exit(1);
+      }
+
+      // Read and parse the hierarchy file
+      const fileContent = fs.readFileSync(hierarchyFile, 'utf8');
+      const hierarchyData = JSON.parse(fileContent);
+
+      // Function to recursively extract all clickableUrl from linkSources
+      function extractClickableURLs(obj, clickableURLs = new Set()) {
+        if (Array.isArray(obj)) {
+          obj.forEach((item) => extractClickableURLs(item, clickableURLs));
+        } else if (typeof obj === 'object' && obj !== null) {
+          // Extract clickableUrl from linkSources object
+          if (obj.linkSources && obj.linkSources.clickableUrl) {
+            // Strip .html extension if present
+            const url = obj.linkSources.clickableUrl.replace(/\.html$/, '');
+            clickableURLs.add(url);
+          }
+          Object.values(obj).forEach((value) => extractClickableURLs(value, clickableURLs));
+        }
+        return clickableURLs;
+      }
+
+      // Extract all clickableURLs
+      const allClickableURLs = extractClickableURLs(hierarchyData);
+      console.log(`📊 Found ${allClickableURLs.size} total clickableURLs`);
+
+      // Filter to only valid AEM content store paths
+      const contentStorePaths = new Set();
+      allClickableURLs.forEach((clickableURL) => {
+        // Skip the current content path
+        if (clickableURL === DEFAULT_CONTENT_PATH) {
+          return;
+        }
+
+        // Only process valid AEM content store paths
+        if (clickableURL.startsWith('/content/share/us/en/')) {
+          contentStorePaths.add(clickableURL);
+        }
+      });
+
+      console.log(`🎯 Discovered ${contentStorePaths.size} unique linked store(s)\n`);
+
+      // Sort paths for consistent output and add DEFAULT_CONTENT_PATH at the top
+      const sortedPaths = Array.from(contentStorePaths).sort();
+      const allStorePaths = [DEFAULT_CONTENT_PATH, ...sortedPaths];
+
+      // Display all stores (including default)
+      console.log('📋 All store links (including default):');
+      allStorePaths.forEach((storePath, index) => {
+        const label = index === 0 ? ' (default)' : '';
+        console.log(`  ${index + 1}. ${storePath}${label}`);
+      });
+
+      // Save to file with header comment
+      const outputFile = path.join(__dirname, 'all-store-links.txt');
+      const header = '# Lines starting with # are comments and will be skipped\n# Generated by: node extract-stores-hierarchy.js --fetch-store-links\n#\n';
+      const fileContent2 = `${header}${allStorePaths.join('\n')}\n`;
+      fs.writeFileSync(outputFile, fileContent2);
+
+      console.log(`\n✅ Store links saved to: ${path.relative(process.cwd(), outputFile)}`);
+      console.log(`   Total stores: ${allStorePaths.length} (1 default + ${sortedPaths.length} linked)`);
+      console.log('\n💡 You can now use this file with --input flag:');
+      console.log('   node extract-stores-hierarchy.js --input all-store-links.txt');
+
+      process.exit(0);
+    } catch (error) {
+      console.error(`\n❌ Error in fetch-store-links mode: ${error.message}`);
+      process.exit(1);
+    }
+  })();
+  // The IIFE above will exit the process, so the rest of the script won't execute
 }
 
 // File paths - Create hierarchical directory name
@@ -692,7 +831,7 @@ async function extractLinkedContentStores(hierarchyStructureFile, debug = false)
       try {
       // Run the extraction script recursively
         // Use execFileSync instead of execSync to prevent command injection
-        const output = execFileSync('node', ['extract-tab-hierarchy-all.js', contentPath], {
+        const output = execFileSync('node', ['extract-stores-hierarchy.js', contentPath], {
           cwd: __dirname,
           encoding: 'utf8',
           stdio: 'pipe',
@@ -5512,26 +5651,31 @@ if (CONTENT_PATHS.length > 1) {
 
 // Run the main function (single path execution)
 main().then(async () => {
-  // After successful extraction, download all images
-  const fs = require('fs');
-  const path = require('path');
-  const hierarchyPath = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
-  if (fs.existsSync(hierarchyPath)) {
-    const hierarchyStructure = JSON.parse(fs.readFileSync(hierarchyPath, 'utf8'));
-    const hierarchyData = hierarchyStructure.items || [];
-    const bannerImages = hierarchyStructure.bannerImages || [];
+  // After successful extraction, download all images (unless SKIP_IMAGES is set)
+  const skipImages = process.env.SKIP_IMAGES === 'true' || flags.fetchStoreLinks;
+  if (!skipImages) {
+    const fs = require('fs');
+    const path = require('path');
+    const hierarchyPath = path.join(OUTPUT_DIR, 'hierarchy-structure.json');
+    if (fs.existsSync(hierarchyPath)) {
+      const hierarchyStructure = JSON.parse(fs.readFileSync(hierarchyPath, 'utf8'));
+      const hierarchyData = hierarchyStructure.items || [];
+      const bannerImages = hierarchyStructure.bannerImages || [];
 
-    // Combine teaser images and banner images for download
-    const allImagesToDownload = [...hierarchyData];
+      // Combine teaser images and banner images for download
+      const allImagesToDownload = [...hierarchyData];
 
-    // Add banner images to the download list (they already have imageUrl property)
-    if (bannerImages.length > 0) {
-      console.log(`\n🖼️  Found ${bannerImages.length} banner image(s) to download`);
-      allImagesToDownload.push(...bannerImages);
+      // Add banner images to the download list (they already have imageUrl property)
+      if (bannerImages.length > 0) {
+        console.log(`\n🖼️  Found ${bannerImages.length} banner image(s) to download`);
+        allImagesToDownload.push(...bannerImages);
+      }
+
+      // Download all images (teasers + banners) using the existing function
+      await downloadAllImages(allImagesToDownload, OUTPUT_DIR);
     }
-
-    // Download all images (teasers + banners) using the existing function
-    await downloadAllImages(allImagesToDownload, OUTPUT_DIR);
+  } else {
+    console.log('\n⏭️  Skipping image downloads');
   }
 
   // After successful extraction, check for linked content stores (only when --recursive flag is provided)

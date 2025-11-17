@@ -52,7 +52,7 @@ run_extraction() {
   echo "   Path: $content_path"
   
   # Run extraction (suppress most output, only show errors)
-  if ! node extract-tab-hierarchy-all.js "$content_path" > /tmp/extract-$$.log 2>&1; then
+  if ! node extract-stores-hierarchy.js "$content_path" > /tmp/extract-$$.log 2>&1; then
     echo -e "${RED}❌ EXTRACTION FAILED${NC}"
     echo "   Check log: /tmp/extract-$$.log"
     cat /tmp/extract-$$.log
