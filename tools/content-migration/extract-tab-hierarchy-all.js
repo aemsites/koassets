@@ -1725,7 +1725,9 @@ async function main() {
     // eslint-disable-next-line no-use-before-define
     const tabConverted = convertTabContainers(accordionConverted);
     // eslint-disable-next-line no-use-before-define
-    const textConverted = convertTextContainers(tabConverted);
+    const textExtracted = extractTextFromTabsWithChildren(tabConverted);
+    // eslint-disable-next-line no-use-before-define
+    const textConverted = convertTextContainers(textExtracted);
     // eslint-disable-next-line no-use-before-define
     let convertedHierarchy = filterEmptyContainers(textConverted);
 
@@ -2246,6 +2248,19 @@ async function main() {
       bannerImages.forEach((img, index) => {
         console.log(`   ${index + 1}. ${img.fileName} (${img.alt || 'No alt text'})`);
       });
+    }
+
+    // Sort sections by __jcrOrder (preserves JCR file order for sibling titles)
+    if (hierarchyStructure.items) {
+      const hasJcrOrder = hierarchyStructure.items.some((item) => item.__jcrOrder !== undefined && item.__jcrOrder !== null);
+      if (hasJcrOrder) {
+        console.log('🔄 Sorting sections by JCR order...');
+        hierarchyStructure.items.sort((a, b) => {
+          const orderA = a.__jcrOrder !== undefined && a.__jcrOrder !== null ? a.__jcrOrder : 9999;
+          const orderB = b.__jcrOrder !== undefined && b.__jcrOrder !== null ? b.__jcrOrder : 9999;
+          return orderA - orderB;
+        });
+      }
     }
 
     // Clean up internal metadata before saving
@@ -3537,6 +3552,7 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
 
     let currentTitle = null;
     let contentContainers = [];
+    let precedingUntitledContainers = []; // Track untitled containers BEFORE first title
 
     for (const key of childKeys) {
       const child = parentContainer[key];
@@ -3574,7 +3590,19 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
       }
 
       if (titleComp && titleComp['jcr:title']) {
-        // Found a new title - save previous section if exists
+        // Found the first title!
+        // Extract any preceding untitled containers as standalone sections
+        if (!currentTitle && precedingUntitledContainers.length > 0) {
+          for (const untitledContainer of precedingUntitledContainers) {
+            foundSections.push({
+              title: null, // Will be handled during extraction
+              containers: [untitledContainer],
+            });
+          }
+          precedingUntitledContainers = [];
+        }
+
+        // Save previous section if exists
         if (currentTitle && contentContainers.length > 0) {
           foundSections.push({
             title: currentTitle,
@@ -3582,19 +3610,26 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
           });
         }
 
-        // Start new section
+        // Start new section - include the container WITH the title PLUS containers after
         currentTitle = titleComp;
-        contentContainers = [child]; // Include the container itself that has the title
+        contentContainers = [child]; // Include the container that has the title
       } else if (currentTitle) {
         // This is content after a title - add to current section
         if (resourceType === 'tccc-dam/components/container') {
           contentContainers.push(child);
         }
       } else {
-        // No title yet - search recursively in this child
+        // No title yet - either recursively search or save as preceding untitled container
         if (resourceType === 'tccc-dam/components/container') {
+          // Always recursively search for nested sections
           const nested = scanForSections(child, depth + 1, maxDepth);
-          foundSections.push(...nested);
+          if (nested.length > 0) {
+            // Found nested sections - add them directly
+            foundSections.push(...nested);
+          } else {
+            // No nested sections - save as preceding untitled container (only if no titles found yet)
+            precedingUntitledContainers.push(child);
+          }
         }
       }
     }
@@ -3618,6 +3653,28 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
   // so we just assign __jcrOrder sequentially
   let orderIndex = 0;
   for (const section of detectedSections) {
+    // Handle untitled sections (null title)
+    if (!section.title) {
+      // Extract items from untitled containers and add them directly as root-level items
+      const untitledItems = [];
+      for (const container of section.containers) {
+        extractComponentsFromContainer(container, untitledItems, '', jcrTeaserImageMap);
+      }
+
+      // Add each item as a root-level section
+      for (const item of untitledItems) {
+        const jcrOrder = orderIndex++;
+        console.log(`📦 Completed untitled section "${item.title}" (__jcrOrder: ${jcrOrder})`);
+        sections.push({
+          ...item,
+          path: item.title || item.path || 'Untitled',
+          items: item.items || [], // Ensure items array exists
+          __jcrOrder: jcrOrder,
+        });
+      }
+      continue;
+    }
+
     const titleText = section.title['jcr:title'];
 
     // Skip sections that contain carousel components (e.g., "What's New")
@@ -3661,13 +3718,72 @@ function extractMissingSectionsFromJCR(jcrData, existingSectionTitles = [], main
   const rootContainer = jcrData.root.container;
   const processedContainers = new Set();
 
+  // Get ordered list of root container keys (preserves JCR file order)
+  const rootContainerKeys = Object.keys(rootContainer).filter(
+    (key) => !key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:'),
+  );
+
+  let sectionOrderCounter = 0; // Track order in which sections are discovered
+
+  // FIRST PASS: Detect containers with multiple sibling titles (like Tea store: "TEA STOREs", "Global Growth Information")
+  // and extract any missing empty title sections
+  for (const containerKey of rootContainerKeys) {
+    const container = rootContainer[containerKey];
+
+    if (!container || typeof container !== 'object') continue;
+
+    // Check if this container has multiple direct title children (sibling titles)
+    const directTitles = [];
+    for (const childKey in container) {
+      const child = container[childKey];
+      if (child && typeof child === 'object'
+            && child['sling:resourceType'] === 'tccc-dam/components/title'
+            && child['jcr:title']) {
+        directTitles.push(child['jcr:title']);
+      }
+    }
+
+    // If we found multiple sibling titles, assign __jcrOrder and extract any missing
+    if (directTitles.length >= 2) {
+      console.log(`  🔍 Found ${directTitles.length} sibling title(s) in ${containerKey}: ${directTitles.join(', ')}`);
+
+      // For sibling titles, assign __jcrOrder to both extracted and existing sections
+      for (let i = 0; i < directTitles.length; i++) {
+        const titleText = directTitles[i];
+        const titleOrder = sectionOrderCounter++;
+
+        if (existingSectionTitles.includes(titleText)) {
+          // Update __jcrOrder for existing section
+          const existingSection = mainHierarchy.find((s) => s.title === titleText);
+          if (existingSection) {
+            console.log(`  🔄 Setting __jcrOrder for existing section "${titleText}": ${titleOrder}`);
+            existingSection.__jcrOrder = titleOrder;
+          }
+        } else {
+          console.log(`  📦 Extracting empty sibling title section: "${titleText}" (__jcrOrder: ${titleOrder})`);
+          missingSections.push({
+            title: titleText,
+            path: titleText,
+            type: 'title',
+            items: [],
+            __jcrOrder: titleOrder,
+          });
+        }
+      }
+      processedContainers.add(containerKey);
+    }
+  }
+
+  // SECOND PASS: Look for nested container with title (original logic)
   for (const containerKey in rootContainer) {
     const container = rootContainer[containerKey];
 
     if (!container || typeof container !== 'object') continue;
     if (containerKey.startsWith('jcr:') || containerKey.startsWith('cq:') || containerKey.startsWith('sling:')) continue;
 
-    // Look for nested container with title
+    // Skip if already processed in first pass (sibling titles)
+    if (processedContainers.has(containerKey)) continue;
+
     for (const nestedKey in container) {
       const nestedContainer = container[nestedKey];
 
@@ -4499,12 +4615,14 @@ function convertAccordionContainers(items, depth = 0) {
     // 2. Has cq:panelTitle (strong indicator of accordion panel)
     // 3. Key matches accordion item patterns (item_1, item_copy, etc.)
     // 4. Has direct text content (text components are merged into parent)
+    // 5. Does NOT have child items (if it has children, it's a tab, not an accordion)
     if (
       updatedItem.type === 'container'
       && updatedItem['cq:panelTitle']
       && updatedItem.key
       && (updatedItem.key.match(/^item_\d+$/) || updatedItem.key.match(/^item_copy/))
       && updatedItem.text
+      && (!updatedItem.items || updatedItem.items.length === 0)
     ) {
       updatedItem.type = 'accordion';
     }
@@ -4544,11 +4662,13 @@ function convertTabContainers(items, depth = 0) {
         || updatedItem['cq:panelTitle']
       )
     ) {
-      // Check if this looks like an accordion panel (has text + cq:panelTitle + accordion key pattern)
+      // Check if this looks like an accordion panel (has text + cq:panelTitle + accordion key pattern + NO children)
+      // Items with children should be tabs, even if they have text
       const isAccordionPattern = updatedItem['cq:panelTitle']
         && updatedItem.key
         && (updatedItem.key.match(/^item_\d+$/) || updatedItem.key.match(/^item_copy/))
-        && updatedItem.text;
+        && updatedItem.text
+        && (!updatedItem.items || updatedItem.items.length === 0);
 
       if (!isAccordionPattern) {
         updatedItem.type = 'tab';
@@ -4558,6 +4678,51 @@ function convertTabContainers(items, depth = 0) {
     // Recursively process children
     if (updatedItem.items) {
       updatedItem.items = convertTabContainers(updatedItem.items, depth + 1);
+    }
+
+    return updatedItem;
+  });
+}
+
+// Function to extract text from tabs/accordions that have both text and children
+// The text should be moved to a separate "Text" child item
+function extractTextFromTabsWithChildren(items, depth = 0) {
+  if (!items || !Array.isArray(items)) return items;
+
+  // Safeguard against infinite recursion
+  if (depth > 100) {
+    console.warn(`⚠️  extractTextFromTabsWithChildren: Stopping recursion at depth ${depth}`);
+    return items;
+  }
+
+  return items.map((item) => {
+    const updatedItem = { ...item };
+
+    // Check if this is a tab/accordion with both text and children
+    if (
+      (updatedItem.type === 'tab' || updatedItem.type === 'accordion')
+      && updatedItem.text
+      && updatedItem.items
+      && updatedItem.items.length > 0
+    ) {
+      // Extract the text as a separate "Text" child item at the beginning
+      const textItem = {
+        title: 'Text',
+        path: `${updatedItem.path} >>> Text`,
+        type: 'text',
+        text: updatedItem.text,
+      };
+
+      // Add the text item at the beginning of the children
+      updatedItem.items = [textItem, ...updatedItem.items];
+
+      // Remove the text from the parent
+      delete updatedItem.text;
+    }
+
+    // Recursively process children
+    if (updatedItem.items) {
+      updatedItem.items = extractTextFromTabsWithChildren(updatedItem.items, depth + 1);
     }
 
     return updatedItem;
