@@ -10,8 +10,11 @@ function displaySampleFacetsStatus() {
   const facetCount = Object.keys(sampleFacets).length;
 
   if (facetCount > 0) {
-    const totalValues = Object.values(sampleFacets).reduce((sum, facet) => sum + Object.keys(facet).length, 0);
-    console.log(`✓ Loaded sample_facets.json: ${facetCount} facet(s), ${totalValues} value(s)\n`);
+    const totalValues = Object.values(sampleFacets)
+      .reduce((sum, facet) => sum + Object.keys(facet).length, 0);
+    console.log(
+      `✓ Loaded sample_facets.json: ${facetCount} facet(s), ${totalValues} value(s)\n`,
+    );
   } else {
     console.log('⚠️  No sample_facets.json found - using default transformation rules\n');
   }
@@ -43,6 +46,7 @@ function parseArgs() {
 
   console.error('Error: Unknown argument. Use --url or --path');
   process.exit(1);
+  return undefined; // Satisfy consistent-return rule
 }
 
 // Transform a single URL and display results
@@ -85,9 +89,10 @@ function extractUrlsFromContent(content) {
   // Pattern to match search-assets.html and template-search.html URLs
   const urlPattern = /https?:\/\/[^\s"'>]+\/(search-assets|template-search)\.html[^\s"'>]*/gi;
 
-  let match;
-  while ((match = urlPattern.exec(content)) !== null) {
+  let match = urlPattern.exec(content);
+  while (match !== null) {
     urls.push(match[0]);
+    match = urlPattern.exec(content);
   }
 
   return urls;
@@ -126,15 +131,14 @@ function processDirectory(dirPath) {
   try {
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
 
-    for (const entry of entries) {
+    entries.forEach((entry) => {
       const fullPath = path.join(dirPath, entry.name);
 
       if (entry.isDirectory()) {
         // Skip node_modules and hidden directories
-        if (entry.name === 'node_modules' || entry.name.startsWith('.')) {
-          continue;
+        if (entry.name !== 'node_modules' && !entry.name.startsWith('.')) {
+          totalUrls += processDirectory(fullPath);
         }
-        totalUrls += processDirectory(fullPath);
       } else if (entry.isFile()) {
         // Process text-based files
         const ext = path.extname(entry.name).toLowerCase();
@@ -142,7 +146,7 @@ function processDirectory(dirPath) {
           totalUrls += processFile(fullPath);
         }
       }
-    }
+    });
   } catch (error) {
     console.error(`Error processing directory ${dirPath}: ${error.message}`);
   }
