@@ -317,16 +317,16 @@ async function getAssetAgreementList(assetId) {
   }
 
   // Extract unique agreement numbers from rights list
-  const agreements = [];
   const seen = new Set();
 
-  for (const right of data.assetRightLst) {
+  const agreements = data.assetRightLst.reduce((acc, right) => {
     const agreementNumber = right.assetRightExtId;
     if (agreementNumber && !seen.has(agreementNumber)) {
       seen.add(agreementNumber);
-      agreements.push({ agreementNumber, assetRightExtId: agreementNumber, ...right });
+      acc.push({ agreementNumber, assetRightExtId: agreementNumber, ...right });
     }
-  }
+    return acc;
+  }, []);
 
   return agreements;
 }
@@ -337,6 +337,29 @@ async function getAssetAgreementList(assetId) {
  * @returns {Promise<Object|null>} - Agreement details including rights profile information
  */
 async function getAgreementDetails(agreementNumber) {
+  // Check cache first
+  const cacheKey = `fadel-agreement-${agreementNumber}`;
+  const cachedData = localStorage.getItem(cacheKey);
+  
+  if (cachedData) {
+    try {
+      const { data, timestamp } = JSON.parse(cachedData);
+      // Cache valid for 24 hours
+      const cacheAge = Date.now() - timestamp;
+      const twentyFourHours = 24 * 60 * 60 * 1000;
+      
+      if (cacheAge < twentyFourHours) {
+        // eslint-disable-next-line no-console
+        console.trace(`[Fadel API] Using cached agreement details for ${agreementNumber}`);
+        return data;
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn('Failed to parse cached agreement details:', error);
+      // Continue to fetch fresh data
+    }
+  }
+
   const url = `${window.location.origin}/api/fadel/rc-api/agreements/number/${agreementNumber}?loadAttachmentFile=false&loadAttachments=false`;
 
   const response = await fetch(url, {
@@ -349,7 +372,22 @@ async function getAgreementDetails(agreementNumber) {
     throw new Error(`Fadel API error: ${response.status} ${response.statusText}`);
   }
 
-  return response.status === 204 ? null : response.json();
+  const data = response.status === 204 ? null : await response.json();
+  
+  // Cache the response
+  if (data) {
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({
+        data,
+        timestamp: Date.now()
+      }));
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn('Failed to cache agreement details:', error);
+    }
+  }
+  
+  return data;
 }
 
 /**
