@@ -692,7 +692,6 @@
   line-height: 2.5;
   font-family: var(--body-font-family);
   color: var(--text-color);
-  max-height: 300px;
   overflow-y: auto;
   transition: none;
 }

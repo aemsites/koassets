@@ -154,7 +154,24 @@ function reconstructHierarchyFromRows(rows) {
       return;
     }
 
-    // For non-section-title items, determine where to place them
+    // For type='text' items, always create a new item (no deduplication)
+    if (row.type === 'text') {
+      const textItem = {
+        title: row.title || row.path,
+        path: row.path,
+        items: [],
+      };
+      // Copy all schema properties
+      copySchemaProperties(row, textItem, { onlyIfTruthy: true });
+      textItem.title = row.title || row.path;
+
+      // Add to current section or root
+      const targetLevel = currentSection || root;
+      targetLevel.items.push(textItem);
+      return;
+    }
+
+    // For non-section-title, non-text items, determine where to place them
     const pathSegments = splitPathSegments(row.path);
     if (pathSegments.length === 0) return;
 

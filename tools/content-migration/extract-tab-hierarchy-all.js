@@ -1306,7 +1306,7 @@ async function main() {
     // Extract non-tabs content from JCR (separate extraction, no merging yet)
     console.log('\n📥 Extracting non-tabs content from JCR...\n');
     // eslint-disable-next-line no-use-before-define
-    const nonTabsSections = extractNonTabsContent(jcrData, jcrTeaserImageMap);
+    const { sections: nonTabsSections, processedRootContainerKeys } = extractNonTabsContent(jcrData, jcrTeaserImageMap);
     if (nonTabsSections.length > 0) {
       console.log(`\n📦 Found ${nonTabsSections.length} section(s) outside tabs:`);
       nonTabsSections.forEach((section) => {
@@ -1754,7 +1754,7 @@ async function main() {
     };
     const existingSectionTitles = collectAllTitles(convertedHierarchy);
 
-    const missingSections = extractMissingSectionsFromJCR(jcrData, existingSectionTitles, convertedHierarchy, jcrTeaserImageMap);
+    const missingSections = extractMissingSectionsFromJCR(jcrData, existingSectionTitles, convertedHierarchy, jcrTeaserImageMap, processedRootContainerKeys);
 
     if (missingSections.length > 0) {
       console.log(`✅ Found ${missingSections.length} missing section(s) from JCR - adding to hierarchy`);
@@ -2138,8 +2138,14 @@ async function main() {
       // Then deduplicate items at the same path - prefer items with content
       const pathGroups = new Map(); // pathKey -> array of items
       filtered.forEach((item) => {
-        // For any item type, group by path
-        const pathKey = `${item.type}|${item.path}`;
+        // For text items, include text length and key in the grouping to avoid false duplicates
+        let pathKey;
+        if (item.type === 'text' && item.text) {
+          // Use text length + key to differentiate text items
+          pathKey = `${item.type}|${item.path}|${item.key}|${item.text.length}`;
+        } else {
+          pathKey = `${item.type}|${item.path}`;
+        }
         if (!pathGroups.has(pathKey)) {
           pathGroups.set(pathKey, []);
         }
@@ -2159,15 +2165,20 @@ async function main() {
           const itemWithOrder = groupItems.find((item) => typeof item.__jcrOrder === 'number');
 
           for (const item of groupItems) {
-            // Prefer items that have non-empty items array
+            // Prefer items that have non-empty items array OR text content
             const currentHasItems = item.items && Array.isArray(item.items) && item.items.length > 0;
-            const bestHasItems = bestItem.items && Array.isArray(bestItem.items) && bestItem.items.length > 0;
+            const currentHasText = item.type === 'text' && item.text && item.text.trim().length > 0;
+            const currentHasContent = currentHasItems || currentHasText;
 
-            if (currentHasItems && !bestHasItems) {
-              // Current has items, best doesn't - prefer current
+            const bestHasItems = bestItem.items && Array.isArray(bestItem.items) && bestItem.items.length > 0;
+            const bestHasText = bestItem.type === 'text' && bestItem.text && bestItem.text.trim().length > 0;
+            const bestHasContent = bestHasItems || bestHasText;
+
+            if (currentHasContent && !bestHasContent) {
+              // Current has content, best doesn't - prefer current
               bestItem = item;
             }
-            // If both have items or both don't have items, keep the first one (bestItem)
+            // If both have content or both don't have content, keep the first one (bestItem)
           }
 
           // Preserve __jcrOrder if any item had it
@@ -2178,7 +2189,10 @@ async function main() {
           // Log if we're removing an empty duplicate
           if (groupItems.length > 1) {
             const removedCount = groupItems.length - 1;
-            console.log(`  🔄 Removing ${removedCount} duplicate(s) at path "${bestItem.path}" (keeping the one with ${bestItem.items?.length || 0} items)`);
+            const contentDesc = bestItem.type === 'text'
+              ? `${bestItem.text?.length || 0} chars of text`
+              : `${bestItem.items?.length || 0} items`;
+            console.log(`  🔄 Removing ${removedCount} duplicate(s) at path "${bestItem.path}" (keeping the one with ${contentDesc})`);
           }
 
           itemsToKeep.add(bestItem);
@@ -3542,6 +3556,7 @@ function hasCarouselComponent(container) {
  */
 function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
   const sections = [];
+  const processedRootContainerKeys = new Set(); // Track all root container keys that are part of sections
 
   if (!jcrData.root || !jcrData.root.container) {
     return sections;
@@ -3670,6 +3685,63 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
   // Scan for all sections
   const detectedSections = scanForSections(jcrData.root.container);
 
+  // Track which root-level containers are part of detected sections
+  function markContainersAsProcessed(parentContainer, sectionsToMark) {
+    const rootContainerKeys = Object.keys(parentContainer).filter(
+      (key) => !key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:'),
+    );
+
+    for (const section of sectionsToMark) {
+      for (const container of section.containers) {
+        // Find the root-level key for this container
+        for (const rootKey of rootContainerKeys) {
+          if (parentContainer[rootKey] === container
+              || isNestedWithin(container, parentContainer[rootKey])) {
+            processedRootContainerKeys.add(rootKey);
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // Helper to check if a container is nested within a parent
+  function isNestedWithin(needle, haystack) {
+    if (needle === haystack) return true;
+    if (!haystack || typeof haystack !== 'object') return false;
+
+    for (const key in haystack) {
+      if (key.startsWith('jcr:') || key.startsWith('cq:') || key.startsWith('sling:')) continue;
+      const child = haystack[key];
+      if (child && typeof child === 'object') {
+        if (isNestedWithin(needle, child)) return true;
+      }
+    }
+    return false;
+  }
+
+  markContainersAsProcessed(jcrData.root.container, detectedSections);
+
+  // Helper function to collect all container keys recursively (including nested)
+  function collectAllContainerKeys(container, collectedKeys = new Set()) {
+    if (!container || typeof container !== 'object') return collectedKeys;
+
+    for (const key in container) {
+      if (key.startsWith('jcr:') || key.startsWith('cq:') || key.startsWith('sling:')) continue;
+
+      const child = container[key];
+      if (child && typeof child === 'object') {
+        const resourceType = child['sling:resourceType'];
+        if (resourceType === 'tccc-dam/components/container') {
+          // This is a container - recursively collect its nested containers
+          collectAllContainerKeys(child, collectedKeys);
+        }
+      }
+    }
+
+    return collectedKeys;
+  }
+
   // Convert to hierarchy format with JCR order
   // The detectedSections array is already in the correct order from the JCR file,
   // so we just assign __jcrOrder sequentially
@@ -3758,11 +3830,11 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
     }
   }
 
-  return sections;
+  return { sections, processedRootContainerKeys };
 }
 
 // Extract missing top-level sections from JCR that aren't in Sling Model
-function extractMissingSectionsFromJCR(jcrData, existingSectionTitles = [], mainHierarchy = [], jcrTeaserImageMap = {}) {
+function extractMissingSectionsFromJCR(jcrData, existingSectionTitles = [], mainHierarchy = [], jcrTeaserImageMap = {}, alreadyProcessedKeys = new Set()) {
   const missingSections = [];
 
   if (!jcrData.root || !jcrData.root.container) {
@@ -3771,7 +3843,7 @@ function extractMissingSectionsFromJCR(jcrData, existingSectionTitles = [], main
 
   // Find all title components at depth 2 (section level)
   const rootContainer = jcrData.root.container;
-  const processedContainers = new Set();
+  const processedContainers = new Set(alreadyProcessedKeys); // Start with already processed keys
 
   // Get ordered list of root container keys (preserves JCR file order)
   const rootContainerKeys = Object.keys(rootContainer).filter(

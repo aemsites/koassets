@@ -183,7 +183,28 @@ function reconstructHierarchyFromRows(rows) {
       return;
     }
 
-    // For non-section-title items, determine where to place them
+    // For type='text' items, always create a new item (no deduplication)
+    if (row.type === 'text') {
+      const textItem = {
+        title: row.title || row.path,
+        path: row.path,
+        items: [],
+      };
+      // Copy all properties from row
+      if (row.imageUrl) textItem.imageUrl = row.imageUrl;
+      if (row.linkURL) textItem.linkURL = row.linkURL;
+      if (row.text) textItem.text = row.text;
+      if (row.type) textItem.type = row.type;
+      if (row.synonym) textItem.synonym = row.synonym;
+      textItem.title = row.title || row.path;
+
+      // Add to current section or root
+      const targetLevel = currentSection || root;
+      targetLevel.items.push(textItem);
+      return;
+    }
+
+    // For non-section-title, non-text items, determine where to place them
     const pathSegments = splitPathSegments(row.path);
     if (pathSegments.length === 0) return;
 
