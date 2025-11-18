@@ -88,9 +88,10 @@ function readInputFile(filePath) {
  * @param {boolean} [reupFlag=false] - Re-upload flag: skip status checks and always upload
  * @param {boolean} [dryFlag=false] - Dry run mode: skip actual operations
  * @param {object} [dryRunStats=null] - Dry run statistics tracking object
+ * @param {number} [concurrency=1] - Number of concurrent operations (1 = sequential, higher = more parallel)
  */
 // eslint-disable-next-line no-shadow
-async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFlag = false, reupFlag = false, dryFlag = false, dryRunStats = null) {
+async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFlag = false, reupFlag = false, dryFlag = false, dryRunStats = null, concurrency = 1) {
   // Check if path exists
   if (!fs.existsSync(localPath)) {
     console.error(`❌ Path not found: ${localPath}`);
@@ -158,22 +159,44 @@ async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFl
     // Read all files and subdirectories
     const entries = fs.readdirSync(localPath, { withFileTypes: true });
 
-    // Process each entry sequentially
-    await entries.reduce(async (promise, entry) => {
-      await promise;
-
-      const entryPath = path.join(localPath, entry.name);
-
-      if (entry.isDirectory()) {
-        // Recursively process subdirectory
-        const subDaPath = `${baseDaPath}/${entry.name}`;
-        await uploadToEDS(entryPath, subDaPath, previewFlag, publishFlag, reupFlag, dryFlag, dryRunStats);
-      } else {
-        // Process file
-        const fileDaPath = `${baseDaPath}/${entry.name}`;
-        await uploadToEDS(entryPath, fileDaPath, previewFlag, publishFlag, reupFlag, dryFlag, dryRunStats);
+    // Helper function to split array into chunks
+    const chunkArray = (array, chunkSize) => {
+      const chunks = [];
+      for (let i = 0; i < array.length; i += chunkSize) {
+        chunks.push(array.slice(i, i + chunkSize));
       }
-    }, Promise.resolve());
+      return chunks;
+    };
+
+    // Split entries into batches based on concurrency
+    const entryBatches = chunkArray(entries, concurrency);
+
+    console.log(`   Processing ${entries.length} entries in ${entryBatches.length} batch(es) (concurrency: ${concurrency})`);
+
+    // Process each batch
+    for (let batchIndex = 0; batchIndex < entryBatches.length; batchIndex += 1) {
+      const batch = entryBatches[batchIndex];
+
+      // Process all entries in current batch concurrently
+      await Promise.all(batch.map(async (entry) => {
+        const entryPath = path.join(localPath, entry.name);
+
+        if (entry.isDirectory()) {
+          // Recursively process subdirectory
+          const subDaPath = `${baseDaPath}/${entry.name}`;
+          await uploadToEDS(entryPath, subDaPath, previewFlag, publishFlag, reupFlag, dryFlag, dryRunStats, concurrency);
+        } else {
+          // Process file
+          const fileDaPath = `${baseDaPath}/${entry.name}`;
+          await uploadToEDS(entryPath, fileDaPath, previewFlag, publishFlag, reupFlag, dryFlag, dryRunStats, concurrency);
+        }
+      }));
+
+      // Small pause between batches (except for last batch)
+      if (batchIndex < entryBatches.length - 1 && concurrency > 1) {
+        await sleep(500); // 0.5 second pause between batches
+      }
+    }
 
     console.log(`✅ Completed processing directory: ${localPath}`);
     return;
@@ -287,18 +310,18 @@ async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFl
       // isSourceUploaded needs targetDaPath (with extension, without branch)
       needsUpload = !(await isSourceUploaded(targetDaPath));
       if (!needsUpload) {
-        console.log('   ℹ️  Source already uploaded');
+        console.log('   ℹ️  Source already uploaded (will skip upload)');
         // Check preview and publish status
         if (previewFlag || publishFlag) {
           alreadyPreviewed = await isSourcePreviewed(fullPath);
           if (alreadyPreviewed) {
-            console.log('   ℹ️  Source already previewed');
+            console.log('   ℹ️  Source already previewed (will preview again due to --preview flag)');
           }
         }
         if (publishFlag) {
           alreadyPublished = await isSourcePublished(fullPath);
           if (alreadyPublished) {
-            console.log('   ℹ️  Source already published');
+            console.log('   ℹ️  Source already published (will publish again due to --publish flag)');
           }
         }
       }
@@ -407,6 +430,7 @@ if (require.main === module) {
   let reupFlag = false;
   let inputFile;
   let storeContentPath;
+  let concurrency = 1;
 
   // Dry run statistics tracking
   const dryRunStats = {
@@ -498,6 +522,9 @@ if (require.main === module) {
       dryFlag = true;
     } else if (arg === '--reup' || arg === '-r') {
       reupFlag = true;
+    } else if (arg === '--concurrency' || arg === '-c') {
+      concurrency = parseInt(args[i + 1], 10) || 1;
+      i += 1; // Skip next argument since we consumed it
     } else if (arg === '--input' || arg === '-i') {
       inputFile = args[i + 1];
       i += 1; // Skip next argument since we consumed it
@@ -558,8 +585,8 @@ if (require.main === module) {
     console.error('  Uploads files or directories to DA (Digital Assets) with optional preview and publish.');
     console.error('');
     console.error('Usage:');
-    console.error('  ./upload-to-EDS.js <localPath> [daFullPath] [--preview] [--publish] [--dry] [--reup]');
-    console.error('  ./upload-to-EDS.js --input <file> [--preview] [--publish] [--dry] [--reup]');
+    console.error('  ./upload-to-EDS.js <localPath> [daFullPath] [--preview] [--publish] [--dry] [--reup] [--concurrency <n>]');
+    console.error('  ./upload-to-EDS.js --input <file> [--preview] [--publish] [--dry] [--reup] [--concurrency <n>]');
     console.error('');
     console.error('Arguments:');
     console.error('  localPath     - Path to local file or directory (e.g., "./file.json" or "./my-folder")');
@@ -575,7 +602,9 @@ if (require.main === module) {
     console.error('  -pr, --preview             Trigger preview (always executes when set, regardless of status)');
     console.error('  -pb, --publish             Trigger publish (always executes when set, regardless of status)');
     console.error('  -dr, --dry                 Dry run mode: skip actual DA operations (default: false)');
-    console.error('  -r, --reup                Re-upload mode: skip status checks, always upload (default: false)');
+    console.error('  -r, --reup                 Re-upload mode: skip status checks, always upload (default: false)');
+    console.error('  -c, --concurrency <number> Number of concurrent operations (default: 1)');
+    console.error('                             1 = sequential (safest), higher = faster but more load');
     console.error('  -h, --help                 Show this help message');
     console.error('');
     console.error('Examples (single file):');
@@ -630,53 +659,70 @@ if (require.main === module) {
     console.log(`   Publish: ${publishFlag}`);
     console.log(`   Dry run: ${dryFlag}`);
     console.log(`   Reup: ${reupFlag}`);
+    console.log(`   Concurrency: ${concurrency}`);
 
     const contentPaths = readInputFile(inputFile);
     console.log(`\n📋 Found ${contentPaths.length} content path(s) in input file\n`);
 
-    // Process each content path sequentially
+    // Helper function to split array into chunks
+    const chunkArray = (array, chunkSize) => {
+      const chunks = [];
+      for (let i = 0; i < array.length; i += chunkSize) {
+        chunks.push(array.slice(i, i + chunkSize));
+      }
+      return chunks;
+    };
+
+    // Split content paths into batches based on concurrency
+    const pathBatches = chunkArray(contentPaths, concurrency);
+    console.log(`📦 Processing ${contentPaths.length} stores in ${pathBatches.length} batch(es) (concurrency: ${concurrency})\n`);
+
+    // Process each content path batch
     (async () => {
-      for (let i = 0; i < contentPaths.length; i += 1) {
-        const contentPath = contentPaths[i];
+      for (let batchIndex = 0; batchIndex < pathBatches.length; batchIndex += 1) {
+        const batch = pathBatches[batchIndex];
         console.log(`\n${'='.repeat(80)}`);
-        console.log(`📍 [${i + 1}/${contentPaths.length}] Processing: ${contentPath}`);
+        console.log(`📦 Batch ${batchIndex + 1}/${pathBatches.length}: Processing ${batch.length} store(s)`);
         console.log('='.repeat(80));
 
-        try {
-          // Convert content path to directory name
-          const dirName = contentPathToDirectoryName(contentPath);
+        // Process all stores in current batch concurrently
+        await Promise.all(batch.map(async (contentPath, indexInBatch) => {
+          const globalIndex = batchIndex * concurrency + indexInBatch;
+          console.log(`\n📍 [${globalIndex + 1}/${contentPaths.length}] Processing: ${contentPath}`);
 
-          // All stores (including main stores) are now in subdirectories
-          const generatedDocsDir = path.join(__dirname, 'DATA', 'generated-eds-docs');
-          const targetPath = path.join(generatedDocsDir, dirName);
+          try {
+            // Convert content path to directory name
+            const dirName = contentPathToDirectoryName(contentPath);
 
-          let matchingFiles = [];
+            // All stores (including main stores) are now in subdirectories
+            const generatedDocsDir = path.join(__dirname, 'DATA', 'generated-eds-docs');
+            const targetPath = path.join(generatedDocsDir, dirName);
 
-          // Look in subdirectory DATA/generated-eds-docs/{dirName}/
-          if (fs.existsSync(targetPath) && fs.statSync(targetPath).isDirectory()) {
-            const entries = fs.readdirSync(targetPath, { withFileTypes: true });
-            matchingFiles = entries
-              .filter((entry) => entry.isFile())
-              .map((entry) => path.join(targetPath, entry.name));
+            // Check if directory exists
+            if (!fs.existsSync(targetPath)) {
+              console.log(`   ⚠️  Skipping: Directory not found at: DATA/generated-eds-docs/${dirName}/`);
+              return;
+            }
+
+            if (!fs.statSync(targetPath).isDirectory()) {
+              console.log(`   ⚠️  Skipping: Not a directory: DATA/generated-eds-docs/${dirName}/`);
+              return;
+            }
+
+            // Upload the entire directory (sequential processing of files within each store)
+            console.log(`   📁 Processing directory: ${dirName}/`);
+            await uploadToEDS(targetPath, null, previewFlag, publishFlag, reupFlag, dryFlag, dryRunStats, 1); // Use concurrency=1 for files within each store
+          } catch (error) {
+            console.error(`   ❌ Error processing ${contentPath}: ${error.message}`);
           }
+        }));
 
-          // Check if files were found
-          if (matchingFiles.length === 0) {
-            console.log(`   ⚠️  Skipping: No files found at: DATA/generated-eds-docs/${dirName}/`);
-            continue; // eslint-disable-line no-continue
-          }
+        console.log(`\n✅ Batch ${batchIndex + 1}/${pathBatches.length} completed`);
 
-          console.log(`   📁 Found ${matchingFiles.length} file(s) in ${dirName}/`);
-
-          // Upload each matching file
-          await matchingFiles.reduce(async (promise, filePath) => {
-            await promise;
-            const fileName = path.basename(filePath);
-            console.log(`      📄 ${fileName}`);
-            await uploadToEDS(filePath, null, previewFlag, publishFlag, reupFlag, dryFlag, dryRunStats);
-          }, Promise.resolve());
-        } catch (error) {
-          console.error(`   ❌ Error processing ${contentPath}: ${error.message}`);
+        // Small pause between batches (except for last batch)
+        if (batchIndex < pathBatches.length - 1 && concurrency > 1) {
+          console.log('   ⏸️  Pausing briefly before next batch...');
+          await sleep(500);
         }
       }
 
@@ -702,8 +748,9 @@ if (require.main === module) {
     console.log(`   Publish: ${publishFlag}`);
     console.log(`   Dry run: ${dryFlag}`);
     console.log(`   Reup: ${reupFlag}`);
+    console.log(`   Concurrency: ${concurrency}`);
 
-    uploadToEDS(localPath, daFullPath, previewFlag, publishFlag, reupFlag, dryFlag, dryRunStats).then(() => {
+    uploadToEDS(localPath, daFullPath, previewFlag, publishFlag, reupFlag, dryFlag, dryRunStats, concurrency).then(() => {
       // Display dry run summary if in dry run mode
       if (dryFlag) {
         displayDryRunSummary();

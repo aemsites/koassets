@@ -5,9 +5,9 @@
 const fs = require('fs');
 const path = require('path');
 const {
-  DA_ORG, DA_REPO, DA_DEST, IMAGES_BASE, isImageUploaded,
+  DA_ORG, DA_REPO, DA_DEST, IMAGES_BASE,
 } = require('./da-admin-client.js');
-const { uploadToEDS, sleep } = require('./upload-to-EDS.js');
+const { uploadToEDS } = require('./upload-to-EDS.js');
 const { DATA_DIR } = require('./constants.js');
 
 // Parse command line arguments
@@ -51,54 +51,6 @@ for (let i = 0; i < args.length; i += 1) {
   // --help and -h flags are handled separately below
 }
 
-// Dry run statistics tracking
-const dryRunStats = {
-  totalImages: 0,
-  uploaded: [],
-  skipped: [],
-  failed: [],
-};
-
-/**
- * Display dry run mode summary
- */
-function displayDryRunSummary() {
-  console.log('\n╔════════════════════════════════════════════════════════════════════════╗');
-  console.log('║                    🧪 DRY RUN SUMMARY                                  ║');
-  console.log('╚════════════════════════════════════════════════════════════════════════╝');
-  console.log(`\n📊 Total images processed: ${dryRunStats.totalImages}`);
-
-  console.log('\n📤 Upload Operations:');
-  if (dryRunStats.uploaded.length > 0) {
-    console.log(`   ✅ Would upload (${dryRunStats.uploaded.length}):`);
-    dryRunStats.uploaded.forEach((file) => {
-      console.log(`      • ${file}`);
-    });
-  } else {
-    console.log('   ✅ Would upload: 0');
-  }
-
-  if (dryRunStats.skipped.length > 0) {
-    console.log(`   ⏭️  Already exist (${dryRunStats.skipped.length}):`);
-  } else {
-    console.log('   ⏭️  Already exist: 0');
-  }
-
-  if (dryRunStats.failed.length > 0) {
-    console.log(`   ❌ Failed checks (${dryRunStats.failed.length}):`);
-    dryRunStats.failed.forEach((file) => {
-      console.log(`      • ${file}`);
-    });
-  } else {
-    console.log('   ❌ Failed checks: 0');
-  }
-
-  console.log('\n🎯 Summary:');
-  console.log(`   → Would upload: ${dryRunStats.uploaded.length} images`);
-  console.log(`   → Would skip: ${dryRunStats.skipped.length} images (already exist)`);
-  console.log('');
-}
-
 /**
  * Extract store directory name from a content path
  * @param {string} contentPath - Content path like "/content/share/us/en/all-content-stores/360-integrated-activations"
@@ -130,10 +82,9 @@ function extractStoreNameFromPath(contentPath) {
  * @param {number} [concurrency=1] - Number of concurrent uploads (1 = sequential, higher = more parallel)
  * @param {string[]} [storesList] - Optional: List of store paths/names to process (from --input file)
  * @param {boolean} [dry=false] - Dry run mode: check status but skip actual uploads
- * @param {boolean} [isTopLevel=true] - Internal: whether this is the top-level call (for summary display)
  */
 // eslint-disable-next-line no-shadow
-async function uploadAllImages(imagesPath, concurrency = 1, storesList = null, dry = false, isTopLevel = true) {
+async function uploadAllImages(imagesPath, concurrency = 1, storesList = null, dry = false) {
   // If no imagesPath provided, auto-discover all content stores with images
   if (!imagesPath) {
     console.log('\n📸 Auto-discovering content stores with images...');
@@ -172,19 +123,14 @@ async function uploadAllImages(imagesPath, concurrency = 1, storesList = null, d
 
         console.log(`   Target DA path: ${targetDaBasePath}`);
 
-        // Recursively call uploadAllImages with the specific path (not top level)
-        await uploadAllImages(imagesDir, concurrency, storesList, dry, false);
+        // Recursively call uploadAllImages with the specific path
+        await uploadAllImages(imagesDir, concurrency, storesList, dry);
       } else {
         console.log(`   ⚠️ Skipping ${contentStoreDir}: no images directory found`);
       }
     }, Promise.resolve());
 
     console.log('\n✅ Completed processing all content stores');
-
-    // Display dry run summary if in dry run mode
-    if (dry) {
-      displayDryRunSummary();
-    }
     return;
   }
 
@@ -224,115 +170,12 @@ async function uploadAllImages(imagesPath, concurrency = 1, storesList = null, d
     return;
   }
 
-  // Get all files in the images directory
-  const files = fs.readdirSync(absoluteImagesPath, { withFileTypes: true });
-
-  // Filter for image files (common image extensions)
-  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.tiff'];
-  const imageFiles = files
-    .filter((file) => file.isFile())
-    .filter((file) => {
-      const ext = path.extname(file.name).toLowerCase();
-      return imageExtensions.includes(ext);
-    })
-    .map((file) => file.name);
-
-  if (imageFiles.length === 0) {
-    console.log('   ⚠️ No image files found in directory');
-    return;
-  }
-
-  console.log(`   Found ${imageFiles.length} image files to upload`);
-
-  // Helper function to split array into chunks
-  const chunkArray = (array, chunkSize) => {
-    const chunks = [];
-    for (let i = 0; i < array.length; i += chunkSize) {
-      chunks.push(array.slice(i, i + chunkSize));
-    }
-    return chunks;
-  };
-
-  // Split images into batches based on concurrency
-  const imageBatches = chunkArray(imageFiles, concurrency);
-  let totalUploaded = 0;
-  let totalSkipped = 0;
-  let totalFailed = 0;
-
-  console.log(`   Processing ${imageBatches.length} batch(es) of up to ${concurrency} images each`);
-
-  // Process each batch
-  for (let batchIndex = 0; batchIndex < imageBatches.length; batchIndex += 1) {
-    const batch = imageBatches[batchIndex];
-    console.log(`\n   📦 Batch ${batchIndex + 1}/${imageBatches.length}: uploading ${batch.length} images...`);
-
-    // Upload all images in current batch concurrently
-    const batchPromises = batch.map(async (imageName) => {
-      const localImagePath = path.join(absoluteImagesPath, imageName);
-      // Ensure targetDaBasePath ends with / and construct full DA path for this image
-      const normalizedDaPath = targetDaBasePath.endsWith('/') ? targetDaBasePath : `${targetDaBasePath}/`;
-      const daImagePath = `${normalizedDaPath}${imageName}`;
-
-      try {
-        // Track total images in dry run mode
-        if (dry) {
-          dryRunStats.totalImages += 1;
-        }
-
-        // Check if image already exists
-        const alreadyExists = await isImageUploaded(daImagePath);
-
-        if (alreadyExists) {
-          console.log(`      ⏭️  Already exists: ${imageName}`);
-          if (dry) {
-            dryRunStats.skipped.push(daImagePath);
-          }
-          return { imageName, status: 'skipped' };
-        }
-
-        if (dry) {
-          console.log(`      🧪 [DRY RUN] Would upload: ${imageName}`);
-          dryRunStats.uploaded.push(daImagePath);
-          return { imageName, status: 'success' };
-        }
-
-        console.log(`      📤 Uploading: ${imageName}`);
-        await uploadToEDS(localImagePath, daImagePath, false, false);
-        console.log(`      ✅ Uploaded: ${imageName}`);
-        return { imageName, status: 'success' };
-      } catch (error) {
-        console.error(`      ❌ Error uploading ${imageName}: ${error.message}`);
-        if (dry) {
-          dryRunStats.failed.push(`${daImagePath} (${error.message})`);
-        }
-        return { imageName, status: 'error', error: error.message };
-      }
-    });
-
-    // Wait for all uploads in this batch to complete
-    const batchResults = await Promise.all(batchPromises);
-    const batchUploaded = batchResults.filter((r) => r.status === 'success').length;
-    const batchSkipped = batchResults.filter((r) => r.status === 'skipped').length;
-    const batchFailed = batchResults.filter((r) => r.status === 'error').length;
-
-    totalUploaded += batchUploaded;
-    totalSkipped += batchSkipped;
-    totalFailed += batchFailed;
-
-    console.log(`   ✅ Batch ${batchIndex + 1} completed: ${batchUploaded} uploaded, ${batchSkipped} skipped, ${batchFailed} failed`);
-
-    // Small pause between batches to avoid overwhelming server (except for last batch)
-    if (batchIndex < imageBatches.length - 1) {
-      console.log('   ⏸️  Pausing briefly before next batch...');
-      await sleep(500); // 0.5 second pause between batches
-    }
-  }
-
-  console.log(`\n✅ All uploads completed: ${totalUploaded} uploaded, ${totalSkipped} skipped, ${totalFailed} failed out of ${imageFiles.length} total`);
-
-  // Display dry run summary if in dry run mode (only for top-level calls)
-  if (dry && isTopLevel) {
-    displayDryRunSummary();
+  // Upload the entire directory using uploadToEDS with concurrency support
+  try {
+    await uploadToEDS(absoluteImagesPath, targetDaBasePath, false, false, false, dry, null, concurrency);
+    console.log(`\n✅ Completed uploading images from: ${imagesPath}`);
+  } catch (error) {
+    console.error(`❌ Error uploading images: ${error.message}`);
   }
 }
 
