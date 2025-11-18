@@ -156,9 +156,16 @@ export function createMediaRightsMap(mediaRightsResponse: MediaRightsResponse): 
     return mediaRightsMap;
 }
 
+interface CacheEntry<T> {
+    data: T;
+    timestamp: number;
+}
+
 export class FadelClient {
     private static baseUrl: string = `${window.location.origin}/api/fadel`;
     private static instance: FadelClient | null = null;
+    private rightsProfileCache: Map<string, CacheEntry<AgreementDetail[]>> = new Map();
+    private readonly CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
     constructor() {
     }
@@ -371,17 +378,40 @@ export class FadelClient {
     }
 
     /**
+     * Check if cached data is still valid
+     */
+    private isCacheValid(entry: CacheEntry<AgreementDetail[]>): boolean {
+        return Date.now() - entry.timestamp < this.CACHE_DURATION_MS;
+    }
+
+    /**
      * Get rights profile data for an asset
      * Fetches asset agreements and their details in parallel
+     * Uses in-memory cache to avoid repeated API calls
      * @param assetId - Asset ID (can include 'urn:aaid:aem:' prefix)
      * @returns Array of agreement details with rights profile information
      */
     async getAssetRightsProfile(assetId: string): Promise<AgreementDetail[]> {
         try {
             const strippedAssetId = this.stripAssetIdPrefix(assetId);
+
+            // Check cache first
+            const cachedEntry = this.rightsProfileCache.get(strippedAssetId);
+            if (cachedEntry && this.isCacheValid(cachedEntry)) {
+                console.debug(`[FadelClient] Cache hit for asset ${strippedAssetId}`);
+                return cachedEntry.data;
+            }
+
+            console.debug(`[FadelClient] Cache miss for asset ${strippedAssetId}, fetching from API...`);
+
             const agreements = await this.getAssetAgreementList(strippedAssetId);
 
             if (!agreements.length) {
+                // Cache empty results too to avoid repeated failed lookups
+                this.rightsProfileCache.set(strippedAssetId, {
+                    data: [],
+                    timestamp: Date.now()
+                });
                 return [];
             }
 
@@ -392,10 +422,33 @@ export class FadelClient {
                 .map(num => this.getAgreementDetails(num).catch(() => null));
 
             const details = await Promise.all(detailsPromises);
-            return details.filter((detail): detail is AgreementDetail => detail !== null);
+            const filteredDetails = details.filter((detail): detail is AgreementDetail => detail !== null);
+
+            // Store in cache
+            this.rightsProfileCache.set(strippedAssetId, {
+                data: filteredDetails,
+                timestamp: Date.now()
+            });
+
+            return filteredDetails;
         } catch (error) {
             console.error('Error fetching asset rights profile:', error);
             throw error;
+        }
+    }
+
+    /**
+     * Clear the rights profile cache for a specific asset or all assets
+     * @param assetId - Optional asset ID to clear specific cache entry
+     */
+    clearRightsProfileCache(assetId?: string): void {
+        if (assetId) {
+            const strippedAssetId = this.stripAssetIdPrefix(assetId);
+            this.rightsProfileCache.delete(strippedAssetId);
+            console.debug(`[FadelClient] Cleared cache for asset ${strippedAssetId}`);
+        } else {
+            this.rightsProfileCache.clear();
+            console.debug('[FadelClient] Cleared all rights profile cache');
         }
     }
 
