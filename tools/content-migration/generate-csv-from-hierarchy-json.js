@@ -1173,6 +1173,18 @@ function main() {
       process.exit(0);
     }
 
+    // Validate arguments - check for unknown flags
+    for (let i = 0; i < args.length; i += 1) {
+      const arg = args[i];
+      if (arg.startsWith('-')) {
+        console.error(`❌ ERROR: Unknown flag: ${arg}`);
+        console.error('');
+        console.error('This script only accepts positional arguments (file paths).');
+        console.error('Run with --help to see usage information');
+        process.exit(1);
+      }
+    }
+
     if (args.length > 0) {
       // Process the file specified in command line
       const inputFile = path.resolve(args[0]);

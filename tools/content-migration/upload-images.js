@@ -39,6 +39,14 @@ for (let i = 0; i < args.length; i += 1) {
     i += 1; // Skip next argument since we consumed it
   } else if (arg === '--dry' || arg === '-dr') {
     dryFlag = true;
+  } else if (arg.startsWith('-')) {
+    // Unknown flag
+    if (arg !== '--help' && arg !== '-h') {
+      console.error(`❌ ERROR: Unknown flag: ${arg}`);
+      console.error('');
+      console.error('Run with --help to see available options');
+      process.exit(1);
+    }
   }
   // --help and -h flags are handled separately below
 }

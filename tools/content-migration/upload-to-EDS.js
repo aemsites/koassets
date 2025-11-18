@@ -17,71 +17,6 @@ const { DA_ORG, DA_REPO, DA_DEST } = require('./da-admin-client.js');
 // Example: ./upload-to-EDS.js --input stores.txt --preview --publish --dry
 // Example: ./upload-to-EDS.js --input stores.txt --preview --publish --reup
 // Example: ./upload-to-EDS.js --store /content/share/us/en/all-content-stores --preview --publish
-const args = process.argv.slice(2);
-let localPath;
-let daFullPath;
-let previewFlag = false;
-let publishFlag = false;
-let dryFlag = false;
-let reupFlag = false;
-let inputFile;
-let storeContentPath;
-
-// Parse arguments
-for (let i = 0; i < args.length; i += 1) {
-  const arg = args[i];
-
-  if (arg === '--preview' || arg === '-pr') {
-    previewFlag = true;
-  } else if (arg === '--publish' || arg === '-pb') {
-    publishFlag = true;
-  } else if (arg === '--dry' || arg === '-dr') {
-    dryFlag = true;
-  } else if (arg === '--reup' || arg === '-r') {
-    reupFlag = true;
-  } else if (arg === '--input' || arg === '-i') {
-    inputFile = args[i + 1];
-    i += 1; // Skip next argument since we consumed it
-  } else if (arg === '--store' || arg === '-s') {
-    storeContentPath = args[i + 1];
-    i += 1; // Skip next argument since we consumed it
-  } else if (arg === '--path' || arg === '-p') {
-    localPath = args[i + 1];
-    i += 1; // Skip next argument since we consumed it
-  } else if (arg === '--daFullPath' || arg === '-d') {
-    daFullPath = args[i + 1];
-    i += 1; // Skip next argument since we consumed it
-  } else if (!arg.startsWith('-') && !localPath) {
-    // First positional argument is localPath
-    localPath = arg;
-  } else if (!arg.startsWith('-') && !daFullPath && localPath) {
-    // Second positional argument is daFullPath
-    daFullPath = arg;
-  }
-  // --help and -h flags are handled separately below
-}
-
-// Validate mutually exclusive options
-if (inputFile && storeContentPath) {
-  console.error('❌ Error: --input and --store options are mutually exclusive');
-  console.error('   Use --input to process multiple stores from a file');
-  console.error('   Use --store to process a single content store path');
-  process.exit(1);
-}
-
-// If --store is provided, convert to localPath
-if (storeContentPath) {
-  try {
-    const dirName = contentPathToDirectoryName(storeContentPath);
-    localPath = path.join(__dirname, 'DATA', 'generated-eds-docs', dirName);
-    console.log(`📍 Using store: ${storeContentPath}`);
-    console.log(`   → Resolved to: ${path.relative(__dirname, localPath)}`);
-  } catch (error) {
-    console.error(`❌ Error: Invalid --store path: ${storeContentPath}`);
-    console.error(`   ${error.message}`);
-    process.exit(1);
-  }
-}
 
 /**
  * Sleep for specified milliseconds
@@ -143,92 +78,6 @@ function readInputFile(filePath) {
   }
 }
 
-// Dry run statistics tracking
-const dryRunStats = {
-  totalFiles: 0,
-  uploads: [],
-  previews: [],
-  publishes: [],
-  skippedUploads: [],
-  skippedPreviews: [],
-  skippedPublishes: [],
-};
-
-/**
- * Display dry run mode summary
- */
-function displayDryRunSummary() {
-  console.log('\n╔════════════════════════════════════════════════════════════════════════╗');
-  console.log('║                    🧪 DRY RUN SUMMARY                                  ║');
-  console.log('╚════════════════════════════════════════════════════════════════════════╝');
-  console.log(`\n📊 Total files processed: ${dryRunStats.totalFiles}`);
-
-  console.log('\n📤 Upload Operations:');
-  if (dryRunStats.uploads.length > 0) {
-    console.log(`   ✅ Would upload (${dryRunStats.uploads.length}):`);
-    dryRunStats.uploads.forEach((file) => {
-      console.log(`      • ${file}`);
-    });
-  } else {
-    console.log('   ✅ Would upload: 0');
-  }
-
-  if (dryRunStats.skippedUploads.length > 0) {
-    console.log(`   ⏭️  Already exist (${dryRunStats.skippedUploads.length}):`);
-    // dryRunStats.skippedUploads.forEach((file) => {
-    //   console.log(`      • ${file}`);
-    // });
-  } else {
-    console.log('   ⏭️  Already exist: 0');
-  }
-
-  console.log('\n📋 Preview Operations:');
-  if (dryRunStats.previews.length > 0) {
-    console.log(`   ✅ Would preview (${dryRunStats.previews.length}):`);
-    dryRunStats.previews.forEach((file) => {
-      console.log(`      • ${file}`);
-    });
-  } else {
-    console.log('   ✅ Would preview: 0');
-  }
-
-  if (dryRunStats.skippedPreviews.length > 0) {
-    console.log(`   ⏭️  Already previewed (${dryRunStats.skippedPreviews.length}):`);
-    // dryRunStats.skippedPreviews.forEach((file) => {
-    //   console.log(`      • ${file}`);
-    // });
-  } else {
-    console.log('   ⏭️  Already previewed: 0');
-  }
-
-  console.log('\n🚀 Publish Operations:');
-  if (dryRunStats.publishes.length > 0) {
-    console.log(`   ✅ Would publish (${dryRunStats.publishes.length}):`);
-    dryRunStats.publishes.forEach((file) => {
-      console.log(`      • ${file}`);
-    });
-  } else {
-    console.log('   ✅ Would publish: 0');
-  }
-
-  if (dryRunStats.skippedPublishes.length > 0) {
-    console.log(`   ⏭️  Already published (${dryRunStats.skippedPublishes.length}):`);
-    // dryRunStats.skippedPublishes.forEach((file) => {
-    //   console.log(`      • ${file}`);
-    // });
-  } else {
-    console.log('   ⏭️  Already published: 0');
-  }
-
-  const totalOperations = dryRunStats.uploads.length + dryRunStats.previews.length + dryRunStats.publishes.length;
-  const totalSkipped = dryRunStats.skippedUploads.length + dryRunStats.skippedPreviews.length + dryRunStats.skippedPublishes.length;
-
-  console.log('\n🎯 Total Operations Summary:');
-  console.log(`   → Would perform: ${totalOperations} operations`);
-  console.log(`   → Would skip: ${totalSkipped} operations (already done)`);
-  console.log('');
-}
-
 /**
  * Upload file or directory to EDS
  * @param {string} localPath - Path to the file or directory to upload from local filesystem, e.g. './generated-documents/all-content-stores.html'
@@ -237,9 +86,11 @@ function displayDryRunSummary() {
  * @param {boolean} [previewFlag=false] - Trigger preview after upload
  * @param {boolean} [publishFlag=false] - Trigger publish after preview
  * @param {boolean} [reupFlag=false] - Re-upload flag: skip status checks and always upload
+ * @param {boolean} [dryFlag=false] - Dry run mode: skip actual operations
+ * @param {object} [dryRunStats=null] - Dry run statistics tracking object
  */
 // eslint-disable-next-line no-shadow
-async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFlag = false, reupFlag = false) {
+async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFlag = false, reupFlag = false, dryFlag = false, dryRunStats = null) {
   // Check if path exists
   if (!fs.existsSync(localPath)) {
     console.error(`❌ Path not found: ${localPath}`);
@@ -316,11 +167,11 @@ async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFl
       if (entry.isDirectory()) {
         // Recursively process subdirectory
         const subDaPath = `${baseDaPath}/${entry.name}`;
-        await uploadToEDS(entryPath, subDaPath, previewFlag, publishFlag, reupFlag);
+        await uploadToEDS(entryPath, subDaPath, previewFlag, publishFlag, reupFlag, dryFlag, dryRunStats);
       } else {
         // Process file
         const fileDaPath = `${baseDaPath}/${entry.name}`;
-        await uploadToEDS(entryPath, fileDaPath, previewFlag, publishFlag, reupFlag);
+        await uploadToEDS(entryPath, fileDaPath, previewFlag, publishFlag, reupFlag, dryFlag, dryRunStats);
       }
     }, Promise.resolve());
 
@@ -397,7 +248,7 @@ async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFl
   const localFilePath = localPath;
 
   // Track file count in debug mode
-  if (dryFlag) {
+  if (dryFlag && dryRunStats) {
     dryRunStats.totalFiles += 1;
   }
 
@@ -454,7 +305,7 @@ async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFl
     }
 
     // Track statistics and show summary in debug mode
-    if (dryFlag) {
+    if (dryFlag && dryRunStats) {
       // Track what would be done
       if (needsUpload) dryRunStats.uploads.push(targetDaPath);
       else dryRunStats.skippedUploads.push(targetDaPath);
@@ -546,6 +397,158 @@ module.exports = { uploadToEDS, sleep };
 
 // Only run the command-line interface if this script is executed directly
 if (require.main === module) {
+  // Parse command line arguments
+  const args = process.argv.slice(2);
+  let localPath;
+  let daFullPath;
+  let previewFlag = false;
+  let publishFlag = false;
+  let dryFlag = false;
+  let reupFlag = false;
+  let inputFile;
+  let storeContentPath;
+
+  // Dry run statistics tracking
+  const dryRunStats = {
+    totalFiles: 0,
+    uploads: [],
+    previews: [],
+    publishes: [],
+    skippedUploads: [],
+    skippedPreviews: [],
+    skippedPublishes: [],
+  };
+
+  /**
+   * Display dry run mode summary
+   */
+  // eslint-disable-next-line no-inner-declarations
+  function displayDryRunSummary() {
+    console.log('\n╔════════════════════════════════════════════════════════════════════════╗');
+    console.log('║                    🧪 DRY RUN SUMMARY                                  ║');
+    console.log('╚════════════════════════════════════════════════════════════════════════╝');
+    console.log(`\n📊 Total files processed: ${dryRunStats.totalFiles}`);
+
+    console.log('\n📤 Upload Operations:');
+    if (dryRunStats.uploads.length > 0) {
+      console.log(`   ✅ Would upload (${dryRunStats.uploads.length}):`);
+      dryRunStats.uploads.forEach((file) => {
+        console.log(`      • ${file}`);
+      });
+    } else {
+      console.log('   ✅ Would upload: 0');
+    }
+
+    if (dryRunStats.skippedUploads.length > 0) {
+      console.log(`   ⏭️  Already exist (${dryRunStats.skippedUploads.length}):`);
+    } else {
+      console.log('   ⏭️  Already exist: 0');
+    }
+
+    console.log('\n📋 Preview Operations:');
+    if (dryRunStats.previews.length > 0) {
+      console.log(`   ✅ Would preview (${dryRunStats.previews.length}):`);
+      dryRunStats.previews.forEach((file) => {
+        console.log(`      • ${file}`);
+      });
+    } else {
+      console.log('   ✅ Would preview: 0');
+    }
+
+    if (dryRunStats.skippedPreviews.length > 0) {
+      console.log(`   ⏭️  Already previewed (${dryRunStats.skippedPreviews.length}):`);
+    } else {
+      console.log('   ⏭️  Already previewed: 0');
+    }
+
+    console.log('\n🚀 Publish Operations:');
+    if (dryRunStats.publishes.length > 0) {
+      console.log(`   ✅ Would publish (${dryRunStats.publishes.length}):`);
+      dryRunStats.publishes.forEach((file) => {
+        console.log(`      • ${file}`);
+      });
+    } else {
+      console.log('   ✅ Would publish: 0');
+    }
+
+    if (dryRunStats.skippedPublishes.length > 0) {
+      console.log(`   ⏭️  Already published (${dryRunStats.skippedPublishes.length}):`);
+    } else {
+      console.log('   ⏭️  Already published: 0');
+    }
+
+    const totalOperations = dryRunStats.uploads.length + dryRunStats.previews.length + dryRunStats.publishes.length;
+    const totalSkipped = dryRunStats.skippedUploads.length + dryRunStats.skippedPreviews.length + dryRunStats.skippedPublishes.length;
+
+    console.log('\n🎯 Total Operations Summary:');
+    console.log(`   → Would perform: ${totalOperations} operations`);
+    console.log(`   → Would skip: ${totalSkipped} operations (already done)`);
+    console.log('');
+  }
+
+  // Parse arguments
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+
+    if (arg === '--preview' || arg === '-pr') {
+      previewFlag = true;
+    } else if (arg === '--publish' || arg === '-pb') {
+      publishFlag = true;
+    } else if (arg === '--dry' || arg === '-dr') {
+      dryFlag = true;
+    } else if (arg === '--reup' || arg === '-r') {
+      reupFlag = true;
+    } else if (arg === '--input' || arg === '-i') {
+      inputFile = args[i + 1];
+      i += 1; // Skip next argument since we consumed it
+    } else if (arg === '--store' || arg === '-s') {
+      storeContentPath = args[i + 1];
+      i += 1; // Skip next argument since we consumed it
+    } else if (arg === '--path' || arg === '-p') {
+      localPath = args[i + 1];
+      i += 1; // Skip next argument since we consumed it
+    } else if (arg === '--daFullPath' || arg === '-d') {
+      daFullPath = args[i + 1];
+      i += 1; // Skip next argument since we consumed it
+    } else if (!arg.startsWith('-') && !localPath) {
+      // First positional argument is localPath
+      localPath = arg;
+    } else if (!arg.startsWith('-') && !daFullPath && localPath) {
+      // Second positional argument is daFullPath
+      daFullPath = arg;
+    } else if (arg.startsWith('-')) {
+      // Unknown flag
+      if (arg !== '--help' && arg !== '-h') {
+        console.error(`❌ ERROR: Unknown flag: ${arg}`);
+        console.error('');
+        console.error('Run with --help to see available options');
+        process.exit(1);
+      }
+    }
+  }
+
+  // Validate mutually exclusive options
+  if (inputFile && storeContentPath) {
+    console.error('❌ Error: --input and --store options are mutually exclusive');
+    console.error('   Use --input to process multiple stores from a file');
+    console.error('   Use --store to process a single content store path');
+    process.exit(1);
+  }
+
+  // If --store is provided, convert to localPath
+  if (storeContentPath) {
+    try {
+      const dirName = contentPathToDirectoryName(storeContentPath);
+      localPath = path.join(__dirname, 'DATA', 'generated-eds-docs', dirName);
+      console.log(`📍 Using store: ${storeContentPath}`);
+      console.log(`   → Resolved to: ${path.relative(__dirname, localPath)}`);
+    } catch (error) {
+      console.error(`❌ Error: Invalid --store path: ${storeContentPath}`);
+      console.error(`   ${error.message}`);
+      process.exit(1);
+    }
+  }
+
   // Check for help flag
   if (args.includes('--help') || args.includes('-h')) {
     console.error('');
@@ -670,7 +673,7 @@ if (require.main === module) {
             await promise;
             const fileName = path.basename(filePath);
             console.log(`      📄 ${fileName}`);
-            await uploadToEDS(filePath, null, previewFlag, publishFlag, reupFlag);
+            await uploadToEDS(filePath, null, previewFlag, publishFlag, reupFlag, dryFlag, dryRunStats);
           }, Promise.resolve());
         } catch (error) {
           console.error(`   ❌ Error processing ${contentPath}: ${error.message}`);
@@ -700,7 +703,7 @@ if (require.main === module) {
     console.log(`   Dry run: ${dryFlag}`);
     console.log(`   Reup: ${reupFlag}`);
 
-    uploadToEDS(localPath, daFullPath, previewFlag, publishFlag, reupFlag).then(() => {
+    uploadToEDS(localPath, daFullPath, previewFlag, publishFlag, reupFlag, dryFlag, dryRunStats).then(() => {
       // Display dry run summary if in dry run mode
       if (dryFlag) {
         displayDryRunSummary();

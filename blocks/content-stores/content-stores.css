@@ -174,7 +174,7 @@
 
 /* Narrower styling for leaf nodes */
 .content-stores .tree-item.leaf-item .tree-node {
-  padding: 10px 15px;
+  padding: 10px 18px;
   min-width: auto;
   width: auto;
   display: inline-flex;
@@ -275,6 +275,9 @@
   text-align: left;
   text-decoration: none;
   font-family: "TCCC UnityText Medium", roboto-condensed-fallback, sans-serif;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Ensure no underline on button titles even when they have links */
@@ -370,16 +373,15 @@
 }
 
 /* Teaser hover - only change text color to primary */
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node {
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node {
   padding: 0;
   height: 110px;
-  width: 100%;
   border: none;
   padding-right: 10px;
   box-shadow: 0 0 0 2px rgb(237 0 0 / 10%);
 }
 
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node .node-title,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node .node-title,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node .node-title {
   font-size: 15px;
   padding-left: 10px;
@@ -389,9 +391,9 @@
   overflow-wrap: break-word;
 }
 
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node .item-image,
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node picture,
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node img,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node .item-image,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node picture,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node img,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node .item-image,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node picture,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node img {
@@ -401,19 +403,19 @@
 }
 
 /* Teaser hover effects - only for teasers with links */
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover {
   background-color: transparent !important;
   color: inherit;
 }
 
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .node-title,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .node-title,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .node-title {
   text-decoration: none;
   color: var(--primary-color) !important;
 }
 
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .expand-icon,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .expand-icon,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .expand-icon {
   color: var(--primary-color) !important;
 }
@@ -537,17 +539,17 @@
 }
 
 /* Prevent hover effects on teasers without links (like disabled buttons) */
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover {
   background-color: transparent !important;
 }
 
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .node-title,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .node-title,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .node-title {
   color: var(--text-color) !important;
 }
 
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .expand-icon,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .expand-icon,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .expand-icon {
   color: var(--text-color) !important;
 }
@@ -570,7 +572,9 @@
 }
 
 .content-stores .tree-children.expanded {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
 .content-stores .tree-children.expanded:not(.has-grid) {

@@ -308,6 +308,25 @@ if (inputFlagIndex !== -1 && args[inputFlagIndex + 1]) {
 // Get the first content path (for backward compatibility with existing code)
 const CONTENT_PATH = CONTENT_PATHS[0];
 
+// Validate arguments - check for unknown flags
+const knownFlags = ['--help', '-h', '--debug', '--recursive', '--fetch-store-links', '--store', '--input'];
+const knownFlagsWithValues = ['--store', '--input'];
+for (let i = 0; i < args.length; i += 1) {
+  const arg = args[i];
+  if (arg.startsWith('--') || arg.startsWith('-')) {
+    if (!knownFlags.includes(arg)) {
+      console.error(`❌ ERROR: Unknown flag: ${arg}`);
+      console.error('');
+      showHelp();
+      process.exit(1);
+    }
+    // Skip the next argument if this flag expects a value
+    if (knownFlagsWithValues.includes(arg) && args[i + 1] && !args[i + 1].startsWith('--')) {
+      i += 1;
+    }
+  }
+}
+
 // Load AUTHOR_AUTH_COOKIE from config file
 let AUTHOR_AUTH_COOKIE;
 try {
@@ -2794,6 +2813,8 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         itemType = 'accordion';
       } else if (resourceType.includes('container')) {
         itemType = 'container';
+      } else if (resourceType.includes('title')) {
+        itemType = 'title';
       } else if (resourceType.includes('text')) {
         itemType = 'text';
       } else if (key.startsWith('teaser_')) {
