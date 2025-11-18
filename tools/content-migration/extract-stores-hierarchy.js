@@ -308,6 +308,25 @@ if (inputFlagIndex !== -1 && args[inputFlagIndex + 1]) {
 // Get the first content path (for backward compatibility with existing code)
 const CONTENT_PATH = CONTENT_PATHS[0];
 
+// Validate arguments - check for unknown flags
+const knownFlags = ['--help', '-h', '--debug', '--recursive', '--fetch-store-links', '--store', '--input'];
+const knownFlagsWithValues = ['--store', '--input'];
+for (let i = 0; i < args.length; i += 1) {
+  const arg = args[i];
+  if (arg.startsWith('--') || arg.startsWith('-')) {
+    if (!knownFlags.includes(arg)) {
+      console.error(`❌ ERROR: Unknown flag: ${arg}`);
+      console.error('');
+      showHelp();
+      process.exit(1);
+    }
+    // Skip the next argument if this flag expects a value
+    if (knownFlagsWithValues.includes(arg) && args[i + 1] && !args[i + 1].startsWith('--')) {
+      i += 1;
+    }
+  }
+}
+
 // Load AUTHOR_AUTH_COOKIE from config file
 let AUTHOR_AUTH_COOKIE;
 try {
@@ -2794,6 +2813,8 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         itemType = 'accordion';
       } else if (resourceType.includes('container')) {
         itemType = 'container';
+      } else if (resourceType.includes('title')) {
+        itemType = 'title';
       } else if (resourceType.includes('text')) {
         itemType = 'text';
       } else if (key.startsWith('teaser_')) {
@@ -2930,8 +2951,76 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         }
       } else if (itemType === 'button' && item[':type'] === 'tccc-dam/components/custom-button' && !itemLinkSources.clickableUrl) {
         // For custom-button components, if searchLink is not in Sling Model, check JCR
-        // Search for the button by BOTH key AND title in JCR (keys can be reused in different sections)
-        function findButtonInJCR(obj, targetKey, targetTitle) {
+        // Search for the button by key, title AND parent tab/container context (keys can be reused in different sections)
+        function findButtonInJCRWithContext(obj, targetKey, targetTitle, pathContext) {
+          // Extract the tab/container context key from the path
+          // Path format: /item_1733337091907__tabs0/container_copy_44108
+          // We want to find the button within the "item_1733337091907" tab context
+          const match = pathContext.match(/\/(item_\d+)/);
+          const tabContextKey = match ? match[1] : null;
+
+          if (tabContextKey) {
+            // Search for the button within this specific tab context
+            const result = findButtonInTabContext(obj, targetKey, targetTitle, tabContextKey);
+            if (result) return result;
+          }
+
+          // Fall back to global search if no tab context or not found
+          return findButtonInJCRGlobal(obj, targetKey, targetTitle);
+        }
+
+        // Search for button within a specific tab context
+        function findButtonInTabContext(obj, targetKey, targetTitle, tabKey) {
+          if (!obj || typeof obj !== 'object') return null;
+
+          // First, find the tab with the matching key
+          function findTab(node) {
+            if (!node || typeof node !== 'object') return null;
+
+            // Check if this node is the tab we're looking for
+            if (node[tabKey]) {
+              return node[tabKey];
+            }
+
+            // Recursively search children
+            for (const key of Object.keys(node)) {
+              if (!key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
+                const result = findTab(node[key]);
+                if (result) return result;
+              }
+            }
+            return null;
+          }
+
+          const tabNode = findTab(obj);
+          if (!tabNode) return null;
+
+          // Now search for the button within this tab
+          function searchInNode(node) {
+            if (!node || typeof node !== 'object') return null;
+
+            // Check if this node has the button we're looking for
+            if (node[targetKey]
+                && node[targetKey]['sling:resourceType'] === 'tccc-dam/components/custom-button'
+                && node[targetKey]['jcr:title'] === targetTitle) {
+              return node[targetKey];
+            }
+
+            // Recursively search children
+            for (const key of Object.keys(node)) {
+              if (!key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
+                const result = searchInNode(node[key]);
+                if (result) return result;
+              }
+            }
+            return null;
+          }
+
+          return searchInNode(tabNode);
+        }
+
+        // Fallback: global search (original behavior)
+        function findButtonInJCRGlobal(obj, targetKey, targetTitle) {
           if (obj && typeof obj === 'object') {
             if (obj[targetKey]
                 && obj[targetKey]['sling:resourceType'] === 'tccc-dam/components/custom-button'
@@ -2940,7 +3029,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
             }
             for (const key of Object.keys(obj)) {
               if (typeof obj[key] === 'object') {
-                const result = findButtonInJCR(obj[key], targetKey, targetTitle);
+                const result = findButtonInJCRGlobal(obj[key], targetKey, targetTitle);
                 if (result) return result;
               }
             }
@@ -2948,7 +3037,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
           return null;
         }
 
-        const jcrButton = findButtonInJCR(jcrData.root, key, title);
+        const jcrButton = findButtonInJCRWithContext(jcrData.root, key, title, parentKeyPath);
         if (jcrButton && jcrButton.searchLink && isValidLinkURL(jcrButton.searchLink)) {
           itemLinkSources.clickableUrl = stripHostOnly(jcrButton.searchLink);
         }
