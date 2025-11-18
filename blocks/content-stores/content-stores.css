@@ -181,6 +181,18 @@
   white-space: nowrap;
 }
 
+/* Section-title leaf items should have left-aligned text and full width */
+.content-stores .tree-item.leaf-item[data-item-type="section-title"] {
+  padding: 0;
+}
+
+.content-stores .tree-item.leaf-item[data-item-type="section-title"] .tree-node {
+  text-align: left;
+  justify-content: flex-start;
+  width: 100%;
+  display: flex;
+}
+
 /* Expanded section-title overrides leaf item styling */
 .content-stores .tree-item.leaf-item .tree-node.expanded.type-section-title {
   padding: 10px 0;
@@ -600,8 +612,9 @@
   margin-left: 0;
 }
 
-/* Exclude text type items from grid layout */
-.content-stores .tree-children.has-grid .tree-item[data-item-type="text"] {
+/* Exclude text and section-title type items from grid layout */
+.content-stores .tree-children.has-grid .tree-item[data-item-type="text"],
+.content-stores .tree-children.has-grid .tree-item[data-item-type="section-title"] {
   width: 100%;
   max-width: none;
 }

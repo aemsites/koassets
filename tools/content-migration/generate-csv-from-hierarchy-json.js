@@ -851,10 +851,11 @@ function rewriteHierarchyStructure(jsonFilePath) {
 
 /**
  * Removes section-title paths from their children's paths
- * When a section-title is encountered, all subsequent items (until the next section-title)
- * have the section-title's path prefix removed from their paths.
- * Section-titles themselves also get their parent path removed (so path = title only).
- * Also adds 2 empty rows before each section-title (starting from the 2nd one)
+ * When a FIRST-LEVEL section-title is encountered (no parent), all subsequent items
+ * (until the next FIRST-LEVEL section-title) have the section-title's path prefix removed.
+ * Nested section-titles are treated as normal nodes - they don't affect path removal.
+ * Nested section-titles get their first-level parent prefix removed from their path.
+ * Also adds 2 empty rows before each FIRST-LEVEL section-title (starting from the 2nd one)
  */
 function removeParentSectionTitleFromPaths(items) {
   const result = [];
@@ -865,8 +866,11 @@ function removeParentSectionTitleFromPaths(items) {
     const newItem = { ...item };
 
     if (item.type === 'section-title') {
-      // Add 2 empty rows before section-title (except for the first one)
-      if (!isFirstSectionTitle) {
+      // Check if this is a first-level section-title (no parent)
+      const isFirstLevel = !item.path || !item.path.includes(PATH_SEPARATOR);
+
+      // Add 2 empty rows before FIRST-LEVEL section-title (except for the first one)
+      if (isFirstLevel && !isFirstSectionTitle) {
         // Create empty row objects with all fields empty
         const emptyRow = {
           type: '',
@@ -880,21 +884,29 @@ function removeParentSectionTitleFromPaths(items) {
         result.push({ ...emptyRow });
         result.push({ ...emptyRow });
       }
-      isFirstSectionTitle = false;
-
-      // For section-titles: remove parent prefix so path = title only
-      // Extract just the last segment as the path
-      if (newItem.path && newItem.path.includes(PATH_SEPARATOR)) {
-        const segments = newItem.path.split(PATH_SEPARATOR);
-        newItem.path = segments[segments.length - 1];
+      if (isFirstLevel) {
+        isFirstSectionTitle = false;
       }
 
-      // Update current section path for removing from children
-      // Use the original (full) path for comparison
-      currentSectionPath = item.path;
+      // For first-level section-titles: path stays as is (just the title)
+      // For nested section-titles: remove the first-level section-title prefix
+      if (!isFirstLevel && currentSectionPath && item.path.startsWith(currentSectionPath + PATH_SEPARATOR)) {
+        // Remove the first-level section-title prefix
+        newItem.path = item.path.substring(currentSectionPath.length + PATH_SEPARATOR.length);
+      }
+
+      // Only update current section path if this is a FIRST-LEVEL section-title
+      // Nested section-titles don't change the currentSectionPath
+      if (isFirstLevel) {
+        // Use the original (full) path for comparison
+        currentSectionPath = item.path;
+      }
+      // Note: For nested section-titles, we DON'T reset currentSectionPath
+      // They are treated as normal nodes
+
       result.push(newItem);
     } else {
-      // Check if this item is a child of the current section-title
+      // Check if this item is a child of a first-level section-title
       if (currentSectionPath && item.path && item.path.startsWith(currentSectionPath + PATH_SEPARATOR)) {
         // Remove the section path prefix
         newItem.path = item.path.substring(currentSectionPath.length + PATH_SEPARATOR.length);
