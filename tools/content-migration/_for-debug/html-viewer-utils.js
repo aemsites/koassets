@@ -163,14 +163,57 @@ function reconstructHierarchyFromRows(rows) {
   let currentSection = null; // Track the current section-title
 
   rows.forEach((row) => {
-    // If this is a section-title, create it at root level and set as current section
+    // If this is a section-title, check if it should be nested or at root level
     if (row.type === 'section-title') {
+      const pathSegments = splitPathSegments(row.path);
+
+      // If path has multiple segments, it's nested - handle like other items
+      if (pathSegments.length > 1) {
+        // Navigate to parent and add as nested section-title
+        let currentLevel = currentSection || root;
+
+        // Navigate through all segments except the last one
+        for (let i = 0; i < pathSegments.length - 1; i += 1) {
+          const segment = pathSegments[i].trim();
+          let existingItem = currentLevel.items.find(
+            (item) => item.title && item.title.trim() === segment,
+          );
+
+          if (!existingItem) {
+            existingItem = {
+              title: segment,
+              path: pathSegments.slice(0, i + 1).join(PATH_SEPARATOR),
+              items: [],
+            };
+            currentLevel.items.push(existingItem);
+          }
+
+          if (!existingItem.items) existingItem.items = [];
+          currentLevel = existingItem;
+        }
+
+        // Create the section-title as a child
+        const sectionItem = {
+          title: row.title || row.path,
+          path: row.path,
+          items: [],
+        };
+        if (row.imageUrl) sectionItem.imageUrl = row.imageUrl;
+        if (row.linkURL) sectionItem.linkURL = row.linkURL;
+        if (row.text) sectionItem.text = row.text;
+        if (row.type) sectionItem.type = row.type;
+        if (row.synonym) sectionItem.synonym = row.synonym;
+        sectionItem.title = row.title || row.path;
+        currentLevel.items.push(sectionItem);
+        return;
+      }
+
+      // Root level section-title - add to root and set as current section
       const sectionItem = {
         title: row.title || row.path,
         path: row.path,
         items: [],
       };
-      // Copy all properties from row
       if (row.imageUrl) sectionItem.imageUrl = row.imageUrl;
       if (row.linkURL) sectionItem.linkURL = row.linkURL;
       if (row.text) sectionItem.text = row.text;
