@@ -852,7 +852,8 @@ function rewriteHierarchyStructure(jsonFilePath) {
 /**
  * Removes section-title paths from their children's paths
  * When a section-title is encountered, all subsequent items (until the next section-title)
- * have the section-title's path prefix removed from their paths
+ * have the section-title's path prefix removed from their paths.
+ * Section-titles themselves also get their parent path removed (so path = title only).
  * Also adds 2 empty rows before each section-title (starting from the 2nd one)
  */
 function removeParentSectionTitleFromPaths(items) {
@@ -881,7 +882,15 @@ function removeParentSectionTitleFromPaths(items) {
       }
       isFirstSectionTitle = false;
 
-      // This is a section title - update current section path for future children
+      // For section-titles: remove parent prefix so path = title only
+      // Extract just the last segment as the path
+      if (newItem.path && newItem.path.includes(PATH_SEPARATOR)) {
+        const segments = newItem.path.split(PATH_SEPARATOR);
+        newItem.path = segments[segments.length - 1];
+      }
+
+      // Update current section path for removing from children
+      // Use the original (full) path for comparison
       currentSectionPath = item.path;
       result.push(newItem);
     } else {

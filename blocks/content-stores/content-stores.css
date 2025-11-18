@@ -181,6 +181,13 @@
   white-space: nowrap;
 }
 
+/* Expanded section-title overrides leaf item styling */
+.content-stores .tree-item.leaf-item .tree-node.expanded.type-section-title {
+  padding: 10px 0;
+  display: block;
+  width: 100%;
+}
+
 .content-stores .tree-node.expanded:not(.type-button, .type-section-title) {
   color: var(--primary-color);
   border: 1px solid var(--primary-color);
