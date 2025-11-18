@@ -855,19 +855,22 @@ function rewriteHierarchyStructure(jsonFilePath) {
  * (until the next FIRST-LEVEL section-title) have the section-title's path prefix removed.
  * Nested section-titles are treated as normal nodes - they don't affect path removal.
  * Nested section-titles get their first-level parent prefix removed from their path.
+ * EXCEPTION: If two section-titles are consecutive (no nodes between them), treat the 2nd as first-level.
  * Also adds 2 empty rows before each FIRST-LEVEL section-title (starting from the 2nd one)
  */
 function removeParentSectionTitleFromPaths(items) {
   const result = [];
   let currentSectionPath = null;
   let isFirstSectionTitle = true;
+  let previousItemWasSectionTitle = false;
 
   for (const item of items) {
     const newItem = { ...item };
 
     if (item.type === 'section-title') {
       // Check if this is a first-level section-title (no parent)
-      const isFirstLevel = !item.path || !item.path.includes(PATH_SEPARATOR);
+      // OR if the previous item was also a section-title (consecutive section-titles)
+      const isFirstLevel = !item.path || !item.path.includes(PATH_SEPARATOR) || previousItemWasSectionTitle;
 
       // Add 2 empty rows before FIRST-LEVEL section-title (except for the first one)
       if (isFirstLevel && !isFirstSectionTitle) {
@@ -888,10 +891,13 @@ function removeParentSectionTitleFromPaths(items) {
         isFirstSectionTitle = false;
       }
 
-      // For first-level section-titles: path stays as is (just the title)
-      // For nested section-titles: remove the first-level section-title prefix
-      if (!isFirstLevel && currentSectionPath && item.path.startsWith(currentSectionPath + PATH_SEPARATOR)) {
-        // Remove the first-level section-title prefix
+      // For first-level section-titles (naturally or consecutive):
+      // If path has separators, extract just the last segment
+      if (isFirstLevel && item.path && item.path.includes(PATH_SEPARATOR)) {
+        const segments = item.path.split(PATH_SEPARATOR);
+        newItem.path = segments[segments.length - 1];
+      } else if (!isFirstLevel && currentSectionPath && item.path.startsWith(currentSectionPath + PATH_SEPARATOR)) {
+        // For nested section-titles (not consecutive): remove the first-level section-title prefix
         newItem.path = item.path.substring(currentSectionPath.length + PATH_SEPARATOR.length);
       }
 
@@ -904,6 +910,7 @@ function removeParentSectionTitleFromPaths(items) {
       // Note: For nested section-titles, we DON'T reset currentSectionPath
       // They are treated as normal nodes
 
+      previousItemWasSectionTitle = true;
       result.push(newItem);
     } else {
       // Check if this item is a child of a first-level section-title
@@ -911,6 +918,7 @@ function removeParentSectionTitleFromPaths(items) {
         // Remove the section path prefix
         newItem.path = item.path.substring(currentSectionPath.length + PATH_SEPARATOR.length);
       }
+      previousItemWasSectionTitle = false;
       result.push(newItem);
     }
   }

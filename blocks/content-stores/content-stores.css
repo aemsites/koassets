@@ -182,15 +182,8 @@
 }
 
 /* Section-title leaf items should have left-aligned text and full width */
-.content-stores .tree-item.leaf-item[data-item-type="section-title"] {
+.content-stores .tree-item[data-item-type="tab"] [data-item-type="section-title"] {
   padding: 0;
-}
-
-.content-stores .tree-item.leaf-item[data-item-type="section-title"] .tree-node {
-  text-align: left;
-  justify-content: flex-start;
-  width: 100%;
-  display: flex;
 }
 
 /* Expanded section-title overrides leaf item styling */
