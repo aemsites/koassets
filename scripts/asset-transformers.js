@@ -247,7 +247,7 @@ function extractDisplayValueFromHiddenArray(
   fallback = 'N/A',
 ) {
   const hiddenRaw = hit[hiddenKey];
-  
+
   // Handle array of _hidden values
   if (Array.isArray(hiddenRaw) && hiddenRaw.length > 0) {
     return hiddenRaw
@@ -260,13 +260,13 @@ function extractDisplayValueFromHiddenArray(
       })
       .join(', ');
   }
-  
+
   // Handle single _hidden value
   const hiddenValue = safeStringField(hit, hiddenKey, '');
   if (hiddenValue && hiddenValue !== 'N/A' && hiddenValue.includes('|')) {
     return hiddenValue.split('|')[0].trim();
   }
-  
+
   // Fallback to original property
   return extractJoinedIfArrayElseSafe(hit, primaryKey, candidateKeys, fallback);
 }
@@ -553,7 +553,7 @@ function extractDisplayValueFromHiddenArrayMetadata(
   fallback = 'N/A',
 ) {
   const hiddenRaw = assetMetadata?.[hiddenKey];
-  
+
   // Handle array of _hidden values
   if (Array.isArray(hiddenRaw) && hiddenRaw.length > 0) {
     return hiddenRaw
@@ -566,12 +566,12 @@ function extractDisplayValueFromHiddenArrayMetadata(
       })
       .join(', ');
   }
-  
+
   // Handle single _hidden value
   if (hiddenRaw && typeof hiddenRaw === 'string' && hiddenRaw.includes('|')) {
     return hiddenRaw.split('|')[0].trim();
   }
-  
+
   // Fallback to original property
   return extractJoinedIfArrayElseSafe(assetMetadata, primaryKey, [primaryKey], fallback);
 }
