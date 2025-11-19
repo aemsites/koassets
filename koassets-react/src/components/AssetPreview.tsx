@@ -7,8 +7,8 @@ import ActionButton from './ActionButton';
 import { BUTTON_CONFIGS } from './ActionButtonConfigs';
 import './AssetPreview.css';
 import Picture from './Picture';
-import PDFViewer from './PDFViewer';
 import { isPdfPreview } from '../constants/filetypes';
+import AdobePDFViewer from './AdobePDFViewer';
 
 const AssetPreview: React.FC<AssetPreviewProps> = ({
     showModal,
@@ -24,6 +24,8 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
     const { dynamicMediaClient } = useAppConfig();
     const [actionButtonEnable, setActionButtonEnable] = useState<boolean>(false);
     const [watermarkRendition, setWatermarkRendition] = useState<Rendition | undefined>(undefined);
+    const [showPdfModal, setShowPdfModal] = useState<boolean>(false);
+    const [pdfUrl, setPdfUrl] = useState<string>('');
 
     // Check if this item is already in the cart
     const isInCart = selectedImage ? cartAssetItems.some(cartAssetItem => cartAssetItem.assetId === selectedImage.assetId) : false;
@@ -99,12 +101,62 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
         }
     };
 
+    const handlePdfPreviewClick = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        
+        if (!selectedImage || !dynamicMediaClient) {
+            return;
+        }
+
+        // Check if this is a PDF
+        if (!isPdfPreview(selectedImage.format as string)) {
+            return;
+        }
+
+        // Find the PDF rendition
+        const pdfRendition = renditions.items
+            ?.filter((item: Rendition) => isPdfPreview(item.format as string))
+            ?.sort((a: Rendition, b: Rendition) => (a.size ?? 0) - (b.size ?? 0))?.[0];
+
+        if (!pdfRendition) {
+            console.warn('No PDF rendition found');
+            return;
+        }
+
+        // Get the PDF URL
+        const url = dynamicMediaClient.getPreviewPdfUrl(
+            selectedImage.assetId as string,
+            selectedImage.name as string,
+            pdfRendition.name as string
+        );
+        
+        if (url) {
+            setPdfUrl(url);
+            setShowPdfModal(true);
+        }
+    };
+
     return (
-        <div className="asset-preview-modal portal-modal" onClick={handleOverlayClick}>
-            <div className="asset-preview-modal-inner" onClick={handleModalClick}>
-                <button className="modal-close-button" onClick={closeModal}>
-                    ✕
-                </button>
+        <>
+            {showPdfModal && (
+                <div className="pdf-modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowPdfModal(false)}>
+                    <div className="pdf-modal-content">
+                        <AdobePDFViewer
+                            pdfUrl={pdfUrl}
+                            fileName={selectedImage.title as string || 'document.pdf'}
+                            showDownloadPDF={false}
+                            showPrintPDF={false}
+                            onClose={() => setShowPdfModal(false)}
+                        />
+                    </div>
+                </div>
+            )}
+
+            <div className="asset-preview-modal portal-modal" onClick={handleOverlayClick}>
+                <div className="asset-preview-modal-inner" onClick={handleModalClick}>
+                    <button className="modal-close-button" onClick={closeModal}>
+                        ✕
+                    </button>
 
                 <div className="asset-preview-modal-container">
                     <div className="modal-header">
@@ -118,28 +170,19 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                         </h3>
                     </div>
 
-                    <div className="modal-image-container">
-                        {(() => {
-                            const pictureComponent = (
-                                <Picture
-                                    key={selectedImage?.assetId}
-                                    asset={selectedImage as Asset}
-                                    width={350}
-                                    className="modal-image"
-                                    eager={true}
-                                    fetchPriority="high"
-                                />
-                            );
-                            return isPdfPreview(selectedImage?.format as string) ? (
-                                <PDFViewer 
-                                    selectedImage={selectedImage as Asset} 
-                                    renditions={renditions}
-                                    fallbackComponent={pictureComponent}
-                                />
-                            ) : (
-                                pictureComponent
-                            );
-                        })()}
+                    <div 
+                        className="modal-image-container"
+                        onClick={isPdfPreview(selectedImage?.format as string) && selectedImage?.readyToUse?.toLowerCase() === 'yes' ? handlePdfPreviewClick : undefined}
+                        style={isPdfPreview(selectedImage?.format as string) && selectedImage?.readyToUse?.toLowerCase() === 'yes' ? { cursor: 'pointer' } : undefined}
+                    >
+                        <Picture
+                            key={selectedImage?.assetId}
+                            asset={selectedImage as Asset}
+                            width={350}
+                            className="modal-image"
+                            eager={true}
+                            fetchPriority="high"
+                        />
                     </div>
 
                     <div className="preview-modal-details">
@@ -188,6 +231,7 @@ const AssetPreview: React.FC<AssetPreviewProps> = ({
                 </div>
             </div>
         </div>
+        </>
     );
 };
 
