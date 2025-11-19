@@ -437,19 +437,4 @@ export class FadelClient {
         }
     }
 
-    /**
-     * Clear the rights profile cache for a specific asset or all assets
-     * @param assetId - Optional asset ID to clear specific cache entry
-     */
-    clearRightsProfileCache(assetId?: string): void {
-        if (assetId) {
-            const strippedAssetId = this.stripAssetIdPrefix(assetId);
-            this.rightsProfileCache.delete(strippedAssetId);
-            console.debug(`[FadelClient] Cleared cache for asset ${strippedAssetId}`);
-        } else {
-            this.rightsProfileCache.clear();
-            console.debug('[FadelClient] Cleared all rights profile cache');
-        }
-    }
-
 }
