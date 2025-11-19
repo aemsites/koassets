@@ -112,7 +112,7 @@ function transformSearchHitToAsset(hit) {
     repoName: hit['repo-name'],
     // Metadata fields that are useful for search and display
     format: hit['dc-format'],
-    assetType: hit['tccc-assetType'],
+    contentType: hit['tccc-contentType'],
     brand: hit['tccc-brand']?.TCCC?.['#values'],
     campaign: hit['tccc-campaignName'],
     intendedChannel: hit['tccc-intendedChannel'],
@@ -502,7 +502,7 @@ function createAssetCard(asset, collectionId) {
       asset && asset.repoName,
       asset && (asset.assetId || asset.id),
       asset && asset.campaign,
-      asset && asset.assetType,
+      asset && asset.content,
       asset && (Array.isArray(asset.brand) ? asset.brand.join(' ') : asset.brand),
       asset && (Array.isArray(asset.intendedChannel) ? asset.intendedChannel.join(' ') : asset.intendedChannel),
       asset && (Array.isArray(asset.marketCovered) ? asset.marketCovered.join(' ') : asset.marketCovered),

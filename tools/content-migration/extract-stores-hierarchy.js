@@ -36,28 +36,28 @@ USAGE:
 EXAMPLES:
   # Show help
   node extract-stores-hierarchy.js
-  
+
   # Extract default content store
   node extract-stores-hierarchy.js /content/share/us/en/all-content-stores
-  
+
   # Extract default content store with recursive extraction
   node extract-stores-hierarchy.js /content/share/us/en/all-content-stores --recursive
-  
+
   # Extract specific campaign
   node extract-stores-hierarchy.js /content/share/us/en/all-content-stores/global-coca-cola-uplift
-  
+
   # Extract specific content store with recursive extraction
   node extract-stores-hierarchy.js /content/share/us/en/bottler-content-stores --recursive
-  
+
   # Extract multiple stores from a file
   node extract-stores-hierarchy.js --input stores.txt
-  
+
   # Extract stores from file with recursive extraction
   node extract-stores-hierarchy.js --input stores.txt --recursive
-  
+
   # Discover and save all store links from default path (no extraction)
   node extract-stores-hierarchy.js --fetch-store-links
-  
+
   # Discover and save all store links from a specific store
   node extract-stores-hierarchy.js --fetch-store-links --store /content/share/us/en/bottler-content-stores
 
@@ -75,7 +75,7 @@ OUTPUTS:
 
   Note: {hierarchical-dir-name} follows this convention:
   • all-content-stores                  # For main content stores
-  • *-content-stores                    # For other main content stores  
+  • *-content-stores                    # For other main content stores
   • all-content-stores__global-coca-cola-uplift    # For child campaigns (parent__child)
   • *-content-stores__campaign-name     # For other child campaigns (parent__child)
 
@@ -91,23 +91,23 @@ FEATURES:
 
 AUTOMATIC DISCOVERY:
   The script automatically discovers and extracts OTHER base content stores:
-  
+
   1. Extracts the specified content path (e.g., /content/share/us/en/all-content-stores)
   2. Analyzes all linkURLs in the extracted hierarchy
   3. Identifies linkURLs pointing to DIFFERENT base content stores
      (must end with '-content-stores' and be different from current store)
   4. Recursively extracts each discovered base content store
-  
+
   Example:
     Running: node extract-stores-hierarchy.js /content/share/us/en/all-content-stores
-    
+
     Will extract:
     • all-content-stores/                          (main extraction - specified)
-    
+
     May also discover and extract (if linkURLs point to them):
     • bottler-content-stores/                      (different base store)
     • regional-content-stores/                     (different base store)
-    
+
   Note: Child campaigns (e.g., global-coca-cola-uplift) are NOT automatically
         extracted. You must manually run the script for each child campaign:
         node extract-stores-hierarchy.js /content/share/us/en/all-content-stores/global-coca-cola-uplift
@@ -307,6 +307,25 @@ if (inputFlagIndex !== -1 && args[inputFlagIndex + 1]) {
 
 // Get the first content path (for backward compatibility with existing code)
 const CONTENT_PATH = CONTENT_PATHS[0];
+
+// Validate arguments - check for unknown flags
+const knownFlags = ['--help', '-h', '--debug', '--recursive', '--fetch-store-links', '--store', '--input'];
+const knownFlagsWithValues = ['--store', '--input'];
+for (let i = 0; i < args.length; i += 1) {
+  const arg = args[i];
+  if (arg.startsWith('--') || arg.startsWith('-')) {
+    if (!knownFlags.includes(arg)) {
+      console.error(`❌ ERROR: Unknown flag: ${arg}`);
+      console.error('');
+      showHelp();
+      process.exit(1);
+    }
+    // Skip the next argument if this flag expects a value
+    if (knownFlagsWithValues.includes(arg) && args[i + 1] && !args[i + 1].startsWith('--')) {
+      i += 1;
+    }
+  }
+}
 
 // Load AUTHOR_AUTH_COOKIE from config file
 let AUTHOR_AUTH_COOKIE;
@@ -688,6 +707,88 @@ function isValidImageFile(filePath) {
   }
 }
 
+// Function to extract the true order of container keys from JSON text
+// This preserves the actual order from the JSON file, which Object.keys() doesn't always preserve
+function extractContainerKeyOrder(jsonText) {
+  try {
+    // Find the "container": { section within root
+    // We search for patterns like: "container": {  where container is a direct child of root
+    const rootMatch = jsonText.match(/"root"\s*:\s*\{/);
+    if (!rootMatch) {
+      return [];
+    }
+
+    // Now find "container": { after the root
+    const containerMatch = jsonText.substring(rootMatch.index).match(/"container"\s*:\s*\{/);
+    if (!containerMatch) {
+      return [];
+    }
+
+    const startIdx = rootMatch.index + containerMatch.index + containerMatch[0].length;
+    const containerKeys = [];
+
+    // Parse the container object to extract keys in order
+    // We need to find all first-level keys (not nested)
+    let depth = 1; // We're already inside {container:{
+    let currentKey = '';
+    let inString = false;
+    let escapeNext = false;
+    let inKey = false;
+
+    for (let i = startIdx; i < jsonText.length && depth > 0; i++) {
+      const char = jsonText[i];
+
+      if (escapeNext) {
+        escapeNext = false;
+        if (inKey) currentKey += char;
+        continue;
+      }
+
+      if (char === '\\') {
+        escapeNext = true;
+        if (inKey) currentKey += char;
+        continue;
+      }
+
+      if (char === '"') {
+        if (!inString) {
+          inString = true;
+          inKey = true;
+          currentKey = '';
+        } else {
+          inString = false;
+          if (inKey && depth === 1) {
+            // Check if this is a key (followed by :)
+            const nextNonSpace = jsonText.substring(i + 1).match(/^\s*:/);
+            if (nextNonSpace && !currentKey.startsWith('jcr:') && !currentKey.startsWith('cq:') && !currentKey.startsWith('sling:')) {
+              containerKeys.push(currentKey);
+            }
+          }
+          inKey = false;
+        }
+        continue;
+      }
+
+      if (inKey && inString) {
+        currentKey += char;
+      }
+
+      if (!inString) {
+        if (char === '{' || char === '[') {
+          depth++;
+        } else if (char === '}' || char === ']') {
+          depth--;
+        }
+      }
+    }
+
+    return containerKeys;
+  } catch (error) {
+    console.warn(`⚠️  Failed to extract container key order: ${error.message}`);
+    return [];
+  }
+}
+
 // Function to clean up corrupted images in the images directory
 function cleanupCorruptedImages() {
   const imagesDir = path.join(OUTPUT_DIR, 'images');
@@ -929,10 +1030,26 @@ async function main() {
     console.log(`📡 Fetching JCR structure: ${jcrUrl}\n`);
 
     const jcrContent = await downloadFile(jcrUrl, path.join(OUTPUT_DIR, 'jcr-content.json'));
+
+    // Extract the true key order from JSON text before parsing
+    // This preserves the actual order from the JSON file, which Object.keys() doesn't always preserve
+    const containerKeyOrder = extractContainerKeyOrder(jcrContent);
+
     const jcrData = JSON.parse(jcrContent);
 
-    // Save jcr-content.json in pretty format
-    fs.writeFileSync(path.join(OUTPUT_DIR, 'jcr-content.json'), JSON.stringify(jcrData, null, 2));
+    // Attach the true container key order to jcrData for later use
+    jcrData.__containerKeyOrder = containerKeyOrder;
+
+    // Save jcr-content.json in pretty format (both to output dir and cache)
+    const jcrDataStr = JSON.stringify(jcrData, null, 2);
+    fs.writeFileSync(path.join(OUTPUT_DIR, 'jcr-content.json'), jcrDataStr);
+
+    // Also update the cached file to include __containerKeyOrder
+    const cachePath = getCacheFilePath(jcrUrl);
+    if (fs.existsSync(cachePath)) {
+      fs.writeFileSync(cachePath, jcrDataStr);
+    }
+
     console.log('✅ Saved jcr-content.json in pretty format');
     console.log(`💡 Tip: Delete ${CACHE_DIR} to force re-download from AEM\n`);
 
@@ -2794,6 +2911,8 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         itemType = 'accordion';
       } else if (resourceType.includes('container')) {
         itemType = 'container';
+      } else if (resourceType.includes('title')) {
+        itemType = 'title';
       } else if (resourceType.includes('text')) {
         itemType = 'text';
       } else if (key.startsWith('teaser_')) {
@@ -2930,8 +3049,76 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         }
       } else if (itemType === 'button' && item[':type'] === 'tccc-dam/components/custom-button' && !itemLinkSources.clickableUrl) {
         // For custom-button components, if searchLink is not in Sling Model, check JCR
-        // Search for the button by BOTH key AND title in JCR (keys can be reused in different sections)
-        function findButtonInJCR(obj, targetKey, targetTitle) {
+        // Search for the button by key, title AND parent tab/container context (keys can be reused in different sections)
+        function findButtonInJCRWithContext(obj, targetKey, targetTitle, pathContext) {
+          // Extract the tab/container context key from the path
+          // Path format: /item_1733337091907__tabs0/container_copy_44108
+          // We want to find the button within the "item_1733337091907" tab context
+          const match = pathContext.match(/\/(item_\d+)/);
+          const tabContextKey = match ? match[1] : null;
+
+          if (tabContextKey) {
+            // Search for the button within this specific tab context
+            const result = findButtonInTabContext(obj, targetKey, targetTitle, tabContextKey);
+            if (result) return result;
+          }
+
+          // Fall back to global search if no tab context or not found
+          return findButtonInJCRGlobal(obj, targetKey, targetTitle);
+        }
+
+        // Search for button within a specific tab context
+        function findButtonInTabContext(obj, targetKey, targetTitle, tabKey) {
+          if (!obj || typeof obj !== 'object') return null;
+
+          // First, find the tab with the matching key
+          function findTab(node) {
+            if (!node || typeof node !== 'object') return null;
+
+            // Check if this node is the tab we're looking for
+            if (node[tabKey]) {
+              return node[tabKey];
+            }
+
+            // Recursively search children
+            for (const key of Object.keys(node)) {
+              if (!key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
+                const result = findTab(node[key]);
+                if (result) return result;
+              }
+            }
+            return null;
+          }
+
+          const tabNode = findTab(obj);
+          if (!tabNode) return null;
+
+          // Now search for the button within this tab
+          function searchInNode(node) {
+            if (!node || typeof node !== 'object') return null;
+
+            // Check if this node has the button we're looking for
+            if (node[targetKey]
+                && node[targetKey]['sling:resourceType'] === 'tccc-dam/components/custom-button'
+                && node[targetKey]['jcr:title'] === targetTitle) {
+              return node[targetKey];
+            }
+
+            // Recursively search children
+            for (const key of Object.keys(node)) {
+              if (!key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
+                const result = searchInNode(node[key]);
+                if (result) return result;
+              }
+            }
+            return null;
+          }
+
+          return searchInNode(tabNode);
+        }
+
+        // Fallback: global search (original behavior)
+        function findButtonInJCRGlobal(obj, targetKey, targetTitle) {
           if (obj && typeof obj === 'object') {
             if (obj[targetKey]
                 && obj[targetKey]['sling:resourceType'] === 'tccc-dam/components/custom-button'
@@ -2940,7 +3127,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
             }
             for (const key of Object.keys(obj)) {
               if (typeof obj[key] === 'object') {
-                const result = findButtonInJCR(obj[key], targetKey, targetTitle);
+                const result = findButtonInJCRGlobal(obj[key], targetKey, targetTitle);
                 if (result) return result;
               }
             }
@@ -2948,7 +3135,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
           return null;
         }
 
-        const jcrButton = findButtonInJCR(jcrData.root, key, title);
+        const jcrButton = findButtonInJCRWithContext(jcrData.root, key, title, parentKeyPath);
         if (jcrButton && jcrButton.searchLink && isValidLinkURL(jcrButton.searchLink)) {
           itemLinkSources.clickableUrl = stripHostOnly(jcrButton.searchLink);
         }
@@ -3881,10 +4068,71 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
     return collectedKeys;
   }
 
+  // Build a map of root container keys to their JCR order
+  // Use __containerKeyOrder if available (preserves true JSON file order), otherwise fall back to Object.keys()
+  const allContainerKeys = jcrData.__containerKeyOrder && jcrData.__containerKeyOrder.length > 0
+    ? jcrData.__containerKeyOrder
+    : Object.keys(jcrData.root.container);
+
+  const rootContainerKeys = allContainerKeys.filter(
+    (key) => {
+      const container = jcrData.root.container[key];
+      return container && typeof container === 'object' && !key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:');
+    },
+  );
+
+  const rootContainerOrder = {};
+  rootContainerKeys.forEach((key, index) => {
+    rootContainerOrder[key] = index;
+  });
+
+  // Helper to extract nested container order from a parent container
+  function getNestedContainerOrder(parentContainer, targetContainer) {
+    const keys = Object.keys(parentContainer).filter(
+      (k) => !k.startsWith('jcr:') && !k.startsWith('cq:') && !k.startsWith('sling:'),
+    );
+
+    for (let i = 0; i < keys.length; i++) {
+      const child = parentContainer[keys[i]];
+      if (child === targetContainer) {
+        return i;
+      }
+      // Check if target is nested within this child
+      if (child && typeof child === 'object' && isNestedWithin(targetContainer, child)) {
+        return i;
+      }
+    }
+    return 0;
+  }
+
+  // Helper to find which root container a section's container belongs to
+  // Returns a precise order number that accounts for nested containers
+  function getRootContainerOrder(sectionContainers) {
+    for (const container of sectionContainers) {
+      // Check if this container is directly a root container
+      for (const rootKey of rootContainerKeys) {
+        if (jcrData.root.container[rootKey] === container) {
+          return rootContainerOrder[rootKey];
+        }
+      }
+      // Check if this container is nested within a root container
+      for (const rootKey of rootContainerKeys) {
+        const rootContainer = jcrData.root.container[rootKey];
+        if (isNestedWithin(container, rootContainer)) {
+          const baseOrder = rootContainerOrder[rootKey];
+          // Get the nested order within the root container
+          const nestedOrder = getNestedContainerOrder(rootContainer, container);
+          // Return a decimal number: root order + (nested order / 1000)
+          // This ensures sections in the same root container are ordered correctly
+          return baseOrder + (nestedOrder / 1000);
+        }
+      }
+    }
+    return 9999; // Fallback if not found
+  }
+
   // Convert to hierarchy format with JCR order
-  // The detectedSections array is already in the correct order from the JCR file,
-  // so we just assign __jcrOrder sequentially
-  let orderIndex = 0;
+  // Assign __jcrOrder based on the actual position of the root container in JCR
   for (const section of detectedSections) {
     // Handle untitled sections (null title)
     if (!section.title) {
@@ -3894,9 +4142,11 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
         extractComponentsFromContainer(container, untitledItems, '', jcrTeaserImageMap);
       }
 
+      // Get the JCR order for this section's containers
+      const jcrOrder = getRootContainerOrder(section.containers);
+
       // Add each item as a root-level section
       for (const item of untitledItems) {
-        const jcrOrder = orderIndex++;
         console.log(`📦 Completed untitled section "${item.title}" (__jcrOrder: ${jcrOrder})`);
         sections.push({
           ...item,
@@ -3924,6 +4174,9 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
       extractComponentsFromContainer(container, sectionItems, titleText, jcrTeaserImageMap);
     }
 
+    // Get the JCR order for this section's containers
+    const jcrOrder = getRootContainerOrder(section.containers);
+
     // Handle nested titles (e.g., "Meals With Fanta" > "Snacks")
     if (section.title.nestedTitles && section.title.nestedTitles.length > 0) {
       // Create nested structure: outer title -> inner title(s) -> content
@@ -3946,7 +4199,6 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
       }
 
       // Outer section contains the nested structure
-      const jcrOrder = orderIndex++;
       console.log(`📦 Completed nested section "${titleText}" > "${section.title.nestedTitles.map((t) => t['jcr:title']).join(' > ')}" with ${sectionItems.length} item(s) (__jcrOrder: ${jcrOrder})`);
       sections.push({
         title: titleText,
@@ -3957,14 +4209,13 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
       });
     } else {
       // Normal section (no nested titles)
-      const jcrOrder = orderIndex++;
       console.log(`📦 Completed section "${titleText}" with ${sectionItems.length} item(s) (__jcrOrder: ${jcrOrder})`);
       sections.push({
         title: titleText,
         path: titleText,
         type: getItemTypeFromResourceType(section.title),
         items: sectionItems,
-        __jcrOrder: jcrOrder, // Assign JCR order sequentially
+        __jcrOrder: jcrOrder,
       });
     }
   }
@@ -4127,9 +4378,18 @@ function extractMissingSectionsFromJCR(jcrData, existingSectionTitles = [], main
   // duplicate keys/signatures WITHIN JCR (only deduplicate between JCR and Sling Model)
 
   // Build a map of container keys to their JCR order
+  // Use the preserved key order from JSON text if available, otherwise fall back to Object.keys()
   const containerOrder = {};
   let orderIndex = 0;
-  for (const containerKey in rootContainer) {
+
+  const containerKeys = jcrData.__containerKeyOrder && jcrData.__containerKeyOrder.length > 0
+    ? jcrData.__containerKeyOrder
+    : Object.keys(rootContainer).filter((key) => {
+      const container = rootContainer[key];
+      return container && typeof container === 'object' && !key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:');
+    });
+
+  for (const containerKey of containerKeys) {
     const container = rootContainer[containerKey];
     if (!container || typeof container !== 'object') continue;
     if (containerKey.startsWith('jcr:') || containerKey.startsWith('cq:') || containerKey.startsWith('sling:')) continue;
@@ -4189,9 +4449,10 @@ function extractMissingSectionsFromJCR(jcrData, existingSectionTitles = [], main
   }
 
   // If we found any standalone items, add them as a section with proper JCR order
-  // Use fractional order to ensure it sorts correctly relative to titled sections in the same container group
+  // Place "Other Content" at its actual container order from JCR
   if (standaloneItems.length > 0) {
-    const otherContentOrder = firstOrphanedContainerOrder !== null ? (firstOrphanedContainerOrder - 0.5) : 9999;
+    // Use the actual container order from JCR
+    const otherContentOrder = firstOrphanedContainerOrder !== null ? firstOrphanedContainerOrder : 9999;
     console.log(`  📦 Creating "Other Content" section with ${standaloneItems.length} item(s) (__jcrOrder: ${otherContentOrder})`);
 
     // DEBUG: Check all items in standaloneItems
