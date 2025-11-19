@@ -211,6 +211,67 @@ function extractFromTcccTagIDs(dataJson, key, fallback = 'N/A') {
 }
 
 /**
+ * Extract display value from _hidden property (format: "Display Value|id")
+ * Falls back to the original property if _hidden doesn't exist or is malformed
+ * @param hit - The raw hit data from search results
+ * @param hiddenKey - The key for the _hidden property (e.g., 'tccc-campaignName_hidden')
+ * @param fallbackKey - The key for the original property (e.g., 'tccc-campaignName')
+ * @param fallback - Default value if neither property exists
+ * @returns The display value extracted from _hidden property, or fallback value
+ */
+function extractDisplayValueFromHidden(hit, hiddenKey, fallbackKey, fallback = 'N/A') {
+  const hiddenValue = safeStringField(hit, hiddenKey, '');
+  if (hiddenValue && hiddenValue !== 'N/A' && hiddenValue.includes('|')) {
+    // Extract display value (before pipe) from format "Display Value|id"
+    return hiddenValue.split('|')[0].trim();
+  }
+  // Fallback to original property value
+  return safeStringField(hit, fallbackKey, fallback);
+}
+
+/**
+ * Extract display value from _hidden property for array/joined fields
+ * Handles multi-value fields that may have multiple "_hidden" values
+ * @param hit - The raw hit data from search results
+ * @param hiddenKey - The key for the _hidden property
+ * @param primaryKey - The primary key for fallback
+ * @param candidateKeys - Additional candidate keys for fallback
+ * @param fallback - Default value if property doesn't exist
+ * @returns The display value(s) extracted from _hidden property
+ */
+function extractDisplayValueFromHiddenArray(
+  hit,
+  hiddenKey,
+  primaryKey,
+  candidateKeys,
+  fallback = 'N/A',
+) {
+  const hiddenRaw = hit[hiddenKey];
+
+  // Handle array of _hidden values
+  if (Array.isArray(hiddenRaw) && hiddenRaw.length > 0) {
+    return hiddenRaw
+      .filter((v) => typeof v === 'string' && v)
+      .map((v) => {
+        if (v.includes('|')) {
+          return v.split('|')[0].trim();
+        }
+        return v;
+      })
+      .join(', ');
+  }
+
+  // Handle single _hidden value
+  const hiddenValue = safeStringField(hit, hiddenKey, '');
+  if (hiddenValue && hiddenValue !== 'N/A' && hiddenValue.includes('|')) {
+    return hiddenValue.split('|')[0].trim();
+  }
+
+  // Fallback to original property
+  return extractJoinedIfArrayElseSafe(hit, primaryKey, candidateKeys, fallback);
+}
+
+/**
  * Transforms a search hit record into an Asset object
  * @param hit - The raw hit data from search results
  * @returns Asset object with populated properties
@@ -229,11 +290,21 @@ export function populateAssetFromHit(hit) {
   const beverageType = extractJoinedIfArrayElseSafe(hit, 'tccc-beverageType');
   const packageOrContainerType = extractJoinedIfArrayElseSafe(hit, 'tccc-packageContainerType');
   const packageOrContainerMaterial = extractJoinedIfArrayElseSafe(hit, 'tccc-packageContainerMaterial');
-  const packageOrContainerSize = extractJoinedIfArrayElseSafe(hit, 'tccc-packageContainerSize');
+  const packageOrContainerSize = extractDisplayValueFromHiddenArray(
+    hit,
+    'tccc-packageContainerSize_hidden',
+    'tccc-packageContainerSize',
+    ['tccc-packageContainerSize'],
+  );
   const secondaryPackaging = extractJoinedIfArrayElseSafe(hit, 'tccc-secondaryPackaging');
 
   // Intended Use fields
-  const intendedBottlerCountry = extractJoinedIfArrayElseSafe(hit, 'tccc-intendedBottlerCountry');
+  const intendedBottlerCountry = extractDisplayValueFromHiddenArray(
+    hit,
+    'tccc-intendedBottlerCountry_hidden',
+    'tccc-intendedBottlerCountry',
+    ['tccc-intendedBottlerCountry'],
+  );
   const intendedCustomers = extractJoinedIfArrayElseSafe(hit, 'tccc-intendedCustomers');
   const intendedChannel = extractFromTcccValues(hit, 'tccc-intendedChannel');
 
@@ -287,7 +358,7 @@ export function populateAssetFromHit(hit) {
   const contractAssetJobs = extractJoinedIfArrayElseSafe(hit, 'tccc-contractAssetJobs');
 
   return {
-    agencyName: safeStringField(hit, 'tccc-agencyName'),
+    agencyName: extractDisplayValueFromHidden(hit, 'tccc-agencyName_hidden', 'tccc-agencyName'),
     ageDemographic,
     alt: safeStringFromCandidates(hit, ['dc-title', 'repo-name']),
     assetAssociatedWithBrand: associatedWBrand,
@@ -304,7 +375,7 @@ export function populateAssetFromHit(hit) {
       'tccc-campaignActivationRemark',
       ['tccc-campaignActivationRemark'],
     ),
-    campaignName: safeStringField(hit, 'tccc-campaignName', ''),
+    campaignName: extractDisplayValueFromHidden(hit, 'tccc-campaignName_hidden', 'tccc-campaignName', ''),
     campaignReach,
     campaignSubActivationRemark: extractJoinedIfArrayElseSafe(
       hit,
@@ -441,6 +512,71 @@ function safeMetadataDateField(
 }
 
 /**
+ * Extract display value from _hidden property in metadata (format: "Display Value|id")
+ * Falls back to the original property if _hidden doesn't exist or is malformed
+ * @param repositoryMetadata - The repository metadata object
+ * @param assetMetadata - The asset metadata object
+ * @param hiddenKey - The key for the _hidden property (e.g., 'tccc:campaignName_hidden')
+ * @param fallbackKey - The key for the original property (e.g., 'tccc:campaignName')
+ * @param fallback - Default value if neither property exists
+ * @returns The display value extracted from _hidden property, or fallback value
+ */
+function extractDisplayValueFromHiddenMetadata(
+  repositoryMetadata,
+  assetMetadata,
+  hiddenKey,
+  fallbackKey,
+  fallback = 'N/A',
+) {
+  const hiddenValue = safeMetadataStringField(repositoryMetadata, assetMetadata, hiddenKey, '');
+  if (hiddenValue && hiddenValue !== 'N/A' && hiddenValue.includes('|')) {
+    // Extract display value (before pipe) from format "Display Value|id"
+    return hiddenValue.split('|')[0].trim();
+  }
+  // Fallback to original property value
+  return safeMetadataStringField(repositoryMetadata, assetMetadata, fallbackKey, fallback);
+}
+
+/**
+ * Extract display value from _hidden property for array/joined fields in metadata
+ * Handles multi-value fields that may have multiple "_hidden" values
+ * @param assetMetadata - The asset metadata object
+ * @param hiddenKey - The key for the _hidden property
+ * @param primaryKey - The primary key for fallback
+ * @param fallback - Default value if property doesn't exist
+ * @returns The display value(s) extracted from _hidden property
+ */
+function extractDisplayValueFromHiddenArrayMetadata(
+  assetMetadata,
+  hiddenKey,
+  primaryKey,
+  fallback = 'N/A',
+) {
+  const hiddenRaw = assetMetadata?.[hiddenKey];
+
+  // Handle array of _hidden values
+  if (Array.isArray(hiddenRaw) && hiddenRaw.length > 0) {
+    return hiddenRaw
+      .filter((v) => typeof v === 'string' && v)
+      .map((v) => {
+        if (v.includes('|')) {
+          return v.split('|')[0].trim();
+        }
+        return v;
+      })
+      .join(', ');
+  }
+
+  // Handle single _hidden value
+  if (hiddenRaw && typeof hiddenRaw === 'string' && hiddenRaw.includes('|')) {
+    return hiddenRaw.split('|')[0].trim();
+  }
+
+  // Fallback to original property
+  return extractJoinedIfArrayElseSafe(assetMetadata, primaryKey, [primaryKey], fallback);
+}
+
+/**
  * Extract values from an array of objects with 'value' property,
  * splitting each value and taking the second part
  * @param dataJson - The data object
@@ -493,11 +629,19 @@ export function populateAssetFromMetadata(metadata) {
   const beverageType = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:beverageType');
   const packageOrContainerType = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:packageContainerType');
   const packageOrContainerMaterial = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:packageContainerMaterial');
-  const packageOrContainerSize = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:packageContainerSize');
+  const packageOrContainerSize = extractDisplayValueFromHiddenArrayMetadata(
+    assetMeta,
+    'tccc:packageContainerSize_hidden',
+    'tccc:packageContainerSize',
+  );
   const secondaryPackaging = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:secondaryPackaging');
 
   // Intended Use fields
-  const intendedBottlerCountry = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:intendedBottlerCountry');
+  const intendedBottlerCountry = extractDisplayValueFromHiddenArrayMetadata(
+    assetMeta,
+    'tccc:intendedBottlerCountry_hidden',
+    'tccc:intendedBottlerCountry',
+  );
   const intendedCustomers = extractJoinedIfArrayElseSafe(assetMeta, 'tccc:intendedCustomers');
   const intendedChannel = extractFromArrayValue(assetMeta, 'tccc:intendedChannel');
 
@@ -561,7 +705,7 @@ export function populateAssetFromMetadata(metadata) {
   const xcmKeywords = extractFromArrayValue(assetMeta, 'xcm:keywords', '');
 
   return {
-    agencyName: safeMetadataStringField(repoMeta, assetMeta, 'tccc:agencyName'),
+    agencyName: extractDisplayValueFromHiddenMetadata(repoMeta, assetMeta, 'tccc:agencyName_hidden', 'tccc:agencyName'),
     ageDemographic,
     alt: safeMetadataStringField(repoMeta, assetMeta, 'dc:title') || name,
     assetAssociatedWithBrand: associatedWBrand,
@@ -576,12 +720,7 @@ export function populateAssetFromMetadata(metadata) {
       assetMeta,
       'tccc:campaignActivationRemark',
     ),
-    campaignName: safeMetadataStringField(
-      repoMeta,
-      assetMeta,
-      'tccc:campaignName',
-      '',
-    ),
+    campaignName: extractDisplayValueFromHiddenMetadata(repoMeta, assetMeta, 'tccc:campaignName_hidden', 'tccc:campaignName', ''),
     campaignReach,
     campaignSubActivationRemark: extractJoinedIfArrayElseSafe(
       assetMeta,
