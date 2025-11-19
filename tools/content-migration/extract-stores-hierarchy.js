@@ -2079,8 +2079,8 @@ async function main() {
               return; // Skip this item
             }
 
-            // Buttons, teasers with URLs are considered unique (if not duplicates)
-            if ((item.type === 'button' || item.type === 'teaser') && item.linkSources) {
+            // Buttons and teasers are considered unique (with or without URLs)
+            if (item.type === 'button' || item.type === 'teaser') {
               uniqueItems.push(`${item.title} (${item.type})`);
               filteredItems.push(item);
               return;
