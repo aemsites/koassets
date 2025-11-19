@@ -784,6 +784,7 @@
 .content-stores .tree-item[data-item-type="accordion"] .rich-content.tree-children.expanded {
   display: flex;
   flex-direction: column;
+  gap: 0;
 }
 
 /* Custom scrollbar styling */

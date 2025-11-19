@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useAppConfig } from '../../hooks/useAppConfig';
 import type { AssetDetailsProps, Rendition, Asset, Metadata } from '../../types';
 
-import { AuthorizationStatus } from '../../clients/fadel-client';
+import { AuthorizationStatus, FadelClient } from '../../clients/fadel-client';
 import ActionButton from '../ActionButton';
 import { BUTTON_CONFIGS } from '../ActionButtonConfigs';
 import DownloadRenditionsModal from '../DownloadRenditionsModal';
@@ -55,6 +55,7 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     const [populatedImage, setPopulatedImage] = useState<Asset>(selectedImage as Asset);
     const [showPdfModal, setShowPdfModal] = useState<boolean>(false);
     const [pdfUrl, setPdfUrl] = useState<string>('');
+    const [isLoadingRightsProfile, setIsLoadingRightsProfile] = useState<boolean>(false);
 
     const rightsFree: boolean = (populatedImage?.readyToUse?.toLowerCase() === 'yes' || populatedImage?.authorized === AuthorizationStatus.AVAILABLE) ? true : false;
 
@@ -184,6 +185,24 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                     const populatedAsset = populateAssetFromMetadata(metadata as Metadata);
                     console.debug('Setting populated image with metadata:', populatedAsset.assetId);
                     setPopulatedImage(populatedAsset);
+
+                    // Fetch rights profile from FADEL
+                    setIsLoadingRightsProfile(true);
+                    try {
+                        const fadelClient = FadelClient.getInstance();
+                        const rightsProfiles = await fadelClient.getAssetRightsProfile(selectedImage.assetId);
+                        
+                        if (rightsProfiles.length > 0) {
+                            const rightsProfileTitle = rightsProfiles[0].description || rightsProfiles[0].rightsProfileTitle;
+                            if (rightsProfileTitle) {
+                                setPopulatedImage(prev => ({ ...prev, rightsProfileTitle }));
+                            }
+                        }
+                    } catch (fadelError) {
+                        console.error('Failed to fetch rights profile:', fadelError);
+                    } finally {
+                        setIsLoadingRightsProfile(false);
+                    }
                 } catch (error) {
                     console.error('Failed to fetch metadata:', error);
                     // Fallback to the provided asset
@@ -387,7 +406,9 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     <div className="tccc-assets-rights-grid">
                                         <div className="tccc-assets-rights-group">
                                             <span className="tccc-metadata-label">RIGHTS PROFILE TITLE</span>
-                                            <span className="tccc-metadata-value">{populatedImage?.rightsProfileTitle as string}</span>
+                                            <span className="tccc-metadata-value">
+                                                {isLoadingRightsProfile ? 'Loading...' : (populatedImage?.rightsProfileTitle as string)}
+                                            </span>
                                         </div>
                                         <div className="tccc-assets-rights-group">
                                             <span className="tccc-metadata-label">MARKET COVERED</span>
