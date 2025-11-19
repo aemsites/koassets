@@ -604,6 +604,7 @@
 .content-stores .tree-children.has-grid {
   display: none;
   flex-flow: row wrap;
+  align-items: flex-start;
   gap: 20px;
   padding: 20px 0 30px 20px;
   border: none;
@@ -673,6 +674,34 @@
 /* Accordion Items Styling */
 .content-stores .tree-item[data-item-type="accordion"] {
   margin-bottom: 1rem;
+  border-radius: 30px;
+  border: 1px solid #e0e0e0;
+  background: white;
+}
+
+/* Accordion expanded state - with scrolling */
+.content-stores .tree-item[data-item-type="accordion"]:has(.tree-node.expanded) {
+  max-height: 400px;
+  overflow: hidden auto;
+}
+
+/* Custom scrollbar for accordion items */
+.content-stores .tree-item[data-item-type="accordion"]::-webkit-scrollbar {
+  width: 6px;
+}
+
+.content-stores .tree-item[data-item-type="accordion"]::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 50px 0 30px;
+}
+
+.content-stores .tree-item[data-item-type="accordion"]::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 3px;
+}
+
+.content-stores .tree-item[data-item-type="accordion"]::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color-hover);
 }
 
 /* Disable all transitions on accordion and its children */
@@ -686,17 +715,18 @@
 /* Accordion node styling - collapsed state */
 .content-stores .tree-item[data-item-type="accordion"] .tree-node {
   background: white;
-  border: 1px solid #e0e0e0;
+  border: none;
   border-radius: 30px;
   cursor: pointer;
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 1;
   transition: none;
   min-height: 50px;
 }
 
 .content-stores .tree-item[data-item-type="accordion"] .tree-node:hover {
   background: white;
-  border-color: #c0c0c0;
 }
 
 /* Hide the default expand icon for accordion items */
@@ -737,8 +767,8 @@
 /* Expanded state - red text and up caret */
 .content-stores .tree-item[data-item-type="accordion"] .tree-node.expanded {
   background: white;
-  border-color: #e0e0e0;
   border-radius: 30px 30px 0 0;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .content-stores .tree-item[data-item-type="accordion"] .tree-node.expanded .node-title {
@@ -776,9 +806,8 @@
   margin: 0;
   padding: 20px 24px;
   background: white;
-  border: 1px solid #e0e0e0;
-  border-top: none;
-  border-radius: 0 0 30px 30px;
+  border: none;
+  border-radius: 0;
 }
 
 .content-stores .tree-item[data-item-type="accordion"] .rich-content.tree-children.expanded {
