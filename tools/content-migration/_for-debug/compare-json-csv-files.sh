@@ -115,6 +115,17 @@ compare_json_csv_files() {
       local rel_path="${file#$dir_path/}"
       local backup_file="$backup_top_dir/$rel_path"
       
+      # # Skip files in extracted-results/caches/ directory
+      # if [[ "$rel_path" == extracted-results/caches/* ]]; then
+      #   continue
+      # fi
+      
+      # # Skip jcr-content.json files
+      # local filename=$(basename "$file")
+      # if [[ "$filename" == "jcr-content.json" ]]; then
+      #   continue
+      # fi
+      
       # Get file extension
       local ext="${file##*.}"
       

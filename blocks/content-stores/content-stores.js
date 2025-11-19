@@ -513,6 +513,22 @@ function createViewerElement(contentStoresData) {
       treeItem.dataset.itemType = item.type;
     }
 
+    // Skip rendering container with title "Other Content" but render its children expanded
+    if (item.type === 'container' && item.title === 'Other Content') {
+      if (item.items && item.items.length > 0) {
+        const childrenContainer = document.createElement('div');
+        childrenContainer.className = 'tree-children has-grid expanded';
+        childrenContainer.style.padding = '0 0 30px 0';
+
+        item.items.forEach((child) => {
+          childrenContainer.appendChild(createTreeItem(child));
+        });
+
+        treeItem.appendChild(childrenContainer);
+      }
+      return treeItem;
+    }
+
     // For type 'text', only display the text content without title
     if (item.type === 'text') {
       if (item.text) {

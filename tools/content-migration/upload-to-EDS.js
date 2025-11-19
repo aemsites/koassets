@@ -597,6 +597,8 @@ if (require.main === module) {
     console.error('Options:');
     console.error('  -i, --input <file>         Input file with content paths (one per line, # for comments)');
     console.error('                             Example line: /content/share/us/en/all-content-stores');
+    console.error('  -s, --store <path>         Process single content store path');
+    console.error('                             Example: /content/share/us/en/all-content-stores');
     console.error('  -p, --path <path>          Path to local file or directory (alternative to positional)');
     console.error('  -d, --daFullPath <path>    Full DA destination path (alternative to positional)');
     console.error('  -pr, --preview             Trigger preview (always executes when set, regardless of status)');
@@ -630,6 +632,10 @@ if (require.main === module) {
     console.error('  ./upload-to-EDS.js --input stores.txt --preview --publish');
     console.error('  ./upload-to-EDS.js -i stores.txt --preview --publish --dry');
     console.error('');
+    console.error('Examples (single store from content path):');
+    console.error('  ./upload-to-EDS.js --store /content/share/us/en/all-content-stores --preview --publish');
+    console.error('  ./upload-to-EDS.js -s /content/share/us/en/all-content-stores-sprite --preview');
+    console.error('');
     console.error('Examples (individual files):');
     console.error('  ./upload-to-EDS.js "file.html"');
     console.error('  ./upload-to-EDS.js "file.html" "aemsites/koassets/{DA_DEST}/file.html"');
@@ -639,11 +645,18 @@ if (require.main === module) {
     console.error('  ./upload-to-EDS.js DATA/generated-eds-docs/all-content-stores --preview --publish --reup');
     console.error('  ./upload-to-EDS.js --input stores.txt --preview --publish --reup');
     console.error('');
-    console.error('Notes:');
-    console.error('  - By default, files are uploaded without preview/publish (use flags to enable)');
-    console.error('  - Preview and publish always execute when their flags are set (no status checks)');
-    console.error('  - Upload only executes if file is new or --reup is used (status checked unless --reup)');
-    console.error('  - Dry run mode skips all DA operations - useful for testing without actual uploads');
+    console.error('Behavior Notes:');
+    console.error('  - Upload: Skipped if file already exists (logs: "will skip upload")');
+    console.error('            Use --reup to force re-upload');
+    console.error('  - Preview: ALWAYS executes when --preview is set (logs: "will preview again due to --preview flag")');
+    console.error('             Even if already previewed, it will preview again');
+    console.error('  - Publish: ALWAYS executes when --publish is set (logs: "will publish again due to --publish flag")');
+    console.error('             Even if already published, it will publish again');
+    console.error('  - Logs clearly indicate whether operations will be skipped or executed');
+    console.error('  - Note: --input and --store are mutually exclusive (use one or the other, not both)');
+    console.error('');
+    console.error('Technical Notes:');
+    console.error('  - Dry run mode (--dry) shows what would happen without executing DA operations');
     console.error('  - For HTML files, extensions are stripped during preview/publish path construction');
     console.error('  - Configuration loaded from da.config file (DA_ORG, DA_REPO, DA_DEST)');
     console.error('');
@@ -779,7 +792,9 @@ if (require.main === module) {
     console.error('  -pr, --preview             Trigger preview (always executes when set, regardless of status)');
     console.error('  -pb, --publish             Trigger publish (always executes when set, regardless of status)');
     console.error('  -dr, --dry                 Dry run mode: skip actual DA operations (default: false)');
-    console.error('  -r, --reup                Re-upload mode: skip status checks, always upload (default: false)');
+    console.error('  -r, --reup                 Re-upload mode: skip status checks, always upload (default: false)');
+    console.error('  -c, --concurrency <number> Number of concurrent operations (default: 1)');
+    console.error('                             1 = sequential (safest), higher = faster but more load');
     console.error('  -h, --help                 Show this help message');
     console.error('');
     console.error('Examples (single file):');
@@ -801,6 +816,16 @@ if (require.main === module) {
     console.error('  ./upload-to-EDS.js "file.html"');
     console.error('  ./upload-to-EDS.js "file.html" "aemsites/koassets/{DA_DEST}/file.html"');
     console.error('  ./upload-to-EDS.js "file.html" "aemsites/koassets/{DA_DEST}/file.html" --preview --publish');
+    console.error('');
+    console.error('Behavior Notes:');
+    console.error('  - Upload: Skipped if file already exists (logs: "will skip upload")');
+    console.error('            Use --reup to force re-upload');
+    console.error('  - Preview: ALWAYS executes when --preview is set (logs: "will preview again due to --preview flag")');
+    console.error('             Even if already previewed, it will preview again');
+    console.error('  - Publish: ALWAYS executes when --publish is set (logs: "will publish again due to --publish flag")');
+    console.error('             Even if already published, it will publish again');
+    console.error('  - Logs clearly indicate whether operations will be skipped or executed');
+    console.error('  - Note: --input and --store are mutually exclusive (use one or the other, not both)');
     process.exit(1);
   }
 }
