@@ -781,13 +781,14 @@ function rewriteHierarchyStructure(jsonFilePath) {
     const hierarchyData = JSON.parse(fs.readFileSync(jsonFilePath, 'utf-8'));
 
     let titleCount = 0;
+    let otherContentCreated = 0;
 
     // Recursive function to transform items
     // eslint-disable-next-line no-inner-declarations
-    function transformItems(items) {
+    function transformItems(items, parentPath = null) {
       if (!items || !Array.isArray(items)) return items;
 
-      return items.map((item) => {
+      const transformed = items.map((item) => {
         const transformedItem = { ...item };
 
         // Transform type "title" to "section-title"
@@ -798,19 +799,76 @@ function rewriteHierarchyStructure(jsonFilePath) {
 
         // Recursively transform nested items
         if (transformedItem.items && Array.isArray(transformedItem.items)) {
-          transformedItem.items = transformItems(transformedItem.items);
+          transformedItem.items = transformItems(transformedItem.items, transformedItem.path);
         }
 
         return transformedItem;
       });
+
+      // Group consecutive buttons that have no parent into "Other Content" containers
+      const grouped = [];
+      let currentButtonGroup = [];
+
+      for (const item of transformed) {
+        // Check if this is a top-level button (no parent path specified)
+        const isTopLevelButton = item.type === 'button' && parentPath === null;
+
+        if (isTopLevelButton) {
+          // Add to current group
+          currentButtonGroup.push(item);
+        } else {
+          // Not a top-level button
+          // If we have accumulated buttons, wrap them in a container
+          if (currentButtonGroup.length > 0) {
+            // Update button paths to be children of "Other Content"
+            const buttonsWithUpdatedPaths = currentButtonGroup.map((btn) => ({
+              ...btn,
+              path: `Other Content${PATH_SEPARATOR}${btn.path}`,
+            }));
+            const container = {
+              type: 'container',
+              title: 'Other Content',
+              path: 'Other Content',
+              items: buttonsWithUpdatedPaths,
+            };
+            grouped.push(container);
+            otherContentCreated += 1;
+            currentButtonGroup = [];
+          }
+          // Add the non-button item
+          grouped.push(item);
+        }
+      }
+
+      // Handle any remaining buttons at the end
+      if (currentButtonGroup.length > 0) {
+        // Update button paths to be children of "Other Content"
+        const buttonsWithUpdatedPaths = currentButtonGroup.map((btn) => ({
+          ...btn,
+          path: `Other Content${PATH_SEPARATOR}${btn.path}`,
+        }));
+        const container = {
+          type: 'container',
+          title: 'Other Content',
+          path: 'Other Content',
+          items: buttonsWithUpdatedPaths,
+        };
+        grouped.push(container);
+        otherContentCreated += 1;
+      }
+
+      return grouped;
     }
 
-    // Transform all items in the hierarchy
+    // Transform all items in the hierarchy (passing null as parentPath for top level)
     if (hierarchyData.items) {
-      hierarchyData.items = transformItems(hierarchyData.items);
+      hierarchyData.items = transformItems(hierarchyData.items, null);
     }
 
     console.log(`  ✅ Renamed ${titleCount} "title" type(s) to "section-title"`);
+    if (otherContentCreated > 0) {
+      console.log(`  ✅ Created ${otherContentCreated} "Other Content" container(s) for grouped buttons`);
+    }
 
     // Return the transformed data instead of writing to file
     return hierarchyData;

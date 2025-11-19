@@ -1559,6 +1559,59 @@ async function main() {
       mainHierarchy = extractTabsFromJCR(jcrData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrPathMap, jcrTeaserImageMap);
     }
 
+    // Assign __jcrOrder to tabs based on their position in JCR root container (and nested container if applicable)
+    if (mainHierarchy.length > 0 && tabsPaths.length > 0) {
+      // Find which root container the tabs belong to
+      const rootContainerKeys = jcrData.__containerKeyOrder && jcrData.__containerKeyOrder.length > 0
+        ? jcrData.__containerKeyOrder.filter((key) => {
+          const container = jcrData.root.container[key];
+          return container && typeof container === 'object' && !key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:');
+        })
+        : Object.keys(jcrData.root.container).filter((key) => {
+          const container = jcrData.root.container[key];
+          return container && typeof container === 'object' && !key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:');
+        });
+
+      // For each tabs path, find which root container it belongs to
+      const tabsPath = tabsPaths[0]; // Use the first (main) tabs path
+      // Extract root container key from path like /jcr:content/root/container/container_408429834_/...
+      const pathMatch = tabsPath.match(/\/jcr:content\/root\/container\/([^/]+)(?:\/([^/]+))?/);
+      if (pathMatch) {
+        const tabsRootContainer = pathMatch[1];
+        const tabsNestedContainer = pathMatch[2]; // May be undefined if tabs are directly in root
+        const tabsRootOrder = rootContainerKeys.indexOf(tabsRootContainer);
+
+        if (tabsRootOrder >= 0) {
+          let tabsOrder = tabsRootOrder;
+
+          // If tabs are in a nested container, add nested order
+          if (tabsNestedContainer) {
+            const rootContainer = jcrData.root.container[tabsRootContainer];
+            if (rootContainer) {
+              const nestedKeys = Object.keys(rootContainer).filter(
+                (k) => !k.startsWith('jcr:') && !k.startsWith('cq:') && !k.startsWith('sling:'),
+              );
+              const nestedIndex = nestedKeys.indexOf(tabsNestedContainer);
+              if (nestedIndex >= 0) {
+                tabsOrder = tabsRootOrder + (nestedIndex / 1000);
+                console.log(`\n📍 Assigning __jcrOrder to tabs based on nested container position (order: ${tabsOrder})`);
+              } else {
+                console.log(`\n📍 Assigning __jcrOrder to tabs based on root container position (order: ${tabsOrder})`);
+              }
+            }
+          } else {
+            console.log(`\n📍 Assigning __jcrOrder to tabs based on root container position (order: ${tabsOrder})`);
+          }
+
+          mainHierarchy.forEach((item) => {
+            if (!item.__jcrOrder) {
+              item.__jcrOrder = tabsOrder;
+            }
+          });
+        }
+      }
+    }
+
     // Extract non-tabs content from JCR (separate extraction, no merging yet)
     console.log('\n📥 Extracting non-tabs content from JCR...\n');
     // eslint-disable-next-line no-use-before-define
@@ -2079,8 +2132,8 @@ async function main() {
               return; // Skip this item
             }
 
-            // Buttons, teasers with URLs are considered unique (if not duplicates)
-            if ((item.type === 'button' || item.type === 'teaser') && item.linkSources) {
+            // Buttons and teasers are considered unique (with or without URLs)
+            if (item.type === 'button' || item.type === 'teaser') {
               uniqueItems.push(`${item.title} (${item.type})`);
               filteredItems.push(item);
               return;
@@ -4884,16 +4937,61 @@ function extractComponentsFromContainer(container, items, sectionTitle, jcrTease
                 id: `accordion-${createDeterministicId(panelTitle + panelKey)}`,
               };
 
-              // Extract text from the panel (look for text components)
+              // Extract text from the panel (look for direct text components)
               let panelText = '';
-              for (const textKey in panel) {
-                if (textKey.startsWith('text') && panel[textKey] && panel[textKey].text) {
+              const nestedChildren = [];
+
+              for (const childKey in panel) {
+                if (childKey.startsWith('jcr:') || childKey.startsWith('cq:') || childKey.startsWith('sling:')) {
+                  continue;
+                }
+
+                const child = panel[childKey];
+                if (!child || typeof child !== 'object') continue;
+
+                const childResourceType = child['sling:resourceType'];
+
+                // Found a direct text component
+                if (childKey.startsWith('text') && childResourceType === 'tccc-dam/components/text' && child.text) {
                   if (panelText) panelText += '\n';
-                  panelText += panel[textKey].text;
+                  panelText += child.text;
+                }
+                // Found a nested container - extract it recursively
+                else if (childResourceType === 'tccc-dam/components/container') {
+                  const nestedPanelTitle = child['cq:panelTitle'] || child['jcr:title'];
+                  if (nestedPanelTitle) {
+                    // This is a nested accordion panel
+                    const nestedAccordionItem = {
+                      title: nestedPanelTitle,
+                      path: `${sectionTitle}${PATH_SEPARATOR}${panelTitle}${PATH_SEPARATOR}${nestedPanelTitle}`,
+                      type: 'accordion',
+                      key: childKey,
+                      id: `accordion-${createDeterministicId(nestedPanelTitle + childKey)}`,
+                    };
+
+                    // Extract text from the nested panel
+                    let nestedText = '';
+                    for (const nestedTextKey in child) {
+                      if (nestedTextKey.startsWith('text') && child[nestedTextKey] && child[nestedTextKey].text) {
+                        if (nestedText) nestedText += '\n';
+                        nestedText += child[nestedTextKey].text;
+                      }
+                    }
+                    if (nestedText) {
+                      nestedAccordionItem.text = stripHostsFromText(nestedText);
+                    }
+
+                    nestedChildren.push(nestedAccordionItem);
+                  }
                 }
               }
+
               if (panelText) {
                 accordionItem.text = stripHostsFromText(panelText);
+              }
+
+              if (nestedChildren.length > 0) {
+                accordionItem.items = nestedChildren;
               }
 
               items.push(accordionItem);
