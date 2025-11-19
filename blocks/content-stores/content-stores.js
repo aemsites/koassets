@@ -700,15 +700,8 @@ function createViewerElement(contentStoresData) {
       childrenContainer.className = 'tree-children';
       if (isExpanded) childrenContainer.classList.add('expanded');
 
-      // Check if all children are leaf items (no grandchildren), excluding text type items
-      const nonTextChildren = item.items.filter((child) => child.type !== 'text');
-      const allChildrenAreLeaves = nonTextChildren.length > 0 && nonTextChildren.every(
-        (child) => !child.items || child.items.length === 0,
-      );
-      // Apply grid layout if all non-text children are leaf items
-      if (allChildrenAreLeaves) {
-        childrenContainer.classList.add('has-grid');
-      }
+      // Always apply grid layout
+      childrenContainer.classList.add('has-grid');
 
       item.items.forEach((child) => {
         childrenContainer.appendChild(createTreeItem(child));
