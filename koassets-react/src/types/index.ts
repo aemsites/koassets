@@ -704,7 +704,7 @@ export interface AssetMetadata {
     'tccc:assignedAM'?: string;
     'tccc:agencyName'?: string;
     'tccc:autoPublish'?: boolean;
-    'tccc:assetType'?: string;
+    'tccc:contentType'?: string;
     'tccc:packageDepicted'?: string;
     'tccc:masterOrAdaptation'?: string;
     'tccc:fundingBU'?: string[];
@@ -769,7 +769,7 @@ declare global {
         toggleCart?: () => void;
         updateCartBadge?: (numItems: number) => void;
 
-        // Download panel management functions  
+        // Download panel management functions
         openDownloadPanel?: () => void;
         closeDownloadPanel?: () => void;
         toggleDownloadPanel?: () => void;
