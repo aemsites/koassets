@@ -129,6 +129,7 @@ compare_json_test() {
   fi
   
   # Normalize and compare JSON (ignore whitespace differences)
+  # Note: jq -S sorts object keys (order irrelevant) but preserves array order (order matters)
   local generated_normalized=$(jq -S . "$generated_file" 2>/dev/null)
   local backup_normalized=$(jq -S . "$backup_file" 2>/dev/null)
   
