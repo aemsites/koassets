@@ -45,17 +45,6 @@ export default defineConfig(({ mode }) => {
     css: {
       devSourcemap: true
     },
-    optimizeDeps: {
-      include: ['@react-aria/live-announcer']
-    },
-    ssr: {
-      noExternal: ['@react-aria/live-announcer', 'react-aria-components']
-    },
-    resolve: {
-      alias: {
-        '@react-aria/live-announcer': '/Users/sharmon/Documents/Cursor/koassets/koassets-react/node_modules/@react-aria/live-announcer/dist/import.mjs'
-      }
-    },
     build: {
       sourcemap: true, // Enable source maps for production builds too
       minify: 'terser', // Use terser for aggressive minification
