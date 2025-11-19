@@ -14,6 +14,7 @@ import AssetDetails from './AssetDetails/';
 import AssetPreview from './AssetPreview';
 import './ImageGallery.css';
 import SearchPanel from './SearchPanel';
+import { loadSearchExpandAllDetailsState, saveSearchExpandAllDetailsState } from '../utils/toggleStateStorage';
 
 /**
  * Sanitize HTML content to prevent XSS attacks
@@ -111,8 +112,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     const [showDetailsModal, setShowDetailsModal] = useState<boolean>(false);
     // Checkbox selection state
     const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
-    // Show full details toggle state
-    const [expandAllDetails, setExpandAllDetails] = useState<boolean>(true);
+    // Show full details toggle state - load from local storage or use default (true)
+    const [expandAllDetails, setExpandAllDetails] = useState<boolean>(() => loadSearchExpandAllDetailsState(true));
     // View type state (grid or list)
     const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
     // Title expansion state
@@ -124,6 +125,11 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
     const displayedCount = visibleImages.length;
     const selectedCount = selectedCards.size;
+
+    // Persist expandAllDetails state to local storage whenever it changes
+    useEffect(() => {
+        saveSearchExpandAllDetailsState(expandAllDetails);
+    }, [expandAllDetails]);
 
     useEffect(() => {
         selectAuthorized ? setVisibleImages(images.filter(image => image.authorized === undefined || image.authorized === AuthorizationStatus.AVAILABLE)) : setVisibleImages(images);

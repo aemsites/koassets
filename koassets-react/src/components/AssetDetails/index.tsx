@@ -25,6 +25,7 @@ import AssetDetailsTechnicalInfo from './AssetDetailsTechnicalInfo';
 import { isPdfPreview } from '../../constants/filetypes';
 import { populateAssetFromMetadata } from '../../utils/assetTransformers';
 import AdobePDFViewer from '../AdobePDFViewer';
+import { loadDetailsCollapseAllState, saveDetailsCollapseAllState } from '../../utils/toggleStateStorage';
 
 /* Displayed on the asset details modal header section
 campaignName 
@@ -46,7 +47,8 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 }) => {
     // Get dynamicMediaClient from context
     const { dynamicMediaClient } = useAppConfig();
-    const [collapseAll, setCollapseAll] = useState<boolean>(false);
+    // Collapse All toggle state - load from local storage or use default (false)
+    const [collapseAll, setCollapseAll] = useState<boolean>(() => loadDetailsCollapseAllState(false));
     const [showDownloadRenditionsModal, setShowDownloadRenditionsModal] = useState<boolean>(false);
     const [actionButtonEnable, setActionButtonEnable] = useState<boolean>(false);
     const [watermarkRendition, setWatermarkRendition] = useState<Rendition | undefined>(undefined);
@@ -55,6 +57,11 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     const [pdfUrl, setPdfUrl] = useState<string>('');
 
     const rightsFree: boolean = (populatedImage?.readyToUse?.toLowerCase() === 'yes' || populatedImage?.authorized === AuthorizationStatus.AVAILABLE) ? true : false;
+
+    // Persist collapseAll state to local storage whenever it changes
+    useEffect(() => {
+        saveDetailsCollapseAllState(collapseAll);
+    }, [collapseAll]);
 
     const handleToggleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setCollapseAll(e.target.checked);

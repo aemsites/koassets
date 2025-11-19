@@ -339,6 +339,7 @@ function generateIndividualStoreFiles(storesList = null) {
       const storeName = extractStoreName(csvPath);
       const isMainStore = storeName === 'all-content-stores' || storeName === 'bottler-content-stores';
 
+      console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>');
       console.log(`   Processing: ${storeName}`);
 
       // Convert CSV to JSON
@@ -458,6 +459,56 @@ if (require.main === module) {
   // Parse command line arguments
   const args = process.argv.slice(2);
   let storesList = null;
+
+  // Check for help flag
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log(`
+📋 AEM to EDS Document Generator
+================================
+
+DESCRIPTION:
+  Generates EDS-compatible JSON sheets and HTML pages from CSV files.
+  Processes all CSV files in DATA/*-content-stores*/derived-results/ directories.
+
+USAGE:
+  node generate-EDS-docs.js [OPTIONS]
+
+OPTIONS:
+  --input <file>   Process only stores listed in the file (one content path per line)
+  --help, -h       Show this help message
+
+EXAMPLES:
+  # Process all CSV files
+  node generate-EDS-docs.js
+
+  # Process only specific stores from a file
+  node generate-EDS-docs.js --input stores.txt
+
+OUTPUT:
+  Creates files in DATA/generated-eds-docs/{store-name}/
+  - {store-name}-sheet.json  # Multi-sheet JSON for EDS
+  - {store-name}.html        # EDS page with content-stores block
+`);
+    process.exit(0);
+  }
+
+  // Validate arguments - check for unknown flags
+  const knownFlags = ['--input', '-i', '--help', '-h'];
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg.startsWith('-')) {
+      if (!knownFlags.includes(arg)) {
+        console.error(`❌ ERROR: Unknown flag: ${arg}`);
+        console.error('');
+        console.error('Run with --help to see available options');
+        process.exit(1);
+      }
+      // Skip the next argument if this is --input
+      if (arg === '--input' || arg === '-i') {
+        i += 1;
+      }
+    }
+  }
 
   // Check for --input flag
   const inputIndex = args.indexOf('--input');

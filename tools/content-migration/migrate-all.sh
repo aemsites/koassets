@@ -1,27 +1,76 @@
 #!/bin/bash
 set -e
 
-# Usage: ./migrate-all.sh --input stores-file
-#   --input <file>  Required file containing list of store paths (one per line)
+# Usage: ./migrate-all.sh [--input stores-file | --store content-path]
+#   --input <file>  File containing list of store paths (one per line)
+#   --store <path>  Single content store path (e.g., /content/share/us/en/all-content-stores)
+#
+# Note: Either --input or --store must be provided
 
-# Parse arguments - stores file is REQUIRED
+# Parse arguments - either stores file OR single store path is REQUIRED
 stores_file=""
-if [[ "$1" == "--input" && -n "$2" ]]; then
-    stores_file="$2"
-elif [[ -n "$1" && -f "$1" ]]; then
-    # Support positional argument for backward compatibility
-    stores_file="$1"
-fi
+single_store=""
 
-if [[ -z "$stores_file" ]]; then
-    echo "❌ ERROR: Stores file is required"
-    echo "Usage: $0 --input stores-file"
+# Parse all arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --input)
+            if [[ -n "$2" ]]; then
+                stores_file="$2"
+                shift 2
+            else
+                echo "❌ ERROR: --input requires a file argument"
+                exit 1
+            fi
+            ;;
+        --store)
+            if [[ -n "$2" ]]; then
+                single_store="$2"
+                shift 2
+            else
+                echo "❌ ERROR: --store requires a content path argument"
+                exit 1
+            fi
+            ;;
+        *)
+            # Support positional argument for backward compatibility
+            if [[ -z "$stores_file" && -z "$single_store" && -f "$1" ]]; then
+                stores_file="$1"
+                shift
+            else
+                echo "❌ ERROR: Unknown argument: $1"
+                echo "Usage: $0 [--input stores-file | --store content-path]"
+                exit 1
+            fi
+            ;;
+    esac
+done
+
+# Validate that either --input or --store is provided (but not both)
+if [[ -z "$stores_file" && -z "$single_store" ]]; then
+    echo "❌ ERROR: Either --input or --store must be provided"
+    echo "Usage: $0 [--input stores-file | --store content-path]"
     exit 1
 fi
 
-if [[ ! -f "$stores_file" ]]; then
+if [[ -n "$stores_file" && -n "$single_store" ]]; then
+    echo "❌ ERROR: Cannot use both --input and --store at the same time"
+    echo "Usage: $0 [--input stores-file | --store content-path]"
+    exit 1
+fi
+
+if [[ -n "$stores_file" && ! -f "$stores_file" ]]; then
     echo "❌ ERROR: Stores file not found: $stores_file"
     exit 1
+fi
+
+# If using --store, create a temporary file for downstream scripts
+temp_stores_file=""
+if [[ -n "$single_store" ]]; then
+    temp_stores_file=$(mktemp)
+    echo "$single_store" > "$temp_stores_file"
+    stores_file="$temp_stores_file"
+    trap 'rm -f "$temp_stores_file"' EXIT
 fi
 
 echo "=========================================="
@@ -30,11 +79,15 @@ echo "=========================================="
 echo ""
 
 # Extract all-content-stores & stores
-#node extract-tab-hierarchy-all.js --recursive --debug ### ==> will fetch '/content/share/us/en/*-content-stores'
+#node extract-stores-hierarchy.js --recursive --debug ### ==> will fetch '/content/share/us/en/*-content-stores'
 
 # Use --input flag to pass stores file to Node.js script
-echo "📄 Using stores from file: $stores_file"
-node extract-tab-hierarchy-all.js --input "$stores_file"
+if [[ -n "$single_store" ]]; then
+    echo "📄 Processing single store: $single_store"
+else
+    echo "📄 Using stores from file: $stores_file"
+fi
+node extract-stores-hierarchy.js --input "$stores_file"
 
 
 echo "=========================================="
@@ -65,5 +118,5 @@ echo "=========================================="
 echo ""
 
 node upload-images.js -c 10
-node upload-to-EDS.js --input "$stores_file" --preview #--debug
+node upload-to-EDS.js -c 5 --input "$stores_file" --preview #--debug
 

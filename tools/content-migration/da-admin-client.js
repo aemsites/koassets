@@ -10,14 +10,19 @@ const { URL } = require('url');
  */
 function parseConfigValue(rawValue) {
   if (rawValue === null || rawValue === undefined) return null;
-  // Remove inline comments (# or //)
-  const cleanValue = rawValue.split('#')[0].split('//')[0].trim();
+  // Remove inline comments (# for comments, but preserve // in URLs)
+  let cleanValue = rawValue.split('#')[0].trim();
+  // Only remove // if it's preceded by whitespace (comment), not part of a URL
+  const commentIndex = cleanValue.search(/\s+\/\//);
+  if (commentIndex !== -1) {
+    cleanValue = cleanValue.substring(0, commentIndex).trim();
+  }
   return cleanValue; // Allow empty strings
 }
 
 // Load configuration from da.config
 let DA_ORG; let DA_REPO; let DA_BRANCH; let DA_DEST; let DA_BEARER_TOKEN; let PUBLISH;
-let IMAGES_BASE;
+let IMAGES_BASE; let AEM_AUTHOR;
 try {
   const daConfig = fs.readFileSync(path.join(__dirname, 'da.config'), 'utf8').trim();
 
@@ -45,12 +50,16 @@ try {
   const imagesBaseMatch = daConfig.match(/IMAGES_BASE=(.*)/);
   IMAGES_BASE = parseConfigValue(imagesBaseMatch ? imagesBaseMatch[1] : null);
 
+  const aemAuthorMatch = daConfig.match(/AEM_AUTHOR=(.*)/);
+  AEM_AUTHOR = parseConfigValue(aemAuthorMatch ? aemAuthorMatch[1] : null);
+
   if (!DA_ORG) throw new Error('DA_ORG not found in da.config');
   if (!DA_REPO) throw new Error('DA_REPO not found in da.config');
   if (!DA_BRANCH) throw new Error('DA_BRANCH not found in da.config');
   if (DA_DEST === null) throw new Error('DA_DEST not found in da.config');
   if (!DA_BEARER_TOKEN) throw new Error('DA_BEARER_TOKEN not found in da.config');
   if (!IMAGES_BASE) throw new Error('IMAGES_BASE not found in da.config');
+  if (!AEM_AUTHOR) throw new Error('AEM_AUTHOR not found in da.config');
 } catch (error) {
   console.error(`❌ Error loading configuration from da.config: ${error.message}`);
   process.exit(1);
@@ -353,6 +362,7 @@ module.exports = {
   DA_DEST,
   PUBLISH,
   IMAGES_BASE,
+  AEM_AUTHOR,
   createSource,
   previewSource,
   publishSource,

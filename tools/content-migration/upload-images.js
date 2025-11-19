@@ -5,24 +5,24 @@
 const fs = require('fs');
 const path = require('path');
 const {
-  DA_ORG, DA_REPO, DA_DEST, IMAGES_BASE, isImageUploaded,
+  DA_ORG, DA_REPO, DA_DEST, IMAGES_BASE,
 } = require('./da-admin-client.js');
-const { uploadToEDS, sleep } = require('./upload-to-EDS.js');
+const { uploadToEDS } = require('./upload-to-EDS.js');
 const { DATA_DIR } = require('./constants.js');
 
 // Parse command line arguments
-// Usage: ./upload-images.js [--input <stores-file>] [--path <imagesPath>] [--concurrency <number>] [--debug]
+// Usage: ./upload-images.js [--input <stores-file>] [--path <imagesPath>] [--concurrency <number>] [--dry]
 // Example: ./upload-images.js --input stores.txt --concurrency 10
 // Example: ./upload-images.js --path all-content-stores/extracted-results/images --concurrency 10
 // Example: ./upload-images.js --concurrency 10  (auto-discover with concurrency=10)
 // Example: ./upload-images.js (auto-discovers all content stores)
-// Example: ./upload-images.js --input stores.txt --debug
+// Example: ./upload-images.js --input stores.txt --dry
 const args = process.argv.slice(2);
 
 let imagesPath;
 let concurrency = 1;
 let storesFile;
-let debugFlag = false;
+let dryFlag = false;
 
 // Parse flags
 for (let i = 0; i < args.length; i += 1) {
@@ -37,58 +37,18 @@ for (let i = 0; i < args.length; i += 1) {
   } else if (arg === '--concurrency' || arg === '-c') {
     concurrency = parseInt(args[i + 1], 10) || 1;
     i += 1; // Skip next argument since we consumed it
-  } else if (arg === '--debug' || arg === '-db') {
-    debugFlag = true;
+  } else if (arg === '--dry' || arg === '-dr') {
+    dryFlag = true;
+  } else if (arg.startsWith('-')) {
+    // Unknown flag
+    if (arg !== '--help' && arg !== '-h') {
+      console.error(`❌ ERROR: Unknown flag: ${arg}`);
+      console.error('');
+      console.error('Run with --help to see available options');
+      process.exit(1);
+    }
   }
   // --help and -h flags are handled separately below
-}
-
-// Debug statistics tracking
-const debugStats = {
-  totalImages: 0,
-  uploaded: [],
-  skipped: [],
-  failed: [],
-};
-
-/**
- * Display debug mode summary
- */
-function displayDebugSummary() {
-  console.log('\n╔════════════════════════════════════════════════════════════════════════╗');
-  console.log('║                    🐛 DEBUG MODE SUMMARY                               ║');
-  console.log('╚════════════════════════════════════════════════════════════════════════╝');
-  console.log(`\n📊 Total images processed: ${debugStats.totalImages}`);
-
-  console.log('\n📤 Upload Operations:');
-  if (debugStats.uploaded.length > 0) {
-    console.log(`   ✅ Would upload (${debugStats.uploaded.length}):`);
-    debugStats.uploaded.forEach((file) => {
-      console.log(`      • ${file}`);
-    });
-  } else {
-    console.log('   ✅ Would upload: 0');
-  }
-
-  if (debugStats.skipped.length > 0) {
-    console.log(`   ⏭️  Already exist (${debugStats.skipped.length}):`);
-  } else {
-    console.log('   ⏭️  Already exist: 0');
-  }
-
-  if (debugStats.failed.length > 0) {
-    console.log(`   ❌ Failed checks (${debugStats.failed.length}):`);
-    debugStats.failed.forEach((file) => {
-      console.log(`      • ${file}`);
-    });
-  } else {
-    console.log('   ❌ Failed checks: 0');
-  }
-
-  console.log('\n🎯 Summary:');
-  console.log(`   → Would upload: ${debugStats.uploaded.length} images`);
-  console.log(`   → Would skip: ${debugStats.skipped.length} images (already exist)`);
-  console.log('');
 }
 
 /**
@@ -121,11 +81,10 @@ function extractStoreNameFromPath(contentPath) {
  *                                 If not provided, auto-discovers all content stores with extracted-results/images
  * @param {number} [concurrency=1] - Number of concurrent uploads (1 = sequential, higher = more parallel)
  * @param {string[]} [storesList] - Optional: List of store paths/names to process (from --input file)
- * @param {boolean} [debug=false] - Debug mode: check status but skip actual uploads
- * @param {boolean} [isTopLevel=true] - Internal: whether this is the top-level call (for summary display)
+ * @param {boolean} [dry=false] - Dry run mode: check status but skip actual uploads
  */
 // eslint-disable-next-line no-shadow
-async function uploadAllImages(imagesPath, concurrency = 1, storesList = null, debug = false, isTopLevel = true) {
+async function uploadAllImages(imagesPath, concurrency = 1, storesList = null, dry = false) {
   // If no imagesPath provided, auto-discover all content stores with images
   if (!imagesPath) {
     console.log('\n📸 Auto-discovering content stores with images...');
@@ -153,6 +112,7 @@ async function uploadAllImages(imagesPath, concurrency = 1, storesList = null, d
       const absoluteImagesDir = path.resolve(__dirname, imagesDir);
 
       if (fs.existsSync(absoluteImagesDir)) {
+        console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>');
         console.log(`\n   📁 Processing: ${imagesDir}`);
 
         // Derive targetDaBasePath: ${DA_ORG}/${DA_REPO}/${DA_DEST}/${FRAGMENTS_BASE}${contentStoreDir}
@@ -163,19 +123,14 @@ async function uploadAllImages(imagesPath, concurrency = 1, storesList = null, d
 
         console.log(`   Target DA path: ${targetDaBasePath}`);
 
-        // Recursively call uploadAllImages with the specific path (not top level)
-        await uploadAllImages(imagesDir, concurrency, storesList, debug, false);
+        // Recursively call uploadAllImages with the specific path
+        await uploadAllImages(imagesDir, concurrency, storesList, dry);
       } else {
         console.log(`   ⚠️ Skipping ${contentStoreDir}: no images directory found`);
       }
     }, Promise.resolve());
 
     console.log('\n✅ Completed processing all content stores');
-
-    // Display debug summary if in debug mode
-    if (debug) {
-      displayDebugSummary();
-    }
     return;
   }
 
@@ -205,8 +160,8 @@ async function uploadAllImages(imagesPath, concurrency = 1, storesList = null, d
   console.log(`\n📸 Uploading all images from: ${imagesPath} (${absoluteImagesPath})`);
   console.log(`   Destination: ${targetDaBasePath}`);
   console.log(`   Concurrency: ${concurrency} ${concurrency === 1 ? '(sequential)' : '(parallel)'}`);
-  if (debug) {
-    console.log('   🐛 Debug mode: Will check status but skip actual uploads');
+  if (dry) {
+    console.log('   🧪 Dry run mode: Will check status but skip actual uploads');
   }
 
   // Check if images directory exists
@@ -215,115 +170,12 @@ async function uploadAllImages(imagesPath, concurrency = 1, storesList = null, d
     return;
   }
 
-  // Get all files in the images directory
-  const files = fs.readdirSync(absoluteImagesPath, { withFileTypes: true });
-
-  // Filter for image files (common image extensions)
-  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.tiff'];
-  const imageFiles = files
-    .filter((file) => file.isFile())
-    .filter((file) => {
-      const ext = path.extname(file.name).toLowerCase();
-      return imageExtensions.includes(ext);
-    })
-    .map((file) => file.name);
-
-  if (imageFiles.length === 0) {
-    console.log('   ⚠️ No image files found in directory');
-    return;
-  }
-
-  console.log(`   Found ${imageFiles.length} image files to upload`);
-
-  // Helper function to split array into chunks
-  const chunkArray = (array, chunkSize) => {
-    const chunks = [];
-    for (let i = 0; i < array.length; i += chunkSize) {
-      chunks.push(array.slice(i, i + chunkSize));
-    }
-    return chunks;
-  };
-
-  // Split images into batches based on concurrency
-  const imageBatches = chunkArray(imageFiles, concurrency);
-  let totalUploaded = 0;
-  let totalSkipped = 0;
-  let totalFailed = 0;
-
-  console.log(`   Processing ${imageBatches.length} batch(es) of up to ${concurrency} images each`);
-
-  // Process each batch
-  for (let batchIndex = 0; batchIndex < imageBatches.length; batchIndex += 1) {
-    const batch = imageBatches[batchIndex];
-    console.log(`\n   📦 Batch ${batchIndex + 1}/${imageBatches.length}: uploading ${batch.length} images...`);
-
-    // Upload all images in current batch concurrently
-    const batchPromises = batch.map(async (imageName) => {
-      const localImagePath = path.join(absoluteImagesPath, imageName);
-      // Ensure targetDaBasePath ends with / and construct full DA path for this image
-      const normalizedDaPath = targetDaBasePath.endsWith('/') ? targetDaBasePath : `${targetDaBasePath}/`;
-      const daImagePath = `${normalizedDaPath}${imageName}`;
-
-      try {
-        // Track total images in debug mode
-        if (debug) {
-          debugStats.totalImages += 1;
-        }
-
-        // Check if image already exists
-        const alreadyExists = await isImageUploaded(daImagePath);
-
-        if (alreadyExists) {
-          console.log(`      ⏭️  Already exists: ${imageName}`);
-          if (debug) {
-            debugStats.skipped.push(daImagePath);
-          }
-          return { imageName, status: 'skipped' };
-        }
-
-        if (debug) {
-          console.log(`      🐛 [DEBUG] Would upload: ${imageName}`);
-          debugStats.uploaded.push(daImagePath);
-          return { imageName, status: 'success' };
-        }
-
-        console.log(`      📤 Uploading: ${imageName}`);
-        await uploadToEDS(localImagePath, daImagePath, false, false);
-        console.log(`      ✅ Uploaded: ${imageName}`);
-        return { imageName, status: 'success' };
-      } catch (error) {
-        console.error(`      ❌ Error uploading ${imageName}: ${error.message}`);
-        if (debug) {
-          debugStats.failed.push(`${daImagePath} (${error.message})`);
-        }
-        return { imageName, status: 'error', error: error.message };
-      }
-    });
-
-    // Wait for all uploads in this batch to complete
-    const batchResults = await Promise.all(batchPromises);
-    const batchUploaded = batchResults.filter((r) => r.status === 'success').length;
-    const batchSkipped = batchResults.filter((r) => r.status === 'skipped').length;
-    const batchFailed = batchResults.filter((r) => r.status === 'error').length;
-
-    totalUploaded += batchUploaded;
-    totalSkipped += batchSkipped;
-    totalFailed += batchFailed;
-
-    console.log(`   ✅ Batch ${batchIndex + 1} completed: ${batchUploaded} uploaded, ${batchSkipped} skipped, ${batchFailed} failed`);
-
-    // Small pause between batches to avoid overwhelming server (except for last batch)
-    if (batchIndex < imageBatches.length - 1) {
-      console.log('   ⏸️  Pausing briefly before next batch...');
-      await sleep(500); // 0.5 second pause between batches
-    }
-  }
-
-  console.log(`\n✅ All uploads completed: ${totalUploaded} uploaded, ${totalSkipped} skipped, ${totalFailed} failed out of ${imageFiles.length} total`);
-
-  // Display debug summary if in debug mode (only for top-level calls)
-  if (debug && isTopLevel) {
-    displayDebugSummary();
+  // Upload the entire directory using uploadToEDS with concurrency support
+  try {
+    await uploadToEDS(absoluteImagesPath, targetDaBasePath, false, false, false, dry, null, concurrency);
+    console.log(`\n✅ Completed uploading images from: ${imagesPath}`);
+  } catch (error) {
+    console.error(`❌ Error uploading images: ${error.message}`);
   }
 }
 
@@ -337,7 +189,7 @@ function showHelp() {
   console.error('  Can auto-discover all content stores or upload from a specific path.');
   console.error('');
   console.error('Usage:');
-  console.error('  ./upload-images.js [--input <stores-file>] [--path <imagesPath>] [--concurrency <number>] [--debug]');
+  console.error('  ./upload-images.js [--input <stores-file>] [--path <imagesPath>] [--concurrency <number>] [--dry]');
   console.error('');
   console.error('Options:');
   console.error('  -i, --input <file>         Stores file (one content path per line, # for comments)');
@@ -354,7 +206,7 @@ function showHelp() {
   console.error('                             1 = sequential (safest), higher = faster but more load on server');
   console.error('                             Recommended: 1-10');
   console.error('');
-  console.error('  -db, --debug               Debug mode: Check status but skip actual uploads');
+  console.error('  -dr, --dry                 Dry run mode: Check status but skip actual uploads');
   console.error('                             Shows what would be uploaded without making changes');
   console.error('');
   console.error('  -h, --help                 Show this help message');
@@ -436,9 +288,9 @@ if (imagesPath) {
   console.log('   Images Path: (auto-discovering all content stores)');
 }
 console.log(`   Concurrency: ${concurrency}`);
-console.log(`   Debug: ${debugFlag}`);
+console.log(`   Dry run: ${dryFlag}`);
 
-uploadAllImages(imagesPath, concurrency, storesList, debugFlag)
+uploadAllImages(imagesPath, concurrency, storesList, dryFlag)
   .then(() => {
     console.log('\n✅ Process complete. Exiting...');
     // Force exit after brief delay to allow console output to flush
