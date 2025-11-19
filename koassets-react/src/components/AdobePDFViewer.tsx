@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './AdobePDFViewer.css';
 
 interface AdobePDFViewerProps {
@@ -9,21 +9,31 @@ interface AdobePDFViewerProps {
     onClose?: () => void;
 }
 
+// Adobe DC View type definition
+interface AdobeDCView {
+    previewFile: (config: {
+        content: { location: { url: string } };
+        metaData: { fileName: string };
+    }, viewerConfig: {
+        embedMode: string;
+        showDownloadPDF: boolean;
+        showPrintPDF: boolean;
+        showLeftHandPanel?: boolean;
+    }) => void;
+}
+
+// Extended Document interface for fullscreen browser prefixes
+interface DocumentWithFullscreen extends Document {
+    webkitFullscreenElement?: Element;
+    mozFullScreenElement?: Element;
+    msFullscreenElement?: Element;
+}
+
 // Extend window type to include AdobeDC
 declare global {
     interface Window {
         AdobeDC?: {
-            View: new (config: { clientId: string; divId: string }) => {
-                previewFile: (config: {
-                    content: { location: { url: string } };
-                    metaData: { fileName: string };
-                }, viewerConfig: {
-                    embedMode: string;
-                    showDownloadPDF?: boolean;
-                    showPrintPDF?: boolean;
-                    showLeftHandPanel?: boolean;
-                }) => void;
-            };
+            View: new (config: { clientId: string; divId: string }) => AdobeDCView;
         };
     }
 }
@@ -39,18 +49,19 @@ const AdobePDFViewer: React.FC<AdobePDFViewerProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const viewerRef = useRef<HTMLDivElement>(null);
-    const adobeDCViewRef = useRef<any>(null);
+    const adobeDCViewRef = useRef<AdobeDCView | null>(null);
     const isInFullscreen = useRef(false);
     const escapeHandlerRef = useRef<((e: KeyboardEvent) => void) | null>(null);
 
     // Track fullscreen state and refocus after exit
     useEffect(() => {
         const handleFullscreenChange = () => {
+            const doc = document as DocumentWithFullscreen;
             const isFullscreen = !!(
                 document.fullscreenElement ||
-                (document as any).webkitFullscreenElement ||
-                (document as any).mozFullScreenElement ||
-                (document as any).msFullscreenElement
+                doc.webkitFullscreenElement ||
+                doc.mozFullScreenElement ||
+                doc.msFullscreenElement
             );
             isInFullscreen.current = isFullscreen;
 
@@ -126,6 +137,43 @@ const AdobePDFViewer: React.FC<AdobePDFViewerProps> = ({
         fetchClientId();
     }, []);
 
+    // Initialize Adobe DC View
+    const initializeAdobeViewer = useCallback(() => {
+        if (!window.AdobeDC || !clientId) {
+            setError('Adobe PDF viewer not available');
+            setIsLoading(false);
+            return;
+        }
+
+        try {
+            const adobeDCView = new window.AdobeDC.View({
+                clientId: clientId,
+                divId: 'adobe-dc-view',
+            });
+
+            adobeDCViewRef.current = adobeDCView;
+
+            adobeDCView.previewFile(
+                {
+                    content: { location: { url: pdfUrl } },
+                    metaData: { fileName: fileName || 'document.pdf' },
+                },
+                {
+                    embedMode: 'SIZED_CONTAINER',
+                    showDownloadPDF: showDownloadPDF,
+                    showPrintPDF: showPrintPDF,
+                    showLeftHandPanel: false,
+                }
+            );
+
+            setIsLoading(false);
+        } catch (err) {
+            console.error('Error initializing Adobe PDF viewer:', err);
+            setError('Failed to initialize PDF viewer');
+            setIsLoading(false);
+        }
+    }, [clientId, pdfUrl, fileName, showDownloadPDF, showPrintPDF]);
+
     // Load Adobe PDF Embed API script
     useEffect(() => {
         if (!clientId) return;
@@ -169,44 +217,7 @@ const AdobePDFViewer: React.FC<AdobePDFViewerProps> = ({
         return () => {
             // Don't remove script on unmount - it can be reused
         };
-    }, [clientId]);
-
-    // Initialize Adobe DC View
-    const initializeAdobeViewer = () => {
-        if (!window.AdobeDC || !clientId) {
-            setError('Adobe PDF viewer not available');
-            setIsLoading(false);
-            return;
-        }
-
-        try {
-            const adobeDCView = new window.AdobeDC.View({
-                clientId: clientId,
-                divId: 'adobe-dc-view',
-            });
-
-            adobeDCViewRef.current = adobeDCView;
-
-            adobeDCView.previewFile(
-                {
-                    content: { location: { url: pdfUrl } },
-                    metaData: { fileName: fileName || 'document.pdf' },
-                },
-                {
-                    embedMode: 'SIZED_CONTAINER',
-                    showDownloadPDF: showDownloadPDF,
-                    showPrintPDF: showPrintPDF,
-                    showLeftHandPanel: false,
-                }
-            );
-
-            setIsLoading(false);
-        } catch (err) {
-            console.error('Error initializing Adobe PDF viewer:', err);
-            setError('Failed to initialize PDF viewer');
-            setIsLoading(false);
-        }
-    };
+    }, [clientId, initializeAdobeViewer]);
 
     return (
         <div className="adobe-pdf-viewer-container">
