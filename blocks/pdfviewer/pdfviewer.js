@@ -72,6 +72,36 @@ function createPdfCard(title, pdfLink, previewImage) {
 // Flag to track if PDF modal just handled escape (prevents React modals from closing)
 let pdfModalHandledEscape = false;
 
+// Track fullscreen state
+let isInFullscreen = false;
+
+// Listen for fullscreen changes
+(function setupFullscreenTracking() {
+  const handleFullscreenChange = () => {
+    isInFullscreen = !!(
+      document.fullscreenElement
+      || document.webkitFullscreenElement
+      || document.mozFullScreenElement
+      || document.msFullscreenElement
+    );
+
+    // When exiting fullscreen, refocus to ensure keyboard events work
+    if (!isInFullscreen) {
+      setTimeout(() => {
+        const viewerContainer = document.getElementById('adobe-dc-view-help');
+        if (viewerContainer) {
+          viewerContainer.focus();
+        }
+      }, 100);
+    }
+  };
+
+  document.addEventListener('fullscreenchange', handleFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+  document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+  document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+}());
+
 // Global escape key handler that runs at the highest priority
 // This is added once when the module loads, not when modal opens
 (function setupGlobalEscapeHandler() {
@@ -80,7 +110,13 @@ let pdfModalHandledEscape = false;
     if (e.key === 'Escape') {
       const modal = document.getElementById('pdf-viewer-modal');
       if (modal && modal.style.display === 'flex') {
-        // PDF modal is open, intercept the escape key completely
+        // If in fullscreen, let the browser handle ESC to exit fullscreen
+        // Don't close the modal
+        if (isInFullscreen) {
+          return true;
+        }
+
+        // PDF modal is open and not in fullscreen, intercept the escape key completely
         e.stopPropagation();
         e.stopImmediatePropagation();
         e.preventDefault();
@@ -111,44 +147,131 @@ export async function openPdfModal(title, pdfLink) {
   }
 
   // Update modal content
-  const modalTitle = modal.querySelector('.pdf-modal-title');
   const modalBody = modal.querySelector('.pdf-modal-body');
 
-  modalTitle.textContent = title;
   modalBody.innerHTML = '<div class="pdf-loading">Loading PDF...</div>';
 
   // Show modal
   modal.style.display = 'flex';
 
   try {
-    // Check if server forces download with Content-Disposition header
-    const headResponse = await fetch(pdfLink, { method: 'HEAD' });
-    const contentDisposition = headResponse.headers.get('Content-Disposition');
-    const forceDownload = contentDisposition && contentDisposition.includes('attachment');
+    // Fetch Adobe PDF Client ID from API
+    const configResponse = await fetch('/api/pdfconfig');
+    if (!configResponse.ok) {
+      throw new Error('Failed to fetch PDF configuration');
+    }
+    const { clientId } = await configResponse.json();
 
-    let iframeUrl = pdfLink;
-
-    // If server forces download, fetch as blob and create blob URL
-    if (forceDownload) {
-      const response = await fetch(pdfLink);
-      const blob = await response.blob();
-      iframeUrl = URL.createObjectURL(blob);
+    // Load Adobe PDF Embed API if not already loaded
+    if (!window.AdobeDC) {
+      await loadAdobePdfScript();
     }
 
-    // Create iframe with appropriate URL
-    const iframe = document.createElement('iframe');
-    iframe.src = iframeUrl;
-    iframe.width = '100%';
-    iframe.height = '100%';
-    iframe.setAttribute('aria-label', title);
-    iframe.style.border = 'none';
+    // Wait a bit for Adobe DC to fully initialize
+    if (!window.AdobeDC) {
+      throw new Error('Adobe PDF viewer not available after loading script');
+    }
+
+    // Create container for Adobe PDF viewer
+    const viewerContainer = document.createElement('div');
+    viewerContainer.id = 'adobe-dc-view-help';
+    viewerContainer.style.width = '100%';
+    viewerContainer.style.height = '100%';
+    viewerContainer.tabIndex = -1; // Make focusable for keyboard events
 
     modalBody.innerHTML = '';
-    modalBody.appendChild(iframe);
+    modalBody.appendChild(viewerContainer);
+
+    // Give the DOM a moment to add the container
+    await new Promise((resolve) => {
+      setTimeout(resolve, 100);
+    });
+
+    // Initialize Adobe DC View
+    const adobeDCView = new window.AdobeDC.View({
+      clientId,
+      divId: 'adobe-dc-view-help',
+    });
+
+    // Render PDF with download and print enabled
+    adobeDCView.previewFile(
+      {
+        content: { location: { url: pdfLink } },
+        metaData: { fileName: title || 'document.pdf' },
+      },
+      {
+        embedMode: 'SIZED_CONTAINER',
+        showDownloadPDF: true, // Enable download for help pages
+        showPrintPDF: true, // Enable print for help pages
+        showLeftHandPanel: false,
+      },
+    );
   } catch (error) {
     // Fallback: show error message
     modalBody.innerHTML = `<p class="pdf-error">Failed to load PDF: ${error.message}</p>`;
   }
+}
+
+/**
+ * Load Adobe PDF Embed API script
+ * @returns {Promise} Promise that resolves when script is loaded
+ */
+function loadAdobePdfScript() {
+  return new Promise((resolve, reject) => {
+    // Check if already loaded
+    if (window.AdobeDC) {
+      resolve();
+      return;
+    }
+
+    // Check if script is already being loaded
+    const existingScript = document.querySelector('script[src*="acrobatservices.adobe.com"]');
+    if (existingScript) {
+      // Wait for it to load
+      const checkReady = setInterval(() => {
+        if (window.AdobeDC) {
+          clearInterval(checkReady);
+          resolve();
+        }
+      }, 100);
+
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        clearInterval(checkReady);
+        if (!window.AdobeDC) {
+          reject(new Error('Timeout waiting for Adobe PDF Embed API'));
+        }
+      }, 10000);
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://acrobatservices.adobe.com/view-sdk/viewer.js';
+    script.async = true;
+
+    script.onload = () => {
+      // Wait a bit for AdobeDC to be available
+      const checkReady = setInterval(() => {
+        if (window.AdobeDC) {
+          clearInterval(checkReady);
+          resolve();
+        }
+      }, 100);
+
+      // Timeout after 5 seconds
+      setTimeout(() => {
+        clearInterval(checkReady);
+        if (window.AdobeDC) {
+          resolve();
+        } else {
+          reject(new Error('Adobe DC not available after script load'));
+        }
+      }, 5000);
+    };
+
+    script.onerror = () => reject(new Error('Failed to load Adobe PDF Embed API'));
+    document.body.appendChild(script);
+  });
 }
 
 /**
@@ -164,28 +287,18 @@ export function createPdfModal() {
   const modalContent = document.createElement('div');
   modalContent.className = 'pdf-modal-content';
 
-  // Modal header
-  const modalHeader = document.createElement('div');
-  modalHeader.className = 'pdf-modal-header';
-
-  const modalTitle = document.createElement('h2');
-  modalTitle.className = 'pdf-modal-title';
-  modalTitle.textContent = 'PDF Viewer';
-
+  // Close button (floating style matching asset details)
   const closeBtn = document.createElement('button');
   closeBtn.className = 'pdf-modal-close';
-  closeBtn.innerHTML = '&times;';
+  closeBtn.innerHTML = '✕';
   closeBtn.setAttribute('aria-label', 'Close PDF viewer');
   closeBtn.onclick = closePdfModal;
-
-  modalHeader.appendChild(modalTitle);
-  modalHeader.appendChild(closeBtn);
 
   // Modal body
   const modalBody = document.createElement('div');
   modalBody.className = 'pdf-modal-body';
 
-  modalContent.appendChild(modalHeader);
+  modalContent.appendChild(closeBtn);
   modalContent.appendChild(modalBody);
   modal.appendChild(modalContent);
 

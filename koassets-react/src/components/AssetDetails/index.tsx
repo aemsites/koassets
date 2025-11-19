@@ -24,8 +24,7 @@ import AssetDetailsSystemInfoLegacy from './AssetDetailsSystemInfoLegacy';
 import AssetDetailsTechnicalInfo from './AssetDetailsTechnicalInfo';
 import { isPdfPreview } from '../../constants/filetypes';
 import { populateAssetFromMetadata } from '../../utils/assetTransformers';
-import { openPdfModal } from '../../../../blocks/pdfviewer/pdfviewer.js';
-import '../../../../blocks/pdfviewer/pdfviewer.css';
+import AdobePDFViewer from '../AdobePDFViewer';
 
 /* Displayed on the asset details modal header section
 campaignName 
@@ -52,6 +51,8 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     const [actionButtonEnable, setActionButtonEnable] = useState<boolean>(false);
     const [watermarkRendition, setWatermarkRendition] = useState<Rendition | undefined>(undefined);
     const [populatedImage, setPopulatedImage] = useState<Asset>(selectedImage as Asset);
+    const [showPdfModal, setShowPdfModal] = useState<boolean>(false);
+    const [pdfUrl, setPdfUrl] = useState<string>('');
 
     const rightsFree: boolean = (populatedImage?.readyToUse?.toLowerCase() === 'yes' || populatedImage?.authorized === AuthorizationStatus.AVAILABLE) ? true : false;
 
@@ -150,18 +151,15 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
         }
 
         // Get the PDF URL
-        const pdfUrl = dynamicMediaClient.getPreviewPdfUrl(
+        const url = dynamicMediaClient.getPreviewPdfUrl(
             populatedImage.assetId as string,
             populatedImage.name as string,
             pdfRendition.name as string
         );
         
-        if (pdfUrl) {
-            try {
-                await openPdfModal(populatedImage.title as string || 'PDF Preview', pdfUrl);
-            } catch (error) {
-                console.error('Error opening PDF modal:', error);
-            }
+        if (url) {
+            setPdfUrl(url);
+            setShowPdfModal(true);
         }
     };
 
@@ -245,12 +243,37 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
         return modalRoot;
     };
 
+    const handlePdfModalOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (e.target === e.currentTarget) {
+            setShowPdfModal(false);
+        }
+    };
+
+    const handlePdfModalContentClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        e.stopPropagation();
+    };
+
     return (
-        createPortal(<div className="asset-details-modal portal-modal"
-            onClick={handleOverlayClick}
-            style={{ pointerEvents: 'auto' }} // Re-enable pointer events for the modal
-        >
-            <div className="asset-details-modal-inner" onClick={handleModalClick}>
+        createPortal(<>
+            {showPdfModal && (
+                <div className="pdf-modal-overlay" onClick={handlePdfModalOverlayClick}>
+                    <div className="pdf-modal-content" onClick={handlePdfModalContentClick}>
+                        <AdobePDFViewer
+                            pdfUrl={pdfUrl}
+                            fileName={populatedImage.title as string || 'document.pdf'}
+                            showDownloadPDF={false}
+                            showPrintPDF={false}
+                            onClose={() => setShowPdfModal(false)}
+                        />
+                    </div>
+                </div>
+            )}
+
+            <div className="asset-details-modal portal-modal"
+                onClick={handleOverlayClick}
+                style={{ pointerEvents: 'auto' }} // Re-enable pointer events for the modal
+            >
+                <div className="asset-details-modal-inner" onClick={handleModalClick}>
                 <div className="asset-details-main-main-section">
                     <div className="asset-details-main-image-section">
                         <div className="asset-details-image-wrapper">
@@ -454,7 +477,8 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                 />,
                 document.body
             )}
-        </div>,
+        </div>
+        </>,
             getModalRoot()
         )
     );

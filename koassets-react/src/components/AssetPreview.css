@@ -221,3 +221,59 @@
         transform: rotate(360deg);
     }
 }
+
+/* PDF Modal Styles */
+.pdf-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+    box-sizing: border-box;
+    pointer-events: auto;
+}
+
+.pdf-modal-content {
+    background: white;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 1000px;
+    height: 100%;
+    max-height: 800px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+/* Responsive - Mobile */
+@media (max-width: 768px) {
+    .pdf-modal-overlay {
+        padding: 0;
+    }
+
+    .pdf-modal-content {
+        width: 100%;
+        height: 100%;
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 0;
+    }
+}
+
+/* Responsive - Tablet */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .pdf-modal-content {
+        width: 90%;
+        height: 90%;
+        max-width: 900px;
+        max-height: 750px;
+    }
+}
