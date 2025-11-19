@@ -605,7 +605,7 @@
   display: none;
   flex-flow: row wrap;
   align-items: flex-start;
-  gap: 20px;
+  gap: 25px;
   padding: 20px 0 30px 20px;
   border: none;
   box-sizing: border-box;
@@ -625,9 +625,15 @@
 }
 
 /* Item wrapper in flex - auto width based on content */
-.content-stores .tree-children.has-grid .tree-item {
+.content-stores .tree-children.has-grid .tree-item:not([data-item-type="tab"], [data-item-type="text"]) {
   display: block;
   box-sizing: border-box;
+  min-width: 320px;
+  max-width: 340px;
+  width: auto;
+}
+
+.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] {
   width: 330px;
 }
 
@@ -681,7 +687,7 @@
 
 /* Accordion expanded state - with scrolling */
 .content-stores .tree-item[data-item-type="accordion"]:has(.tree-node.expanded) {
-  max-height: 400px;
+  max-height: 300px;
   overflow: hidden auto;
 }
 
@@ -692,7 +698,7 @@
 
 .content-stores .tree-item[data-item-type="accordion"]::-webkit-scrollbar-track {
   background: transparent;
-  margin: 50px 0 30px;
+  margin: 50px 0 20px;
 }
 
 .content-stores .tree-item[data-item-type="accordion"]::-webkit-scrollbar-thumb {
@@ -804,7 +810,7 @@
 /* Rich content area - shown when expanded */
 .content-stores .tree-item[data-item-type="accordion"] .rich-content {
   margin: 0;
-  padding: 20px 24px;
+  padding: 10px 24px;
   background: white;
   border: none;
   border-radius: 0;
@@ -847,7 +853,7 @@
 
 /* Paragraph tags with links displayed as bullet points */
 .content-stores .tree-item[data-item-type="accordion"] .rich-content p {
-  margin: 0 0 8px;
+  margin: 0 0 3px;
   padding-left: 20px;
   position: relative;
 }
