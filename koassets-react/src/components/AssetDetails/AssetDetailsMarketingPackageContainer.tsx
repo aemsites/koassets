@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import type { Asset } from '../../types';
-import { getAssetFieldDisplayFacetName } from '../../utils/displayUtils';
 
 interface AssetDetailsMarketingPackageContainerProps {
     selectedImage: Asset;
@@ -42,7 +41,7 @@ const AssetDetailsMarketingPackageContainer: React.FC<AssetDetailsMarketingPacka
 
                         <div className="asset-details-group">
                             <h4 className="asset-details-main-metadata-label tccc-metadata-label">Package or Container Size</h4>
-                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.packageOrContainerSize ? getAssetFieldDisplayFacetName('packageContainerSize', selectedImage.packageOrContainerSize as string) : ''}</span>
+                            <span className="asset-details-main-metadata-value tccc-metadata-value">{selectedImage?.packageOrContainerSize as string}</span>
                         </div>
 
                         <div className="asset-details-group">

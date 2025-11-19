@@ -190,7 +190,20 @@ node upload-images.js -c 10
 - Auto-discovers all `DATA/*-content-stores/extracted-results/images` directories
 - Uploads images to `{DA_ORG}/{DA_REPO}/{DA_DEST}/images/{store-name}/`
 - Skips images that already exist (checks before uploading)
-- Processes in batches based on concurrency setting
+- Processes stores **sequentially** (one at a time)
+- Within each store, processes images **in parallel** based on concurrency setting
+
+**Concurrency Behavior**:
+```
+Store 1: all-content-stores
+  ├─ Batch 1: 10 images in parallel
+  ├─ Batch 2: 10 images in parallel
+  └─ ✅ Complete
+
+Store 2: bottler-content-stores
+  ├─ Batch 1: 10 images in parallel
+  └─ ...
+```
 
 **Example with specific path**:
 ```bash
@@ -230,6 +243,7 @@ node upload-to-EDS.js --store /content/share/us/en/all-content-stores/global-coc
 - `--publish` or `-pb` - Trigger publish after upload (always executes)
 - `--reup` or `-r` - Force re-upload even if file exists
 - `--dry` or `-dr` - Dry run mode (shows what would be done without actually doing it)
+- `--concurrency` or `-c` - Number of concurrent operations (default: 1, range: 1-10 recommended)
 
 **Flag Behavior**:
 - **Without flags**: Only uploads files that don't exist yet
@@ -253,8 +267,14 @@ node upload-to-EDS.js --input all-store-links.txt --preview
 # Upload, preview, and publish
 node upload-to-EDS.js --input all-store-links.txt --preview --publish
 
+# Upload with 10 concurrent operations for faster processing
+node upload-to-EDS.js --input all-store-links.txt --preview --publish -c 10
+
 # Force re-upload and re-publish everything
 node upload-to-EDS.js --input all-store-links.txt --reup --preview --publish
+
+# Force re-upload with concurrency
+node upload-to-EDS.js --input all-store-links.txt --reup --preview --publish -c 10
 
 # Test single store with dry run
 node upload-to-EDS.js --store /content/share/us/en/all-content-stores/sprite --preview --publish --dry
@@ -263,9 +283,29 @@ node upload-to-EDS.js --store /content/share/us/en/all-content-stores/sprite --p
 **What it does**:
 - Converts content paths to directory names
 - Finds corresponding files in `DATA/generated-eds-docs/`
-- Uploads JSON sheets and HTML files to DA Live
+- Uploads JSON sheets and HTML files to DA Live with concurrent processing
 - Creates preview (if `--preview` flag is set)
 - Publishes to live site (if `--publish` flag is set)
+
+**Concurrency Behavior with `--input` flag**:
+```
+Batch 1: Processing 5 stores in parallel
+  ├─ Store 1: all-content-stores
+  ├─ Store 2: bottler-content-stores  
+  ├─ Store 3: all-content-stores-sprite
+  ├─ Store 4: all-content-stores-tea
+  └─ Store 5: all-content-stores-fanta
+  ✅ Batch 1 complete (0.5s pause)
+
+Batch 2: Processing next 5 stores in parallel
+  └─ ...
+```
+
+**Performance Tips**:
+- Use `-c 5` to `-c 10` for much faster uploads when processing multiple stores
+- With `--input` flag: Concurrency processes multiple **stores** in parallel batches
+- Without `--input` flag: Concurrency processes multiple **files** in parallel within a single directory
+- Sequential processing (default `-c 1`) is safer for testing or debugging
 
 **Upload Paths**:
 - **Main stores** (all-content-stores, bottler-content-stores):
@@ -347,14 +387,18 @@ node upload-to-EDS.js --input all-store-links.txt --preview --publish
 # Upload single store
 node upload-to-EDS.js --store /content/path --preview --publish
 
+# Upload with concurrency
+node upload-to-EDS.js --input all-store-links.txt --preview --publish -c 10
+
 # Options:
--i, --input <file>    Input file with content paths
--s, --store <path>    Single content store path
--pr, --preview        Trigger preview (always executes)
--pb, --publish        Trigger publish (always executes)
--r, --reup           Force re-upload (skip existence check)
--dr, --dry           Dry run mode (show without executing)
--h, --help           Show help message
+-i, --input <file>         Input file with content paths
+-s, --store <path>         Single content store path
+-pr, --preview             Trigger preview (always executes)
+-pb, --publish             Trigger publish (always executes)
+-r, --reup                 Force re-upload (skip existence check)
+-dr, --dry                 Dry run mode (show without executing)
+-c, --concurrency <number> Number of concurrent operations (default: 1)
+-h, --help                 Show help message
 ```
 
 ---
@@ -386,8 +430,8 @@ node upload-images.js -c 10
 # 7. Test with dry run first
 node upload-to-EDS.js --input all-store-links.txt --preview --publish --dry
 
-# 8. Upload all content, preview, and publish
-node upload-to-EDS.js --input all-store-links.txt --preview --publish
+# 8. Upload all content, preview, and publish (with 10 concurrent operations for speed)
+node upload-to-EDS.js --input all-store-links.txt --preview --publish -c 10
 ```
 
 ---
@@ -451,7 +495,17 @@ node upload-to-EDS.js --help
 ## Notes
 
 - **Credentials Security**: Never commit `da.config` to version control. It contains sensitive credentials.
-- **Performance**: Use concurrency (`-c 10`) for faster image uploads, but be mindful of rate limits.
+- **Performance & Concurrency**: 
+  - **`upload-images.js`**: Processes stores sequentially, but images within each store in parallel
+    - Example with `-c 10`: Store 1 completes (10 images at a time), then Store 2 starts (10 images at a time)
+    - Safer approach, easier to track progress per store
+  - **`upload-to-EDS.js` with `--input`**: Processes stores in parallel batches
+    - Example with `-c 5`: 5 stores upload simultaneously, then next 5 stores, etc.
+    - Much faster for bulk migrations with many stores
+  - Recommended range: 1-10 concurrent operations
+  - Higher concurrency = faster but more server load
+  - Start with `-c 5` and increase if stable
+  - Be mindful of rate limits when using high concurrency
 - **Incremental Updates**: The scripts check for existing files and skip them by default. Use `--reup` to force re-upload.
 - **Preview vs Publish**: 
   - Preview makes content visible at `https://{branch}--{repo}--{org}.aem.page/...`

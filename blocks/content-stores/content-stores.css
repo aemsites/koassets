@@ -139,7 +139,7 @@
 /* Button items in grid layout - fill whole cell width */
 .content-stores .tree-item.button-item {
   display: block;
-  width: 100%;
+  width: max-content;
 }
 
 .content-stores .tree-node {
@@ -174,11 +174,23 @@
 
 /* Narrower styling for leaf nodes */
 .content-stores .tree-item.leaf-item .tree-node {
-  padding: 10px 15px;
+  padding: 10px 18px;
   min-width: auto;
   width: auto;
   display: inline-flex;
   white-space: nowrap;
+}
+
+/* Section-title leaf items should have left-aligned text and full width */
+.content-stores .tree-item[data-item-type="tab"] [data-item-type="section-title"] {
+  padding: 0;
+}
+
+/* Expanded section-title overrides leaf item styling */
+.content-stores .tree-item.leaf-item .tree-node.expanded.type-section-title {
+  padding: 10px 0;
+  display: block;
+  width: 100%;
 }
 
 .content-stores .tree-node.expanded:not(.type-button, .type-section-title) {
@@ -275,6 +287,9 @@
   text-align: left;
   text-decoration: none;
   font-family: "TCCC UnityText Medium", roboto-condensed-fallback, sans-serif;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Ensure no underline on button titles even when they have links */
@@ -370,16 +385,15 @@
 }
 
 /* Teaser hover - only change text color to primary */
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node {
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node {
   padding: 0;
   height: 110px;
-  width: 100%;
   border: none;
   padding-right: 10px;
   box-shadow: 0 0 0 2px rgb(237 0 0 / 10%);
 }
 
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node .node-title,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node .node-title,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node .node-title {
   font-size: 15px;
   padding-left: 10px;
@@ -389,9 +403,9 @@
   overflow-wrap: break-word;
 }
 
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node .item-image,
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node picture,
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node img,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node .item-image,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node picture,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node img,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node .item-image,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node picture,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node img {
@@ -401,19 +415,19 @@
 }
 
 /* Teaser hover effects - only for teasers with links */
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover {
   background-color: transparent !important;
   color: inherit;
 }
 
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .node-title,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .node-title,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .node-title {
   text-decoration: none;
   color: var(--primary-color) !important;
 }
 
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .expand-icon,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .expand-icon,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .expand-icon {
   color: var(--primary-color) !important;
 }
@@ -537,17 +551,17 @@
 }
 
 /* Prevent hover effects on teasers without links (like disabled buttons) */
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover {
   background-color: transparent !important;
 }
 
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .node-title,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .node-title,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .node-title {
   color: var(--text-color) !important;
 }
 
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .expand-icon,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .expand-icon,
 .content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .expand-icon {
   color: var(--text-color) !important;
 }
@@ -570,7 +584,16 @@
 }
 
 .content-stores .tree-children.expanded {
-  display: block;
+  display: flex;
+  flex-flow: row wrap;
+  gap: 15px;
+}
+
+/* Tab and section-title items should take full width in row layout */
+.content-stores .tree-children.expanded .tree-item[data-item-type="tab"],
+.content-stores .tree-children.expanded .tree-item[data-item-type="section-title"] {
+  width: 100%;
+  flex-basis: 100%;
 }
 
 .content-stores .tree-children.expanded:not(.has-grid) {
@@ -589,8 +612,9 @@
   margin-left: 0;
 }
 
-/* Exclude text type items from grid layout */
-.content-stores .tree-children.has-grid .tree-item[data-item-type="text"] {
+/* Exclude text and section-title type items from grid layout */
+.content-stores .tree-children.has-grid .tree-item[data-item-type="text"],
+.content-stores .tree-children.has-grid .tree-item[data-item-type="section-title"] {
   width: 100%;
   max-width: none;
 }
@@ -755,6 +779,11 @@
   border: 1px solid #e0e0e0;
   border-top: none;
   border-radius: 0 0 30px 30px;
+}
+
+.content-stores .tree-item[data-item-type="accordion"] .rich-content.tree-children.expanded {
+  display: flex;
+  flex-direction: column;
 }
 
 /* Custom scrollbar styling */
