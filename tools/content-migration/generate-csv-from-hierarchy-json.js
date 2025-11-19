@@ -546,7 +546,7 @@ function transformSearchUrl(url) {
         return `/search/templates?fulltext=&${filterQueryString}`;
       }
     } catch (error) {
-      // If URL parsing fails, return original URL
+    // If URL parsing fails, return original URL
       console.warn(`Failed to parse URL: ${url}`);
     }
   }
@@ -781,14 +781,13 @@ function rewriteHierarchyStructure(jsonFilePath) {
     const hierarchyData = JSON.parse(fs.readFileSync(jsonFilePath, 'utf-8'));
 
     let titleCount = 0;
-    let otherContentUnwrapped = 0;
 
     // Recursive function to transform items
     // eslint-disable-next-line no-inner-declarations
     function transformItems(items) {
       if (!items || !Array.isArray(items)) return items;
 
-      const transformed = items.map((item) => {
+      return items.map((item) => {
         const transformedItem = { ...item };
 
         // Transform type "title" to "section-title"
@@ -804,31 +803,6 @@ function rewriteHierarchyStructure(jsonFilePath) {
 
         return transformedItem;
       });
-
-      // Unwrap "Other Content" containers - replace container with its children
-      const unwrapped = [];
-      for (const item of transformed) {
-        if (item.type === 'container' && item.title === 'Other Content') {
-          // Skip the container itself, but add all its children
-          if (item.items && Array.isArray(item.items) && item.items.length > 0) {
-            // Fix paths: remove "Other Content >>> " from the beginning of paths
-            const promotedChildren = item.items.map((child) => {
-              const updatedChild = { ...child };
-              if (updatedChild.path && updatedChild.path.startsWith('Other Content >>> ')) {
-                updatedChild.path = updatedChild.path.replace('Other Content >>> ', '');
-              }
-              return updatedChild;
-            });
-            unwrapped.push(...promotedChildren);
-            otherContentUnwrapped += 1;
-            console.log(`  🔄 Unwrapping "Other Content" container (promoting ${item.items.length} child(ren))`);
-          }
-        } else {
-          unwrapped.push(item);
-        }
-      }
-
-      return unwrapped;
     }
 
     // Transform all items in the hierarchy
@@ -837,9 +811,6 @@ function rewriteHierarchyStructure(jsonFilePath) {
     }
 
     console.log(`  ✅ Renamed ${titleCount} "title" type(s) to "section-title"`);
-    if (otherContentUnwrapped > 0) {
-      console.log(`  ✅ Unwrapped ${otherContentUnwrapped} "Other Content" container(s)`);
-    }
 
     // Return the transformed data instead of writing to file
     return hierarchyData;

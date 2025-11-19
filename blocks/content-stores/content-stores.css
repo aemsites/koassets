@@ -139,7 +139,7 @@
 /* Button items in grid layout - fill whole cell width */
 .content-stores .tree-item.button-item {
   display: block;
-  width: 100%;
+  width: max-content;
 }
 
 .content-stores .tree-node {
@@ -585,8 +585,15 @@
 
 .content-stores .tree-children.expanded {
   display: flex;
-  flex-direction: column;
+  flex-flow: row wrap;
   gap: 15px;
+}
+
+/* Tab and section-title items should take full width in row layout */
+.content-stores .tree-children.expanded .tree-item[data-item-type="tab"],
+.content-stores .tree-children.expanded .tree-item[data-item-type="section-title"] {
+  width: 100%;
+  flex-basis: 100%;
 }
 
 .content-stores .tree-children.expanded:not(.has-grid) {
@@ -772,6 +779,11 @@
   border: 1px solid #e0e0e0;
   border-top: none;
   border-radius: 0 0 30px 30px;
+}
+
+.content-stores .tree-item[data-item-type="accordion"] .rich-content.tree-children.expanded {
+  display: flex;
+  flex-direction: column;
 }
 
 /* Custom scrollbar styling */

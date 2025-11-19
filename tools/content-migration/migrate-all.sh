@@ -118,5 +118,5 @@ echo "=========================================="
 echo ""
 
 node upload-images.js -c 10
-node upload-to-EDS.js --input "$stores_file" --preview #--debug
+node upload-to-EDS.js -c 5 --input "$stores_file" --preview #--debug
 
