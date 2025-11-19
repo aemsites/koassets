@@ -155,12 +155,8 @@ export async function openPdfModal(title, pdfLink) {
   modal.style.display = 'flex';
 
   try {
-    // Fetch Adobe PDF Client ID from API
-    const configResponse = await fetch('/api/pdfconfig');
-    if (!configResponse.ok) {
-      throw new Error('Failed to fetch PDF configuration');
-    }
-    const { clientId } = await configResponse.json();
+    // Adobe PDF Embed API Client ID for the worker domain
+    const clientId = 'fb94816ccd554baf8d992217035ad8fc';
 
     // Load Adobe PDF Embed API if not already loaded
     if (!window.AdobeDC) {

@@ -117,24 +117,9 @@ const AdobePDFViewer: React.FC<AdobePDFViewerProps> = ({
         };
     }, [onClose]);
 
-    // Fetch Client ID from API
+    // Set Adobe PDF Embed API Client ID for the worker domain
     useEffect(() => {
-        const fetchClientId = async () => {
-            try {
-                const response = await fetch('/api/pdfconfig');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch PDF configuration');
-                }
-                const data = await response.json();
-                setClientId(data.clientId);
-            } catch (err) {
-                console.error('Error fetching PDF client ID:', err);
-                setError('Failed to load PDF configuration');
-                setIsLoading(false);
-            }
-        };
-
-        fetchClientId();
+        setClientId('fb94816ccd554baf8d992217035ad8fc');
     }, []);
 
     // Initialize Adobe DC View

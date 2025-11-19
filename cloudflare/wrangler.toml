@@ -71,11 +71,6 @@ store_id = "5d64b0d295964846b36569f507fb7b13"
 binding = "FADEL_PASSWORD"
 secret_name = "KOASSETS_FADEL_PASSWORD"
 
-[[secrets_store_secrets]]
-store_id = "5d64b0d295964846b36569f507fb7b13"
-binding = "PDF_EMBED_API_CLIENT_ID"
-secret_name = "KOASSETS_PDF_EMBED_API_CLIENT_ID"
-
 [[kv_namespaces]]
 binding = "AUTH_TOKENS"
 id = "975809e56a7a425aa006e156671bbecf"

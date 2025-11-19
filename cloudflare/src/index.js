@@ -20,7 +20,6 @@ import { apiUser } from './user';
 import { savedSearchesApi } from './api/savedsearches';
 import { rightsRequestsApi } from './api/rightsrequests';
 import { notificationsApi } from './api/notifications';
-import { handlePdfConfig } from './api/pdfconfig';
 
 // Shared CORS origins
 const allowedOrigins = [
@@ -132,9 +131,6 @@ router
   // Notifications API (with extended CORS for DELETE)
   .all('/api/messages/*', notificationsApi)
   .all('/api/messages', notificationsApi)
-
-  // PDF Configuration API
-  .get('/api/pdfconfig', handlePdfConfig)
 
   // future API routes
   .all('/api/*', () => error(404))
