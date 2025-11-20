@@ -1963,6 +1963,22 @@ async function main() {
             const pathParts = accordionPath.split('/').filter((p) => p && !p.startsWith('jcr:'));
             const grandparentKey = pathParts[pathParts.length - 3]; // container_copy
 
+            // Define check function outside the loop to avoid no-loop-func warning
+            function checkHierarchyForAccordion(items, panelToFind) {
+              if (!items || !Array.isArray(items)) return false;
+              for (const hierarchyItem of items) {
+                if (hierarchyItem.type === 'accordion'
+                    && hierarchyItem.key === panelToFind.panelKey
+                    && hierarchyItem.title === panelToFind.title) {
+                  return true;
+                }
+                if (hierarchyItem.items && checkHierarchyForAccordion(hierarchyItem.items, panelToFind)) {
+                  return true;
+                }
+              }
+              return false;
+            }
+
             // Find the ancestor section in hierarchy
             function findAncestorAndAddAccordions(items) {
               if (!items || !Array.isArray(items)) return false;
@@ -1976,27 +1992,14 @@ async function main() {
                 // Add each panel as a separate accordion item (check for global duplicates)
                   let addedAccordionCount = 0;
                   let skippedAccordionCount = 0;
+                  // eslint-disable-next-line no-loop-func
                   panels.forEach((panel) => {
                     // For accordions: use global deduplication (same as buttons)
                     const globalAccordionKey = `accordion|${panel.panelKey || ''}|${panel.title || ''}`;
                     // Check if this accordion exists ANYWHERE in the actual hierarchy (not just registry)
                     // This handles nested tabs that might not be in the main registry
                     let existsGlobally = false;
-                    function checkHierarchyForAccordion(items) {
-                      if (!items || !Array.isArray(items)) return false;
-                      for (const hierarchyItem of items) {
-                        if (hierarchyItem.type === 'accordion'
-                            && hierarchyItem.key === panel.panelKey
-                            && hierarchyItem.title === panel.title) {
-                          return true;
-                        }
-                        if (hierarchyItem.items && checkHierarchyForAccordion(hierarchyItem.items)) {
-                          return true;
-                        }
-                      }
-                      return false;
-                    }
-                    existsGlobally = checkHierarchyForAccordion(mainHierarchy);
+                    existsGlobally = checkHierarchyForAccordion(mainHierarchy, panel);
 
                     if (existsGlobally) {
                       skippedAccordionCount++;
@@ -2978,10 +2981,9 @@ function injectNestedTabsFromJCR(hierarchy, jcrData, jcrTeaserImageMap, tabsPath
   hierarchy.forEach((item) => {
     if (item.type === 'tab' && item.key) {
       // Find tabs paths that are nested under this tab
-      const nestedTabsPaths = tabsPaths.filter((path) =>
-        // Check if this path is nested under the current tab
-        // e.g., if tab key is "item_1", look for paths containing "/item_1/"
-        path.includes(`/${item.key}/`) && path.split('/tabs').length > 2);
+      // Check if this path is nested under the current tab
+      // e.g., if tab key is "item_1", look for paths containing "/item_1/"
+      const nestedTabsPaths = tabsPaths.filter((path) => path.includes(`/${item.key}/`) && path.split('/tabs').length > 2);
 
       if (nestedTabsPaths.length > 0) {
         console.log(`  📂 Found ${nestedTabsPaths.length} nested tabs in "${item.title}"`);
@@ -3893,8 +3895,7 @@ function groupByJCRSections(items, jcrSections) {
     // (tabs with __mainTab should remain as top-level peers)
     // Note: At this point, tabs still have type='container', not 'tab', so check cq:panelTitle
     const itemsInSection = items.filter((item) => item.__jcrSection === section.title
-      && !((item.type === 'tab' || item['cq:panelTitle']) && item.__mainTab), // Exclude tabs marked as __mainTab
-    );
+      && !((item.type === 'tab' || item['cq:panelTitle']) && item.__mainTab)); // Exclude tabs marked as __mainTab
 
     if (itemsInSection.length > 0) {
       // Mark these items as matched
