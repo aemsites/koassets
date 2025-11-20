@@ -1061,10 +1061,10 @@ async function main() {
     // Button container extraction disabled - buttons are already part of regular tabs structure
     const buttonContainerPaths = [];
 
-    // Filter out nested tabs (tabs inside tab items) - they should remain nested
-    // Nested tabs have '/tabs/' or '/tabs_' in their path (tabs inside tab items)
+    // Filter out nested tabs (tabs inside tab items) - they're extracted from parent tab's model or JCR
+    // Nested tabs have multiple '/tabs' occurrences in their path
     const topLevelTabsPaths = tabsPaths.filter((path) => {
-      // Count how many times '/tabs' appears in the path after the first occurrence
+      // Count how many times '/tabs' appears in the path
       const match = path.match(/\/tabs/g);
       return !match || match.length === 1; // Keep only paths with exactly one /tabs
     });
@@ -1114,7 +1114,7 @@ async function main() {
       }
 
       // Recursively search for a title component within this container
-      function findTitleInSubtree(obj) {
+      function findTitleInSubtree(obj, depth = 0) {
         for (const key in obj) {
           if (!key.startsWith(':') && obj[key] && typeof obj[key] === 'object') {
             const item = obj[key];
@@ -1122,7 +1122,7 @@ async function main() {
               return item['jcr:title'];
             }
             // Recurse into nested objects
-            const result = findTitleInSubtree(item);
+            const result = findTitleInSubtree(item, depth + 1);
             if (result) return result;
           }
         }
@@ -1211,6 +1211,7 @@ async function main() {
       });
 
       console.log(`📌 Combined all tabs into ${combinedTabsData[':itemsOrder'].length} items\n`);
+
       mainTabsData = combinedTabsData;
     }
 
@@ -1553,6 +1554,12 @@ async function main() {
       // Continue with parsing
       // eslint-disable-next-line no-use-before-define
       mainHierarchy = parseHierarchyFromModel(mainTabsData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrData, jcrPathMap, jcrTeaserImageMap);
+      console.log(`  🔍 After parseHierarchyFromModel: ${mainHierarchy.length} items -`, mainHierarchy.map((i) => i.title).join(', '));
+
+      // Inject nested tabs from JCR (tabs that couldn't be downloaded via Sling Model)
+      // eslint-disable-next-line no-use-before-define
+      mainHierarchy = injectNestedTabsFromJCR(mainHierarchy, jcrData, jcrTeaserImageMap, tabsPaths);
+      console.log(`  🔍 After injectNestedTabsFromJCR: ${mainHierarchy.length} items -`, mainHierarchy.map((i) => i.title).join(', '));
     } else {
       console.log('📌 No tabs data from Sling Model - extracting tabs directly from JCR\n');
       // eslint-disable-next-line no-use-before-define
@@ -2015,6 +2022,78 @@ async function main() {
       // Merging orphans to the first item caused incorrect text associations
       }
     } // End of else block for JCR button/accordion extraction
+
+    // =========================================================================
+    // PHASE 2C: MARK TABS AS PEERS (if section has mixed content)
+    // =========================================================================
+    // Before type resolution, check if any tabs should be marked as __mainTab
+    // (tabs that have __jcrSection but should remain as top-level peers)
+    // This happens when a section has BOTH tabs AND other non-tab content
+    // =========================================================================
+    function markTabsAsPeersForMixedSections(items) {
+      // Check which sections (type: 'title') have non-tab children (buttons, accordions, text, etc.)
+      // Tabs should only be peers if the section has OTHER types of content, not just tabs
+      const sectionsWithNonTabChildren = {};
+      items.forEach((item) => {
+        if (item.type === 'title' && item.items && item.items.length > 0) {
+          // Count non-tab children (buttons, accordions, text, etc.)
+          const nonTabChildren = item.items.filter((child) => child.type !== 'tab' && !child['cq:panelTitle']);
+          if (nonTabChildren.length > 0) {
+            sectionsWithNonTabChildren[item.title] = {
+              total: item.items.length,
+              nonTabs: nonTabChildren.length,
+              types: nonTabChildren.map((c) => c.type),
+            };
+          }
+        }
+      });
+
+      // Find top-level tabs (items with __jcrSection and cq:panelTitle)
+      const topLevelTabs = items.filter((item) => item.__jcrSection && item['cq:panelTitle']);
+
+      // Group tabs by their __jcrSection
+      const tabsBySection = {};
+      topLevelTabs.forEach((tab) => {
+        if (!tabsBySection[tab.__jcrSection]) {
+          tabsBySection[tab.__jcrSection] = [];
+        }
+        tabsBySection[tab.__jcrSection].push(tab);
+      });
+
+      console.log('  📊 Sections with non-tab children:', JSON.stringify(sectionsWithNonTabChildren, null, 2));
+      console.log('  📊 Top-level tabs by section:', JSON.stringify(Object.keys(tabsBySection).reduce((acc, section) => {
+        acc[section] = tabsBySection[section].map((t) => t.title);
+        return acc;
+      }, {}), null, 2));
+
+      // Find sections that have BOTH non-tab children AND top-level tabs
+      // Only in these cases should tabs remain as peers
+      const sectionsWithMixedContent = Object.keys(tabsBySection).filter((section) => sectionsWithNonTabChildren[section] && sectionsWithNonTabChildren[section].nonTabs > 0);
+
+      // Mark tabs in these sections as __mainTab so they remain as peers
+      if (sectionsWithMixedContent.length > 0) {
+        console.log(`  📍 Sections with mixed content (tabs will be peers): ${sectionsWithMixedContent.join(', ')}`);
+        let markedCount = 0;
+        topLevelTabs.forEach((tab) => {
+          if (sectionsWithMixedContent.includes(tab.__jcrSection)) {
+            tab.__mainTab = true;
+            markedCount++;
+            console.log(`    ✓ Marked "${tab.title}" as __mainTab`);
+          }
+        });
+        console.log(`  ✅ Marked ${markedCount} tabs as __mainTab`);
+      }
+    }
+
+    // Call the marking function after JCR content is merged
+
+    markTabsAsPeersForMixedSections(mainHierarchy);
+
+    // Now group items by sections (respecting __mainTab markers)
+    console.log('\n🔄 Grouping items by sections...');
+    // eslint-disable-next-line no-use-before-define
+    mainHierarchy = groupHierarchyBySections(mainHierarchy, jcrData);
+    console.log(`✅ After grouping: ${mainHierarchy.length} items\n`);
 
     // =========================================================================
     // PHASE 3: TYPE RESOLUTION
@@ -2606,6 +2685,7 @@ async function main() {
         delete item['cq:panelTitle']; // Internal metadata only, not needed in output
         delete item.__jcrSection; // Internal metadata only
         delete item.__jcrOrder; // Internal metadata only, used for sorting
+        delete item.__mainTab; // Internal metadata only, used for grouping logic
         if (item.items) {
           removeInternalMetadata(item.items);
         }
@@ -2760,6 +2840,7 @@ function extractTabsFromJCR(jcrData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcr
         type: 'tab',
         key: itemKey,
         items: [],
+        __mainTab: true, // Mark as top-level tab from Sling Model
       };
 
       // Extract all content from this tab (containers, buttons, etc.)
@@ -2833,6 +2914,70 @@ function extractTabsFromJCR(jcrData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcr
 // PHASE 1: SLING MODEL EXTRACTION FUNCTIONS
 // =============================================================================
 
+// Helper function to inject nested tabs from JCR into existing hierarchy
+function injectNestedTabsFromJCR(hierarchy, jcrData, jcrTeaserImageMap, tabsPaths) {
+  if (!hierarchy || !Array.isArray(hierarchy)) return hierarchy;
+
+  console.log('\n🔍 Checking for nested tabs in JCR...');
+
+  // For each tab in the hierarchy, check if it has nested tabs in JCR
+  hierarchy.forEach((item) => {
+    if (item.type === 'tab' && item.key) {
+      // Find tabs paths that are nested under this tab
+      const nestedTabsPaths = tabsPaths.filter((path) =>
+        // Check if this path is nested under the current tab
+        // e.g., if tab key is "item_1", look for paths containing "/item_1/"
+        path.includes(`/${item.key}/`) && path.split('/tabs').length > 2);
+
+      if (nestedTabsPaths.length > 0) {
+        console.log(`  📂 Found ${nestedTabsPaths.length} nested tabs in "${item.title}"`);
+
+        // Extract nested tabs from JCR
+        nestedTabsPaths.forEach((tabsPath) => {
+          // Navigate to the nested tabs component in JCR
+          const pathParts = tabsPath.replace('/jcr:content/', '').split('/');
+          let current = jcrData.root || jcrData;
+
+          for (const part of pathParts) {
+            if (current && current[part]) {
+              current = current[part];
+            } else {
+              return;
+            }
+          }
+
+          if (!current || typeof current !== 'object') return;
+
+          // Extract tabs from this tabs component
+          const nestedTabs = extractTabsFromTabsComponent(current, item.path, jcrTeaserImageMap);
+          if (nestedTabs.length > 0) {
+            // Check which tabs are not already present in the parent
+            const existingTabTitles = new Set((item.items || []).map((child) => child.title));
+            const newTabs = nestedTabs.filter((tab) => !existingTabTitles.has(tab.title));
+
+            if (newTabs.length > 0) {
+              console.log(`    ➕ Adding ${newTabs.length} new nested tabs to "${item.title}" (${nestedTabs.length - newTabs.length} already present)`);
+              if (!item.items) {
+                item.items = [];
+              }
+              item.items.push(...newTabs);
+            } else {
+              console.log(`    ⏭️  Skipping ${nestedTabs.length} nested tabs for "${item.title}" (already present from Sling Model)`);
+            }
+          }
+        });
+      }
+    }
+
+    // Recursively process children
+    if (item.items && Array.isArray(item.items)) {
+      injectNestedTabsFromJCR(item.items, jcrData, jcrTeaserImageMap, tabsPaths);
+    }
+  });
+
+  return hierarchy;
+}
+
 /**
  * PHASE 1: Extract hierarchy from Sling Model (tabs.model.json)
  *
@@ -2877,7 +3022,9 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         // But still recurse into their nested items, including the structural component in the path
         if (item[':items']) {
           const structuralKeyPath = `${parentKeyPath}/${key}`;
+          console.log(`  🔄 Unwrapping structural tabs component at ${key}, extracting ${Object.keys(item[':items']).filter((k) => !k.startsWith(':')).length} children`);
           const childrenItems = extractItemsHierarchy(item[':items'], structuralKeyPath, displayPath, jcrPathMap, jcrTeaserImageMap);
+          console.log(`    ➡️  Extracted ${childrenItems.length} items:`, childrenItems.map((c) => c.title).join(', '));
           if (childrenItems.length > 0) {
             result.push(...childrenItems);
           }
@@ -3024,10 +3171,22 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         hierarchyItem.id = item.id;
       }
 
+      // Preserve __jcrSection metadata from the model item (assigned during tabs combining)
+      if (item.__jcrSection) {
+        hierarchyItem.__jcrSection = item.__jcrSection;
+      }
+
       // Preserve cq:panelTitle metadata (used by convertTabContainers to identify tab panels)
       // Note: This is internal metadata and will be removed before saving to JSON
       if (item['cq:panelTitle']) {
         hierarchyItem['cq:panelTitle'] = item['cq:panelTitle'];
+        // Mark as top-level tab ONLY if:
+        // 1. It's a direct child of the root tabs component (parentKeyPath segments <= 2)
+        // 2. AND it does NOT have a __jcrSection assigned (tabs with __jcrSection should be grouped into their section)
+        const pathSegments = parentKeyPath.split('/').filter((s) => s);
+        if (pathSegments.length <= 2 && !hierarchyItem.__jcrSection) {
+          hierarchyItem.__mainTab = true;
+        }
       }
 
       // Preserve JCR section information if available
@@ -3400,10 +3559,14 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       // EXCEPTION: If container has text content, keep it (don't unwrap) so text stays assigned to container
       if (itemType === 'container' && title && (String(title).startsWith('container_') || String(title).toLowerCase() === 'container') && !hierarchyItem.text) {
         // Don't add this container to result, but add its children directly (only if no text)
+        console.log(`  🔄 Unwrapping container "${title}", pushing ${hierarchyItem.items?.length || 0} children`);
         if (hierarchyItem.items && hierarchyItem.items.length > 0) {
           result.push(...hierarchyItem.items);
         }
       } else {
+        if (hierarchyItem['cq:panelTitle']) {
+          console.log(`  ✅ Keeping item with cq:panelTitle: "${title}" (type: ${itemType})`);
+        }
         result.push(hierarchyItem);
       }
     });
@@ -3549,8 +3712,10 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
 
     const cleanedHierarchy = unwrapStructuralContainers(rawHierarchy);
     const deduplicatedHierarchy = removeDuplicateContainers(cleanedHierarchy);
-    const groupedHierarchy = groupHierarchyBySections(deduplicatedHierarchy, jcrData);
-    mainHierarchy = cleanupDuplicatePathSegments(groupedHierarchy);
+    // Skip grouping here - it will be done after marking __mainTab in the main function
+    // const groupedHierarchy = groupHierarchyBySections(deduplicatedHierarchy, jcrData);
+    // mainHierarchy = cleanupDuplicatePathSegments(groupedHierarchy);
+    mainHierarchy = cleanupDuplicatePathSegments(deduplicatedHierarchy);
   }
 
   return mainHierarchy;
@@ -3660,7 +3825,12 @@ function groupByJCRSections(items, jcrSections) {
 
   jcrSections.forEach((section) => {
     // Find all items that belong to this section based on __jcrSection metadata
-    const itemsInSection = items.filter((item) => item.__jcrSection === section.title);
+    // Include all non-tab items AND tabs that are NOT marked as __mainTab
+    // (tabs with __mainTab should remain as top-level peers)
+    // Note: At this point, tabs still have type='container', not 'tab', so check cq:panelTitle
+    const itemsInSection = items.filter((item) => item.__jcrSection === section.title
+      && !((item.type === 'tab' || item['cq:panelTitle']) && item.__mainTab), // Exclude tabs marked as __mainTab
+    );
 
     if (itemsInSection.length > 0) {
       // Mark these items as matched
@@ -3720,10 +3890,11 @@ function groupByJCRSections(items, jcrSections) {
 
   // Include items that didn't match any JCR section
   const unmatchedItems = items.filter((item) => !matchedItems.has(item));
+  console.log(`  🔍 Total items: ${items.length}, matched: ${matchedItems.size}, unmatched: ${unmatchedItems.length}`);
   if (unmatchedItems.length > 0) {
     console.log(`⚠️  Found ${unmatchedItems.length} unmatched items (no JCR section metadata):`);
     unmatchedItems.forEach((item) => {
-      console.log(`  - ${item.title} (type: ${item.type})`);
+      console.log(`  - ${item.title} (type: ${item.type}, __mainTab: ${item.__mainTab || false}, __jcrSection: ${item.__jcrSection || 'none'})`);
       // Remove __jcrSection metadata if present
       const cleanItem = { ...item };
       delete cleanItem.__jcrSection;
