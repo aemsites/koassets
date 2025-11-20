@@ -499,6 +499,8 @@ ALL_STORES=(
   "all-content-stores-wanta-fanta"
   "bottler-content-stores-naou-digital-storefront"
   "bottler-content-stores-topo-chico-naou"
+  "bottler-content-stores-fifa-wc-2026"
+  "bottler-content-stores-australia-state-ic"
 )
 
 # Test each store against its backup

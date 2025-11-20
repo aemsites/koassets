@@ -5378,9 +5378,12 @@ function unwrapAccordionItems(items, depth = 0) {
 
     // If item title starts with '{type}_', 'item_', or equals '{type}', skip it but keep its children
     // This handles wrappers like 'accordion_', 'button_', 'teaser_', 'item_*', etc.
+    // BUT: Don't unwrap actual content items (teasers, buttons with content)
     const shouldUnwrap = item.title
         && (item.title.startsWith('item_')
-            || (item.type && (item.title.startsWith(`${item.type}_`) || item.title === item.type)));
+            || (item.type && (item.title.startsWith(`${item.type}_`) || item.title === item.type)))
+        && item.type !== 'teaser' // Don't unwrap teasers - they're actual content
+        && item.type !== 'button'; // Don't unwrap buttons - they're actual content
 
     if (shouldUnwrap) {
       if (item.items && item.items.length > 0) {
