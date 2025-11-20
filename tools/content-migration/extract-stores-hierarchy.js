@@ -4201,9 +4201,28 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
           console.log(`  🔗 Found ${allTitlesInContainer.length} nested titles: ${allTitlesInContainer.map((t) => t['jcr:title']).join(' > ')}`);
         }
       } else if (currentTitle) {
-        // This is content after a title - add to current section
+        // This is content after a title - check if it has nested titles
         if (resourceType === 'tccc-dam/components/container') {
-          contentContainers.push(child);
+          // First, check if this container itself has nested title structures
+          const nested = scanForSections(child, depth + 1, maxDepth);
+          if (nested.length > 0) {
+            // This container has its own nested title sections!
+            // Save current section first
+            if (contentContainers.length > 0) {
+              foundSections.push({
+                title: currentTitle,
+                containers: contentContainers,
+              });
+            }
+            // Add the nested sections
+            foundSections.push(...nested);
+            // Reset for next section
+            currentTitle = null;
+            contentContainers = [];
+          } else {
+            // No nested titles - just add as content
+            contentContainers.push(child);
+          }
         }
       } else {
         // No title yet - either recursively search or save as preceding untitled container
