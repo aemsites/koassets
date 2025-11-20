@@ -499,9 +499,47 @@ function decodeHtmlEntities(str) {
 }
 
 /**
+ * Helper function to transform a search HTML page URL with query parameters
+ * @param {string} url - The original URL
+ * @param {string} searchPath - The new search path (e.g., '/search/templates', '/search/all')
+ * @returns {string|null} - Transformed URL or null if parsing fails
+ */
+function transformSearchHtmlUrl(url, searchPath) {
+  try {
+    // Decode all HTML entities in URL before parsing
+    const decodedUrl = decodeHtmlEntities(url);
+    // Parse the URL to extract query parameters
+    const urlObj = new URL(decodedUrl, 'https://dummy.com'); // Need base URL for relative URLs
+    const fulltext = urlObj.searchParams.get('fulltext');
+    const filters = extractActiveFilters(urlObj.searchParams);
+    const filterQueryString = filtersToQueryString(filters);
+
+    if (fulltext) {
+      // URL decode the fulltext parameter
+      const decodedFullText = decodeURIComponent(fulltext);
+      const filterSuffix = filterQueryString ? `&${filterQueryString}` : '';
+      return `${searchPath}?fulltext=${encodeURIComponent(decodedFullText)}${filterSuffix}`;
+    }
+    if (filterQueryString) {
+      // No fulltext but has filters - create URL with empty query
+      return `${searchPath}?fulltext=&${filterQueryString}`;
+    }
+    // No fulltext and no filters - just return the search path
+    return searchPath;
+  } catch (error) {
+    // If URL parsing fails, return null
+    console.warn(`Failed to parse URL: ${url}`);
+  }
+  return null;
+}
+
+/**
  * Transforms search URLs to new search format
  * - search-assets.html → /search/all?fulltext=...
+ * - search-assets-mycoke.html → /search/all?fulltext=...
  * - template-search.html → /search/template?fulltext=...
+ * - search-assets-pacs.html → /search/search-assets-pacs?fulltext=...
+ * - search-product-assets.html → /search/products?fulltext=...
  * Extracts 'fulltext' parameter, decodes it, and creates new URL
  * Also handles /content/share/us/en/search-assets/details URLs
  * For URLs with active filters (detected by _values parameters),
@@ -524,58 +562,34 @@ function transformSearchUrl(url) {
     }
   }
 
-  // Handle template-search.html URLs with fulltext parameter
+  // Handle template-search.html URLs
   if (url.includes('template-search.html')) {
-    try {
-      // Decode all HTML entities in URL before parsing
-      const decodedUrl = decodeHtmlEntities(url);
-      // Parse the URL to extract query parameters
-      const urlObj = new URL(decodedUrl, 'https://dummy.com'); // Need base URL for relative URLs
-      const fulltext = urlObj.searchParams.get('fulltext');
-      const filters = extractActiveFilters(urlObj.searchParams);
-      const filterQueryString = filtersToQueryString(filters);
-
-      if (fulltext) {
-        // URL decode the fulltext parameter
-        const decodedFullText = decodeURIComponent(fulltext);
-        const filterSuffix = filterQueryString ? `&${filterQueryString}` : '';
-        return `/search/templates?fulltext=${encodeURIComponent(decodedFullText)}${filterSuffix}`;
-      }
-      if (filterQueryString) {
-        // No fulltext but has filters - create URL with empty query
-        return `/search/templates?fulltext=&${filterQueryString}`;
-      }
-    } catch (error) {
-    // If URL parsing fails, return original URL
-      console.warn(`Failed to parse URL: ${url}`);
-    }
+    const transformed = transformSearchHtmlUrl(url, '/search/templates');
+    if (transformed) return transformed;
   }
 
-  // Handle search-assets.html URLs with fulltext parameter
-  if (url.includes('search-assets.html')) {
-    try {
-      // Decode all HTML entities in URL before parsing
-      const decodedUrl = decodeHtmlEntities(url);
-      // Parse the URL to extract query parameters
-      const urlObj = new URL(decodedUrl, 'https://dummy.com'); // Need base URL for relative URLs
-      const fulltext = urlObj.searchParams.get('fulltext');
-      const filters = extractActiveFilters(urlObj.searchParams);
-      const filterQueryString = filtersToQueryString(filters);
+  // Handle search-product-assets.html URLs (check before search-assets.html to avoid false matches)
+  if (url.includes('search-product-assets.html')) {
+    const transformed = transformSearchHtmlUrl(url, '/search/products');
+    if (transformed) return transformed;
+  }
 
-      if (fulltext) {
-        // URL decode the fulltext parameter
-        const decodedFullText = decodeURIComponent(fulltext);
-        const filterSuffix = filterQueryString ? `&${filterQueryString}` : '';
-        return `/search/all?fulltext=${encodeURIComponent(decodedFullText)}${filterSuffix}`;
-      }
-      if (filterQueryString) {
-        // No fulltext but has filters - create URL with empty query
-        return `/search/all?fulltext=&${filterQueryString}`;
-      }
-    } catch (error) {
-      // If URL parsing fails, return original URL
-      console.warn(`Failed to parse URL: ${url}`);
-    }
+  // Handle search-assets-pacs.html URLs (check before search-assets.html to avoid false matches)
+  if (url.includes('search-assets-pacs.html')) {
+    const transformed = transformSearchHtmlUrl(url, '/search/search-assets-pacs');
+    if (transformed) return transformed;
+  }
+
+  // Handle search-assets-mycoke.html URLs (check before search-assets.html to avoid false matches)
+  if (url.includes('search-assets-mycoke.html')) {
+    const transformed = transformSearchHtmlUrl(url, '/search/all');
+    if (transformed) return transformed;
+  }
+
+  // Handle search-assets.html URLs
+  if (url.includes('search-assets.html')) {
+    const transformed = transformSearchHtmlUrl(url, '/search/all');
+    if (transformed) return transformed;
   }
 
   return url;
@@ -636,13 +650,16 @@ function transformGeneralPageUrl(url) {
 
 /**
  * Transforms all search URLs within text/HTML content
- * Handles search-assets.html, search-assets/details, and template-search.html URLs
+ * Handles search-assets.html, search-assets-mycoke.html, search-assets/details, search-assets-pacs.html, search-product-assets.html, and template-search.html URLs
  * @param {string} text - The text or HTML content
  * @returns {string} - Text with transformed URLs
  */
 function transformSearchUrlsInText(text) {
   if (!text || (!text.includes('search-assets.html')
+      && !text.includes('search-assets-mycoke.html')
       && !text.includes('search-assets/details')
+      && !text.includes('search-assets-pacs.html')
+      && !text.includes('search-product-assets.html')
       && !text.includes('template-search.html'))) {
     return text;
   }
@@ -671,9 +688,9 @@ function transformSearchUrlsInText(text) {
 
       const chunk = text.substring(i, endPos);
 
-      // Match search-assets, template-search URLs
+      // Match search-product-assets, search-assets-mycoke, search-assets-pacs, search-assets, template-search URLs
       // After JSON parsing, escaped quotes become regular quotes
-      const urlPattern = /href="([^"]*(?:search-assets|template-search)[^"]*)"/gi;
+      const urlPattern = /href="([^"]*(?:search-product-assets|search-assets-mycoke|search-assets-pacs|search-assets|template-search)[^"]*)"/gi;
 
       const transformedChunk = chunk.replace(urlPattern, (match, url) => {
         // Decode all HTML entities in URL
@@ -691,9 +708,9 @@ function transformSearchUrlsInText(text) {
 
   // For normal-sized text, use the original pattern
   // Match URLs in href attributes
-  // Pattern matches search-assets, template-search URLs
+  // Pattern matches search-product-assets, search-assets-mycoke, search-assets-pacs, search-assets, template-search URLs
   // After JSON parsing, escaped quotes become regular quotes
-  const urlPattern = /href="([^"]*(?:search-assets|template-search)[^"]*)"/gi;
+  const urlPattern = /href="([^"]*(?:search-product-assets|search-assets-mycoke|search-assets-pacs|search-assets|template-search)[^"]*)"/gi;
 
   return text.replace(urlPattern, (match, url) => {
     // Decode all HTML entities in URL
