@@ -490,6 +490,15 @@ ALL_STORES=(
   "all-content-stores-absolut-vodka-sprite"
   "all-content-stores-bacardi-and-coke"
   "all-content-stores-dasani"
+  "all-content-stores-olympics-2024"
+  "all-content-stores-pacs-global"
+  "all-content-stores-topo-chico-hard-seltzer"
+  "all-content-stores-coke-and-meals-emerging-markets"
+  "all-content-stores-grip"
+  "all-content-stores-sprite-limelight-season-3"
+  "all-content-stores-wanta-fanta"
+  "bottler-content-stores-naou-digital-storefront"
+  "bottler-content-stores-topo-chico-naou"
 )
 
 # Test each store against its backup

@@ -1074,62 +1074,87 @@ async function main() {
     // Function to determine which JCR section a tab path belongs to
     function getJCRSectionForTabPath(tabPath, jcrData) {
       // tabPath is like: /jcr:content/root/container/container/container_732554625_/tabs
-      // or: /jcr:content/root/container/container_copy_copy_1873410646/container_732554625_/tabs
-      // We need to find which ROOT-level container this path traverses through
+      // or: /jcr:content/root/container/container_copy_copy_/container_copy/item_1_copy/tabs
+      // We need to find the NEAREST title component by traversing the path
 
       const pathParts = tabPath.split('/').filter((p) => p && p !== 'jcr:content' && p !== 'root');
+      // Remove only the FIRST occurrence of 'container' (which is the root.container property)
+      const containerIndex = pathParts.indexOf('container');
+      if (containerIndex !== -1) {
+        pathParts.splice(containerIndex, 1);
+      }
       if (pathParts.length === 0) return null;
 
-      // Get all root-level container keys
-      const rootContainer = jcrData.root.container;
-      const rootKeys = Object.keys(rootContainer).filter((k) => !k.startsWith(':'));
+      // Start from jcrData.root.container and traverse the path to find the nearest title
+      let current = jcrData.root.container;
+      let nearestTitle = null;
 
-      // Find the longest matching root-level container key in the path
-      let matchedKey = null;
-      let maxMatchLength = 0;
-
-      for (const key of rootKeys) {
-        // Check if this key appears anywhere in the path
-        if (pathParts.includes(key) && key.length > maxMatchLength) {
-          matchedKey = key;
-          maxMatchLength = key.length;
-        }
-      }
-
-      if (!matchedKey) {
-        // Try matching by sequence - take all path parts until we find a root-level key
-        for (let i = 0; i < pathParts.length; i++) {
-          if (rootKeys.includes(pathParts[i])) {
-            matchedKey = pathParts[i];
-            break;
-          }
-        }
-      }
-
-      if (!matchedKey) return null;
-
-      const container = rootContainer[matchedKey];
-      if (!container || typeof container !== 'object') {
-        return null;
-      }
-
-      // Recursively search for a title component within this container
-      function findTitleInSubtree(obj, depth = 0) {
-        for (const key in obj) {
-          if (!key.startsWith(':') && obj[key] && typeof obj[key] === 'object') {
-            const item = obj[key];
-            if (item['sling:resourceType'] === 'tccc-dam/components/title' && item['jcr:title']) {
+      // Helper to find title in a container (checking ONE level of nested containers)
+      function findTitleInContainer(container) {
+        // First, check direct children for title components
+        for (const key in container) {
+          if (!key.startsWith(':') && !key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
+            const item = container[key];
+            if (item && typeof item === 'object'
+                && item['sling:resourceType'] === 'tccc-dam/components/title'
+                && item['jcr:title']) {
               return item['jcr:title'];
             }
-            // Recurse into nested objects
-            const result = findTitleInSubtree(item, depth + 1);
-            if (result) return result;
           }
         }
+
+        // If not found, check ONE level of nested containers
+        for (const key in container) {
+          if (!key.startsWith(':') && !key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
+            const item = container[key];
+            if (item && typeof item === 'object'
+                && item['sling:resourceType'] === 'tccc-dam/components/container') {
+              // Look for title as direct child of this nested container
+              for (const nestedKey in item) {
+                if (!nestedKey.startsWith(':') && !nestedKey.startsWith('jcr:') && !nestedKey.startsWith('cq:') && !nestedKey.startsWith('sling:')) {
+                  const nestedItem = item[nestedKey];
+                  if (nestedItem && typeof nestedItem === 'object'
+                      && nestedItem['sling:resourceType'] === 'tccc-dam/components/title'
+                      && nestedItem['jcr:title']) {
+                    return nestedItem['jcr:title'];
+                  }
+                }
+              }
+            }
+          }
+        }
+
         return null;
       }
 
-      return findTitleInSubtree(container);
+      // Traverse each part of the path
+      for (let i = 0; i < pathParts.length; i++) {
+        const part = pathParts[i];
+
+        if (!current || typeof current !== 'object') {
+          console.log(`    ❌ Stopping at "${part}": current is not an object`);
+          break;
+        }
+
+        // Before moving to the next level, check if the container we're about to enter
+        // has a title component (checking nested containers too)
+        if (current[part] && typeof current[part] === 'object') {
+          const nextContainer = current[part];
+
+          // Look for a title component inside this container (recursively)
+          const foundTitle = findTitleInContainer(nextContainer);
+          if (foundTitle) {
+            nearestTitle = foundTitle;
+          }
+
+          // Move to next level
+          current = nextContainer;
+        } else {
+          break;
+        }
+      }
+
+      return nearestTitle;
     }
 
     // Download all tabs as models and combine
@@ -2901,7 +2926,6 @@ function extractTabsFromJCR(jcrData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcr
       if (tabItem.container) {
         tab.items = extractTabContent(tabItem.container, tabTitle);
       }
-
       hierarchy.push(tab);
     });
   });
