@@ -6,9 +6,12 @@
 
 import { json, error } from 'itty-router';
 import { sendMessage, sendMessageToMultiple } from '../util/notifications-helpers.js';
+import { fetchHelixSheet } from '../util/helixutil.js';
 
 // Rights Reviewers - users who receive notifications for new requests
-// TODO pull from sheet or some other dynamic way
+// NOTE: This hardcoded list is used for notification distribution only.
+// Actual reviewer permissions are managed in /config/access/permissions sheet.
+// Users with 'rights-reviewer' or 'senior-rights-reviewer' permissions can review requests.
 const RIGHTS_REVIEWERS = [
   'jfait@adobe.com',
   'pkoch@adobe.com',
@@ -44,7 +47,9 @@ const SUBMITTER_STATUSES = [
 
 // Permission Constants
 const PERMISSIONS = {
-  RIGHTS_MANAGER: 'rights-manager',
+  RIGHTS_REVIEWER: 'rights-reviewer',
+  SENIOR_RIGHTS_REVIEWER: 'senior-rights-reviewer',
+  RIGHTS_MANAGER: 'rights-manager', // legacy - backwards compatibility
   REPORTS_ADMIN: 'reports-admin',
 };
 
@@ -72,8 +77,14 @@ export async function rightsRequestsApi(request, env) {
   }
 
   // Review routes (reviewer perspective)
+  if (request.method === 'GET' && path.endsWith('/rightsrequests/reviews/reviewers')) {
+    return listAvailableReviewers(request, env);
+  }
   if (request.method === 'GET' && path.endsWith('/rightsrequests/reviews')) {
     return listReviewsForReviewer(request, env);
+  }
+  if (request.method === 'POST' && path.endsWith('/rightsrequests/reviews/assign-to')) {
+    return assignReviewToReviewer(request, env);
   }
   if (request.method === 'POST' && path.endsWith('/rightsrequests/reviews/assign')) {
     return assignReview(request, env);
@@ -249,14 +260,99 @@ export async function createRightsRequest(request, env) {
 }
 
 /**
+ * List available reviewers (users with rights-reviewer permission)
+ * GET /api/rightsrequests/reviews/reviewers
+ * Requires: PERMISSIONS.SENIOR_RIGHTS_REVIEWER
+ * Returns list of users who can be assigned as reviewers
+ */
+export async function listAvailableReviewers(request, env) {
+  try {
+    const userEmail = request.user?.email?.toLowerCase();
+    if (!userEmail) {
+      return error(401, { success: false, error: 'User not authenticated' });
+    }
+
+    // Check if user has senior rights reviewer permission
+    if (!hasSeniorRightsReviewerPermission(request.user)) {
+      return error(403, {
+        success: false,
+        error: 'Senior rights reviewer permission required',
+        message: 'You do not have permission to view available reviewers',
+      });
+    }
+
+    // Fetch permissions sheet to get users with rights-reviewer permission
+    const permissions = await fetchHelixSheet(env, '/config/access/permissions', {
+      sheet: { key: 'email', arrays: ['permissions'] },
+    });
+
+    if (!permissions) {
+      return error(500, {
+        success: false,
+        error: 'Failed to load permissions configuration',
+      });
+    }
+
+    // Find all users with rights-reviewer or legacy rights-manager permission
+    const reviewers = [];
+    Object.entries(permissions).forEach(([email, userData]) => {
+      const userPermissions = userData.permissions || [];
+      if (
+        userPermissions.includes(PERMISSIONS.RIGHTS_REVIEWER) ||
+        userPermissions.includes(PERMISSIONS.RIGHTS_MANAGER)
+      ) {
+        reviewers.push({
+          email,
+          permissions: userPermissions,
+        });
+      }
+    });
+
+    // Also include hardcoded RIGHTS_REVIEWERS for backwards compatibility
+    // (these receive notifications but might not be in permissions sheet yet)
+    RIGHTS_REVIEWERS.forEach((email) => {
+      if (!reviewers.find((r) => r.email === email)) {
+        reviewers.push({
+          email,
+          permissions: [PERMISSIONS.RIGHTS_REVIEWER],
+          note: 'From notification list',
+        });
+      }
+    });
+
+    return json({
+      success: true,
+      data: reviewers,
+      count: reviewers.length,
+    });
+  } catch (err) {
+    return error(500, {
+      success: false,
+      error: 'Failed to retrieve available reviewers',
+      message: err.message,
+    });
+  }
+}
+
+/**
  * List reviews for the authenticated reviewer
  * GET /api/rightsrequests/reviews
+ * Requires: rights-reviewer permission (or legacy rights-manager)
  */
 export async function listReviewsForReviewer(request, env) {
   try {
     const userEmail = request.user?.email?.toLowerCase();
     if (!userEmail) {
       return error(401, { success: false, error: 'User not authenticated' });
+    }
+
+    // Check if user has rights reviewer permission
+    if (!hasRightsReviewerPermission(request.user)) {
+      return error(403, {
+        success: false,
+        error: 'Rights reviewer permission required',
+        message: 'You do not have permission to view rights reviews',
+      });
     }
 
     // Get unassigned reviews
@@ -312,15 +408,25 @@ export async function listReviewsForReviewer(request, env) {
 }
 
 /**
- * Assign a rights request review to the authenticated reviewer
+ * Assign a rights request review to the authenticated reviewer (self-assignment)
  * POST /api/rightsrequests/reviews/assign
  * Body: { requestId: "1234567890" }
+ * Requires: rights-reviewer permission (or legacy rights-manager)
  */
 export async function assignReview(request, env) {
   try {
     const userEmail = request.user?.email?.toLowerCase();
     if (!userEmail) {
       return error(401, { success: false, error: 'User not authenticated' });
+    }
+
+    // Check if user has rights reviewer permission
+    if (!hasRightsReviewerPermission(request.user)) {
+      return error(403, {
+        success: false,
+        error: 'Rights reviewer permission required',
+        message: 'You do not have permission to assign rights reviews',
+      });
     }
 
     const { requestId } = await request.json();
@@ -380,6 +486,127 @@ export async function assignReview(request, env) {
 }
 
 /**
+ * Assign a rights request review to a specific reviewer (senior reviewer only)
+ * POST /api/rightsrequests/reviews/assign-to
+ * Body: { requestId: "1234567890", assigneeEmail: "reviewer@example.com" }
+ * Requires: PERMISSIONS.SENIOR_RIGHTS_REVIEWER
+ */
+export async function assignReviewToReviewer(request, env) {
+  try {
+    const userEmail = request.user?.email?.toLowerCase();
+    if (!userEmail) {
+      return error(401, { success: false, error: 'User not authenticated' });
+    }
+
+    // Check if user has senior rights reviewer permission
+    if (!hasSeniorRightsReviewerPermission(request.user)) {
+      return error(403, {
+        success: false,
+        error: 'Senior rights reviewer permission required',
+        message: 'You do not have permission to assign requests to other reviewers',
+      });
+    }
+
+    const { requestId, assigneeEmail } = await request.json();
+    if (!requestId || !assigneeEmail) {
+      return error(400, {
+        success: false,
+        error: 'Request ID and assignee email are required',
+      });
+    }
+
+    const assigneeEmailLower = assigneeEmail.toLowerCase();
+
+    // Validate that assignee has rights reviewer permission
+    const permissions = await fetchHelixSheet(env, '/config/access/permissions', {
+      sheet: { key: 'email', arrays: ['permissions'] },
+    });
+
+    const assigneePerms = permissions?.[assigneeEmailLower]?.permissions || [];
+    const isValidReviewer =
+      assigneePerms.includes(PERMISSIONS.RIGHTS_REVIEWER) ||
+      assigneePerms.includes(PERMISSIONS.RIGHTS_MANAGER) ||
+      RIGHTS_REVIEWERS.includes(assigneeEmailLower);
+
+    if (!isValidReviewer) {
+      return error(400, {
+        success: false,
+        error: 'Invalid assignee',
+        message: 'The specified user does not have rights reviewer permission',
+      });
+    }
+
+    // Get the unassigned review entry
+    const unassignedKey = `user:unassigned:rights-request-review:${requestId}`;
+    const unassignedData = await env.RIGHTS_REQUEST_REVIEWS.get(unassignedKey);
+
+    if (!unassignedData) {
+      return error(404, {
+        success: false,
+        error: 'Unassigned review not found',
+        message: 'This request may already be assigned',
+      });
+    }
+
+    const reviewData = JSON.parse(unassignedData);
+
+    // Update the primary request with reviewer info
+    const primaryRequestData = await env.RIGHTS_REQUESTS.get(reviewData.requestId);
+    if (!primaryRequestData) {
+      return error(404, { success: false, error: 'Request not found in primary store' });
+    }
+
+    const requestDataObj = JSON.parse(primaryRequestData);
+    requestDataObj.rightsRequestReviewDetails.rightsReviewer = assigneeEmailLower;
+    requestDataObj.rightsRequestReviewDetails.rightsRequestStatus =
+      RIGHTS_REQUEST_STATUSES.IN_PROGRESS;
+    requestDataObj.lastModified = new Date().toUTCString();
+    requestDataObj.lastModifiedBy = userEmail; // The senior reviewer who made the assignment
+
+    // Save updated primary request
+    await env.RIGHTS_REQUESTS.put(reviewData.requestId, JSON.stringify(requestDataObj));
+
+    // Delete unassigned entry
+    await env.RIGHTS_REQUEST_REVIEWS.delete(unassignedKey);
+
+    // Create assigned entry for the assignee
+    const assignedKey = `user:${assigneeEmailLower}:rights-request-review:${requestId}`;
+    const assignedReviewData = {
+      ...reviewData,
+      rightsReviewer: assigneeEmailLower,
+      assignedDate: new Date().toISOString(),
+      assignedBy: userEmail, // Track who made the assignment
+    };
+    await env.RIGHTS_REQUEST_REVIEWS.put(assignedKey, JSON.stringify(assignedReviewData));
+
+    // Send notification to the assigned reviewer
+    const requestDetailsUrl = `${new URL(request.url).origin}/my-rights-review-details?requestId=${requestId}`;
+    const myReviewsUrl = `${new URL(request.url).origin}/my-rights-reviews`;
+
+    await sendMessage(env, assigneeEmailLower, {
+      subject: 'Rights Request Assigned to You',
+      message: `A rights request has been assigned to you by ${userEmail}.\n\nRequest ID: ${requestId}\nSubmitted by: ${reviewData.submittedBy}\n\nView request details: ${requestDetailsUrl}\n\nYou can see all your assigned requests from: ${myReviewsUrl}`,
+      type: 'Notification',
+      from: 'Rights Management System',
+      priority: 'normal',
+      expiresInXDays: 7,
+    });
+
+    return json({
+      success: true,
+      data: requestDataObj,
+      message: `Review assigned to ${assigneeEmailLower} successfully`,
+    });
+  } catch (err) {
+    return error(500, {
+      success: false,
+      error: 'Failed to assign review',
+      message: err.message,
+    });
+  }
+}
+
+/**
  * Helper function to update request status
  * @param {Object} env - Environment bindings
  * @param {string} requestKey - KV key for the request
@@ -400,12 +627,22 @@ async function updateRequestStatusHelper(env, requestKey, requestData, status, u
  * Update review status for a rights request
  * POST /api/rightsrequests/reviews/status
  * Body: { requestId, status }
+ * Requires: rights-reviewer permission (or legacy rights-manager)
  */
 export async function updateReviewStatus(request, env) {
   try {
     const userEmail = request.user?.email?.toLowerCase();
     if (!userEmail) {
       return error(401, { success: false, error: 'User not authenticated' });
+    }
+
+    // Check if user has rights reviewer permission
+    if (!hasRightsReviewerPermission(request.user)) {
+      return error(403, {
+        success: false,
+        error: 'Rights reviewer permission required',
+        message: 'You do not have permission to update rights review status',
+      });
     }
 
     const { requestId, status } = await request.json();
@@ -596,6 +833,25 @@ function isAuthorized(user, requiredPermission) {
 }
 
 /**
+ * Check if user has rights reviewer permission (supports legacy rights-manager permission)
+ * @param {Object} user - User object from request
+ * @returns {boolean} True if user has rights reviewer permission
+ */
+function hasRightsReviewerPermission(user) {
+  return user?.permissions?.includes(PERMISSIONS.RIGHTS_REVIEWER) || 
+         user?.permissions?.includes(PERMISSIONS.RIGHTS_MANAGER); // legacy support
+}
+
+/**
+ * Check if user has senior rights reviewer permission
+ * @param {Object} user - User object from request
+ * @returns {boolean} True if user has senior rights reviewer permission
+ */
+function hasSeniorRightsReviewerPermission(user) {
+  return user?.permissions?.includes(PERMISSIONS.SENIOR_RIGHTS_REVIEWER);
+}
+
+/**
  * List all rights requests across all users (admin report)
  * GET /api/rightsrequests/all
  * Requires: PERMISSIONS.REPORTS_ADMIN
@@ -608,17 +864,6 @@ export async function listAllRightsRequests(request, env) {
     if (!userEmail) {
       return error(401, { success: false, error: 'User not authenticated' });
     }
-
-    // Debug: Log user roles and permissions (temporary for debugging)
-    // eslint-disable-next-line no-console
-    console.log('[Admin Check] User info:', {
-      email: userEmail,
-      isAdmin: request.user?.isAdmin,
-      roles: request.user?.roles,
-      role: request.user?.role,
-      permissions: request.user?.permissions,
-      fullUser: request.user,
-    });
 
     // Check reports-admin permission
     if (!isAuthorized(request.user, PERMISSIONS.REPORTS_ADMIN)) {

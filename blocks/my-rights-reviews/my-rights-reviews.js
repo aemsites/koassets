@@ -3,7 +3,7 @@
  * Reviewer perspective: view unassigned requests and assigned reviews
  */
 
-import { showStatusModal } from './modals.js';
+import { showStatusModal, showAssignmentModal } from './modals.js';
 import { REQUEST_STATUSES, getStatusClassName } from './config.js';
 import { formatDate } from '../../scripts/rights-management/date-formatter.js';
 import { ASSET_PREVIEW } from '../../scripts/rights-management/rights-constants.js';
@@ -20,6 +20,14 @@ let allReviews = [];
 let filteredReviews = [];
 let currentTab = TABS.UNASSIGNED;
 const selectedFilters = new Set(['all']);
+
+/**
+ * Check if current user has senior rights reviewer permission
+ * @returns {boolean} True if user has senior rights reviewer permission
+ */
+function isSeniorRightsReviewer() {
+  return window.user?.permissions?.includes('senior-rights-reviewer');
+}
 
 /**
  * Generate preview URL from asset ID and filename
@@ -46,9 +54,6 @@ function buildAssetImageUrl(
  */
 async function loadReviews() {
   try {
-    // eslint-disable-next-line no-console
-    console.log('Loading reviews from API...');
-
     const response = await fetch('/api/rightsrequests/reviews', {
       credentials: 'include',
     });
@@ -58,9 +63,6 @@ async function loadReviews() {
     }
 
     const result = await response.json();
-    // eslint-disable-next-line no-console
-    console.log('Reviews loaded:', result);
-
     allReviews = Object.values(result.data || {});
     return allReviews;
   } catch (error) {
@@ -264,6 +266,22 @@ function createReviewRow(review) {
       }
     });
     actionCell.appendChild(assignBtn);
+
+    // Add "Assign To..." button for senior reviewers
+    if (isSeniorRightsReviewer()) {
+      const assignToBtn = document.createElement('button');
+      assignToBtn.className = 'action-button assign-to-button';
+      assignToBtn.textContent = 'Assign To...';
+      assignToBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        showAssignmentModal(review, async () => {
+          await loadReviews();
+          applyFilters();
+          renderReviews();
+        });
+      });
+      actionCell.appendChild(assignToBtn);
+    }
   }
 
   // Change Status button (only for assigned reviews)
