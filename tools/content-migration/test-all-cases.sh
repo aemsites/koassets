@@ -503,6 +503,7 @@ ALL_STORES=(
   "bottler-content-stores-australia-state-ic"
   "all-content-stores-wtf-3"
   "all-content-stores-coca-cola-creations"
+  "all-content-stores-coke-studio-2024"
 )
 
 # Test each store against its backup

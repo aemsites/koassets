@@ -5210,6 +5210,37 @@ function extractComponentsFromContainer(container, items, sectionTitle, jcrTease
                   if (panelText) panelText += '\n';
                   panelText += child.text;
                 }
+                // Found a nested accordion - recursively extract its panels
+                else if (childResourceType === 'tccc-dam/components/accordion') {
+                  // Extract all panels from this nested accordion
+                  for (const nestedPanelKey in child) {
+                    if (nestedPanelKey.startsWith('item_') && child[nestedPanelKey]) {
+                      const nestedPanel = child[nestedPanelKey];
+                      const nestedPanelTitle = nestedPanel['cq:panelTitle'] || nestedPanel['jcr:title'] || nestedPanelKey;
+                      const nestedAccordionItem = {
+                        title: nestedPanelTitle,
+                        path: `${sectionTitle}${PATH_SEPARATOR}${panelTitle}${PATH_SEPARATOR}${nestedPanelTitle}`,
+                        type: 'accordion',
+                        key: nestedPanelKey,
+                        id: `accordion-${createDeterministicId(nestedPanelTitle + nestedPanelKey)}`,
+                      };
+
+                      // Extract text from the nested panel
+                      let nestedText = '';
+                      for (const nestedTextKey in nestedPanel) {
+                        if (nestedTextKey.startsWith('text') && nestedPanel[nestedTextKey] && nestedPanel[nestedTextKey].text) {
+                          if (nestedText) nestedText += '\n';
+                          nestedText += nestedPanel[nestedTextKey].text;
+                        }
+                      }
+                      if (nestedText) {
+                        nestedAccordionItem.text = stripHostsFromText(nestedText);
+                      }
+
+                      nestedChildren.push(nestedAccordionItem);
+                    }
+                  }
+                }
                 // Found a nested container - extract it recursively
                 else if (childResourceType === 'tccc-dam/components/container') {
                   const nestedPanelTitle = child['cq:panelTitle'] || child['jcr:title'];

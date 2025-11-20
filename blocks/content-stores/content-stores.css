@@ -615,8 +615,7 @@
 
 /* Exclude text, section-title, and teaser type items from grid layout constraints */
 .content-stores .tree-children.has-grid .tree-item[data-item-type="text"],
-.content-stores .tree-children.has-grid .tree-item[data-item-type="section-title"],
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] {
+.content-stores .tree-children.has-grid .tree-item[data-item-type="section-title"] {
   width: 100%;
   max-width: none;
 }
@@ -634,7 +633,9 @@
   width: auto;
 }
 
-/* Teaser width is controlled by the exclusion rule above (lines 617-621) */
+.content-stores .tree-children .tree-item[data-item-type="teaser"] {
+  width: 330px;
+}
 
 /* Override inline styles for items in flex */
 .content-stores .tree-children.has-grid .tree-item .tree-node {
