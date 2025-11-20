@@ -1061,10 +1061,10 @@ async function main() {
     // Button container extraction disabled - buttons are already part of regular tabs structure
     const buttonContainerPaths = [];
 
-    // Filter out nested tabs (tabs inside tab items) - they should remain nested
-    // Nested tabs have '/tabs/' or '/tabs_' in their path (tabs inside tab items)
+    // Filter out nested tabs (tabs inside tab items) - they're extracted from parent tab's model or JCR
+    // Nested tabs have multiple '/tabs' occurrences in their path
     const topLevelTabsPaths = tabsPaths.filter((path) => {
-      // Count how many times '/tabs' appears in the path after the first occurrence
+      // Count how many times '/tabs' appears in the path
       const match = path.match(/\/tabs/g);
       return !match || match.length === 1; // Keep only paths with exactly one /tabs
     });
@@ -1074,62 +1074,87 @@ async function main() {
     // Function to determine which JCR section a tab path belongs to
     function getJCRSectionForTabPath(tabPath, jcrData) {
       // tabPath is like: /jcr:content/root/container/container/container_732554625_/tabs
-      // or: /jcr:content/root/container/container_copy_copy_1873410646/container_732554625_/tabs
-      // We need to find which ROOT-level container this path traverses through
+      // or: /jcr:content/root/container/container_copy_copy_/container_copy/item_1_copy/tabs
+      // We need to find the NEAREST title component by traversing the path
 
       const pathParts = tabPath.split('/').filter((p) => p && p !== 'jcr:content' && p !== 'root');
+      // Remove only the FIRST occurrence of 'container' (which is the root.container property)
+      const containerIndex = pathParts.indexOf('container');
+      if (containerIndex !== -1) {
+        pathParts.splice(containerIndex, 1);
+      }
       if (pathParts.length === 0) return null;
 
-      // Get all root-level container keys
-      const rootContainer = jcrData.root.container;
-      const rootKeys = Object.keys(rootContainer).filter((k) => !k.startsWith(':'));
+      // Start from jcrData.root.container and traverse the path to find the nearest title
+      let current = jcrData.root.container;
+      let nearestTitle = null;
 
-      // Find the longest matching root-level container key in the path
-      let matchedKey = null;
-      let maxMatchLength = 0;
-
-      for (const key of rootKeys) {
-        // Check if this key appears anywhere in the path
-        if (pathParts.includes(key) && key.length > maxMatchLength) {
-          matchedKey = key;
-          maxMatchLength = key.length;
-        }
-      }
-
-      if (!matchedKey) {
-        // Try matching by sequence - take all path parts until we find a root-level key
-        for (let i = 0; i < pathParts.length; i++) {
-          if (rootKeys.includes(pathParts[i])) {
-            matchedKey = pathParts[i];
-            break;
-          }
-        }
-      }
-
-      if (!matchedKey) return null;
-
-      const container = rootContainer[matchedKey];
-      if (!container || typeof container !== 'object') {
-        return null;
-      }
-
-      // Recursively search for a title component within this container
-      function findTitleInSubtree(obj) {
-        for (const key in obj) {
-          if (!key.startsWith(':') && obj[key] && typeof obj[key] === 'object') {
-            const item = obj[key];
-            if (item['sling:resourceType'] === 'tccc-dam/components/title' && item['jcr:title']) {
+      // Helper to find title in a container (checking ONE level of nested containers)
+      function findTitleInContainer(container) {
+        // First, check direct children for title components
+        for (const key in container) {
+          if (!key.startsWith(':') && !key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
+            const item = container[key];
+            if (item && typeof item === 'object'
+                && item['sling:resourceType'] === 'tccc-dam/components/title'
+                && item['jcr:title']) {
               return item['jcr:title'];
             }
-            // Recurse into nested objects
-            const result = findTitleInSubtree(item);
-            if (result) return result;
           }
         }
+
+        // If not found, check ONE level of nested containers
+        for (const key in container) {
+          if (!key.startsWith(':') && !key.startsWith('jcr:') && !key.startsWith('cq:') && !key.startsWith('sling:')) {
+            const item = container[key];
+            if (item && typeof item === 'object'
+                && item['sling:resourceType'] === 'tccc-dam/components/container') {
+              // Look for title as direct child of this nested container
+              for (const nestedKey in item) {
+                if (!nestedKey.startsWith(':') && !nestedKey.startsWith('jcr:') && !nestedKey.startsWith('cq:') && !nestedKey.startsWith('sling:')) {
+                  const nestedItem = item[nestedKey];
+                  if (nestedItem && typeof nestedItem === 'object'
+                      && nestedItem['sling:resourceType'] === 'tccc-dam/components/title'
+                      && nestedItem['jcr:title']) {
+                    return nestedItem['jcr:title'];
+                  }
+                }
+              }
+            }
+          }
+        }
+
         return null;
       }
 
-      return findTitleInSubtree(container);
+      // Traverse each part of the path
+      for (let i = 0; i < pathParts.length; i++) {
+        const part = pathParts[i];
+
+        if (!current || typeof current !== 'object') {
+          console.log(`    ❌ Stopping at "${part}": current is not an object`);
+          break;
+        }
+
+        // Before moving to the next level, check if the container we're about to enter
+        // has a title component (checking nested containers too)
+        if (current[part] && typeof current[part] === 'object') {
+          const nextContainer = current[part];
+
+          // Look for a title component inside this container (recursively)
+          const foundTitle = findTitleInContainer(nextContainer);
+          if (foundTitle) {
+            nearestTitle = foundTitle;
+          }
+
+          // Move to next level
+          current = nextContainer;
+        } else {
+          break;
+        }
+      }
+
+      return nearestTitle;
     }
 
     // Download all tabs as models and combine
@@ -1211,6 +1236,7 @@ async function main() {
       });
 
       console.log(`📌 Combined all tabs into ${combinedTabsData[':itemsOrder'].length} items\n`);
+
       mainTabsData = combinedTabsData;
     }
 
@@ -1553,6 +1579,12 @@ async function main() {
       // Continue with parsing
       // eslint-disable-next-line no-use-before-define
       mainHierarchy = parseHierarchyFromModel(mainTabsData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcrData, jcrPathMap, jcrTeaserImageMap);
+      console.log(`  🔍 After parseHierarchyFromModel: ${mainHierarchy.length} items -`, mainHierarchy.map((i) => i.title).join(', '));
+
+      // Inject nested tabs from JCR (tabs that couldn't be downloaded via Sling Model)
+      // eslint-disable-next-line no-use-before-define
+      mainHierarchy = injectNestedTabsFromJCR(mainHierarchy, jcrData, jcrTeaserImageMap, tabsPaths);
+      console.log(`  🔍 After injectNestedTabsFromJCR: ${mainHierarchy.length} items -`, mainHierarchy.map((i) => i.title).join(', '));
     } else {
       console.log('📌 No tabs data from Sling Model - extracting tabs directly from JCR\n');
       // eslint-disable-next-line no-use-before-define
@@ -1931,6 +1963,22 @@ async function main() {
             const pathParts = accordionPath.split('/').filter((p) => p && !p.startsWith('jcr:'));
             const grandparentKey = pathParts[pathParts.length - 3]; // container_copy
 
+            // Define check function outside the loop to avoid no-loop-func warning
+            function checkHierarchyForAccordion(items, panelToFind) {
+              if (!items || !Array.isArray(items)) return false;
+              for (const hierarchyItem of items) {
+                if (hierarchyItem.type === 'accordion'
+                    && hierarchyItem.key === panelToFind.panelKey
+                    && hierarchyItem.title === panelToFind.title) {
+                  return true;
+                }
+                if (hierarchyItem.items && checkHierarchyForAccordion(hierarchyItem.items, panelToFind)) {
+                  return true;
+                }
+              }
+              return false;
+            }
+
             // Find the ancestor section in hierarchy
             function findAncestorAndAddAccordions(items) {
               if (!items || !Array.isArray(items)) return false;
@@ -1944,27 +1992,14 @@ async function main() {
                 // Add each panel as a separate accordion item (check for global duplicates)
                   let addedAccordionCount = 0;
                   let skippedAccordionCount = 0;
+                  // eslint-disable-next-line no-loop-func
                   panels.forEach((panel) => {
                     // For accordions: use global deduplication (same as buttons)
                     const globalAccordionKey = `accordion|${panel.panelKey || ''}|${panel.title || ''}`;
                     // Check if this accordion exists ANYWHERE in the actual hierarchy (not just registry)
                     // This handles nested tabs that might not be in the main registry
                     let existsGlobally = false;
-                    function checkHierarchyForAccordion(items) {
-                      if (!items || !Array.isArray(items)) return false;
-                      for (const hierarchyItem of items) {
-                        if (hierarchyItem.type === 'accordion'
-                            && hierarchyItem.key === panel.panelKey
-                            && hierarchyItem.title === panel.title) {
-                          return true;
-                        }
-                        if (hierarchyItem.items && checkHierarchyForAccordion(hierarchyItem.items)) {
-                          return true;
-                        }
-                      }
-                      return false;
-                    }
-                    existsGlobally = checkHierarchyForAccordion(mainHierarchy);
+                    existsGlobally = checkHierarchyForAccordion(mainHierarchy, panel);
 
                     if (existsGlobally) {
                       skippedAccordionCount++;
@@ -2015,6 +2050,78 @@ async function main() {
       // Merging orphans to the first item caused incorrect text associations
       }
     } // End of else block for JCR button/accordion extraction
+
+    // =========================================================================
+    // PHASE 2C: MARK TABS AS PEERS (if section has mixed content)
+    // =========================================================================
+    // Before type resolution, check if any tabs should be marked as __mainTab
+    // (tabs that have __jcrSection but should remain as top-level peers)
+    // This happens when a section has BOTH tabs AND other non-tab content
+    // =========================================================================
+    function markTabsAsPeersForMixedSections(items) {
+      // Check which sections (type: 'title') have non-tab children (buttons, accordions, text, etc.)
+      // Tabs should only be peers if the section has OTHER types of content, not just tabs
+      const sectionsWithNonTabChildren = {};
+      items.forEach((item) => {
+        if (item.type === 'title' && item.items && item.items.length > 0) {
+          // Count non-tab children (buttons, accordions, text, etc.)
+          const nonTabChildren = item.items.filter((child) => child.type !== 'tab' && !child['cq:panelTitle']);
+          if (nonTabChildren.length > 0) {
+            sectionsWithNonTabChildren[item.title] = {
+              total: item.items.length,
+              nonTabs: nonTabChildren.length,
+              types: nonTabChildren.map((c) => c.type),
+            };
+          }
+        }
+      });
+
+      // Find top-level tabs (items with __jcrSection and cq:panelTitle)
+      const topLevelTabs = items.filter((item) => item.__jcrSection && item['cq:panelTitle']);
+
+      // Group tabs by their __jcrSection
+      const tabsBySection = {};
+      topLevelTabs.forEach((tab) => {
+        if (!tabsBySection[tab.__jcrSection]) {
+          tabsBySection[tab.__jcrSection] = [];
+        }
+        tabsBySection[tab.__jcrSection].push(tab);
+      });
+
+      console.log('  📊 Sections with non-tab children:', JSON.stringify(sectionsWithNonTabChildren, null, 2));
+      console.log('  📊 Top-level tabs by section:', JSON.stringify(Object.keys(tabsBySection).reduce((acc, section) => {
+        acc[section] = tabsBySection[section].map((t) => t.title);
+        return acc;
+      }, {}), null, 2));
+
+      // Find sections that have BOTH non-tab children AND top-level tabs
+      // Only in these cases should tabs remain as peers
+      const sectionsWithMixedContent = Object.keys(tabsBySection).filter((section) => sectionsWithNonTabChildren[section] && sectionsWithNonTabChildren[section].nonTabs > 0);
+
+      // Mark tabs in these sections as __mainTab so they remain as peers
+      if (sectionsWithMixedContent.length > 0) {
+        console.log(`  📍 Sections with mixed content (tabs will be peers): ${sectionsWithMixedContent.join(', ')}`);
+        let markedCount = 0;
+        topLevelTabs.forEach((tab) => {
+          if (sectionsWithMixedContent.includes(tab.__jcrSection)) {
+            tab.__mainTab = true;
+            markedCount++;
+            console.log(`    ✓ Marked "${tab.title}" as __mainTab`);
+          }
+        });
+        console.log(`  ✅ Marked ${markedCount} tabs as __mainTab`);
+      }
+    }
+
+    // Call the marking function after JCR content is merged
+
+    markTabsAsPeersForMixedSections(mainHierarchy);
+
+    // Now group items by sections (respecting __mainTab markers)
+    console.log('\n🔄 Grouping items by sections...');
+    // eslint-disable-next-line no-use-before-define
+    mainHierarchy = groupHierarchyBySections(mainHierarchy, jcrData);
+    console.log(`✅ After grouping: ${mainHierarchy.length} items\n`);
 
     // =========================================================================
     // PHASE 3: TYPE RESOLUTION
@@ -2453,6 +2560,8 @@ async function main() {
           // Use text length + key to differentiate text items
           pathKey = `${item.type}|${item.path}|${item.key}|${item.text.length}`;
         } else {
+          // For titles and other types, use basic path grouping
+          // We'll handle __jcrOrder-based separation after initial grouping
           pathKey = `${item.type}|${item.path}`;
         }
         if (!pathGroups.has(pathKey)) {
@@ -2461,9 +2570,36 @@ async function main() {
         pathGroups.get(pathKey).push(item);
       });
 
-      // For each group, pick the best item (prefer items with content)
-      const itemsToKeep = new Set();
+      // For each group, further split by __jcrOrder if items have DIFFERENT __jcrOrder values
+      // This handles cases where two sections have the same title but are truly separate (different JCR order)
+      const finalGroups = new Map();
       pathGroups.forEach((groupItems, pathKey) => {
+        // Check if all items with __jcrOrder have DIFFERENT values
+        const itemsWithOrder = groupItems.filter((item) => typeof item.__jcrOrder === 'number');
+        const uniqueOrders = new Set(itemsWithOrder.map((item) => item.__jcrOrder));
+
+        if (itemsWithOrder.length >= 2 && uniqueOrders.size === itemsWithOrder.length) {
+          // All items with __jcrOrder have different values - they're separate sections
+          // Split them into separate groups
+          groupItems.forEach((item) => {
+            const subKey = typeof item.__jcrOrder === 'number'
+              ? `${pathKey}|jcrOrder:${item.__jcrOrder}`
+              : pathKey;
+            if (!finalGroups.has(subKey)) {
+              finalGroups.set(subKey, []);
+            }
+            finalGroups.get(subKey).push(item);
+          });
+        } else {
+          // Either no items have __jcrOrder, or some items share the same __jcrOrder, or only one has it
+          // Treat them as duplicates to be merged
+          finalGroups.set(pathKey, groupItems);
+        }
+      });
+
+      // For each final group, pick the best item (prefer items with content)
+      const itemsToKeep = new Set();
+      finalGroups.forEach((groupItems, finalKey) => {
         if (groupItems.length === 1) {
           itemsToKeep.add(groupItems[0]);
         } else {
@@ -2606,6 +2742,8 @@ async function main() {
         delete item['cq:panelTitle']; // Internal metadata only, not needed in output
         delete item.__jcrSection; // Internal metadata only
         delete item.__jcrOrder; // Internal metadata only, used for sorting
+        delete item.__mainTab; // Internal metadata only, used for grouping logic
+        delete item.__isAccordionChild; // Internal metadata only, used for type resolution
         if (item.items) {
           removeInternalMetadata(item.items);
         }
@@ -2760,6 +2898,7 @@ function extractTabsFromJCR(jcrData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcr
         type: 'tab',
         key: itemKey,
         items: [],
+        __mainTab: true, // Mark as top-level tab from Sling Model
       };
 
       // Extract all content from this tab (containers, buttons, etc.)
@@ -2820,7 +2959,6 @@ function extractTabsFromJCR(jcrData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcr
       if (tabItem.container) {
         tab.items = extractTabContent(tabItem.container, tabTitle);
       }
-
       hierarchy.push(tab);
     });
   });
@@ -2832,6 +2970,69 @@ function extractTabsFromJCR(jcrData, jcrTitleMap, jcrLinkUrlMap, jcrTextMap, jcr
 // =============================================================================
 // PHASE 1: SLING MODEL EXTRACTION FUNCTIONS
 // =============================================================================
+
+// Helper function to inject nested tabs from JCR into existing hierarchy
+function injectNestedTabsFromJCR(hierarchy, jcrData, jcrTeaserImageMap, tabsPaths) {
+  if (!hierarchy || !Array.isArray(hierarchy)) return hierarchy;
+
+  console.log('\n🔍 Checking for nested tabs in JCR...');
+
+  // For each tab in the hierarchy, check if it has nested tabs in JCR
+  hierarchy.forEach((item) => {
+    if (item.type === 'tab' && item.key) {
+      // Find tabs paths that are nested under this tab
+      // Check if this path is nested under the current tab
+      // e.g., if tab key is "item_1", look for paths containing "/item_1/"
+      const nestedTabsPaths = tabsPaths.filter((path) => path.includes(`/${item.key}/`) && path.split('/tabs').length > 2);
+
+      if (nestedTabsPaths.length > 0) {
+        console.log(`  📂 Found ${nestedTabsPaths.length} nested tabs in "${item.title}"`);
+
+        // Extract nested tabs from JCR
+        nestedTabsPaths.forEach((tabsPath) => {
+          // Navigate to the nested tabs component in JCR
+          const pathParts = tabsPath.replace('/jcr:content/', '').split('/');
+          let current = jcrData.root || jcrData;
+
+          for (const part of pathParts) {
+            if (current && current[part]) {
+              current = current[part];
+            } else {
+              return;
+            }
+          }
+
+          if (!current || typeof current !== 'object') return;
+
+          // Extract tabs from this tabs component
+          const nestedTabs = extractTabsFromTabsComponent(current, item.path, jcrTeaserImageMap);
+          if (nestedTabs.length > 0) {
+            // Check which tabs are not already present in the parent
+            const existingTabTitles = new Set((item.items || []).map((child) => child.title));
+            const newTabs = nestedTabs.filter((tab) => !existingTabTitles.has(tab.title));
+
+            if (newTabs.length > 0) {
+              console.log(`    ➕ Adding ${newTabs.length} new nested tabs to "${item.title}" (${nestedTabs.length - newTabs.length} already present)`);
+              if (!item.items) {
+                item.items = [];
+              }
+              item.items.push(...newTabs);
+            } else {
+              console.log(`    ⏭️  Skipping ${nestedTabs.length} nested tabs for "${item.title}" (already present from Sling Model)`);
+            }
+          }
+        });
+      }
+    }
+
+    // Recursively process children
+    if (item.items && Array.isArray(item.items)) {
+      injectNestedTabsFromJCR(item.items, jcrData, jcrTeaserImageMap, tabsPaths);
+    }
+  });
+
+  return hierarchy;
+}
 
 /**
  * PHASE 1: Extract hierarchy from Sling Model (tabs.model.json)
@@ -2852,7 +3053,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
   console.log('📖 Parsing hierarchy from combined-tabs.model.json...\n');
 
   // Function to recursively extract hierarchy from :items
-  function extractItemsHierarchy(itemsObj, parentKeyPath = '', displayPath = '', jcrPathMap = {}, jcrTeaserImageMap = {}) {
+  function extractItemsHierarchy(itemsObj, parentKeyPath = '', displayPath = '', jcrPathMap = {}, jcrTeaserImageMap = {}, parentResourceType = '') {
     if (!itemsObj || typeof itemsObj !== 'object') {
       return [];
     }
@@ -2877,7 +3078,10 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         // But still recurse into their nested items, including the structural component in the path
         if (item[':items']) {
           const structuralKeyPath = `${parentKeyPath}/${key}`;
-          const childrenItems = extractItemsHierarchy(item[':items'], structuralKeyPath, displayPath, jcrPathMap, jcrTeaserImageMap);
+          const currentResourceType = item[':type'] || item['sling:resourceType'] || '';
+          console.log(`  🔄 Unwrapping structural tabs component at ${key}, extracting ${Object.keys(item[':items']).filter((k) => !k.startsWith(':')).length} children`);
+          const childrenItems = extractItemsHierarchy(item[':items'], structuralKeyPath, displayPath, jcrPathMap, jcrTeaserImageMap, currentResourceType);
+          console.log(`    ➡️  Extracted ${childrenItems.length} items:`, childrenItems.map((c) => c.title).join(', '));
           if (childrenItems.length > 0) {
             result.push(...childrenItems);
           }
@@ -2935,7 +3139,8 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         // This is a synthetic container - skip it but process its children
         // Preserve the JCR section metadata from the synthetic container
         if (item[':items']) {
-          const childrenItems = extractItemsHierarchy(item[':items'], `${parentKeyPath}/${key}`, displayPath, jcrPathMap, jcrTeaserImageMap);
+          const currentResourceType = item[':type'] || item['sling:resourceType'] || '';
+          const childrenItems = extractItemsHierarchy(item[':items'], `${parentKeyPath}/${key}`, displayPath, jcrPathMap, jcrTeaserImageMap, currentResourceType);
           if (childrenItems.length > 0) {
             // Transfer the __jcrSection metadata from the synthetic container to its children
             if (item.__jcrSection) {
@@ -3024,10 +3229,29 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         hierarchyItem.id = item.id;
       }
 
+      // Preserve __jcrSection metadata from the model item (assigned during tabs combining)
+      if (item.__jcrSection) {
+        hierarchyItem.__jcrSection = item.__jcrSection;
+      }
+
       // Preserve cq:panelTitle metadata (used by convertTabContainers to identify tab panels)
       // Note: This is internal metadata and will be removed before saving to JSON
       if (item['cq:panelTitle']) {
         hierarchyItem['cq:panelTitle'] = item['cq:panelTitle'];
+
+        // Check if parent is an accordion - if so, this should be an accordion item, not a tab
+        if (parentResourceType && parentResourceType.includes('accordion')) {
+          hierarchyItem.__isAccordionChild = true;
+        }
+
+        // Mark as top-level tab ONLY if:
+        // 1. It's a direct child of the root tabs component (parentKeyPath segments <= 2)
+        // 2. AND it does NOT have a __jcrSection assigned (tabs with __jcrSection should be grouped into their section)
+        // 3. AND it's NOT a child of an accordion component
+        const pathSegments = parentKeyPath.split('/').filter((s) => s);
+        if (pathSegments.length <= 2 && !hierarchyItem.__jcrSection && !hierarchyItem.__isAccordionChild) {
+          hierarchyItem.__mainTab = true;
+        }
       }
 
       // Preserve JCR section information if available
@@ -3390,7 +3614,8 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
           }
         });
 
-        const childrenItems = extractItemsHierarchy(filteredItems, currentKeyPath, currentDisplayPath, jcrPathMap, jcrTeaserImageMap);
+        const currentResourceType = item[':type'] || item['sling:resourceType'] || '';
+        const childrenItems = extractItemsHierarchy(filteredItems, currentKeyPath, currentDisplayPath, jcrPathMap, jcrTeaserImageMap, currentResourceType);
         if (childrenItems.length > 0) {
           hierarchyItem.items = childrenItems;
         }
@@ -3400,10 +3625,14 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       // EXCEPTION: If container has text content, keep it (don't unwrap) so text stays assigned to container
       if (itemType === 'container' && title && (String(title).startsWith('container_') || String(title).toLowerCase() === 'container') && !hierarchyItem.text) {
         // Don't add this container to result, but add its children directly (only if no text)
+        console.log(`  🔄 Unwrapping container "${title}", pushing ${hierarchyItem.items?.length || 0} children`);
         if (hierarchyItem.items && hierarchyItem.items.length > 0) {
           result.push(...hierarchyItem.items);
         }
       } else {
+        if (hierarchyItem['cq:panelTitle']) {
+          console.log(`  ✅ Keeping item with cq:panelTitle: "${title}" (type: ${itemType})`);
+        }
         result.push(hierarchyItem);
       }
     });
@@ -3549,8 +3778,10 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
 
     const cleanedHierarchy = unwrapStructuralContainers(rawHierarchy);
     const deduplicatedHierarchy = removeDuplicateContainers(cleanedHierarchy);
-    const groupedHierarchy = groupHierarchyBySections(deduplicatedHierarchy, jcrData);
-    mainHierarchy = cleanupDuplicatePathSegments(groupedHierarchy);
+    // Skip grouping here - it will be done after marking __mainTab in the main function
+    // const groupedHierarchy = groupHierarchyBySections(deduplicatedHierarchy, jcrData);
+    // mainHierarchy = cleanupDuplicatePathSegments(groupedHierarchy);
+    mainHierarchy = cleanupDuplicatePathSegments(deduplicatedHierarchy);
   }
 
   return mainHierarchy;
@@ -3660,7 +3891,11 @@ function groupByJCRSections(items, jcrSections) {
 
   jcrSections.forEach((section) => {
     // Find all items that belong to this section based on __jcrSection metadata
-    const itemsInSection = items.filter((item) => item.__jcrSection === section.title);
+    // Include all non-tab items AND tabs that are NOT marked as __mainTab
+    // (tabs with __mainTab should remain as top-level peers)
+    // Note: At this point, tabs still have type='container', not 'tab', so check cq:panelTitle
+    const itemsInSection = items.filter((item) => item.__jcrSection === section.title
+      && !((item.type === 'tab' || item['cq:panelTitle']) && item.__mainTab)); // Exclude tabs marked as __mainTab
 
     if (itemsInSection.length > 0) {
       // Mark these items as matched
@@ -3720,10 +3955,11 @@ function groupByJCRSections(items, jcrSections) {
 
   // Include items that didn't match any JCR section
   const unmatchedItems = items.filter((item) => !matchedItems.has(item));
+  console.log(`  🔍 Total items: ${items.length}, matched: ${matchedItems.size}, unmatched: ${unmatchedItems.length}`);
   if (unmatchedItems.length > 0) {
     console.log(`⚠️  Found ${unmatchedItems.length} unmatched items (no JCR section metadata):`);
     unmatchedItems.forEach((item) => {
-      console.log(`  - ${item.title} (type: ${item.type})`);
+      console.log(`  - ${item.title} (type: ${item.type}, __mainTab: ${item.__mainTab || false}, __jcrSection: ${item.__jcrSection || 'none'})`);
       // Remove __jcrSection metadata if present
       const cleanItem = { ...item };
       delete cleanItem.__jcrSection;
@@ -4030,9 +4266,28 @@ function extractNonTabsContent(jcrData, jcrTeaserImageMap = {}) {
           console.log(`  🔗 Found ${allTitlesInContainer.length} nested titles: ${allTitlesInContainer.map((t) => t['jcr:title']).join(' > ')}`);
         }
       } else if (currentTitle) {
-        // This is content after a title - add to current section
+        // This is content after a title - check if it has nested titles
         if (resourceType === 'tccc-dam/components/container') {
-          contentContainers.push(child);
+          // First, check if this container itself has nested title structures
+          const nested = scanForSections(child, depth + 1, maxDepth);
+          if (nested.length > 0) {
+            // This container has its own nested title sections!
+            // Save current section first
+            if (contentContainers.length > 0) {
+              foundSections.push({
+                title: currentTitle,
+                containers: contentContainers,
+              });
+            }
+            // Add the nested sections
+            foundSections.push(...nested);
+            // Reset for next section
+            currentTitle = null;
+            contentContainers = [];
+          } else {
+            // No nested titles - just add as content
+            contentContainers.push(child);
+          }
         }
       } else {
         // No title yet - either recursively search or save as preceding untitled container
@@ -4956,6 +5211,37 @@ function extractComponentsFromContainer(container, items, sectionTitle, jcrTease
                   if (panelText) panelText += '\n';
                   panelText += child.text;
                 }
+                // Found a nested accordion - recursively extract its panels
+                else if (childResourceType === 'tccc-dam/components/accordion') {
+                  // Extract all panels from this nested accordion
+                  for (const nestedPanelKey in child) {
+                    if (nestedPanelKey.startsWith('item_') && child[nestedPanelKey]) {
+                      const nestedPanel = child[nestedPanelKey];
+                      const nestedPanelTitle = nestedPanel['cq:panelTitle'] || nestedPanel['jcr:title'] || nestedPanelKey;
+                      const nestedAccordionItem = {
+                        title: nestedPanelTitle,
+                        path: `${sectionTitle}${PATH_SEPARATOR}${panelTitle}${PATH_SEPARATOR}${nestedPanelTitle}`,
+                        type: 'accordion',
+                        key: nestedPanelKey,
+                        id: `accordion-${createDeterministicId(nestedPanelTitle + nestedPanelKey)}`,
+                      };
+
+                      // Extract text from the nested panel
+                      let nestedText = '';
+                      for (const nestedTextKey in nestedPanel) {
+                        if (nestedTextKey.startsWith('text') && nestedPanel[nestedTextKey] && nestedPanel[nestedTextKey].text) {
+                          if (nestedText) nestedText += '\n';
+                          nestedText += nestedPanel[nestedTextKey].text;
+                        }
+                      }
+                      if (nestedText) {
+                        nestedAccordionItem.text = stripHostsFromText(nestedText);
+                      }
+
+                      nestedChildren.push(nestedAccordionItem);
+                    }
+                  }
+                }
                 // Found a nested container - extract it recursively
                 else if (childResourceType === 'tccc-dam/components/container') {
                   const nestedPanelTitle = child['cq:panelTitle'] || child['jcr:title'];
@@ -5164,9 +5450,12 @@ function unwrapAccordionItems(items, depth = 0) {
 
     // If item title starts with '{type}_', 'item_', or equals '{type}', skip it but keep its children
     // This handles wrappers like 'accordion_', 'button_', 'teaser_', 'item_*', etc.
+    // BUT: Don't unwrap actual content items (teasers, buttons with content)
     const shouldUnwrap = item.title
         && (item.title.startsWith('item_')
-            || (item.type && (item.title.startsWith(`${item.type}_`) || item.title === item.type)));
+            || (item.type && (item.title.startsWith(`${item.type}_`) || item.title === item.type)))
+        && item.type !== 'teaser' // Don't unwrap teasers - they're actual content
+        && item.type !== 'button'; // Don't unwrap buttons - they're actual content
 
     if (shouldUnwrap) {
       if (item.items && item.items.length > 0) {
@@ -5279,6 +5568,7 @@ function convertTabContainers(items, depth = 0) {
     // 2. Has nested items (structural grouping), OR
     // 3. Has cq:panelTitle metadata (indicates it's a tab panel, even if empty now - items might be added from JCR)
     // EXCEPTION: Don't convert if it has text content and matches accordion patterns (it's an accordion, not a tab)
+    // EXCEPTION: Don't convert if it's marked as an accordion child (__isAccordionChild)
     // Note: No key pattern restriction - any container with nested items is a structural tab
     if (
       updatedItem.type === 'container'
@@ -5295,8 +5585,14 @@ function convertTabContainers(items, depth = 0) {
         && updatedItem.text
         && (!updatedItem.items || updatedItem.items.length === 0);
 
-      if (!isAccordionPattern) {
+      // Check if this is marked as a child of an accordion component
+      const isAccordionChild = updatedItem.__isAccordionChild;
+
+      if (!isAccordionPattern && !isAccordionChild) {
         updatedItem.type = 'tab';
+      } else if (isAccordionChild) {
+        // This is an accordion item, not a tab
+        updatedItem.type = 'accordion';
       }
     }
 

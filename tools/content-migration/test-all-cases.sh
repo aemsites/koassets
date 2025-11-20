@@ -145,6 +145,41 @@ compare_json_test() {
   fi
 }
 
+# Helper to compare CSV structure against backup
+compare_csv_test() {
+  local test_name="$1"
+  local store_path="$2"
+  
+  echo -n "Testing: $test_name... "
+  
+  local generated_file="DATA/$store_path/derived-results/hierarchy-structure.csv"
+  local backup_file="DATA/bk/$store_path/derived-results/hierarchy-structure.csv"
+  
+  # Check if generated file exists
+  if [ ! -f "$generated_file" ]; then
+    echo -e "${YELLOW}⚠️  SKIP (no generated CSV)${NC}"
+    return 0
+  fi
+  
+  # Check if backup file exists
+  if [ ! -f "$backup_file" ]; then
+    echo -e "${YELLOW}⚠️  SKIP (no backup file)${NC}"
+    return 0
+  fi
+  
+  # Compare CSV files line by line
+  if diff -q "$generated_file" "$backup_file" > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ PASS (matches backup)${NC}"
+    PASSED_TESTS+=("$test_name")
+    return 0
+  else
+    echo -e "${RED}❌ FAIL (differs from backup)${NC}"
+    echo "   Run: diff DATA/bk/$store_path/derived-results/hierarchy-structure.csv DATA/$store_path/derived-results/hierarchy-structure.csv"
+    FAILED_TESTS+=("$test_name")
+    return 1
+  fi
+}
+
 echo "=========================================="
 echo "📋 Test Suite 1: Magic Tables"
 echo "=========================================="
@@ -490,12 +525,32 @@ ALL_STORES=(
   "all-content-stores-absolut-vodka-sprite"
   "all-content-stores-bacardi-and-coke"
   "all-content-stores-dasani"
+  "all-content-stores-olympics-2024"
+  "all-content-stores-pacs-global"
+  "all-content-stores-topo-chico-hard-seltzer"
+  "all-content-stores-coke-and-meals-emerging-markets"
+  "all-content-stores-grip"
+  "all-content-stores-sprite-limelight-season-3"
+  "all-content-stores-wanta-fanta"
+  "bottler-content-stores-naou-digital-storefront"
+  "bottler-content-stores-topo-chico-naou"
+  "bottler-content-stores-fifa-wc-2026"
+  "bottler-content-stores-australia-state-ic"
+  "all-content-stores-wtf-3"
+  "all-content-stores-coca-cola-creations"
+  "all-content-stores-coke-studio-2024"
 )
 
 # Test each store against its backup
 for store in "${ALL_STORES[@]}"; do
+  store_name=$(echo $store | sed 's/all-content-stores-//g' | sed 's/all-content-stores/Main Store/g' | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) tolower(substr($i,2));}1')
+  
   compare_json_test \
-    "$(echo $store | sed 's/all-content-stores-//g' | sed 's/all-content-stores/Main Store/g' | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) tolower(substr($i,2));}1'): Structure matches backup" \
+    "$store_name: JSON structure matches backup" \
+    "$store"
+  
+  compare_csv_test \
+    "$store_name: CSV structure matches backup" \
     "$store"
 done
 

@@ -613,7 +613,7 @@
   margin-left: 0;
 }
 
-/* Exclude text and section-title type items from grid layout */
+/* Exclude text, section-title, and teaser type items from grid layout constraints */
 .content-stores .tree-children.has-grid .tree-item[data-item-type="text"],
 .content-stores .tree-children.has-grid .tree-item[data-item-type="section-title"] {
   width: 100%;
@@ -624,16 +624,16 @@
   display: flex;
 }
 
-/* Item wrapper in flex - auto width based on content */
-.content-stores .tree-children.has-grid .tree-item:not([data-item-type="tab"], [data-item-type="text"]) {
+/* Item wrapper in flex - auto width based on content (excluding tab, text, section-title, and teaser) */
+.content-stores .tree-children.has-grid .tree-item:not([data-item-type="tab"], [data-item-type="text"], [data-item-type="section-title"], [data-item-type="teaser"]) {
   display: block;
   box-sizing: border-box;
-  min-width: 320px;
-  max-width: 340px;
+  min-width: 310px;
+  max-width: 350px;
   width: auto;
 }
 
-.content-stores .tree-children.has-grid .tree-item[data-item-type="teaser"] {
+.content-stores .tree-children .tree-item[data-item-type="teaser"] {
   width: 330px;
 }
 

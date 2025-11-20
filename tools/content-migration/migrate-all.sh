@@ -79,7 +79,7 @@ echo "=========================================="
 echo ""
 
 # Extract all-content-stores & stores
-#node extract-stores-hierarchy.js --recursive --debug ### ==> will fetch '/content/share/us/en/*-content-stores'
+#node extract-stores-hierarchy.js --recursive --dry ### ==> will fetch '/content/share/us/en/*-content-stores'
 
 # Use --input flag to pass stores file to Node.js script
 if [[ -n "$single_store" ]]; then
@@ -118,5 +118,5 @@ echo "=========================================="
 echo ""
 
 node upload-images.js -c 10
-node upload-to-EDS.js -c 5 --input "$stores_file" --preview #--debug
+node upload-to-EDS.js -c 5 --input "$stores_file" --preview #--dry
 
