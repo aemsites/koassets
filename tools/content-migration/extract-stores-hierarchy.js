@@ -2557,6 +2557,8 @@ async function main() {
           // Use text length + key to differentiate text items
           pathKey = `${item.type}|${item.path}|${item.key}|${item.text.length}`;
         } else {
+          // For titles and other types, use basic path grouping
+          // We'll handle __jcrOrder-based separation after initial grouping
           pathKey = `${item.type}|${item.path}`;
         }
         if (!pathGroups.has(pathKey)) {
@@ -2565,9 +2567,36 @@ async function main() {
         pathGroups.get(pathKey).push(item);
       });
 
-      // For each group, pick the best item (prefer items with content)
-      const itemsToKeep = new Set();
+      // For each group, further split by __jcrOrder if items have DIFFERENT __jcrOrder values
+      // This handles cases where two sections have the same title but are truly separate (different JCR order)
+      const finalGroups = new Map();
       pathGroups.forEach((groupItems, pathKey) => {
+        // Check if all items with __jcrOrder have DIFFERENT values
+        const itemsWithOrder = groupItems.filter((item) => typeof item.__jcrOrder === 'number');
+        const uniqueOrders = new Set(itemsWithOrder.map((item) => item.__jcrOrder));
+
+        if (itemsWithOrder.length >= 2 && uniqueOrders.size === itemsWithOrder.length) {
+          // All items with __jcrOrder have different values - they're separate sections
+          // Split them into separate groups
+          groupItems.forEach((item) => {
+            const subKey = typeof item.__jcrOrder === 'number'
+              ? `${pathKey}|jcrOrder:${item.__jcrOrder}`
+              : pathKey;
+            if (!finalGroups.has(subKey)) {
+              finalGroups.set(subKey, []);
+            }
+            finalGroups.get(subKey).push(item);
+          });
+        } else {
+          // Either no items have __jcrOrder, or some items share the same __jcrOrder, or only one has it
+          // Treat them as duplicates to be merged
+          finalGroups.set(pathKey, groupItems);
+        }
+      });
+
+      // For each final group, pick the best item (prefer items with content)
+      const itemsToKeep = new Set();
+      finalGroups.forEach((groupItems, finalKey) => {
         if (groupItems.length === 1) {
           itemsToKeep.add(groupItems[0]);
         } else {
@@ -2711,6 +2740,7 @@ async function main() {
         delete item.__jcrSection; // Internal metadata only
         delete item.__jcrOrder; // Internal metadata only, used for sorting
         delete item.__mainTab; // Internal metadata only, used for grouping logic
+        delete item.__isAccordionChild; // Internal metadata only, used for type resolution
         if (item.items) {
           removeInternalMetadata(item.items);
         }
@@ -3021,7 +3051,7 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
   console.log('📖 Parsing hierarchy from combined-tabs.model.json...\n');
 
   // Function to recursively extract hierarchy from :items
-  function extractItemsHierarchy(itemsObj, parentKeyPath = '', displayPath = '', jcrPathMap = {}, jcrTeaserImageMap = {}) {
+  function extractItemsHierarchy(itemsObj, parentKeyPath = '', displayPath = '', jcrPathMap = {}, jcrTeaserImageMap = {}, parentResourceType = '') {
     if (!itemsObj || typeof itemsObj !== 'object') {
       return [];
     }
@@ -3046,8 +3076,9 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         // But still recurse into their nested items, including the structural component in the path
         if (item[':items']) {
           const structuralKeyPath = `${parentKeyPath}/${key}`;
+          const currentResourceType = item[':type'] || item['sling:resourceType'] || '';
           console.log(`  🔄 Unwrapping structural tabs component at ${key}, extracting ${Object.keys(item[':items']).filter((k) => !k.startsWith(':')).length} children`);
-          const childrenItems = extractItemsHierarchy(item[':items'], structuralKeyPath, displayPath, jcrPathMap, jcrTeaserImageMap);
+          const childrenItems = extractItemsHierarchy(item[':items'], structuralKeyPath, displayPath, jcrPathMap, jcrTeaserImageMap, currentResourceType);
           console.log(`    ➡️  Extracted ${childrenItems.length} items:`, childrenItems.map((c) => c.title).join(', '));
           if (childrenItems.length > 0) {
             result.push(...childrenItems);
@@ -3106,7 +3137,8 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
         // This is a synthetic container - skip it but process its children
         // Preserve the JCR section metadata from the synthetic container
         if (item[':items']) {
-          const childrenItems = extractItemsHierarchy(item[':items'], `${parentKeyPath}/${key}`, displayPath, jcrPathMap, jcrTeaserImageMap);
+          const currentResourceType = item[':type'] || item['sling:resourceType'] || '';
+          const childrenItems = extractItemsHierarchy(item[':items'], `${parentKeyPath}/${key}`, displayPath, jcrPathMap, jcrTeaserImageMap, currentResourceType);
           if (childrenItems.length > 0) {
             // Transfer the __jcrSection metadata from the synthetic container to its children
             if (item.__jcrSection) {
@@ -3204,11 +3236,18 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
       // Note: This is internal metadata and will be removed before saving to JSON
       if (item['cq:panelTitle']) {
         hierarchyItem['cq:panelTitle'] = item['cq:panelTitle'];
+
+        // Check if parent is an accordion - if so, this should be an accordion item, not a tab
+        if (parentResourceType && parentResourceType.includes('accordion')) {
+          hierarchyItem.__isAccordionChild = true;
+        }
+
         // Mark as top-level tab ONLY if:
         // 1. It's a direct child of the root tabs component (parentKeyPath segments <= 2)
         // 2. AND it does NOT have a __jcrSection assigned (tabs with __jcrSection should be grouped into their section)
+        // 3. AND it's NOT a child of an accordion component
         const pathSegments = parentKeyPath.split('/').filter((s) => s);
-        if (pathSegments.length <= 2 && !hierarchyItem.__jcrSection) {
+        if (pathSegments.length <= 2 && !hierarchyItem.__jcrSection && !hierarchyItem.__isAccordionChild) {
           hierarchyItem.__mainTab = true;
         }
       }
@@ -3573,7 +3612,8 @@ function parseHierarchyFromModel(modelData, jcrTitleMap, jcrLinkUrlMap, jcrTextM
           }
         });
 
-        const childrenItems = extractItemsHierarchy(filteredItems, currentKeyPath, currentDisplayPath, jcrPathMap, jcrTeaserImageMap);
+        const currentResourceType = item[':type'] || item['sling:resourceType'] || '';
+        const childrenItems = extractItemsHierarchy(filteredItems, currentKeyPath, currentDisplayPath, jcrPathMap, jcrTeaserImageMap, currentResourceType);
         if (childrenItems.length > 0) {
           hierarchyItem.items = childrenItems;
         }
@@ -5496,6 +5536,7 @@ function convertTabContainers(items, depth = 0) {
     // 2. Has nested items (structural grouping), OR
     // 3. Has cq:panelTitle metadata (indicates it's a tab panel, even if empty now - items might be added from JCR)
     // EXCEPTION: Don't convert if it has text content and matches accordion patterns (it's an accordion, not a tab)
+    // EXCEPTION: Don't convert if it's marked as an accordion child (__isAccordionChild)
     // Note: No key pattern restriction - any container with nested items is a structural tab
     if (
       updatedItem.type === 'container'
@@ -5512,8 +5553,14 @@ function convertTabContainers(items, depth = 0) {
         && updatedItem.text
         && (!updatedItem.items || updatedItem.items.length === 0);
 
-      if (!isAccordionPattern) {
+      // Check if this is marked as a child of an accordion component
+      const isAccordionChild = updatedItem.__isAccordionChild;
+
+      if (!isAccordionPattern && !isAccordionChild) {
         updatedItem.type = 'tab';
+      } else if (isAccordionChild) {
+        // This is an accordion item, not a tab
+        updatedItem.type = 'accordion';
       }
     }
 
