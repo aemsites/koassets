@@ -7,6 +7,8 @@ import DownloadRenditionsContent from '../DownloadRenditionsContent';
 import Picture from '../Picture';
 import './CartRightsCheck.css';
 import { EAGER_LOAD_IMAGE_COUNT } from '../../constants/images';
+// @ts-expect-error - vanilla JS module from parent directory
+import showToast from '@scripts/toast/toast';
 
 interface CartRightsCheckProps {
     cartAssetItems: Asset[];
@@ -49,6 +51,9 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
 
     // Loading state for rights check
     const [isRightsCheckLoading, setIsRightsCheckLoading] = useState<boolean>(true);
+    
+    // Error state for rights check
+    const [hasRightsCheckError, setHasRightsCheckError] = useState<boolean>(false);
 
     // Local state for authorized assets (so we can modify it when downloads complete)
     const [authorizedAssets, setAuthorizedAssets] = useState<Asset[]>(() =>
@@ -87,9 +92,21 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
         setAuthorizedAssets(newAuthorizedAssets);
     }, [cartAssetItems]);
 
+    // Helper function to get current step data
+    const getCurrentStepData = useCallback((): RightsCheckStepData => ({
+        downloadOptions,
+        agreesToTerms: false
+    }), [downloadOptions]);
+
     // Call checkRights when component mounts or key data changes
     useEffect(() => {
         const performRightsCheck = async () => {
+            // Don't perform rights check if there was an error
+            if (hasRightsCheckError) {
+                console.log('Rights check error occurred, skipping subsequent checks');
+                return;
+            }
+
             // Prevent concurrent calls
             if (isCheckingRightsRef.current) {
                 console.log('Rights check already in progress, skipping');
@@ -121,6 +138,7 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
             setIsRightsCheckLoading(true);
 
             isCheckingRightsRef.current = true;
+            
             try {
                 const fadelClient = FadelClient.getInstance();
 
@@ -205,6 +223,18 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
 
             } catch (error) {
                 console.error('Rights check failed:', error);
+                showToast('Error performing rights check. Please try again.', 'error');
+                
+                // Set error state first to prevent re-triggering
+                setHasRightsCheckError(true);
+                
+                // Clear authorized assets and newly authorized IDs so all assets become restricted
+                // The hasRightsCheckError flag will prevent the useEffect from running again
+                setAuthorizedAssets([]);
+                setNewlyAuthorizedAssetIds(new Set());
+                
+                // Automatically move back to REQUEST_DOWNLOAD step
+                onBack(getCurrentStepData());
             } finally {
                 isCheckingRightsRef.current = false;
                 setIsRightsCheckLoading(false);
@@ -217,7 +247,11 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
         intendedUse.pullDate,
         intendedUse.selectedMediaChannels,
         intendedUse.selectedMarkets,
-        restrictedAssets
+        restrictedAssets,
+        hasRightsCheckError,
+        downloadOptions,
+        onBack,
+        getCurrentStepData
     ]);
 
     const formatDate = (calendarDate: CalendarDate | null | undefined): string => {
@@ -227,12 +261,6 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
         return `${months[calendarDate.month - 1]} ${String(calendarDate.day).padStart(2, '0')}, ${calendarDate.year}`;
     };
 
-
-    // Helper function to get current step data
-    const getCurrentStepData = useCallback((): RightsCheckStepData => ({
-        downloadOptions,
-        agreesToTerms: false
-    }), [downloadOptions]);
 
     // Handler function to request rights extension
     const handleOpenRightsExtension = useCallback(() => {
@@ -350,6 +378,7 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
                                     <button
                                         className="request-rights-extension-btn primary-button"
                                         onClick={handleOpenRightsExtension}
+                                        disabled={hasRightsCheckError}
                                         type="button"
                                     >
                                         Request Rights Extension

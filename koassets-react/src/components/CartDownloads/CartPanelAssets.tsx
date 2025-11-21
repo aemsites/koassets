@@ -330,19 +330,19 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                 selectedMediaChannels: Array.from(stepData.requestDownload?.selectedMediaChannels || [])
             };
 
-            const response = await fetch('/api/rightsrequests', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify(payload)
-            });
+            // const response = await fetch('/api/rightsrequests', {
+            //     method: 'POST',
+            //     headers: { 'Content-Type': 'application/json' },
+            //     credentials: 'include',
+            //     body: JSON.stringify(payload)
+            // });
 
-            if (!response.ok) {
-                throw new Error(`Failed to submit rights request: ${response.statusText}`);
-            }
+            // if (!response.ok) {
+            //     throw new Error(`Failed to submit rights request: ${response.statusText}`);
+            // }
 
-            const result = await response.json();
-            console.trace('Rights extension request submitted successfully:', result);
+            // const result = await response.json();
+            // console.trace('Rights extension request submitted successfully:', result);
 
             // Remove the submitted assets from the cart
             if (rightsExtensionData.restrictedAssets && rightsExtensionData.restrictedAssets.length > 0) {
