@@ -56,13 +56,14 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
     );
 
     // Memoize restrictedAssets to prevent unnecessary re-renders, excluding newly authorized assets
-    const restrictedAssets = useMemo(() =>
-        cartAssetItems.filter(item =>
+    const restrictedAssets = useMemo(() => {
+        const restrictedAssets = cartAssetItems.filter(item =>
             item?.readyToUse?.toLowerCase() !== 'yes' &&
             !newlyAuthorizedAssetIds.has(item.assetId || '')
-        ),
-        [cartAssetItems, newlyAuthorizedAssetIds]
-    );
+        );
+        // console.log(`Executed workflow steps||| Restricted assets:`, restrictedAssets);
+        return restrictedAssets;
+    }, [cartAssetItems, newlyAuthorizedAssetIds]);
 
     // Update authorization status for newly authorized assets
     useEffect(() => {
@@ -198,7 +199,7 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
                     if (newlyAuthorizedAssets.length > 0) {
                         setAuthorizedAssets(prev => [...prev, ...newlyAuthorizedAssets]);
                         setNewlyAuthorizedAssetIds(prev => new Set([...prev, ...newAuthorizedIds]));
-                        console.log(`Moved ${newlyAuthorizedAssets.length} assets to authorized status`);
+                        console.debug(`Newly authorized assets:`, newlyAuthorizedAssets);
                     }
                 }
 

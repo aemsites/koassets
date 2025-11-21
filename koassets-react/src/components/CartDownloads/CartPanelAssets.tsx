@@ -344,7 +344,13 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             const result = await response.json();
             console.trace('Rights extension request submitted successfully:', result);
 
-            showToast('Rights extension request submitted successfully', 'success');
+            // Remove the submitted assets from the cart
+            if (rightsExtensionData.restrictedAssets && rightsExtensionData.restrictedAssets.length > 0) {
+                const submittedAssetIds = rightsExtensionData.restrictedAssets.map(asset => asset.assetId);
+                const remainingItems = cartAssetItems.filter(item => !submittedAssetIds.includes(item.assetId));
+                setCartAssetItems(remainingItems);
+            }
+
             // Mark REQUEST_RIGHTS_EXTENSION step as successful
             setStepStatus(prev => ({ ...prev, [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: StepStatus.SUCCESS }));
 
@@ -357,15 +363,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             showToast('Error submitting rights extension request', 'error');
             return Promise.reject(error);
         }
-
-        // Remove restricted assets from cart
-        if (rightsExtensionData.restrictedAssets && rightsExtensionData.restrictedAssets.length > 0) {
-            const restrictedAssetIds = rightsExtensionData.restrictedAssets.map(asset => asset.assetId);
-            const authorizedItems = cartAssetItems.filter(item => !restrictedAssetIds.includes(item.assetId));
-
-            setCartAssetItems(authorizedItems);
-        }
-    }, [cartAssetItems, setCartAssetItems]);
+    }, [cartAssetItems, setCartAssetItems, stepData.requestDownload]);
 
     const handleOpenDownload = useCallback(async (): Promise<void> => {
         setStepStatus(prev => ({ ...prev, [WorkflowStep.CART]: stepStatus[WorkflowStep.CART] === StepStatus.INIT ? StepStatus.SUCCESS : stepStatus[WorkflowStep.CART] }));
