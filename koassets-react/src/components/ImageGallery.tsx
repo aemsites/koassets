@@ -157,6 +157,16 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         setSelectedCard(null);
         setShowDetailsModal(false);
         
+        // Clean up deep link URL parameter if this was opened via deep link
+        if (isDeepLinkAsset) {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('assetid')) {
+                url.searchParams.delete('assetid');
+                // Use replaceState to clean up URL without adding to history
+                window.history.replaceState({}, '', url.toString());
+            }
+        }
+        
         // If we pushed a history state and we're NOT closing via back button,
         // we need to go back to clean up the history state
         if (hasPushedHistoryState.current && !isClosingViaBackButton.current) {
@@ -171,7 +181,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         if (deepLinkAsset && onCloseDeepLinkModal) {
             onCloseDeepLinkModal();
         }
-    }, [deepLinkAsset, onCloseDeepLinkModal]);
+    }, [deepLinkAsset, onCloseDeepLinkModal, isDeepLinkAsset]);
 
     // Handle keyboard events for modals
     useEffect(() => {
@@ -208,9 +218,10 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     // Handle browser back button for asset details modal
     useEffect(() => {
         const handlePopState = () => {
-            // Check if the modal is open and we have a history state for it
+            // Only handle back button if modal is open and we pushed a history state for it
+            // This prevents incorrectly closing the modal if other parts of the app use history API
             if (showDetailsModal && hasPushedHistoryState.current) {
-                // Mark that we're closing via back button
+                // Mark that we're closing via back button to prevent double history manipulation
                 isClosingViaBackButton.current = true;
                 hasPushedHistoryState.current = false;
                 // Close the modal
@@ -245,8 +256,11 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         }
         
         // Push a history state so the back button can close the modal
-        window.history.pushState({ assetDetailsModal: true }, '', window.location.href);
-        hasPushedHistoryState.current = true;
+        // Only push if we haven't already pushed one (prevents multiple history entries)
+        if (!hasPushedHistoryState.current) {
+            window.history.pushState({ assetDetailsModal: true }, '', window.location.href);
+            hasPushedHistoryState.current = true;
+        }
         
         setShowDetailsModal(true);
     }, []);
