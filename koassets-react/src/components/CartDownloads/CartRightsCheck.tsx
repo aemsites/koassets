@@ -204,7 +204,6 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
 
             } catch (error) {
                 console.error('Rights check failed:', error);
-                // TODO: Handle error state in UI
             } finally {
                 isCheckingRightsRef.current = false;
                 setIsRightsCheckLoading(false);

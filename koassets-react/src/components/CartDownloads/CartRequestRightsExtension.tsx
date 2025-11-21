@@ -14,6 +14,7 @@ const CartRequestRightsExtension: React.FC<CartRequestRightsExtensionProps> = ({
     onBack,
     initialData
 }) => {
+
     // Form state
     const [agencyType, setAgencyType] = useState<string>(initialData?.agencyType ?? 'TCCC Associate');
     const [agencyName, setAgencyName] = useState<string>(initialData?.agencyName ?? '');
@@ -135,11 +136,11 @@ const CartRequestRightsExtension: React.FC<CartRequestRightsExtensionProps> = ({
                             </div>
                             <div className="intended-use-item">
                                 <label>INTENDED MARKETS</label>
-                                <div>{intendedUse.markets.map(c => c.name).join(', ')}</div>
+                                <div>{intendedUse.markets?.map(c => c.name).join(', ') || 'N/A'}</div>
                             </div>
                             <div className="intended-use-item">
                                 <label>INTENDED MEDIA</label>
-                                <div>{intendedUse.mediaChannels.map(c => c.name).join(', ')}</div>
+                                <div>{intendedUse.mediaChannels?.map(c => c.name).join(', ') || 'N/A'}</div>
                             </div>
                         </div>
                     </div>
