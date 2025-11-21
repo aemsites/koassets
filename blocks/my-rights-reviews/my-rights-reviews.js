@@ -26,7 +26,14 @@ const selectedFilters = new Set(['all']);
  * @returns {boolean} True if user has rights manager permission
  */
 function isRightsManager() {
-  return window.user?.permissions?.includes('rights-manager');
+  const hasPermission = window.user?.permissions?.includes('rights-manager');
+  // TEMP DEBUG - Remove after troubleshooting
+  console.log('[DEBUG] isRightsManager check:', {
+    userPermissions: window.user?.permissions,
+    hasRightsManager: hasPermission,
+    fullUser: window.user,
+  });
+  return hasPermission;
 }
 
 /**
@@ -54,6 +61,13 @@ function buildAssetImageUrl(
  */
 async function loadReviews() {
   try {
+    // TEMP DEBUG - Remove after troubleshooting
+    console.log('[DEBUG] loadReviews() called with user:', {
+      userPermissions: window.user?.permissions,
+      userEmail: window.user?.email,
+      isRightsManager: isRightsManager(),
+    });
+
     const response = await fetch('/api/rightsrequests/reviews', {
       credentials: 'include',
     });
