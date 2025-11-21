@@ -83,9 +83,6 @@ export async function rightsRequestsApi(request, env) {
   if (request.method === 'GET' && path.endsWith('/rightsrequests/reviews')) {
     return listReviewsForReviewer(request, env);
   }
-  if (request.method === 'POST' && path.endsWith('/rightsrequests/reviews/assign-to')) {
-    return assignReviewToReviewer(request, env);
-  }
   if (request.method === 'POST' && path.endsWith('/rightsrequests/reviews/assign')) {
     return assignReview(request, env);
   }
@@ -410,10 +407,15 @@ export async function listReviewsForReviewer(request, env) {
 }
 
 /**
- * Assign a rights request review to the authenticated reviewer (self-assignment)
+ * Assign a rights request review (unified endpoint)
  * POST /api/rightsrequests/reviews/assign
- * Body: { requestId: "1234567890" }
- * Requires: manage-rights permission (admin-rights users also have access)
+ * Body: { requestId: "1234567890", assigneeEmail: "reviewer@example.com" (optional) }
+ * 
+ * If assigneeEmail is omitted or equals caller's email: Self-assignment
+ *   - Requires: manage-rights OR admin-rights
+ * 
+ * If assigneeEmail is provided and different from caller: Assign to another
+ *   - Requires: admin-rights (elevated permission)
  */
 export async function assignReview(request, env) {
   try {
@@ -422,120 +424,57 @@ export async function assignReview(request, env) {
       return error(401, { success: false, error: 'User not authenticated' });
     }
 
-    // Check if user has manage-rights permission
-    if (!hasManageRightsPermission(request.user)) {
-      return error(403, {
-        success: false,
-        error: 'Manage-rights permission required',
-        message: 'You do not have permission to assign rights reviews',
-      });
-    }
-
-    const { requestId } = await request.json();
+    const { requestId, assigneeEmail } = await request.json();
     if (!requestId) {
       return error(400, { success: false, error: 'Request ID is required' });
     }
 
-    // Get the unassigned review entry
-    const unassignedKey = `user:unassigned:rights-request-review:${requestId}`;
-    const unassignedData = await env.RIGHTS_REQUEST_REVIEWS.get(unassignedKey);
+    // Determine target email and assignment type
+    const targetEmail = assigneeEmail?.toLowerCase() || userEmail;
+    const isSelfAssignment = !assigneeEmail || targetEmail === userEmail;
 
-    if (!unassignedData) {
-      return error(404, { success: false, error: 'Unassigned review not found' });
-    }
+    // Check permissions based on assignment type
+    if (isSelfAssignment) {
+      // Self-assignment: requires manage-rights or admin-rights
+      if (!hasManageRightsPermission(request.user)) {
+        return error(403, {
+          success: false,
+          error: 'Manage-rights permission required',
+          message: 'You do not have permission to assign rights reviews',
+        });
+      }
+    } else {
+      // Assign to another: requires admin-rights
+      if (!hasAdminRightsPermission(request.user)) {
+        return error(403, {
+          success: false,
+          error: 'Admin-rights permission required',
+          message: 'You do not have permission to assign requests to other reviewers',
+        });
+      }
 
-    const reviewData = JSON.parse(unassignedData);
-
-    // Update the primary request with reviewer info
-    const primaryRequestData = await env.RIGHTS_REQUESTS.get(reviewData.requestId);
-    if (!primaryRequestData) {
-      return error(404, { success: false, error: 'Request not found in primary store' });
-    }
-
-    const requestDataObj = JSON.parse(primaryRequestData);
-    requestDataObj.rightsRequestReviewDetails.rightsReviewer = userEmail;
-    requestDataObj.rightsRequestReviewDetails.rightsRequestStatus = RIGHTS_REQUEST_STATUSES.IN_PROGRESS;
-    requestDataObj.lastModified = new Date().toUTCString();
-    requestDataObj.lastModifiedBy = userEmail;
-
-    // Save updated primary request
-    await env.RIGHTS_REQUESTS.put(reviewData.requestId, JSON.stringify(requestDataObj));
-
-    // Delete unassigned entry
-    await env.RIGHTS_REQUEST_REVIEWS.delete(unassignedKey);
-
-    // Create assigned entry
-    const assignedKey = `user:${userEmail}:rights-request-review:${requestId}`;
-    const assignedReviewData = {
-      ...reviewData,
-      rightsReviewer: userEmail,
-      assignedDate: new Date().toISOString(),
-    };
-    await env.RIGHTS_REQUEST_REVIEWS.put(assignedKey, JSON.stringify(assignedReviewData));
-
-    return json({
-      success: true,
-      data: requestDataObj,
-      message: 'Review assigned successfully',
-    });
-  } catch (err) {
-    return error(500, {
-      success: false,
-      error: 'Failed to assign review',
-      message: err.message,
-    });
-  }
-}
-
-/**
- * Assign a rights request review to a specific reviewer (admin-rights users only)
- * POST /api/rightsrequests/reviews/assign-to
- * Body: { requestId: "1234567890", assigneeEmail: "reviewer@example.com" }
- * Requires: PERMISSIONS.ADMIN_RIGHTS
- */
-export async function assignReviewToReviewer(request, env) {
-  try {
-    const userEmail = request.user?.email?.toLowerCase();
-    if (!userEmail) {
-      return error(401, { success: false, error: 'User not authenticated' });
-    }
-
-    // Check if user has admin-rights permission
-    if (!hasAdminRightsPermission(request.user)) {
-      return error(403, {
-        success: false,
-        error: 'Admin-rights permission required',
-        message: 'You do not have permission to assign requests to other reviewers',
+      // Validate that assignee has manage-rights or admin-rights permission
+      const permissions = await fetchHelixSheet(env, '/config/access/permissions', {
+        sheet: { key: 'email', arrays: ['permissions'] },
       });
-    }
 
-    const { requestId, assigneeEmail } = await request.json();
-    if (!requestId || !assigneeEmail) {
-      return error(400, {
-        success: false,
-        error: 'Request ID and assignee email are required',
-      });
-    }
+      const assigneePerms = permissions?.[targetEmail]?.permissions || [];
+      const domain = targetEmail.split('@')[1]?.toLowerCase();
+      const domainPerms = permissions?.[domain]?.permissions || [];
+      
+      const isValidReviewer =
+        assigneePerms.includes(PERMISSIONS.MANAGE_RIGHTS) ||
+        assigneePerms.includes(PERMISSIONS.ADMIN_RIGHTS) ||
+        domainPerms.includes(PERMISSIONS.MANAGE_RIGHTS) ||
+        domainPerms.includes(PERMISSIONS.ADMIN_RIGHTS);
 
-    const assigneeEmailLower = assigneeEmail.toLowerCase();
-
-    // Validate that assignee has rights reviewer permission
-    const permissions = await fetchHelixSheet(env, '/config/access/permissions', {
-      sheet: { key: 'email', arrays: ['permissions'] },
-    });
-
-    const assigneePerms = permissions?.[assigneeEmailLower]?.permissions || [];
-    const isValidReviewer =
-      assigneePerms.includes(PERMISSIONS.MANAGE_RIGHTS) ||
-      assigneePerms.includes(PERMISSIONS.ADMIN_RIGHTS) ||
-      RIGHTS_REVIEWERS.includes(assigneeEmailLower);
-
-    if (!isValidReviewer) {
-      return error(400, {
-        success: false,
-        error: 'Invalid assignee',
-        message: 'The specified user does not have manage-rights permission',
-      });
+      if (!isValidReviewer) {
+        return error(400, {
+          success: false,
+          error: 'Invalid assignee',
+          message: 'The specified user does not have manage-rights permission',
+        });
+      }
     }
 
     // Get the unassigned review entry
@@ -559,11 +498,10 @@ export async function assignReviewToReviewer(request, env) {
     }
 
     const requestDataObj = JSON.parse(primaryRequestData);
-    requestDataObj.rightsRequestReviewDetails.rightsReviewer = assigneeEmailLower;
-    requestDataObj.rightsRequestReviewDetails.rightsRequestStatus =
-      RIGHTS_REQUEST_STATUSES.IN_PROGRESS;
+    requestDataObj.rightsRequestReviewDetails.rightsReviewer = targetEmail;
+    requestDataObj.rightsRequestReviewDetails.rightsRequestStatus = RIGHTS_REQUEST_STATUSES.IN_PROGRESS;
     requestDataObj.lastModified = new Date().toUTCString();
-    requestDataObj.lastModifiedBy = userEmail; // The senior reviewer who made the assignment
+    requestDataObj.lastModifiedBy = userEmail; // The user who made the assignment
 
     // Save updated primary request
     await env.RIGHTS_REQUESTS.put(reviewData.requestId, JSON.stringify(requestDataObj));
@@ -571,33 +509,42 @@ export async function assignReviewToReviewer(request, env) {
     // Delete unassigned entry
     await env.RIGHTS_REQUEST_REVIEWS.delete(unassignedKey);
 
-    // Create assigned entry for the assignee
-    const assignedKey = `user:${assigneeEmailLower}:rights-request-review:${requestId}`;
+    // Create assigned entry for the target reviewer
+    const assignedKey = `user:${targetEmail}:rights-request-review:${requestId}`;
     const assignedReviewData = {
       ...reviewData,
-      rightsReviewer: assigneeEmailLower,
+      rightsReviewer: targetEmail,
       assignedDate: new Date().toISOString(),
-      assignedBy: userEmail, // Track who made the assignment
     };
+    
+    // Track who made the assignment if it's not self-assignment
+    if (!isSelfAssignment) {
+      assignedReviewData.assignedBy = userEmail;
+    }
+    
     await env.RIGHTS_REQUEST_REVIEWS.put(assignedKey, JSON.stringify(assignedReviewData));
 
-    // Send notification to the assigned reviewer
-    const requestDetailsUrl = `${new URL(request.url).origin}/my-rights-review-details?requestId=${requestId}`;
-    const myReviewsUrl = `${new URL(request.url).origin}/my-rights-reviews`;
+    // Send notification if assigning to another reviewer
+    if (!isSelfAssignment) {
+      const requestDetailsUrl = `${new URL(request.url).origin}/my-rights-review-details?requestId=${requestId}`;
+      const myReviewsUrl = `${new URL(request.url).origin}/my-rights-reviews`;
 
-    await sendMessage(env, assigneeEmailLower, {
-      subject: 'Rights Request Assigned to You',
-      message: `A rights request has been assigned to you by ${userEmail}.\n\nRequest ID: ${requestId}\nSubmitted by: ${reviewData.submittedBy}\n\nView request details: ${requestDetailsUrl}\n\nYou can see all your assigned requests from: ${myReviewsUrl}`,
-      type: 'Notification',
-      from: 'Rights Management System',
-      priority: 'normal',
-      expiresInXDays: 7,
-    });
+      await sendMessage(env, targetEmail, {
+        subject: 'Rights Request Assigned to You',
+        message: `A rights request has been assigned to you by ${userEmail}.\n\nRequest ID: ${requestId}\nSubmitted by: ${reviewData.submittedBy}\n\nView request details: ${requestDetailsUrl}\n\nYou can see all your assigned requests from: ${myReviewsUrl}`,
+        type: 'Notification',
+        from: 'Rights Management System',
+        priority: 'normal',
+        expiresInXDays: 7,
+      });
+    }
 
     return json({
       success: true,
       data: requestDataObj,
-      message: `Review assigned to ${assigneeEmailLower} successfully`,
+      message: isSelfAssignment 
+        ? 'Review assigned successfully' 
+        : `Review assigned to ${targetEmail} successfully`,
     });
   } catch (err) {
     return error(500, {
@@ -607,6 +554,7 @@ export async function assignReviewToReviewer(request, env) {
     });
   }
 }
+
 
 /**
  * Helper function to update request status

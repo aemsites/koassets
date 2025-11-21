@@ -170,10 +170,11 @@ async function fetchAvailableReviewers() {
 
 /**
  * Assign review to a specific reviewer via API
+ * Uses the unified /assign endpoint with assigneeEmail parameter
  */
 async function assignReviewToReviewer(requestId, assigneeEmail) {
   try {
-    const response = await fetch('/api/rightsrequests/reviews/assign-to', {
+    const response = await fetch('/api/rightsrequests/reviews/assign', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
