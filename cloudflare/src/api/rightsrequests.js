@@ -834,11 +834,13 @@ function isAuthorized(user, requiredPermission) {
 
 /**
  * Check if user has rights reviewer permission (base permission)
+ * Rights managers automatically have all reviewer capabilities
  * @param {Object} user - User object from request
  * @returns {boolean} True if user has rights reviewer permission
  */
 function hasRightsReviewerPermission(user) {
-  return user?.permissions?.includes(PERMISSIONS.RIGHTS_REVIEWER);
+  return user?.permissions?.includes(PERMISSIONS.RIGHTS_REVIEWER) ||
+         user?.permissions?.includes(PERMISSIONS.RIGHTS_MANAGER);
 }
 
 /**
