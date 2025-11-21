@@ -453,7 +453,31 @@ The `da.download.config` should contain:
 DA_BEARER_TOKEN=Bearer eyJhbG...   # Get from https://da.live
 ```
 
-### Step 2: Create Download List
+### Step 2: Setup Upload Configuration
+
+Setup the upload configuration file with authentication credentials and destination settings:
+
+```bash
+cp da.upload.config.example da.upload.config
+# Edit da.upload.config with your DA bearer token and destination path
+```
+
+The `da.upload.config` should contain:
+```bash
+DA_ORG=aemsites                    # Your DA organization name
+DA_REPO=koassets                   # Your DA repository name
+DA_BRANCH=main                     # Target branch (usually 'main')
+DA_DEST=drafts/yourname            # Destination folder path for uploads
+DA_BEARER_TOKEN=Bearer eyJhbG...   # Get from https://da.live
+# ... other settings like IMAGES_BASE, AEM_AUTHOR, etc.
+```
+
+**Important**: 
+- Use the same `DA_BEARER_TOKEN` in both config files
+- Set `DA_DEST` to specify where files will be uploaded
+- Files will upload to: `{DA_ORG}/{DA_REPO}/{DA_DEST}/{filename}`
+
+### Step 3: Create Download List
 
 Create a text file (e.g., `todownload.txt`) with AEM.page URLs you want to download, one URL per line:
 
@@ -473,7 +497,7 @@ https://main--koassets--aemsites.aem.page/content-stores
 - Paths with extensions are downloaded as-is
 - Trailing slashes are automatically handled
 
-### Step 3: Download Content
+### Step 4: Download Content
 
 Download all files from your list using the download script:
 
@@ -497,7 +521,7 @@ node download-from-EDS.js --input todownload.txt --output downloaded --concurren
 - Progress is shown for each file
 - Summary report shows success/failure counts
 
-### Step 4: (Optional) Make Local Changes
+### Step 5: (Optional) Make Local Changes
 
 After downloading, you can modify the files locally:
 
@@ -507,7 +531,7 @@ cd downloaded
 # Make whatever changes you need
 ```
 
-### Step 5: Re-upload Content
+### Step 6: Re-upload Content
 
 Upload the modified content back to EDS using the upload script:
 
@@ -544,7 +568,11 @@ Here's a complete end-to-end example:
 cp da.download.config.example da.download.config
 # Edit da.download.config with your DA bearer token
 
-# 2. Create your download list
+# 2. Setup upload configuration
+cp da.upload.config.example da.upload.config
+# Edit da.upload.config with your DA bearer token and destination
+
+# 3. Create your download list
 cat > todownload.txt << 'EOF'
 # Content to download and update
 https://main--koassets--aemsites.aem.page/asset-details
@@ -552,21 +580,21 @@ https://main--koassets--aemsites.aem.page/search/all
 https://main--koassets--aemsites.aem.page/content-stores
 EOF
 
-# 3. Download all content
+# 4. Download all content
 node download-from-EDS.js --input todownload.txt --output downloaded --concurrency 3
 
-# 4. Make your changes
+# 5. Make your changes
 cd downloaded
 # Edit files as needed...
 cd ..
 
-# 5. Test upload (dry run)
+# 6. Test upload (dry run)
 node upload-to-EDS.js --reup --path downloaded --concurrency 3 --dry
 
-# 6. Upload with preview (check results)
+# 7. Upload with preview (check results)
 node upload-to-EDS.js --reup --path downloaded --concurrency 3 --preview
 
-# 7. Publish when ready
+# 8. Publish when ready
 node upload-to-EDS.js --reup --path downloaded --concurrency 3 --preview --publish
 ```
 
