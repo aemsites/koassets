@@ -254,10 +254,10 @@ function createReviewRow(review) {
         assignBtn.textContent = 'Assigning...';
         await assignReviewToMe(review.rightsRequestID);
         showToast('Review assigned successfully', 'success');
-        
+
         // Wait for Cloudflare KV propagation before refreshing
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
+        await new Promise((resolve) => { setTimeout(resolve, 800); });
+
         await loadReviews();
         // eslint-disable-next-line no-use-before-define
         applyFilters();
