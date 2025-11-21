@@ -7,12 +7,14 @@ export interface WorkflowProgressProps {
     activeStep: WorkflowStep;
     hasAllItemsReadyToUse?: boolean;
     stepStatus?: WorkflowStepStatuses;
+    executedSteps?: WorkflowStep[];
 }
 
 export const WorkflowProgress: React.FC<WorkflowProgressProps> = ({
     activeStep,
     hasAllItemsReadyToUse,
-    stepStatus
+    stepStatus,
+    executedSteps = []
 }) => {
     // Internal state for step icons
     const [stepIcon, setStepIcon] = useState<WorkflowStepIcons>({
@@ -195,7 +197,10 @@ export const WorkflowProgress: React.FC<WorkflowProgressProps> = ({
                 <span className="step-label">Cart</span>
             </div>
             <div className="horizontal-line"></div>
-            {!hasAllItemsReadyToUse && (
+            {(!hasAllItemsReadyToUse || executedSteps.includes(WorkflowStep.REQUEST_DOWNLOAD) 
+                || executedSteps.includes(WorkflowStep.RIGHTS_CHECK) 
+                || executedSteps.includes(WorkflowStep.REQUEST_RIGHTS_EXTENSION) 
+                || executedSteps.includes(WorkflowStep.RIGHTS_EXTENSION_SUBMITTED)) && (
                 <>
                     <div className={getStepClassName(WorkflowStep.REQUEST_DOWNLOAD, activeStep === WorkflowStep.REQUEST_DOWNLOAD)}>
                         <div className="step-icon">
@@ -211,7 +216,7 @@ export const WorkflowProgress: React.FC<WorkflowProgressProps> = ({
                         <span className="step-label">Rights Check</span>
                     </div>
                     <div className="horizontal-line"></div>
-                    {activeStep === WorkflowStep.REQUEST_RIGHTS_EXTENSION && (
+                    {(executedSteps.includes(WorkflowStep.REQUEST_RIGHTS_EXTENSION) || executedSteps.includes(WorkflowStep.RIGHTS_EXTENSION_SUBMITTED)) && (
                         <>
                             <div className={getStepClassName(WorkflowStep.REQUEST_RIGHTS_EXTENSION, activeStep === WorkflowStep.REQUEST_RIGHTS_EXTENSION)}>
                                 <div className="step-icon">

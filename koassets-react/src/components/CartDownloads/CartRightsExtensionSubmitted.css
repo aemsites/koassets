@@ -1,0 +1,137 @@
+/* Cart Rights Extension Submitted - Inline Content */
+.cart-rights-extension-submitted {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    min-height: 0;
+    flex: 1;
+}
+
+.cart-rights-extension-submitted-content {
+    padding: 80px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    flex: 1;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Success Icon */
+.cart-rights-extension-submitted-content .success-icon {
+    margin-bottom: 30px;
+    animation: checkmarkPop 0.5s ease-out 0.2s both;
+}
+
+@keyframes checkmarkPop {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Success Heading */
+.cart-rights-extension-submitted-content .success-heading {
+    margin: 0 0 24px 0;
+    font-size: 32px;
+    font-weight: 700;
+    color: #4CAF50;
+    font-family: "TCCC UnityHeadline", sans-serif;
+    letter-spacing: 1px;
+}
+
+/* Success Message */
+.cart-rights-extension-submitted-content .success-message {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 400;
+    color: #1e1e1e;
+    line-height: 1.6;
+    font-family: "TCCC UnityText Regular", sans-serif;
+}
+
+.cart-rights-extension-submitted-content .success-submessage {
+    margin: 0 0 40px 0;
+    font-size: 16px;
+    font-weight: 400;
+    color: #666;
+    line-height: 1.5;
+    font-family: "TCCC UnityText Regular", sans-serif;
+    max-width: 480px;
+}
+
+/* Continue Button */
+.cart-rights-extension-submitted-content .continue-button {
+    min-width: 200px;
+    padding: 14px 48px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 50px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: "TCCC UnityText Bold", sans-serif;
+    text-transform: none;
+}
+
+.cart-rights-extension-submitted-content .continue-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+}
+
+.cart-rights-extension-submitted-content .continue-button:active {
+    transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+    .cart-rights-extension-submitted-content {
+        padding: 40px 24px;
+    }
+
+    .cart-rights-extension-submitted-content .success-icon svg {
+        width: 100px;
+        height: 100px;
+    }
+
+    .cart-rights-extension-submitted-content .success-heading {
+        font-size: 28px;
+        margin-bottom: 20px;
+    }
+
+    .cart-rights-extension-submitted-content .success-message {
+        font-size: 16px;
+        margin-bottom: 12px;
+    }
+
+    .cart-rights-extension-submitted-content .success-submessage {
+        font-size: 14px;
+        margin-bottom: 32px;
+    }
+
+    .cart-rights-extension-submitted-content .continue-button {
+        width: 100%;
+        min-width: unset;
+    }
+}

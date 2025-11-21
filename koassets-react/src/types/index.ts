@@ -470,6 +470,7 @@ export enum WorkflowStep {
     REQUEST_DOWNLOAD = 'request-download',
     RIGHTS_CHECK = 'rights-check',
     REQUEST_RIGHTS_EXTENSION = 'request-rights-extension',
+    RIGHTS_EXTENSION_SUBMITTED = 'rights-extension-submitted',
     DOWNLOAD = 'download',
     CLOSE_DOWNLOAD = 'close-download'
 }
@@ -483,6 +484,7 @@ export interface WorkflowStepStatuses {
     [WorkflowStep.REQUEST_DOWNLOAD]?: StepStatus;
     [WorkflowStep.RIGHTS_CHECK]?: StepStatus;
     [WorkflowStep.REQUEST_RIGHTS_EXTENSION]?: StepStatus;
+    [WorkflowStep.RIGHTS_EXTENSION_SUBMITTED]?: StepStatus;
     [WorkflowStep.DOWNLOAD]?: StepStatus;
     [WorkflowStep.CLOSE_DOWNLOAD]?: StepStatus;
 }
