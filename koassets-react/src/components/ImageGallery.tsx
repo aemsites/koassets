@@ -207,7 +207,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
     // Handle browser back button for asset details modal
     useEffect(() => {
-        const handlePopState = (event: PopStateEvent) => {
+        const handlePopState = () => {
             // Check if the modal is open and we have a history state for it
             if (showDetailsModal && hasPushedHistoryState.current) {
                 // Mark that we're closing via back button
