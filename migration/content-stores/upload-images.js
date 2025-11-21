@@ -247,7 +247,7 @@ function showHelp() {
   console.error('  - Images are uploaded without preview/publish flags');
   console.error('  - Supported formats: jpg, jpeg, png, gif, webp, svg, bmp, tiff');
   console.error('  - Batches are processed with a 0.5s pause between them');
-  console.error('  - Configuration loaded from da.config file (DA_ORG, DA_REPO, DA_DEST)');
+  console.error('  - Configuration loaded from da.upload.config file (DA_ORG, DA_REPO, DA_DEST)');
   console.error('');
 }
 
