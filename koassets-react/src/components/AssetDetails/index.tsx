@@ -56,8 +56,35 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
     const [showPdfModal, setShowPdfModal] = useState<boolean>(false);
     const [pdfUrl, setPdfUrl] = useState<string>('');
     const [isLoadingRightsProfile, setIsLoadingRightsProfile] = useState<boolean>(false);
+    const [isRightsExpanded, setIsRightsExpanded] = useState<boolean>(true);
 
     const rightsFree: boolean = (populatedImage?.readyToUse?.toLowerCase() === 'yes' || populatedImage?.authorized === AuthorizationStatus.AVAILABLE) ? true : false;
+
+    // Helper function to render rights grid
+    const renderRightsGrid = (profileTitle: string | undefined, marketCovered: string | undefined, startDate: string | number | undefined, endDate: string | number | undefined, media: string | undefined) => (
+        <div className="tccc-assets-rights-grid">
+            <div className="tccc-assets-rights-group">
+                <span className="tccc-metadata-label">RIGHTS PROFILE TITLE</span>
+                <span className="tccc-metadata-value">{profileTitle}</span>
+            </div>
+            <div className="tccc-assets-rights-group">
+                <span className="tccc-metadata-label">MARKET COVERED</span>
+                <span className="tccc-metadata-value">{marketCovered as string}</span>
+            </div>
+            <div className="tccc-assets-rights-group">
+                <span className="tccc-metadata-label">RIGHTS START DATE</span>
+                <span className="tccc-metadata-value">{startDate as string}</span>
+            </div>
+            <div className="tccc-assets-rights-group">
+                <span className="tccc-metadata-label">RIGHTS END DATE</span>
+                <span className="tccc-metadata-value">{endDate as string}</span>
+            </div>
+            <div className="tccc-assets-rights-group">
+                <span className="tccc-metadata-label">MEDIA</span>
+                <span className="tccc-metadata-value">{media as string}</span>
+            </div>
+        </div>
+    );
 
     // Persist collapseAll state to local storage whenever it changes
     useEffect(() => {
@@ -190,12 +217,20 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                     setIsLoadingRightsProfile(true);
                     try {
                         const fadelClient = FadelClient.getInstance();
-                        const rightsProfiles = await fadelClient.getAssetRightsProfile(selectedImage.assetId);
+                        const rightsProfilesData = await fadelClient.getAssetRightsProfile(selectedImage.assetId);
                         
-                        if (rightsProfiles.length > 0) {
-                            const rightsProfileTitle = rightsProfiles[0].description || rightsProfiles[0].rightsProfileTitle;
-                            if (rightsProfileTitle) {
-                                setPopulatedImage(prev => ({ ...prev, rightsProfileTitle }));
+                        if (rightsProfilesData.length > 0) {
+                            // Convert FADEL agreement details to RightsProfile format
+                            const rightsProfiles = rightsProfilesData.map(profile => ({
+                                profileTitle: profile.description || profile.rightsProfileTitle || '',
+                                agreementNumber: profile.agreementNumber,
+                                dealId: profile.dealId,
+                                dealType: profile.dealType,
+                                status: profile.status
+                            })).filter(profile => !!profile.profileTitle);
+                            
+                            if (rightsProfiles.length > 0) {
+                                setPopulatedImage(prev => ({ ...prev, rightsProfiles }));
                             }
                         }
                     } catch (fadelError) {
@@ -400,34 +435,44 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                 </div>
                             </div>
 
-                            <div className="tccc-assets-rights-container">
-                                <div className="tccc-assets-rights-inner">
+                            {/* Collapsible Rights section */}
+                            <div className="asset-details-card">
+                                <div className="asset-details-header" onClick={() => setIsRightsExpanded(!isRightsExpanded)}>
                                     <h3 className="asset-details-title">Rights</h3>
-                                    <div className="tccc-assets-rights-grid">
-                                        <div className="tccc-assets-rights-group">
-                                            <span className="tccc-metadata-label">RIGHTS PROFILE TITLE</span>
-                                            <span className="tccc-metadata-value">
-                                                {isLoadingRightsProfile ? 'Loading...' : (populatedImage?.rightsProfileTitle as string)}
-                                            </span>
-                                        </div>
-                                        <div className="tccc-assets-rights-group">
-                                            <span className="tccc-metadata-label">MARKET COVERED</span>
-                                            <span className="tccc-metadata-value">{populatedImage?.marketCovered as string}</span>
-                                        </div>
-                                        <div className="tccc-assets-rights-group">
-                                            <span className="tccc-metadata-label">RIGHTS START DATE</span>
-                                            <span className="tccc-metadata-value">{populatedImage?.rightsStartDate as string}</span>
-                                        </div>
-                                        <div className="tccc-assets-rights-group">
-                                            <span className="tccc-metadata-label">RIGHTS END DATE</span>
-                                            <span className="tccc-metadata-value">{populatedImage?.rightsEndDate as string}</span>
-                                        </div>
-                                        <div className="tccc-assets-rights-group">
-                                            <span className="tccc-metadata-label">MEDIA</span>
-                                            <span className="tccc-metadata-value">{populatedImage?.media as string}</span>
-                                        </div>
-                                    </div>
+                                    <span className={`asset-details-arrow ${isRightsExpanded ? 'expanded' : ''}`}></span>
                                 </div>
+
+                                {isRightsExpanded && (
+                                    <div className="asset-details-content">
+                                        {isLoadingRightsProfile ? (
+                                            renderRightsGrid('Loading...', undefined, undefined, undefined, undefined)
+                                        ) : populatedImage?.rightsProfiles && populatedImage.rightsProfiles.length > 0 ? (
+                                            // Display multiple profiles in scrollable container
+                                            <div className="tccc-assets-rights-wrapper">
+                                                {populatedImage.rightsProfiles.map((profile, index) => (
+                                                    <div key={`rights-${index}`} className="tccc-assets-rights-container">
+                                                        {renderRightsGrid(
+                                                            profile.profileTitle,
+                                                            populatedImage?.marketCovered,
+                                                            populatedImage?.rightsStartDate,
+                                                            populatedImage?.rightsEndDate,
+                                                            populatedImage?.media
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            // Fallback: display AEM metadata
+                                            renderRightsGrid(
+                                                populatedImage?.rightsProfileTitle,
+                                                populatedImage?.marketCovered,
+                                                populatedImage?.rightsStartDate,
+                                                populatedImage?.rightsEndDate,
+                                                populatedImage?.media
+                                            )
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             <div className="product-actions">

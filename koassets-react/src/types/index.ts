@@ -76,6 +76,14 @@ export interface Rendition {
     dimensions?: { width: number; height: number };
 }
 
+export interface RightsProfile {
+    profileTitle: string;
+    agreementNumber?: string;
+    dealId?: number;
+    dealType?: string;
+    status?: string;
+}
+
 export interface Asset {
     agencyName?: string;
     ageDemographic?: string;
@@ -149,6 +157,7 @@ export interface Asset {
     readyToUse?: string;
     rightsNotes?: string;
     rightsProfileTitle?: string;
+    rightsProfiles?: RightsProfile[]; // Array of all rights profiles from FADEL
     rightsStartDate?: string | number;
     rightsStatus?: string;
     riskTypeManagement?: string;
