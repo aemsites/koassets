@@ -50,7 +50,7 @@ const SUBMITTER_STATUSES = [
 const PERMISSIONS = {
   MANAGE_RIGHTS: 'manage-rights',  // Base: can review and self-assign
   ADMIN_RIGHTS: 'admin-rights',    // Elevated: can assign to others
-  REPORTS_ADMIN: 'reports-admin',
+  ADMIN_REPORTS: 'admin-reports',  // Can access admin reports
 };
 
 /**
@@ -805,7 +805,7 @@ function hasAdminRightsPermission(user) {
 /**
  * List all rights requests across all users (admin report)
  * GET /api/rightsrequests/all
- * Requires: PERMISSIONS.REPORTS_ADMIN
+ * Requires: PERMISSIONS.ADMIN_REPORTS
  */
 export async function listAllRightsRequests(request, env) {
   try {
@@ -816,12 +816,12 @@ export async function listAllRightsRequests(request, env) {
       return error(401, { success: false, error: 'User not authenticated' });
     }
 
-    // Check reports-admin permission
-    if (!isAuthorized(request.user, PERMISSIONS.REPORTS_ADMIN)) {
+    // Check admin-reports permission
+    if (!isAuthorized(request.user, PERMISSIONS.ADMIN_REPORTS)) {
       return error(403, {
         success: false,
-        error: `${PERMISSIONS.REPORTS_ADMIN} permission required`,
-        message: `You do not have the ${PERMISSIONS.REPORTS_ADMIN} permission to access this report`,
+        error: `${PERMISSIONS.ADMIN_REPORTS} permission required`,
+        message: `You do not have the ${PERMISSIONS.ADMIN_REPORTS} permission to access this report`,
         // Temporary debug info - shows what roles and permissions the user has
         debug: {
           userEmail,
@@ -830,8 +830,8 @@ export async function listAllRightsRequests(request, env) {
           role: request.user?.role,
           permissions: request.user?.permissions,
           allUserProperties: Object.keys(request.user || {}),
-          requiredPermission: PERMISSIONS.REPORTS_ADMIN,
-          note: `User needs: permissions array must include "${PERMISSIONS.REPORTS_ADMIN}"`,
+          requiredPermission: PERMISSIONS.ADMIN_REPORTS,
+          note: `User needs: permissions array must include "${PERMISSIONS.ADMIN_REPORTS}"`,
         },
       });
     }
