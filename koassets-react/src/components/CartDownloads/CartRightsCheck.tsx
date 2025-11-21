@@ -66,7 +66,6 @@ const CartRightsCheck: React.FC<CartRightsCheckProps> = ({
             item?.readyToUse?.toLowerCase() !== 'yes' &&
             !newlyAuthorizedAssetIds.has(item.assetId || '')
         );
-        // console.log(`Executed workflow steps||| Restricted assets:`, restrictedAssets);
         return restrictedAssets;
     }, [cartAssetItems, newlyAuthorizedAssetIds]);
 
