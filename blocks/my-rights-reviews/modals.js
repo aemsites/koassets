@@ -185,6 +185,10 @@ async function assignReviewToReviewer(requestId, assigneeEmail) {
     }
 
     const result = await response.json();
+    
+    // Wait for Cloudflare KV propagation before returning
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
     return result;
   } catch (error) {
     // eslint-disable-next-line no-console
