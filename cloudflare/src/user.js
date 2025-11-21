@@ -178,14 +178,22 @@ export async function createSession(request, env) {
     return false;
   }
 
-  const rawPermissions = [
-    ...(access['*']?.permissions || []),
-    ...(access[domain]?.permissions || []),
-    ...(access[email]?.permissions || []),
-  ];
+  // TEMPORARY TEST MODE - Override permissions for testing
+  const TEST_PERMISSION = request.cookies?.TEST_PERMISSION;
+  
+  const rawPermissions = TEST_PERMISSION 
+    ? ['preview', TEST_PERMISSION]  // Use test permission if set
+    : [
+        ...(access['*']?.permissions || []),
+        ...(access[domain]?.permissions || []),
+        ...(access[email]?.permissions || []),
+      ];
 
   // TEMPORARY DEBUG LOGGING - Remove after troubleshooting
   console.log('[DEBUG] Permission loading for:', email);
+  if (TEST_PERMISSION) {
+    console.log('[DEBUG] ⚠️  TEST MODE ACTIVE - Using test permission:', TEST_PERMISSION);
+  }
   console.log('[DEBUG] From wildcard (*):', access['*']?.permissions || []);
   console.log('[DEBUG] From domain (' + domain + '):', access[domain]?.permissions || []);
   console.log('[DEBUG] From email (' + email + '):', access[email]?.permissions || []);

@@ -107,16 +107,7 @@ router
     }
   })
 
-  // authentication flows (/auth/* by default)
-  .all(authRouter.route, authRouter.fetch)
-
-  // from here on authentication required (middleware)
-  .all('*', withAuthentication)
-
-  // user info
-  .get('/api/user', apiUser)
-
-  // TEMPORARY DEBUG ENDPOINT - Remove after troubleshooting
+  // TEMPORARY DEBUG ENDPOINT - Remove after troubleshooting (before auth)
   .get('/api/debug/permissions', async (request, env) => {
     const { fetchHelixSheet } = await import('./util/helixutil.js');
     const { json } = await import('itty-router');
@@ -130,6 +121,35 @@ router
       allKeys: Object.keys(access).slice(0, 20), // First 20 keys
     });
   })
+
+  // TEMPORARY TEST ENDPOINT - Test alias normalization
+  .get('/api/debug/test-alias', async (request) => {
+    const { json } = await import('itty-router');
+    const url = new URL(request.url);
+    const testPerm = url.searchParams.get('perm') || 'rr';
+    
+    const permissionAliases = {
+      rr: 'rights-reviewer',
+      rm: 'rights-manager',
+    };
+    
+    const normalized = permissionAliases[testPerm] || testPerm;
+    
+    return json({
+      input: testPerm,
+      normalized: normalized,
+      wasAlias: testPerm !== normalized,
+    });
+  })
+
+  // authentication flows (/auth/* by default)
+  .all(authRouter.route, authRouter.fetch)
+
+  // from here on authentication required (middleware)
+  .all('*', withAuthentication)
+
+  // user info
+  .get('/api/user', apiUser)
 
   // dynamic media
   .all('/api/adobe/assets/*', originDynamicMedia)
