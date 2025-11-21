@@ -107,41 +107,6 @@ router
     }
   })
 
-  // TEMPORARY DEBUG ENDPOINT - Remove after troubleshooting (before auth)
-  .get('/api/debug/permissions', async (request, env) => {
-    const { fetchHelixSheet } = await import('./util/helixutil.js');
-    const { json } = await import('itty-router');
-    const access = await fetchHelixSheet(env, '/config/access/permissions', {
-      sheet: { key: 'email', arrays: ['permissions'] },
-    });
-    return json({
-      wildcardPermissions: access['*']?.permissions || [],
-      adobeDomainPermissions: access['adobe.com']?.permissions || [],
-      sharmonPermissions: access['sharmon@adobe.com']?.permissions || [],
-      allKeys: Object.keys(access).slice(0, 20), // First 20 keys
-    });
-  })
-
-  // TEMPORARY TEST ENDPOINT - Test alias normalization
-  .get('/api/debug/test-alias', async (request) => {
-    const { json } = await import('itty-router');
-    const url = new URL(request.url);
-    const testPerm = url.searchParams.get('perm') || 'rr';
-    
-    const permissionAliases = {
-      rr: 'rights-reviewer',
-      rm: 'rights-manager',
-    };
-    
-    const normalized = permissionAliases[testPerm] || testPerm;
-    
-    return json({
-      input: testPerm,
-      normalized: normalized,
-      wasAlias: testPerm !== normalized,
-    });
-  })
-
   // authentication flows (/auth/* by default)
   .all(authRouter.route, authRouter.fetch)
 
