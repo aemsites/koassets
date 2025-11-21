@@ -79,10 +79,9 @@ function readInputFile(filePath) {
 }
 
 /**
- * Upload file or directory to EDS
- * @param {string} localPath - Path to the file or directory to upload from local filesystem, e.g. './generated-documents/all-content-stores.html'
- * @param {string} [daFullPath] - Optional: Full DA path including org/repo, e.g. 'aemsites/koassets/{DA_DEST}/all-content-stores.html'
- *                                If not provided, constructed as: {DA_ORG}/{DA_REPO}/{DA_DEST}/{filename}
+ * Upload file or directory to EDS (main function)
+ * @param {string} localPath - Path to the file or directory to upload from local filesystem, e.g. './file.html' or './my-folder'
+ * @param {string} daFullPath - Required: Full DA path including org/repo, e.g. 'aemsites/koassets/{DA_DEST}/file.html'
  * @param {boolean} [previewFlag=false] - Trigger preview after upload
  * @param {boolean} [publishFlag=false] - Trigger publish after preview
  * @param {boolean} [reupFlag=false] - Re-upload flag: skip status checks and always upload
@@ -92,6 +91,11 @@ function readInputFile(filePath) {
  */
 // eslint-disable-next-line no-shadow
 async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFlag = false, reupFlag = false, dryFlag = false, dryRunStats = null, concurrency = 1) {
+  // Validate required parameters
+  if (!daFullPath) {
+    console.error('❌ Error: daFullPath is required');
+    process.exit(1);
+  }
   // Check if path exists
   if (!fs.existsSync(localPath)) {
     console.error(`❌ Path not found: ${localPath}`);
@@ -103,58 +107,7 @@ async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFl
   if (stats.isDirectory()) {
     console.log(`\n📁 Processing directory: ${localPath}`);
 
-    // If daFullPath not provided, construct base path from DA config (without directory name)
-    let baseDaPath = daFullPath;
-    if (!baseDaPath) {
-      // Check if localPath starts with DATA/generated-eds-docs/ and transform accordingly
-      const normalizedLocalPath = localPath.replace(/\\/g, '/');
-      const dataGenDocsPrefix = 'DATA/generated-eds-docs/';
-
-      if (normalizedLocalPath.includes(dataGenDocsPrefix)) {
-        // Strip DATA/generated-eds-docs/ prefix and construct DA path
-        const relativePath = normalizedLocalPath.substring(
-          normalizedLocalPath.indexOf(dataGenDocsPrefix) + dataGenDocsPrefix.length,
-        );
-        // Remove trailing slash if present
-        const cleanRelativePath = relativePath.replace(/\/$/, '');
-
-        // Check if this is a main store (all-content-stores or bottler-content-stores)
-        const isMainStore = cleanRelativePath === 'all-content-stores'
-                           || cleanRelativePath === 'bottler-content-stores';
-
-        // Check if this is a sub-store subdirectory that should be flattened to content-stores/
-        const isSubStore = (cleanRelativePath.startsWith('all-content-stores-')
-                           || cleanRelativePath.startsWith('bottler-content-stores-'))
-                           && !isMainStore;
-
-        // Use DA_DEST if available
-        if (DA_DEST) {
-          const normalizedDest = DA_DEST.startsWith('/') ? DA_DEST.substring(1) : DA_DEST;
-          if (isMainStore) {
-            // Main stores go to root of destination
-            baseDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}`;
-          } else if (isSubStore) {
-            // Sub-stores are flattened to content-stores/
-            baseDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/content-stores`;
-          } else {
-            baseDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/${cleanRelativePath}`;
-          }
-        } else if (isMainStore) {
-          baseDaPath = `${DA_ORG}/${DA_REPO}`;
-        } else if (isSubStore) {
-          baseDaPath = `${DA_ORG}/${DA_REPO}/content-stores`;
-        } else {
-          baseDaPath = `${DA_ORG}/${DA_REPO}/${cleanRelativePath}`;
-        }
-      } else if (DA_DEST) {
-        // Default behavior: use DA_DEST
-        // Remove leading slash from DA_DEST if present
-        const normalizedDest = DA_DEST.startsWith('/') ? DA_DEST.substring(1) : DA_DEST;
-        baseDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}`;
-      } else {
-        baseDaPath = `${DA_ORG}/${DA_REPO}`;
-      }
-    }
+    const baseDaPath = daFullPath;
 
     // Read all files and subdirectories
     const entries = fs.readdirSync(localPath, { withFileTypes: true });
@@ -202,70 +155,8 @@ async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFl
     return;
   }
 
-  // If localPath is a file, construct path with filename if not provided
-  let targetDaPath = daFullPath;
-  if (!targetDaPath) {
-    // Check if localPath starts with DATA/generated-eds-docs/ and transform accordingly
-    const normalizedLocalPath = localPath.replace(/\\/g, '/');
-    const dataGenDocsPrefix = 'DATA/generated-eds-docs/';
-
-    if (normalizedLocalPath.includes(dataGenDocsPrefix)) {
-      // Strip DATA/generated-eds-docs/ prefix and construct DA path
-      const relativePath = normalizedLocalPath.substring(
-        normalizedLocalPath.indexOf(dataGenDocsPrefix) + dataGenDocsPrefix.length,
-      );
-
-      // Check if this is a file from a store subdirectory
-      // Main store files: all-content-stores/all-content-stores-sheet.json
-      // Sub-store files: all-content-stores-{name}/all-content-stores-{name}-sheet.json
-      const pathParts = relativePath.split('/');
-      const dirName = pathParts[0];
-
-      // Check if this is a main store
-      const isMainStore = pathParts.length === 2
-        && (dirName === 'all-content-stores' || dirName === 'bottler-content-stores');
-
-      // Check if this is a sub-store
-      const isSubStore = pathParts.length === 2
-        && !isMainStore
-        && (dirName.startsWith('all-content-stores-') || dirName.startsWith('bottler-content-stores-'));
-
-      // Use DA_DEST if available
-      if (DA_DEST) {
-        const normalizedDest = DA_DEST.startsWith('/') ? DA_DEST.substring(1) : DA_DEST;
-        if (isMainStore) {
-          // Main store files go to root level
-          const filename = pathParts[1];
-          targetDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/${filename}`;
-        } else if (isSubStore) {
-          // Sub-store files are flattened to content-stores/filename
-          const filename = pathParts[1];
-          targetDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/content-stores/${filename}`;
-        } else {
-          // Other files keep their relative path
-          targetDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/${relativePath}`;
-        }
-      } else if (isMainStore) {
-        const filename = pathParts[1];
-        targetDaPath = `${DA_ORG}/${DA_REPO}/${filename}`;
-      } else if (isSubStore) {
-        const filename = pathParts[1];
-        targetDaPath = `${DA_ORG}/${DA_REPO}/content-stores/${filename}`;
-      } else {
-        targetDaPath = `${DA_ORG}/${DA_REPO}/${relativePath}`;
-      }
-    } else {
-      // Default behavior: use basename with DA_DEST
-      const basename = path.basename(localPath);
-      if (DA_DEST) {
-        // Remove leading slash from DA_DEST if present
-        const normalizedDest = DA_DEST.startsWith('/') ? DA_DEST.substring(1) : DA_DEST;
-        targetDaPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/${basename}`;
-      } else {
-        targetDaPath = `${DA_ORG}/${DA_REPO}/${basename}`;
-      }
-    }
-  }
+  // For files, use the provided daFullPath
+  const targetDaPath = daFullPath;
 
   // If localPath is a file, proceed with upload
   const localFilePath = localPath;
@@ -415,8 +306,63 @@ async function uploadToEDS(localPath, daFullPath, previewFlag = false, publishFl
   }
 }
 
+/**
+ * Upload content stores to EDS (wrapper for store-specific logic)
+ * @param {string} storeContentPath - Content path like "/content/share/us/en/all-content-stores"
+ * @param {boolean} [previewFlag=false] - Trigger preview after upload
+ * @param {boolean} [publishFlag=false] - Trigger publish after preview
+ * @param {boolean} [reupFlag=false] - Re-upload flag: skip status checks and always upload
+ * @param {boolean} [dryFlag=false] - Dry run mode: skip actual operations
+ * @param {object} [dryRunStats=null] - Dry run statistics tracking object
+ * @param {number} [concurrency=1] - Number of concurrent operations (1 = sequential, higher = more parallel)
+ */
+async function uploadStoresToEDS(storeContentPath, previewFlag = false, publishFlag = false, reupFlag = false, dryFlag = false, dryRunStats = null, concurrency = 1) {
+  // Convert content path to directory name
+  const dirName = contentPathToDirectoryName(storeContentPath);
+
+  // Construct local path
+  const localPath = path.join(__dirname, 'DATA', 'generated-eds-docs', dirName);
+
+  // Check if directory exists
+  if (!fs.existsSync(localPath)) {
+    throw new Error(`Directory not found at: DATA/generated-eds-docs/${dirName}/`);
+  }
+
+  if (!fs.statSync(localPath).isDirectory()) {
+    throw new Error(`Not a directory: DATA/generated-eds-docs/${dirName}/`);
+  }
+
+  // Determine if this is a main store or sub-store
+  const isMainStore = dirName === 'all-content-stores' || dirName === 'bottler-content-stores';
+  const isSubStore = !isMainStore && (dirName.startsWith('all-content-stores-') || dirName.startsWith('bottler-content-stores-'));
+
+  // Construct DA path based on store type
+  let daFullPath;
+  if (DA_DEST) {
+    const normalizedDest = DA_DEST.startsWith('/') ? DA_DEST.substring(1) : DA_DEST;
+    if (isMainStore) {
+      // Main stores go to root of destination
+      daFullPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}`;
+    } else if (isSubStore) {
+      // Sub-stores are flattened to content-stores/
+      daFullPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/content-stores`;
+    } else {
+      daFullPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/${dirName}`;
+    }
+  } else if (isMainStore) {
+    daFullPath = `${DA_ORG}/${DA_REPO}`;
+  } else if (isSubStore) {
+    daFullPath = `${DA_ORG}/${DA_REPO}/content-stores`;
+  } else {
+    daFullPath = `${DA_ORG}/${DA_REPO}/${dirName}`;
+  }
+
+  // Call the main uploadToEDS function
+  await uploadToEDS(localPath, daFullPath, previewFlag, publishFlag, reupFlag, dryFlag, dryRunStats, concurrency);
+}
+
 // Export functions for use in other scripts
-module.exports = { uploadToEDS, sleep };
+module.exports = { uploadToEDS, uploadStoresToEDS, sleep };
 
 // Only run the command-line interface if this script is executed directly
 if (require.main === module) {
@@ -562,19 +508,8 @@ if (require.main === module) {
     process.exit(1);
   }
 
-  // If --store is provided, convert to localPath
-  if (storeContentPath) {
-    try {
-      const dirName = contentPathToDirectoryName(storeContentPath);
-      localPath = path.join(__dirname, 'DATA', 'generated-eds-docs', dirName);
-      console.log(`📍 Using store: ${storeContentPath}`);
-      console.log(`   → Resolved to: ${path.relative(__dirname, localPath)}`);
-    } catch (error) {
-      console.error(`❌ Error: Invalid --store path: ${storeContentPath}`);
-      console.error(`   ${error.message}`);
-      process.exit(1);
-    }
-  }
+  // Store path will be processed separately using uploadStoresToEDS
+  // No conversion needed here
 
   // Check for help flag
   if (args.includes('--help') || args.includes('-h')) {
@@ -658,7 +593,7 @@ if (require.main === module) {
     console.error('Technical Notes:');
     console.error('  - Dry run mode (--dry) shows what would happen without executing DA operations');
     console.error('  - For HTML files, extensions are stripped during preview/publish path construction');
-    console.error('  - Configuration loaded from da.config file (DA_ORG, DA_REPO, DA_DEST)');
+    console.error('  - Configuration loaded from da.upload.config file (DA_ORG, DA_REPO, DA_DEST)');
     console.error('');
     process.exit(0);
   }
@@ -704,29 +639,10 @@ if (require.main === module) {
           console.log(`\n📍 [${globalIndex + 1}/${contentPaths.length}] Processing: ${contentPath}`);
 
           try {
-            // Convert content path to directory name
-            const dirName = contentPathToDirectoryName(contentPath);
-
-            // All stores (including main stores) are now in subdirectories
-            const generatedDocsDir = path.join(__dirname, 'DATA', 'generated-eds-docs');
-            const targetPath = path.join(generatedDocsDir, dirName);
-
-            // Check if directory exists
-            if (!fs.existsSync(targetPath)) {
-              console.log(`   ⚠️  Skipping: Directory not found at: DATA/generated-eds-docs/${dirName}/`);
-              return;
-            }
-
-            if (!fs.statSync(targetPath).isDirectory()) {
-              console.log(`   ⚠️  Skipping: Not a directory: DATA/generated-eds-docs/${dirName}/`);
-              return;
-            }
-
-            // Upload the entire directory (sequential processing of files within each store)
-            console.log(`   📁 Processing directory: ${dirName}/`);
-            await uploadToEDS(targetPath, null, previewFlag, publishFlag, reupFlag, dryFlag, dryRunStats, 1); // Use concurrency=1 for files within each store
+            // Upload the store using uploadStoresToEDS (sequential processing of files within each store)
+            await uploadStoresToEDS(contentPath, previewFlag, publishFlag, reupFlag, dryFlag, dryRunStats, 1); // Use concurrency=1 for files within each store
           } catch (error) {
-            console.error(`   ❌ Error processing ${contentPath}: ${error.message}`);
+            console.error(`   ⚠️  Skipping: ${error.message}`);
           }
         }));
 
@@ -749,14 +665,55 @@ if (require.main === module) {
       console.error(`❌ Error: ${error.message}`);
       process.exit(1);
     });
+  } else if (storeContentPath) {
+    // Process single store from content path
+    console.log('\n🚀 Starting upload for store...');
+    console.log(`   Store Path: ${storeContentPath}`);
+    console.log(`   Preview: ${previewFlag}`);
+    console.log(`   Publish: ${publishFlag}`);
+    console.log(`   Dry run: ${dryFlag}`);
+    console.log(`   Reup: ${reupFlag}`);
+    console.log(`   Concurrency: ${concurrency}`);
+
+    uploadStoresToEDS(storeContentPath, previewFlag, publishFlag, reupFlag, dryFlag, dryRunStats, concurrency).then(() => {
+      // Display dry run summary if in dry run mode
+      if (dryFlag) {
+        displayDryRunSummary();
+      }
+    }).catch((error) => {
+      console.error(`❌ Error: ${error.message}`);
+      process.exit(1);
+    });
   } else if (localPath) {
     console.log('\n🚀 Starting upload with command line arguments...');
     console.log(`   Local Path: ${localPath}`);
-    if (daFullPath) {
-      console.log(`   DA Full Path: ${daFullPath}`);
-    } else {
+
+    // Construct daFullPath if not provided
+    if (!daFullPath) {
+      // Check if localPath is a directory or file
+      const isDirectory = fs.existsSync(localPath) && fs.statSync(localPath).isDirectory();
+
+      if (isDirectory) {
+        // For directories, upload contents directly to DA_DEST (without folder name)
+        if (DA_DEST) {
+          const normalizedDest = DA_DEST.startsWith('/') ? DA_DEST.substring(1) : DA_DEST;
+          daFullPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}`;
+        } else {
+          daFullPath = `${DA_ORG}/${DA_REPO}`;
+        }
+      } else {
+        // For files, include the filename in the path
+        const basename = path.basename(localPath);
+        if (DA_DEST) {
+          const normalizedDest = DA_DEST.startsWith('/') ? DA_DEST.substring(1) : DA_DEST;
+          daFullPath = `${DA_ORG}/${DA_REPO}/${normalizedDest}/${basename}`;
+        } else {
+          daFullPath = `${DA_ORG}/${DA_REPO}/${basename}`;
+        }
+      }
       console.log('   DA Full Path: (auto-constructed from config)');
     }
+    console.log(`   DA Full Path: ${daFullPath}`);
     console.log(`   Preview: ${previewFlag}`);
     console.log(`   Publish: ${publishFlag}`);
     console.log(`   Dry run: ${dryFlag}`);

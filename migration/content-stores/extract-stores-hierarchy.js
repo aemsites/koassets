@@ -113,7 +113,7 @@ AUTOMATIC DISCOVERY:
         node extract-stores-hierarchy.js /content/share/us/en/all-content-stores/global-coca-cola-uplift
 
 REQUIREMENTS:
-  - AEM authentication cookie in da.config file
+  - AEM authentication cookie in da.upload.config file
   - Network access to AEM author instance
   - Write permissions to output directory
 
@@ -330,14 +330,14 @@ for (let i = 0; i < args.length; i += 1) {
 // Load AUTHOR_AUTH_COOKIE from config file
 let AUTHOR_AUTH_COOKIE;
 try {
-  const authConfig = fs.readFileSync(path.join(__dirname, 'da.config'), 'utf8').trim();
+  const authConfig = fs.readFileSync(path.join(__dirname, 'da.upload.config'), 'utf8').trim();
   const [, cookieValue] = authConfig.match(/AUTHOR_AUTH_COOKIE=(.*)/);
   AUTHOR_AUTH_COOKIE = cookieValue;
   if (!AUTHOR_AUTH_COOKIE) {
-    throw new Error('AUTHOR_AUTH_COOKIE not found in da.config');
+    throw new Error('AUTHOR_AUTH_COOKIE not found in da.upload.config');
   }
 } catch (error) {
-  console.error(`❌ Error loading AUTHOR_AUTH_COOKIE from da.config: ${error.message}`);
+  console.error(`❌ Error loading AUTHOR_AUTH_COOKIE from da.upload.config: ${error.message}`);
   process.exit(1);
 }
 

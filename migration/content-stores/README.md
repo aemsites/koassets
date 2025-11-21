@@ -8,7 +8,9 @@ This guide provides step-by-step instructions for migrating content stores from 
 2. [Configuration Setup](#configuration-setup)
 3. [Migration Steps](#migration-steps)
 4. [Command Reference](#command-reference)
-5. [Troubleshooting](#troubleshooting)
+5. [Download and Re-upload Workflow](#download-and-re-upload-workflow)
+6. [Complete Migration Workflow](#complete-migration-workflow)
+7. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -25,17 +27,23 @@ Before starting the migration, ensure you have:
 
 ## Configuration Setup
 
+### Step 0: Get into working dir
+
+```bash
+cd migration/content-stores
+```
+
 ### Step 1: Create Configuration File
 
 Copy the example configuration file and customize it for your environment:
 
 ```bash
-cp da.config.example da.config
+cp da.upload.config.example da.upload.config
 ```
 
 ### Step 2: Update Configuration Values
 
-Edit `da.config` with your credentials and settings:
+Edit `da.upload.config` with your credentials and settings:
 
 ```bash
 DA_ORG=aemsites                    # Your DA organization name
@@ -222,7 +230,7 @@ node upload-images.js --path DATA/all-content-stores/extracted-results/images -c
 Upload all stores from the input file:
 
 ```bash
-node upload-to-EDS.js --input all-store-links.txt --preview --publish
+node upload-to-EDS.js --input all-store-links.txt --preview --publish [--reup]
 ```
 
 #### Option B: Upload Individual Stores
@@ -231,10 +239,10 @@ Upload specific stores one at a time:
 
 ```bash
 # Main content store
-node upload-to-EDS.js --store /content/share/us/en/all-content-stores --preview --publish
+node upload-to-EDS.js --store /content/share/us/en/all-content-stores --preview --publish [--reup]
 
 # Specific sub-store
-node upload-to-EDS.js --store /content/share/us/en/all-content-stores/global-coca-cola-uplift --preview --publish
+node upload-to-EDS.js --store /content/share/us/en/all-content-stores/global-coca-cola-uplift --preview --publish [--reup]
 ```
 
 **Available Flags**:
@@ -401,6 +409,214 @@ node upload-to-EDS.js --input all-store-links.txt --preview --publish -c 10
 -h, --help                 Show help message
 ```
 
+### Download from EDS
+
+```bash
+# Download single URL
+node download-from-EDS.js --url https://main--koassets--aemsites.aem.page/asset-details
+
+# Download multiple URLs from file
+node download-from-EDS.js --input todownload.txt --output downloaded
+
+# Download with concurrency
+node download-from-EDS.js --input todownload.txt --output downloaded -c 5
+
+# Options:
+-u, --url <url>            Single AEM.page URL to download
+-i, --input <file>         Input file with URLs (one per line, # for comments)
+-o, --output <dir>         Output directory (default: ./downloaded)
+-c, --concurrency <number> Number of concurrent downloads (default: 1)
+-h, --help                 Show help message
+```
+
+---
+
+## Download and Re-upload Workflow
+
+This workflow is useful for:
+- **Updating existing content**: Download published content, make changes locally, then re-upload
+- **Moving content between environments**: Download from one environment, upload to another
+- **Bulk content updates**: Download multiple pages, apply changes, then batch re-upload
+- **Content backup and restore**: Download content for backup, restore when needed
+
+### Step 1: Setup Download Configuration
+
+First, create your download configuration file with authentication credentials:
+
+```bash
+cp da.download.config.example da.download.config
+# Edit da.download.config with your DA bearer token
+```
+
+The `da.download.config` should contain:
+```bash
+DA_BEARER_TOKEN=Bearer eyJhbG...   # Get from https://da.live
+```
+
+### Step 2: Setup Upload Configuration
+
+Setup the upload configuration file with authentication credentials and destination settings:
+
+```bash
+cp da.upload.config.example da.upload.config
+# Edit da.upload.config with your DA bearer token and destination path
+```
+
+The `da.upload.config` should contain:
+```bash
+DA_ORG=aemsites                    # Your DA organization name
+DA_REPO=koassets                   # Your DA repository name
+DA_BRANCH=main                     # Target branch (usually 'main')
+DA_DEST=drafts/yourname            # Destination folder path for uploads
+DA_BEARER_TOKEN=Bearer eyJhbG...   # Get from https://da.live
+# ... other settings like IMAGES_BASE, AEM_AUTHOR, etc.
+```
+
+**Important**: 
+- Use the same `DA_BEARER_TOKEN` in both config files
+- Set `DA_DEST` to specify where files will be uploaded
+- Files will upload to: `{DA_ORG}/{DA_REPO}/{DA_DEST}/{filename}`
+
+### Step 3: Create Download List
+
+Create a text file (e.g., `todownload.txt`) with AEM.page URLs you want to download, one URL per line:
+
+```bash
+# todownload.txt - List of URLs to download
+# Lines starting with # are comments
+
+https://main--koassets--aemsites.aem.page/asset-details
+https://main--koassets--aemsites.aem.page/search/all
+https://main--koassets--aemsites.aem.page/content-stores
+# Add more URLs as needed
+```
+
+**URL Format**: 
+- Root path (e.g., `https://main--koassets--aemsites.aem.page/`) downloads `index.html`
+- Paths without extensions automatically append `.html`
+- Paths with extensions are downloaded as-is
+- Trailing slashes are automatically handled
+
+### Step 4: Download Content
+
+Download all files from your list using the download script:
+
+```bash
+# Download with default settings (sequential, to ./downloaded)
+node download-from-EDS.js --input todownload.txt
+
+# Download to specific directory with concurrency
+node download-from-EDS.js --input todownload.txt --output downloaded --concurrency 3
+```
+
+**Options**:
+- `--input todownload.txt`: File containing URLs to download
+- `--output downloaded`: Directory to save downloaded files (default: `./downloaded`)
+- `--concurrency 3`: Download 3 files in parallel (default: 1)
+
+**What happens**:
+- Files are downloaded from DA admin using your `da.download.config` credentials
+- Each URL is parsed to extract org/repo/filename
+- Files are saved to the output directory with their original names
+- Progress is shown for each file
+- Summary report shows success/failure counts
+
+### Step 5: (Optional) Make Local Changes
+
+After downloading, you can modify the files locally:
+
+```bash
+cd downloaded
+# Edit HTML files, update content, fix issues, etc.
+# Make whatever changes you need
+```
+
+### Step 6: Re-upload Content
+
+Upload the modified content back to EDS using the upload script:
+
+```bash
+# Upload with force re-upload flag (--reup)
+node upload-to-EDS.js --reup --path downloaded --concurrency 3
+
+# With dry run (see what would happen without uploading)
+node upload-to-EDS.js --reup --path downloaded --concurrency 3 --dry
+
+# With preview (triggers preview after upload)
+node upload-to-EDS.js --reup --path downloaded --concurrency 3 --preview
+
+# With preview and publish
+node upload-to-EDS.js --reup --path downloaded --concurrency 3 --preview --publish
+```
+
+**Important Flags**:
+- `--reup`: Force re-upload (skips existence checks, always uploads)
+- `--path downloaded`: Local directory containing files to upload
+- `--concurrency 3`: Upload 3 files in parallel
+- `--dry`: Dry run mode (shows what would happen without actually uploading)
+- `--preview`: Trigger preview after upload
+- `--publish`: Trigger publish after preview
+
+**Note**: The `--reup` flag is recommended when re-uploading modified content to ensure your changes overwrite the existing content.
+
+### Complete Example
+
+Here's a complete end-to-end example:
+
+```bash
+# 1. Setup download configuration
+cp da.download.config.example da.download.config
+# Edit da.download.config with your DA bearer token
+
+# 2. Setup upload configuration
+cp da.upload.config.example da.upload.config
+# Edit da.upload.config with your DA bearer token and destination
+
+# 3. Create your download list
+cat > todownload.txt << 'EOF'
+# Content to download and update
+https://main--koassets--aemsites.aem.page/asset-details
+https://main--koassets--aemsites.aem.page/search/all
+https://main--koassets--aemsites.aem.page/content-stores
+EOF
+
+# 4. Download all content
+node download-from-EDS.js --input todownload.txt --output downloaded --concurrency 3
+
+# 5. Make your changes
+cd downloaded
+# Edit files as needed...
+cd ..
+
+# 6. Test upload (dry run)
+node upload-to-EDS.js --reup --path downloaded --concurrency 3 --dry
+
+# 7. Upload with preview (check results)
+node upload-to-EDS.js --reup --path downloaded --concurrency 3 --preview
+
+# 8. Publish when ready
+node upload-to-EDS.js --reup --path downloaded --concurrency 3 --preview --publish
+```
+
+### Troubleshooting Download/Re-upload
+
+**Issue**: `DA_BEARER_TOKEN not found in da.download.config`
+- **Solution**: Make sure you've created `da.download.config` from the example file and added your token
+
+**Issue**: `Download failed: 404 - Not Found`
+- **Solution**: Verify the URL is correct and the file exists in DA. Check the org/repo/path in the URL
+
+**Issue**: `URL path is empty`
+- **Solution**: Root URLs (e.g., ending in `/`) will download `index.html`. If you need a specific file, provide the full path
+
+**Issue**: Files upload to wrong location
+- **Solution**: Check your `da.upload.config` file, specifically `DA_DEST` path. The files will upload to `{DA_ORG}/{DA_REPO}/{DA_DEST}/{filename}`
+
+**Issue**: Want to upload to different destination
+- **Solution**: Either:
+  - Update `DA_DEST` in your `da.upload.config` file, or
+  - Use `--daFullPath` option to specify exact destination path
+
 ---
 
 ## Complete Migration Workflow
@@ -409,8 +625,8 @@ Here's the recommended complete workflow for migrating all content stores:
 
 ```bash
 # 1. Setup configuration
-cp da.config.example da.config
-# Edit da.config with your credentials
+cp da.upload.config.example da.upload.config
+# Edit da.upload.config with your credentials
 
 # 2. Discover all content stores
 node extract-stores-hierarchy.js --fetch-store-links
@@ -440,8 +656,8 @@ node upload-to-EDS.js --input all-store-links.txt --preview --publish -c 10
 
 ### Common Issues
 
-**Issue**: `DA_BEARER_TOKEN not found in da.config`
-- **Solution**: Make sure you've copied `da.config.example` to `da.config` and filled in your token
+**Issue**: `DA_BEARER_TOKEN not found in da.upload.config`
+- **Solution**: Make sure you've copied `da.upload.config.example` to `da.upload.config` and filled in your token
 
 **Issue**: `401 Unauthorized` when downloading from AEM
 - **Solution**: Your `AUTHOR_AUTH_COOKIE` may have expired. Get a fresh cookie from your browser
@@ -494,7 +710,7 @@ node upload-to-EDS.js --help
 
 ## Notes
 
-- **Credentials Security**: Never commit `da.config` to version control. It contains sensitive credentials.
+- **Credentials Security**: Never commit `da.upload.config` to version control. It contains sensitive credentials.
 - **Performance & Concurrency**: 
   - **`upload-images.js`**: Processes stores sequentially, but images within each store in parallel
     - Example with `-c 10`: Store 1 completes (10 images at a time), then Store 2 starts (10 images at a time)

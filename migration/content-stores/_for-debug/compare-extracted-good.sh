@@ -26,10 +26,10 @@ PAUSE_ON_FAIL=false
 UPLOAD=false
 FAILED_STORES=()
 
-# Read DA_DEST from da.config
+# Read DA_DEST from da.upload.config
 DA_DEST=""
-if [[ -f "$SRC_DIR/da.config" ]]; then
-    DA_DEST=$(grep -E "^DA_DEST=" "$SRC_DIR/da.config" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
+if [[ -f "$SRC_DIR/da.upload.config" ]]; then
+    DA_DEST=$(grep -E "^DA_DEST=" "$SRC_DIR/da.upload.config" | cut -d'=' -f2 | sed 's/#.*//' | tr -d ' ')
 fi
 
 # Helper function to handle failures - either exit or pause and continue
