@@ -278,7 +278,7 @@ export async function listAvailableReviewers(request, env) {
       });
     }
 
-    // Fetch permissions sheet to get users with rights-reviewer permission
+    // Fetch permissions sheet to get users with manage-rights or admin-rights permission
     const permissions = await fetchHelixSheet(env, '/config/access/permissions', {
       sheet: { key: 'email', arrays: ['permissions'] },
     });
