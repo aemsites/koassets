@@ -116,6 +116,21 @@ router
   // user info
   .get('/api/user', apiUser)
 
+  // TEMPORARY DEBUG ENDPOINT - Remove after troubleshooting
+  .get('/api/debug/permissions', async (request, env) => {
+    const { fetchHelixSheet } = await import('./util/helixutil.js');
+    const { json } = await import('itty-router');
+    const access = await fetchHelixSheet(env, '/config/access/permissions', {
+      sheet: { key: 'email', arrays: ['permissions'] },
+    });
+    return json({
+      wildcardPermissions: access['*']?.permissions || [],
+      adobeDomainPermissions: access['adobe.com']?.permissions || [],
+      sharmonPermissions: access['sharmon@adobe.com']?.permissions || [],
+      allKeys: Object.keys(access).slice(0, 20), // First 20 keys
+    });
+  })
+
   // dynamic media
   .all('/api/adobe/assets/*', originDynamicMedia)
 
