@@ -184,6 +184,13 @@ export async function createSession(request, env) {
     ...(access[email]?.permissions || []),
   ];
 
+  // TEMPORARY DEBUG LOGGING - Remove after troubleshooting
+  console.log('[DEBUG] Permission loading for:', email);
+  console.log('[DEBUG] From wildcard (*):', access['*']?.permissions || []);
+  console.log('[DEBUG] From domain (' + domain + '):', access[domain]?.permissions || []);
+  console.log('[DEBUG] From email (' + email + '):', access[email]?.permissions || []);
+  console.log('[DEBUG] Raw permissions before alias:', rawPermissions);
+
   // Normalize permission aliases for easier sheet administration
   const permissionAliases = {
     rr: 'rights-reviewer',
@@ -191,6 +198,8 @@ export async function createSession(request, env) {
   };
 
   const permissions = rawPermissions.map(perm => permissionAliases[perm] || perm);
+
+  console.log('[DEBUG] Permissions after alias normalization:', permissions);
 
   // check preview access
   if (!['koassets.adobeaem.workers.dev', 'localhost:8787'].includes(request.headers.get('host'))) {
