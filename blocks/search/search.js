@@ -189,6 +189,7 @@ export default async function decorate(block) {
     input.value = '';
     toggleClearIcon();
     input.focus();
+    performSearch();
   });
 
   // Toggle clear icon on input changes

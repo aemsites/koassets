@@ -17,20 +17,6 @@ interface CartRequestDownloadProps {
 }
 
 
-
-
-// Utility functions for date conversion
-// Note: CalendarDate to epoch conversion removed as it's no longer needed
-
-// Utility function for converting epoch back to CalendarDate (for future use if needed)
-// const epochToCalendarDate = (epochTime: number | null): CalendarDate | null => {
-//     if (!epochTime) return null;
-//     const date = new Date(epochTime);
-//     return new CalendarDate(date.getFullYear(), date.getMonth() + 1, date.getDate());
-// };
-
-
-
 const CartRequestDownload: React.FC<CartRequestDownloadProps> = ({
     cartAssetItems,
     onCancel,
