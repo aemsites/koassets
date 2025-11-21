@@ -437,7 +437,7 @@
 
 .report-table th:nth-child(6),
 .report-table td:nth-child(6) {
-  width: 150px; /* RIGHTSREVIEWER */
+  width: 150px; /* MANAGERIGHTS */
 }
 
 .report-table th:nth-child(7),

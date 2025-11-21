@@ -11,8 +11,8 @@ import { fetchHelixSheet } from '../util/helixutil.js';
 // Rights Reviewers - users who receive notifications for new requests
 // NOTE: This hardcoded list is used for notification distribution only.
 // Actual reviewer permissions are managed in /config/access/permissions sheet.
-// Users with 'rights-reviewer' permissions can review requests.
-// Users with 'rights-manager' permissions can assign requests to reviewers.
+// Users with 'manage-rights' permissions can review requests.
+// Users with 'admin-rights' permissions can assign requests to other reviewers.
 const RIGHTS_REVIEWERS = [
   'jfait@adobe.com',
   'pkoch@adobe.com',
@@ -48,8 +48,8 @@ const SUBMITTER_STATUSES = [
 
 // Permission Constants
 const PERMISSIONS = {
-  RIGHTS_REVIEWER: 'rights-reviewer',  // Base: can review and self-assign
-  RIGHTS_MANAGER: 'rights-manager',    // Supervisory: can assign to reviewers
+  MANAGE_RIGHTS: 'manage-rights',  // Base: can review and self-assign
+  ADMIN_RIGHTS: 'admin-rights',    // Elevated: can assign to others
   REPORTS_ADMIN: 'reports-admin',
 };
 
@@ -260,9 +260,9 @@ export async function createRightsRequest(request, env) {
 }
 
 /**
- * List available reviewers (users with rights-reviewer permission)
+ * List available reviewers (users with manage-rights permission)
  * GET /api/rightsrequests/reviews/reviewers
- * Requires: PERMISSIONS.RIGHTS_MANAGER
+ * Requires: PERMISSIONS.ADMIN_RIGHTS
  * Returns list of users who can be assigned as reviewers
  */
 export async function listAvailableReviewers(request, env) {
@@ -272,11 +272,11 @@ export async function listAvailableReviewers(request, env) {
       return error(401, { success: false, error: 'User not authenticated' });
     }
 
-    // Check if user has rights manager permission
-    if (!hasRightsManagerPermission(request.user)) {
+    // Check if user has admin-rights permission
+    if (!hasAdminRightsPermission(request.user)) {
       return error(403, {
         success: false,
-        error: 'Rights manager permission required',
+        error: 'Admin-rights permission required',
         message: 'You do not have permission to view available reviewers',
       });
     }
@@ -293,28 +293,31 @@ export async function listAvailableReviewers(request, env) {
       });
     }
 
-    // Normalize permission aliases (rr → rights-reviewer, rm → rights-manager)
-    const normalizePermissionAliases = (perms) => {
-      const aliases = {
-        rr: PERMISSIONS.RIGHTS_REVIEWER,
-        rm: PERMISSIONS.RIGHTS_MANAGER,
-      };
-      return perms.map(p => aliases[p] || p);
-    };
-
-    // Find all users with rights-reviewer or rights-manager permission
+    // Find all users with manage-rights or admin-rights permission
+    // Filter out domain-level entries (only return valid email addresses with '@')
+    // Include users who inherit permissions from their domain
     const reviewers = [];
     Object.entries(permissions).forEach(([email, userData]) => {
-      const rawPermissions = userData.permissions || [];
-      const normalizedPermissions = normalizePermissionAliases(rawPermissions);
+      // Only include valid individual email addresses (must contain '@')
+      if (!email.includes('@')) {
+        return; // Skip domain-level entries like 'adobe.com'
+      }
       
-      if (
-        normalizedPermissions.includes(PERMISSIONS.RIGHTS_REVIEWER) ||
-        normalizedPermissions.includes(PERMISSIONS.RIGHTS_MANAGER)
-      ) {
+      const userPermissions = userData.permissions || [];
+      const domain = email.split('@')[1]?.toLowerCase();
+      const domainPermissions = permissions[domain]?.permissions || [];
+      
+      // Check explicit user permissions OR inherited domain permissions
+      const hasManageRights = 
+        userPermissions.includes(PERMISSIONS.MANAGE_RIGHTS) ||
+        userPermissions.includes(PERMISSIONS.ADMIN_RIGHTS) ||
+        domainPermissions.includes(PERMISSIONS.MANAGE_RIGHTS) ||
+        domainPermissions.includes(PERMISSIONS.ADMIN_RIGHTS);
+      
+      if (hasManageRights) {
         reviewers.push({
           email,
-          permissions: normalizedPermissions,
+          permissions: userPermissions, // Return user's explicit permissions
         });
       }
     });
@@ -336,7 +339,7 @@ export async function listAvailableReviewers(request, env) {
 /**
  * List reviews for the authenticated reviewer
  * GET /api/rightsrequests/reviews
- * Requires: rights-reviewer permission (or legacy rights-manager)
+ * Requires: manage-rights permission (admin-rights users also have access)
  */
 export async function listReviewsForReviewer(request, env) {
   try {
@@ -345,11 +348,11 @@ export async function listReviewsForReviewer(request, env) {
       return error(401, { success: false, error: 'User not authenticated' });
     }
 
-    // Check if user has rights reviewer permission
-    if (!hasRightsReviewerPermission(request.user)) {
+    // Check if user has manage-rights permission
+    if (!hasManageRightsPermission(request.user)) {
       return error(403, {
         success: false,
-        error: 'Rights reviewer permission required',
+        error: 'Manage-rights permission required',
         message: 'You do not have permission to view rights reviews',
       });
     }
@@ -410,7 +413,7 @@ export async function listReviewsForReviewer(request, env) {
  * Assign a rights request review to the authenticated reviewer (self-assignment)
  * POST /api/rightsrequests/reviews/assign
  * Body: { requestId: "1234567890" }
- * Requires: rights-reviewer permission (or legacy rights-manager)
+ * Requires: manage-rights permission (admin-rights users also have access)
  */
 export async function assignReview(request, env) {
   try {
@@ -419,11 +422,11 @@ export async function assignReview(request, env) {
       return error(401, { success: false, error: 'User not authenticated' });
     }
 
-    // Check if user has rights reviewer permission
-    if (!hasRightsReviewerPermission(request.user)) {
+    // Check if user has manage-rights permission
+    if (!hasManageRightsPermission(request.user)) {
       return error(403, {
         success: false,
-        error: 'Rights reviewer permission required',
+        error: 'Manage-rights permission required',
         message: 'You do not have permission to assign rights reviews',
       });
     }
@@ -485,10 +488,10 @@ export async function assignReview(request, env) {
 }
 
 /**
- * Assign a rights request review to a specific reviewer (senior reviewer only)
+ * Assign a rights request review to a specific reviewer (admin-rights users only)
  * POST /api/rightsrequests/reviews/assign-to
  * Body: { requestId: "1234567890", assigneeEmail: "reviewer@example.com" }
- * Requires: PERMISSIONS.RIGHTS_MANAGER
+ * Requires: PERMISSIONS.ADMIN_RIGHTS
  */
 export async function assignReviewToReviewer(request, env) {
   try {
@@ -497,11 +500,11 @@ export async function assignReviewToReviewer(request, env) {
       return error(401, { success: false, error: 'User not authenticated' });
     }
 
-    // Check if user has rights manager permission
-    if (!hasRightsManagerPermission(request.user)) {
+    // Check if user has admin-rights permission
+    if (!hasAdminRightsPermission(request.user)) {
       return error(403, {
         success: false,
-        error: 'Rights manager permission required',
+        error: 'Admin-rights permission required',
         message: 'You do not have permission to assign requests to other reviewers',
       });
     }
@@ -523,15 +526,15 @@ export async function assignReviewToReviewer(request, env) {
 
     const assigneePerms = permissions?.[assigneeEmailLower]?.permissions || [];
     const isValidReviewer =
-      assigneePerms.includes(PERMISSIONS.RIGHTS_REVIEWER) ||
-      assigneePerms.includes(PERMISSIONS.RIGHTS_MANAGER) ||
+      assigneePerms.includes(PERMISSIONS.MANAGE_RIGHTS) ||
+      assigneePerms.includes(PERMISSIONS.ADMIN_RIGHTS) ||
       RIGHTS_REVIEWERS.includes(assigneeEmailLower);
 
     if (!isValidReviewer) {
       return error(400, {
         success: false,
         error: 'Invalid assignee',
-        message: 'The specified user does not have rights reviewer permission',
+        message: 'The specified user does not have manage-rights permission',
       });
     }
 
@@ -626,7 +629,7 @@ async function updateRequestStatusHelper(env, requestKey, requestData, status, u
  * Update review status for a rights request
  * POST /api/rightsrequests/reviews/status
  * Body: { requestId, status }
- * Requires: rights-reviewer permission (or legacy rights-manager)
+ * Requires: manage-rights permission (admin-rights users also have access)
  */
 export async function updateReviewStatus(request, env) {
   try {
@@ -635,11 +638,11 @@ export async function updateReviewStatus(request, env) {
       return error(401, { success: false, error: 'User not authenticated' });
     }
 
-    // Check if user has rights reviewer permission
-    if (!hasRightsReviewerPermission(request.user)) {
+    // Check if user has manage-rights permission
+    if (!hasManageRightsPermission(request.user)) {
       return error(403, {
         success: false,
-        error: 'Rights reviewer permission required',
+        error: 'Manage-rights permission required',
         message: 'You do not have permission to update rights review status',
       });
     }
@@ -832,23 +835,23 @@ function isAuthorized(user, requiredPermission) {
 }
 
 /**
- * Check if user has rights reviewer permission (base permission)
- * Rights managers automatically have all reviewer capabilities
+ * Check if user has manage-rights permission (base permission)
+ * Admin-rights users automatically have all manage-rights capabilities
  * @param {Object} user - User object from request
- * @returns {boolean} True if user has rights reviewer permission
+ * @returns {boolean} True if user has manage-rights permission
  */
-function hasRightsReviewerPermission(user) {
-  return user?.permissions?.includes(PERMISSIONS.RIGHTS_REVIEWER) ||
-         user?.permissions?.includes(PERMISSIONS.RIGHTS_MANAGER);
+function hasManageRightsPermission(user) {
+  return user?.permissions?.includes(PERMISSIONS.MANAGE_RIGHTS) ||
+         user?.permissions?.includes(PERMISSIONS.ADMIN_RIGHTS);
 }
 
 /**
- * Check if user has rights manager permission (supervisory role)
+ * Check if user has admin-rights permission (elevated role)
  * @param {Object} user - User object from request
- * @returns {boolean} True if user has rights manager permission
+ * @returns {boolean} True if user has admin-rights permission
  */
-function hasRightsManagerPermission(user) {
-  return user?.permissions?.includes(PERMISSIONS.RIGHTS_MANAGER);
+function hasAdminRightsPermission(user) {
+  return user?.permissions?.includes(PERMISSIONS.ADMIN_RIGHTS);
 }
 
 /**

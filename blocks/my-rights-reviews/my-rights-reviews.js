@@ -22,11 +22,11 @@ let currentTab = TABS.UNASSIGNED;
 const selectedFilters = new Set(['all']);
 
 /**
- * Check if current user has rights manager permission (supervisory role)
- * @returns {boolean} True if user has rights manager permission
+ * Check if current user has admin-rights permission (elevated role)
+ * @returns {boolean} True if user has admin-rights permission
  */
-function isRightsManager() {
-  return window.user?.permissions?.includes('rights-manager');
+function isAdminRights() {
+  return window.user?.permissions?.includes('admin-rights');
 }
 
 /**
@@ -267,8 +267,8 @@ function createReviewRow(review) {
     });
     actionCell.appendChild(assignBtn);
 
-    // Add "Assign To..." button for rights managers
-    if (isRightsManager()) {
+    // Add "Assign To..." button for admin-rights users
+    if (isAdminRights()) {
       const assignToBtn = document.createElement('button');
       assignToBtn.className = 'action-button assign-to-button';
       assignToBtn.textContent = 'Assign To...';
