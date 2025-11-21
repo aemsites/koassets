@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ToastQueue } from '@react-spectrum/toast';
 import { AuthorizationStatus } from '../clients/fadel-client';
@@ -126,6 +126,11 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     const displayedCount = visibleImages.length;
     const selectedCount = selectedCards.size;
 
+    // Track if we're closing due to browser back button
+    const isClosingViaBackButton = useRef<boolean>(false);
+    // Track if we pushed a history state for the current modal
+    const hasPushedHistoryState = useRef<boolean>(false);
+
     // Persist expandAllDetails state to local storage whenever it changes
     useEffect(() => {
         saveSearchExpandAllDetailsState(expandAllDetails);
@@ -151,6 +156,17 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     const closeDetailsModal = useCallback(() => {
         setSelectedCard(null);
         setShowDetailsModal(false);
+        
+        // If we pushed a history state and we're NOT closing via back button,
+        // we need to go back to clean up the history state
+        if (hasPushedHistoryState.current && !isClosingViaBackButton.current) {
+            hasPushedHistoryState.current = false;
+            window.history.back();
+        }
+        
+        // Reset the flag
+        isClosingViaBackButton.current = false;
+        
         // If this was a deep link modal, notify parent
         if (deepLinkAsset && onCloseDeepLinkModal) {
             onCloseDeepLinkModal();
@@ -189,6 +205,26 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         };
     }, [showPreviewModal, showDetailsModal, closeDetailsModal, isDeepLinkAsset]);
 
+    // Handle browser back button for asset details modal
+    useEffect(() => {
+        const handlePopState = (event: PopStateEvent) => {
+            // Check if the modal is open and we have a history state for it
+            if (showDetailsModal && hasPushedHistoryState.current) {
+                // Mark that we're closing via back button
+                isClosingViaBackButton.current = true;
+                hasPushedHistoryState.current = false;
+                // Close the modal
+                closeDetailsModal();
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [showDetailsModal, closeDetailsModal]);
+
     // Create stable callback for opening details view
     const openDetailsView = useCallback(async (asset?: Asset) => {
         console.debug('openDetailsView called with asset:', JSON.stringify(asset, null, 2));
@@ -207,6 +243,11 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         } else {
             console.log('No asset provided to openDetailsView');
         }
+        
+        // Push a history state so the back button can close the modal
+        window.history.pushState({ assetDetailsModal: true }, '', window.location.href);
+        hasPushedHistoryState.current = true;
+        
         setShowDetailsModal(true);
     }, []);
 
@@ -252,8 +293,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     // Handler for card click to show asset details modal
     const handleCardDetailClick = (image: Asset, e: React.MouseEvent) => {
         e.stopPropagation();
-        setSelectedCard(image);
-        setShowDetailsModal(true);
+        openDetailsView(image);
     };
 
     // Handle checkbox selection
