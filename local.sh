@@ -68,6 +68,13 @@ if nc -z "localhost" "8787" > /dev/null 2>&1; then
   exit 1
 fi
 
+# Initial React build to ensure fresh artifacts
+echo
+echo "Building React app to ensure fresh artifacts..."
+(cd koassets-react && npm run build-local-dev)
+echo "✅ Initial build complete"
+echo
+
 # cloudflare worker: http://localhost:8787
 (run_cloudflare 2>&1 | prefix $BG_YELLOW "[cfl]" ) &
 

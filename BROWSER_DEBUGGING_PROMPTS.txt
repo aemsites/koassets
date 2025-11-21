@@ -1,0 +1,170 @@
+====================================================================
+CURSOR AI - AUTOMATIC BROWSER DEBUGGING SETUP
+====================================================================
+
+STEP 1: PASTE THIS PROMPT INTO CURSOR
+--------------------------------------
+(Replace [YOUR_*] with your actual values)
+
+---START PROMPT---
+
+I want you to proactively use browser debugging tools during development without me needing to provide console logs or screenshots manually.
+
+My Setup:
+- Local dev server URL: [YOUR_LOCAL_URL] (e.g., http://localhost:3000)
+- Tech stack: [YOUR_STACK] (e.g., React frontend, Node.js backend, etc.)
+
+Development Workflow:
+When I report a bug or issue, I want you to automatically:
+1. Navigate to the relevant page on my local dev server
+2. Capture console messages (errors, warnings, logs)
+3. Check network requests for API failures
+4. Take page snapshots to understand the current state
+5. Use this information to diagnose and fix the issue
+
+When to Use Browser Tools:
+- Automatically when I report any bug or error
+- When implementing features that could break existing functionality
+- When investigating strange behavior or issues
+- Before marking work as complete
+
+Rules:
+- Always remove debug statements and console.logs before committing code
+- Make debugging faster by being self-sufficient instead of asking me for logs
+- Use browser tools proactively, not reactively
+
+Please:
+1. Save this workflow as a memory/rule for this project
+2. Confirm you can access browser tools
+3. Test by navigating to my local dev server (when I tell you it's running)
+
+This will make our development workflow much faster!
+
+---END PROMPT---
+
+
+STEP 2: START YOUR DEV SERVER
+------------------------------
+Run your usual command:
+- npm start
+- npm run dev
+- yarn dev
+- or whatever starts your local server
+
+
+STEP 3: TEST THE SETUP
+-----------------------
+Paste this to verify it's working:
+
+---START TEST PROMPT---
+
+I've started my development server. Please test the browser debugging workflow:
+
+1. Navigate to [YOUR_LOCAL_URL]
+2. Capture the current page state
+3. Get all console messages
+4. Check network requests
+5. Summarize what you found (errors, warnings, successful loads, etc.)
+
+This will confirm everything is working.
+
+---END TEST PROMPT---
+
+
+====================================================================
+EXAMPLES OF WHAT YOU CAN NOW DO
+====================================================================
+
+BEFORE (Old Way):
+-----------------
+You: "The login button isn't working"
+You: *Opens DevTools*
+You: *Copies error from console*
+You: *Takes screenshot*
+You: *Pastes to Cursor*
+You: "Here's the error: TypeError at line 42..."
+
+AFTER (New Way):
+----------------
+You: "The login button isn't working"
+Cursor: *Automatically navigates to page*
+Cursor: *Captures console showing: TypeError: validateForm is not defined*
+Cursor: *Checks network requests*
+Cursor: "I see the error - validateForm is not imported. Fixing..."
+
+
+MORE EXAMPLES:
+--------------
+Just say:
+- "Search isn't working"
+- "Getting an error on the checkout page"
+- "User profile won't load"
+- "Submit button does nothing"
+
+Cursor will automatically check console, network, and page state!
+
+
+====================================================================
+CUSTOMIZATION (OPTIONAL)
+====================================================================
+
+Want additional rules? Add this after Step 1:
+
+---OPTIONAL CUSTOMIZATION---
+
+Also, for this project:
+- Before checking in code, always verify no console errors exist
+- When implementing new features, test in both desktop and mobile viewports
+- For API changes, verify all endpoints return expected status codes
+- Take screenshots before/after when fixing visual bugs
+
+---END CUSTOMIZATION---
+
+
+====================================================================
+TROUBLESHOOTING
+====================================================================
+
+Problem: "Can't connect to localhost"
+Solution: Make sure your dev server is actually running
+
+Problem: "Browser tools not working"
+Solution: 
+  1. Restart Cursor
+  2. Verify the URL matches your server
+  3. Check browser extension is enabled
+
+Problem: "Connection refused"
+Solution: Check firewall/security software isn't blocking
+
+
+====================================================================
+FILL IN YOUR VALUES
+====================================================================
+
+Replace these in the prompts above:
+
+[YOUR_LOCAL_URL] = Your local server URL
+  Examples:
+  - http://localhost:3000
+  - http://localhost:8080
+  - http://localhost:8787
+  - http://127.0.0.1:5000
+
+[YOUR_STACK] = Brief description of your tech
+  Examples:
+  - React frontend with Express backend
+  - Next.js application
+  - Vue.js with Node API
+  - Plain HTML/CSS/JavaScript
+  - Django + React
+
+
+====================================================================
+THAT'S IT!
+====================================================================
+
+Time to setup: ~2 minutes
+Benefit: Automatic debugging forever
+Result: Faster development, less manual work!
+

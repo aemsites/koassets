@@ -1,0 +1,173 @@
+CURSOR AI SETUP - COPY/PASTE PROMPTS
+========================================
+
+STEP 1: SETUP JIRA MCP SERVER
+------------------------------
+Paste this prompt into Cursor (fill in YOUR_* values first):
+
+---BEGIN PROMPT---
+I want to set up an MCP server for my company's self-hosted JIRA instance that uses Personal Access Token (PAT) authentication.
+
+Configuration details:
+- JIRA Host: [YOUR_JIRA_HOST] (e.g., jira.yourcompany.com - without https://)
+- My Email: [YOUR_EMAIL]
+- Personal Access Token: [YOUR_JIRA_PAT]
+- Project Key: [YOUR_PROJECT_KEY]
+
+Requirements:
+1. The server must use Bearer token authentication (not Basic Auth)
+2. Use JIRA REST API v2 (our instance doesn't support v3)
+3. Install in: ~/Documents/Cursor/mcp-servers/
+4. Configure in ~/.cursor/mcp.json
+
+Please:
+1. Find or create an MCP server that works with self-hosted JIRA using PAT authentication
+2. If needed, modify an existing community server to support Bearer tokens and API v2
+3. Build and install it
+4. Configure it in my mcp.json
+5. Test the connection by fetching a JIRA issue I provide
+---END PROMPT---
+
+
+STEP 2: SETUP WIKI/CONFLUENCE MCP SERVER
+-----------------------------------------
+Paste this prompt into Cursor (fill in YOUR_* values first):
+
+---BEGIN PROMPT---
+I want to set up an MCP server for my company's self-hosted Confluence/Wiki instance that uses Personal Access Token (PAT) authentication.
+
+Configuration details:
+- Confluence Host: [YOUR_WIKI_HOST] (e.g., wiki.yourcompany.com - without https://)
+- Personal Access Token: [YOUR_WIKI_PAT]
+
+Requirements:
+1. The server must use Bearer token authentication
+2. Support self-hosted Confluence (not Atlassian Cloud)
+3. Install in: ~/Documents/Cursor/mcp-servers/
+4. Add to ~/.cursor/mcp.json alongside the JIRA server
+
+MCP Tools needed:
+- search-pages: Search using CQL
+- get-page: Get page by ID
+- get-page-by-title: Get page by space key and title
+- list-spaces: List available spaces
+
+Please:
+1. Create a custom Confluence MCP server with these capabilities
+2. Use TypeScript/Node.js
+3. Build and install it
+4. Configure it in my mcp.json
+5. Test the connection by fetching a Wiki page I provide
+---END PROMPT---
+
+
+STEP 3: SETUP BROWSER DEBUGGING WORKFLOW
+-----------------------------------------
+Paste this prompt into Cursor (fill in YOUR_* values first):
+
+---BEGIN PROMPT---
+I want you to proactively use browser debugging tools during development without me having to provide console logs or screenshots manually.
+
+Setup requirements:
+- My local dev server runs at: [YOUR_LOCAL_URL] (e.g., http://localhost:3000)
+- Stack components: [DESCRIBE YOUR STACK]
+
+Workflow I want:
+1. When I report a bug, automatically navigate to the page and capture:
+   - Console errors, warnings, and logs
+   - Network requests and API failures
+   - Page snapshots to understand state
+2. When implementing risky features, check the browser to verify functionality
+3. When investigating issues, use browser tools to self-diagnose
+
+Rules:
+- Always remove debug statements and console.logs before production
+- Use this automatically when: bugs reported, implementing features, investigating issues
+- Make debugging faster by being self-sufficient instead of asking me for logs
+
+Please:
+1. Create a memory/rule for this debugging workflow
+2. Test the browser connection to my local dev environment (when I start it)
+3. Show me an example of automatic debugging in action
+---END PROMPT---
+
+
+STEP 4: TEST EVERYTHING
+------------------------
+After setup, paste this:
+
+---BEGIN PROMPT---
+Please verify all MCP servers and browser tools are working:
+
+1. Test JIRA: Fetch issue [YOUR_ISSUE_KEY] (e.g., PROJ-123)
+2. Test Wiki: Access page [YOUR_WIKI_PAGE_URL]
+3. Test Browser: My dev server is running at [YOUR_LOCAL_URL] - please navigate, capture console, and check network requests
+
+Summarize what's working and any issues found.
+---END PROMPT---
+
+
+QUICK REFERENCE: WHERE TO GET PAT TOKENS
+=========================================
+
+JIRA Personal Access Token:
+1. Log into your JIRA instance
+2. Click your profile picture → "Profile"
+3. Go to "Personal Access Tokens" or "Account Settings" → "Security"
+4. Click "Create token"
+5. Copy the token immediately (you won't see it again)
+
+Confluence/Wiki Personal Access Token:
+1. Log into your Confluence instance
+2. Click your profile picture → "Settings"
+3. Go to "Personal Access Tokens"
+4. Click "Create token"
+5. Copy the token immediately (you won't see it again)
+
+
+AFTER SETUP - RESTART CURSOR
+=============================
+After completing all steps, fully restart Cursor (quit and reopen) for MCP servers to load.
+
+
+WHAT YOU CAN DO AFTER SETUP
+============================
+
+JIRA Examples:
+- "Get details for issue PROJ-123"
+- "Search for all open bugs"
+- "Create a new story for feature X"
+
+Wiki Examples:
+- "Search for pages about authentication"
+- "Get the API documentation page"
+- "List all available Wiki spaces"
+
+Browser Debugging:
+- Just report bugs and AI will automatically check console/network
+- AI will verify features work in browser
+- Faster debugging without manual log sharing
+
+
+TROUBLESHOOTING
+===============
+
+MCP servers not connecting:
+→ Restart Cursor completely
+→ Check paths in mcp.json are absolute
+→ Verify tokens haven't expired
+
+Authentication fails:
+→ Verify Bearer token format
+→ Check API version (v2 for JIRA)
+→ Test with curl first
+
+Browser tools not working:
+→ Ensure dev server is running
+→ Check correct port/URL
+→ Verify browser extension enabled in Cursor
+
+
+
+
+
