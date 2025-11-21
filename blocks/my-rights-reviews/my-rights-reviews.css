@@ -414,7 +414,9 @@
 }
 
 .my-rights-reviews .assign-button:hover:not(:disabled) {
-  background-color: var(--button-primary-hover);
+  opacity: 0.9;
+  box-shadow: 0 2px 8px rgba(230, 0, 18, 0.25);
+  transform: translateY(-1px);
 }
 
 .my-rights-reviews .assign-to-button {
@@ -424,7 +426,9 @@
 }
 
 .my-rights-reviews .assign-to-button:hover:not(:disabled) {
-  background-color: #0e7490;
+  opacity: 0.9;
+  box-shadow: 0 2px 8px rgba(8, 145, 178, 0.25);
+  transform: translateY(-1px);
 }
 
 .my-rights-reviews .assign-to-button:disabled {
@@ -439,8 +443,9 @@
 }
 
 .my-rights-reviews .status-button:hover {
-  background-color: var(--button-primary-hover);
-  color: #fff;
+  opacity: 0.9;
+  box-shadow: 0 2px 8px rgba(230, 0, 18, 0.25);
+  transform: translateY(-1px);
 }
 
 .my-rights-reviews .view-button {
@@ -450,8 +455,10 @@
 }
 
 .my-rights-reviews .view-button:hover {
-  background-color: var(--button-primary);
-  color: #fff;
+  background-color: rgba(230, 0, 18, 0.05);
+  border-color: #cc0010;
+  color: #cc0010;
+  box-shadow: 0 2px 8px rgba(230, 0, 18, 0.15);
 }
 
 .my-rights-reviews .view-button:active,
