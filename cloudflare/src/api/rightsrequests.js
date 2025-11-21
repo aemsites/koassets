@@ -293,29 +293,28 @@ export async function listAvailableReviewers(request, env) {
       });
     }
 
-    // Find all users with rights-reviewer or legacy rights-manager permission
+    // Normalize permission aliases (rr → rights-reviewer, rm → rights-manager)
+    const normalizePermissionAliases = (perms) => {
+      const aliases = {
+        rr: PERMISSIONS.RIGHTS_REVIEWER,
+        rm: PERMISSIONS.RIGHTS_MANAGER,
+      };
+      return perms.map(p => aliases[p] || p);
+    };
+
+    // Find all users with rights-reviewer or rights-manager permission
     const reviewers = [];
     Object.entries(permissions).forEach(([email, userData]) => {
-      const userPermissions = userData.permissions || [];
+      const rawPermissions = userData.permissions || [];
+      const normalizedPermissions = normalizePermissionAliases(rawPermissions);
+      
       if (
-        userPermissions.includes(PERMISSIONS.RIGHTS_REVIEWER) ||
-        userPermissions.includes(PERMISSIONS.RIGHTS_MANAGER)
+        normalizedPermissions.includes(PERMISSIONS.RIGHTS_REVIEWER) ||
+        normalizedPermissions.includes(PERMISSIONS.RIGHTS_MANAGER)
       ) {
         reviewers.push({
           email,
-          permissions: userPermissions,
-        });
-      }
-    });
-
-    // Also include hardcoded RIGHTS_REVIEWERS for backwards compatibility
-    // (these receive notifications but might not be in permissions sheet yet)
-    RIGHTS_REVIEWERS.forEach((email) => {
-      if (!reviewers.find((r) => r.email === email)) {
-        reviewers.push({
-          email,
-          permissions: [PERMISSIONS.RIGHTS_REVIEWER],
-          note: 'From notification list',
+          permissions: normalizedPermissions,
         });
       }
     });
