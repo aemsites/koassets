@@ -178,11 +178,19 @@ export async function createSession(request, env) {
     return false;
   }
 
-  const permissions = [
+  const rawPermissions = [
     ...(access['*']?.permissions || []),
     ...(access[domain]?.permissions || []),
     ...(access[email]?.permissions || []),
   ];
+
+  // Normalize permission aliases for easier sheet administration
+  const permissionAliases = {
+    rr: 'rights-reviewer',
+    rm: 'rights-manager',
+  };
+
+  const permissions = rawPermissions.map(perm => permissionAliases[perm] || perm);
 
   // check preview access
   if (!['koassets.adobeaem.workers.dev', 'localhost:8787'].includes(request.headers.get('host'))) {

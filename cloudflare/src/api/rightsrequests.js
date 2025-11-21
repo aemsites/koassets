@@ -11,7 +11,8 @@ import { fetchHelixSheet } from '../util/helixutil.js';
 // Rights Reviewers - users who receive notifications for new requests
 // NOTE: This hardcoded list is used for notification distribution only.
 // Actual reviewer permissions are managed in /config/access/permissions sheet.
-// Users with 'rights-reviewer' or 'senior-rights-reviewer' permissions can review requests.
+// Users with 'rights-reviewer' permissions can review requests.
+// Users with 'rights-manager' permissions can assign requests to reviewers.
 const RIGHTS_REVIEWERS = [
   'jfait@adobe.com',
   'pkoch@adobe.com',
@@ -47,9 +48,8 @@ const SUBMITTER_STATUSES = [
 
 // Permission Constants
 const PERMISSIONS = {
-  RIGHTS_REVIEWER: 'rights-reviewer',
-  SENIOR_RIGHTS_REVIEWER: 'senior-rights-reviewer',
-  RIGHTS_MANAGER: 'rights-manager', // legacy - backwards compatibility
+  RIGHTS_REVIEWER: 'rights-reviewer',  // Base: can review and self-assign
+  RIGHTS_MANAGER: 'rights-manager',    // Supervisory: can assign to reviewers
   REPORTS_ADMIN: 'reports-admin',
 };
 
@@ -262,7 +262,7 @@ export async function createRightsRequest(request, env) {
 /**
  * List available reviewers (users with rights-reviewer permission)
  * GET /api/rightsrequests/reviews/reviewers
- * Requires: PERMISSIONS.SENIOR_RIGHTS_REVIEWER
+ * Requires: PERMISSIONS.RIGHTS_MANAGER
  * Returns list of users who can be assigned as reviewers
  */
 export async function listAvailableReviewers(request, env) {
@@ -272,11 +272,11 @@ export async function listAvailableReviewers(request, env) {
       return error(401, { success: false, error: 'User not authenticated' });
     }
 
-    // Check if user has senior rights reviewer permission
-    if (!hasSeniorRightsReviewerPermission(request.user)) {
+    // Check if user has rights manager permission
+    if (!hasRightsManagerPermission(request.user)) {
       return error(403, {
         success: false,
-        error: 'Senior rights reviewer permission required',
+        error: 'Rights manager permission required',
         message: 'You do not have permission to view available reviewers',
       });
     }
@@ -489,7 +489,7 @@ export async function assignReview(request, env) {
  * Assign a rights request review to a specific reviewer (senior reviewer only)
  * POST /api/rightsrequests/reviews/assign-to
  * Body: { requestId: "1234567890", assigneeEmail: "reviewer@example.com" }
- * Requires: PERMISSIONS.SENIOR_RIGHTS_REVIEWER
+ * Requires: PERMISSIONS.RIGHTS_MANAGER
  */
 export async function assignReviewToReviewer(request, env) {
   try {
@@ -498,11 +498,11 @@ export async function assignReviewToReviewer(request, env) {
       return error(401, { success: false, error: 'User not authenticated' });
     }
 
-    // Check if user has senior rights reviewer permission
-    if (!hasSeniorRightsReviewerPermission(request.user)) {
+    // Check if user has rights manager permission
+    if (!hasRightsManagerPermission(request.user)) {
       return error(403, {
         success: false,
-        error: 'Senior rights reviewer permission required',
+        error: 'Rights manager permission required',
         message: 'You do not have permission to assign requests to other reviewers',
       });
     }
@@ -833,22 +833,21 @@ function isAuthorized(user, requiredPermission) {
 }
 
 /**
- * Check if user has rights reviewer permission (supports legacy rights-manager permission)
+ * Check if user has rights reviewer permission (base permission)
  * @param {Object} user - User object from request
  * @returns {boolean} True if user has rights reviewer permission
  */
 function hasRightsReviewerPermission(user) {
-  return user?.permissions?.includes(PERMISSIONS.RIGHTS_REVIEWER) || 
-         user?.permissions?.includes(PERMISSIONS.RIGHTS_MANAGER); // legacy support
+  return user?.permissions?.includes(PERMISSIONS.RIGHTS_REVIEWER);
 }
 
 /**
- * Check if user has senior rights reviewer permission
+ * Check if user has rights manager permission (supervisory role)
  * @param {Object} user - User object from request
- * @returns {boolean} True if user has senior rights reviewer permission
+ * @returns {boolean} True if user has rights manager permission
  */
-function hasSeniorRightsReviewerPermission(user) {
-  return user?.permissions?.includes(PERMISSIONS.SENIOR_RIGHTS_REVIEWER);
+function hasRightsManagerPermission(user) {
+  return user?.permissions?.includes(PERMISSIONS.RIGHTS_MANAGER);
 }
 
 /**
