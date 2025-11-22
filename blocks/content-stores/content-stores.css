@@ -1,30 +1,32 @@
+/* stylelint-disable no-descending-specificity */
+
 .content-stores {
-  padding: 20px;
-  border-radius: 8px;
+  padding: 0;
+  border-radius: 0;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  width: 100%;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
   background-color: var(--background-color);
   font-family: var(--body-font-family);
 }
 
 .content-stores .container {
-  max-width: 1400px;
+  max-width: none;
   width: 100%;
-  margin: 0 auto;
-  border-radius: 8px;
+  margin: 0;
+  border-radius: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   flex: 1;
   background-color: white;
-  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
+  box-shadow: none;
 }
 
 .content-stores .controls {
-  padding: 2rem;
-  border-bottom: 2px solid var(--background-color);
+  padding: 30px 200px;
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
@@ -35,6 +37,7 @@
 .content-stores .search-box {
   flex: 1;
   position: relative;
+  min-width: min(500px, 100%);
 }
 
 .content-stores .search-box input {
@@ -114,34 +117,106 @@
 }
 
 .content-stores .content {
-  padding: 2rem;
+  padding: 0;
   flex: 1;
   overflow-y: auto;
   background-color: white;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
 }
 
 .content-stores .tree-item {
-  margin-bottom: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Make leaf items (no children) display inline */
+.content-stores .tree-item.leaf-item {
+  display: inline-block;
+  vertical-align: top;
+}
+
+/* Button items in grid layout - fill whole cell width */
+.content-stores .tree-item.button-item {
+  display: block;
+  width: max-content;
 }
 
 .content-stores .tree-node {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  padding: 10px 16px;
   border-radius: 8px;
   transition: all 0.2s ease;
   user-select: text;
-  border: 1px solid transparent;
+  border: .0625rem solid #e4e4e4;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .content-stores .tree-node:hover {
-  background: var(--background-color);
-  border-color: rgb(237 0 0 / 10%);
+  background: var(--primary-color);
+  color: white;
 }
 
-.content-stores .tree-node.expanded {
-  background: rgb(237 0 0 / 5%);
-  border-color: var(--primary-color);
+.content-stores .tree-node:hover .node-title {
+  color: white;
+}
+
+.content-stores .tree-node:hover .expand-icon {
+  color: white;
+}
+
+.content-stores .tree-item.button-item .tree-node {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Narrower styling for leaf nodes */
+.content-stores .tree-item.leaf-item .tree-node {
+  padding: 10px 18px;
+  min-width: auto;
+  width: auto;
+  display: inline-flex;
+  white-space: nowrap;
+}
+
+/* Section-title leaf items should have left-aligned text and full width */
+.content-stores .tree-item[data-item-type="tab"] [data-item-type="section-title"] {
+  padding: 0;
+}
+
+/* Expanded section-title overrides leaf item styling */
+.content-stores .tree-item.leaf-item .tree-node.expanded.type-section-title {
+  padding: 10px 0;
+  display: block;
+  width: 100%;
+}
+
+.content-stores .tree-node.expanded:not(.type-button, .type-section-title) {
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+}
+
+.content-stores .tree-node.expanded:not(.type-button, .type-section-title) .node-title {
+  color: var(--primary-color);
+}
+
+.content-stores .tree-node.expanded:not(.type-button, .type-section-title) .expand-icon {
+  color: var(--primary-color);
+}
+
+/* When expanded AND hovered, change text to white */
+.content-stores .tree-node.expanded:not(.type-button, .type-section-title):hover {
+  color: white;
+}
+
+.content-stores .tree-node.expanded:not(.type-button, .type-section-title):hover .node-title {
+  color: white;
+}
+
+.content-stores .tree-node.expanded:not(.type-button, .type-section-title):hover .expand-icon {
+  color: white;
 }
 
 .content-stores .expand-icon {
@@ -175,31 +250,274 @@
 .content-stores .node-title {
   font-weight: 500;
   color: var(--text-color);
-  font-family: var(--body-font-family);
-  font-size: var(--body-font-size-s);
+  font-family: "TCCC UnityText Medium", roboto-condensed-fallback, sans-serif;
+  font-size: 14px;
 }
 
-.content-stores .tree-node[data-has-children="false"] .node-title:not(.has-link) {
-  color: var(--dark-color);
-  opacity: 0.5;
+/* Smaller font for leaf items */
+.content-stores .tree-item.leaf-item .node-title {
+  font-size: 14px;
+}
+
+/* Button type styling (matching cmp-button exactly) */
+.content-stores .tree-node.type-button {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  border-radius: 30px;
+  border: 1px solid var(--primary-color);
+  background-color: rgb(255 255 255);
+  position: relative;
+  min-height: 50px;
+  width: 100%;
+  box-sizing: inherit;
+  font-family: var(--heading-font-family);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 140%;
+  color: rgb(32 32 32);
+  cursor: pointer;
+  transition: background-color 0.5s;
+  text-decoration: none;
+}
+
+.content-stores .tree-node.type-button .node-title {
+  flex: 1;
+  line-height: 1.4;
+  text-align: left;
+  text-decoration: none;
+  font-family: "TCCC UnityText Medium", roboto-condensed-fallback, sans-serif;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Ensure no underline on button titles even when they have links */
+.content-stores .tree-node.type-button .node-title.has-link {
+  text-decoration: none;
+}
+
+.content-stores .tree-node.type-button:hover .node-title.has-link {
+  text-decoration: none;
+}
+
+.content-stores .tree-node.type-button::after {
+  content: '›';
+  font-size: 20px;
+  font-weight: bold;
+  color: rgb(32 32 32);
+  margin-left: auto;
+  padding-left: 8px;
+  transition: color 0.5s;
+}
+
+/* Button default state */
+.content-stores .tree-node.type-button:not(.disabled) {
+  background-color: white;
+  color: #333;
+  border-color: #ED0000;
+}
+
+.content-stores .tree-node.type-button:not(.disabled)::after {
+  color: #333;
+}
+
+/* Button hover state (matching search-buttons) */
+.content-stores .tree-node.type-button:not(.disabled):hover,
+.content-stores .tree-node.type-button:not(.disabled):focus {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.content-stores .tree-node.type-button:not(.disabled):hover .node-title,
+.content-stores .tree-node.type-button:not(.disabled):focus .node-title {
+  color: white;
+}
+
+.content-stores .tree-node.type-button:not(.disabled):hover::after,
+.content-stores .tree-node.type-button:not(.disabled):focus::after {
+  color: white;
+}
+
+/* Disabled button styling */
+.content-stores .tree-node.type-button.disabled {
+  background-color: #f5f5f5;
+  border-color: #ccc;
+  cursor: not-allowed;
+}
+
+.content-stores .tree-node.type-button.disabled .node-title {
+  color: #666;
+  margin-left: 24px;
+}
+
+.content-stores .tree-node.type-button.disabled::after {
+  color: #666;
+}
+
+.content-stores .tree-node.type-button.disabled::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  background-image: url('/icons/eye-slash-icon.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.6;
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node {
+  padding: 0 20px 0 0;
+  height: 110px;
+  width: max-content;
+  border: none;
+  box-shadow: 0 0 0 2px rgb(237 0 0 / 10%);
+}
+
+.content-stores .content .tree-item[data-item-type="tab"] > .tree-node {
+  width: 100%
+}
+
+/* Teaser hover - only change text color to primary */
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node {
+  padding: 0;
+  height: 110px;
+  border: none;
+  padding-right: 10px;
+  box-shadow: 0 0 0 2px rgb(237 0 0 / 10%);
+}
+
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node .node-title,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node .node-title {
+  font-size: 15px;
+  padding-left: 10px;
+  text-decoration: none;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node .item-image,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node picture,
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node img,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node .item-image,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node picture,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node img {
+  height: 100%;
+  width: 110px;
+  object-fit: cover;
+}
+
+/* Teaser hover effects - only for teasers with links */
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover {
+  background-color: transparent !important;
+  color: inherit;
+}
+
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .node-title,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .node-title {
+  text-decoration: none;
+  color: var(--primary-color) !important;
+}
+
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .expand-icon,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link):hover .expand-icon {
+  color: var(--primary-color) !important;
+}
+
+.content-stores .tree-item[data-item-type="section-title"] {
+  padding: 24px 200px;
+  box-sizing: border-box;
+}
+
+/* Alternating background colors for sections with section-title items */
+.content-stores .content > .tree-item[data-item-type="section-title"]:nth-of-type(even) {
+  background-color: rgb(245 245 245);
+}
+
+.content-stores .content > .tree-item[data-item-type="section-title"]:nth-of-type(odd) {
+  background-color: rgb(255 255 255);
+}
+
+/* Top-level items styling (direct children of .content) */
+.content-stores .content > .tree-item:not([data-item-type="section-title"]) {
+  padding: 0 200px;
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+/* First non-section-title top-level item */
+.content-stores .content > .tree-item:not([data-item-type="section-title"]):first-child {
+  margin-top: 20px;
+}
+
+.content-stores .tree-node.type-section-title {
+  background: none;
+  border: none;
+  padding: 0;
   cursor: default;
 }
 
-.content-stores .node-title.has-link {
+.content-stores .tree-node.type-section-title h2.node-title,
+.content-stores .tree-node.type-section-title h2.node-title strong {
+  display: inline;
+  font-family: "TCCC UnityText Medium", roboto-condensed-fallback, sans-serif;
+  font-size: 2.25rem;
+  font-weight: 900;
+  line-height: 1;
+  height: auto;
+  color: rgb(30 30 30);
+  margin: 0;
+  padding: 0;
+  scroll-margin: 40px;
+  unicode-bidi: isolate;
+  width: auto;
+  vertical-align: bottom;
+}
+
+.content-stores .tree-node.type-section-title h2.node-title::after {
+  display: block;
+  content: "";
+  background-color: rgb(255 0 0);
+  color: rgb(30 30 30);
+  font-family: "TCCC UnityHeadline", roboto-condensed-fallback, sans-serif;
+  font-size: 29px;
+  font-weight: 600;
+  height: 3px;
+  line-height: 36.25px;
+  margin: 10px 0 30px;
+  padding: 0;
+  border: 0;
+  width: 96px;
+}
+
+.content-stores .tree-node.type-section-title:hover {
+  background: none;
+  border: none;
+}
+
+/* Remove left margin for children of section-title items */
+.content-stores .tree-node.type-section-title ~ .tree-children {
+  margin-left: 0;
+}
+
+.content-stores .tree-item .tree-node.type-section-title + .tree-children {
+  margin-left: 0;
+}
+
+/* Link styling for node titles (excluding buttons) */
+.content-stores .tree-node:not(.type-button) .node-title.has-link {
   color: var(--link-color);
   text-decoration: none;
   transition: color 0.2s ease;
   cursor: pointer;
-}
-
-.content-stores .tree-node[data-has-children="false"] .node-title.has-link {
-  color: var(--link-color);
-  text-decoration: underline;
-}
-
-.content-stores .tree-node[data-has-children="false"] .node-title.has-link:hover {
-  color: var(--link-hover-color);
-  text-decoration: underline;
 }
 
 .content-stores .node-title.has-link:hover {
@@ -207,37 +525,357 @@
   text-decoration: underline;
 }
 
+/* Disabled styling for leaf nodes without links (excluding buttons, section-titles, tabs, and teasers) */
+.content-stores .tree-item:not([data-item-type="teaser"]) .tree-node:not(.type-button, .type-section-title, .type-tab)[data-has-children="false"] .node-title:not(.has-link) {
+  color: var(--dark-color);
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Ensure teaser node titles are never disabled */
+.content-stores .tree-item[data-item-type="teaser"] .tree-node .node-title {
+  color: var(--text-color) !important;
+  opacity: 1 !important;
+}
+
+/* Teaser with links should have pointer cursor on entire node and title */
+.content-stores .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link),
+.content-stores .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title.has-link) .node-title {
+  cursor: pointer !important;
+}
+
+/* Teaser without links should have not-allowed cursor on entire node and title (like disabled button) */
+.content-stores .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)),
+.content-stores .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)) .node-title {
+  cursor: not-allowed !important;
+}
+
+/* Prevent hover effects on teasers without links (like disabled buttons) */
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover {
+  background-color: transparent !important;
+}
+
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .node-title,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .node-title {
+  color: var(--text-color) !important;
+}
+
+.content-stores .tree-children .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .expand-icon,
+.content-stores .content > .tree-item[data-item-type="teaser"] > .tree-node:has(.node-title:not(.has-link)):hover .expand-icon {
+  color: var(--text-color) !important;
+}
+
+/* Underline links in leaf nodes (excluding buttons and tabs) */
+.content-stores .tree-node:not(.type-button, .type-tab)[data-has-children="false"] .node-title.has-link {
+  color: var(--link-color);
+  text-decoration: underline;
+}
+
+.content-stores .tree-node:not(.type-button, .type-tab)[data-has-children="false"] .node-title.has-link:hover {
+  color: var(--link-hover-color);
+  text-decoration: underline;
+}
+
 .content-stores .tree-children {
   margin-left: 32px;
-  border-left: 2px solid var(--background-color);
   padding-left: 0;
   display: none;
 }
 
 .content-stores .tree-children.expanded {
-  display: block;
+  display: flex;
+  flex-flow: row wrap;
+  gap: 15px;
 }
 
-.content-stores .rich-content {
-  margin: 12px 0 12px 32px;
-  padding: 16px;
-  background: var(--background-color);
+/* Tab and section-title items should take full width in row layout */
+.content-stores .tree-children.expanded .tree-item[data-item-type="tab"],
+.content-stores .tree-children.expanded .tree-item[data-item-type="section-title"] {
+  width: 100%;
+  flex-basis: 100%;
+}
+
+.content-stores .tree-children.expanded:not(.has-grid) {
+  margin-top: 10px;
+}
+
+/* Flex container for leaf items - responsive to parent width */
+.content-stores .tree-children.has-grid {
+  display: none;
+  flex-flow: row wrap;
+  align-items: flex-start;
+  gap: 25px;
+  padding: 20px 0 30px 20px;
+  border: none;
+  box-sizing: border-box;
+  width: 100%;
+  margin-left: 0;
+}
+
+/* Exclude text, section-title, and teaser type items from grid layout constraints */
+.content-stores .tree-children.has-grid .tree-item[data-item-type="text"],
+.content-stores .tree-children.has-grid .tree-item[data-item-type="section-title"] {
+  width: 100%;
+  max-width: none;
+}
+
+.content-stores .tree-children.has-grid.expanded {
+  display: flex;
+}
+
+/* Item wrapper in flex - auto width based on content (excluding tab, text, section-title, and teaser) */
+.content-stores .tree-children.has-grid .tree-item:not([data-item-type="tab"], [data-item-type="text"], [data-item-type="section-title"], [data-item-type="teaser"]) {
+  display: block;
+  box-sizing: border-box;
+  min-width: 310px;
+  max-width: 350px;
+  width: auto;
+}
+
+.content-stores .tree-children .tree-item[data-item-type="teaser"] {
+  width: 330px;
+}
+
+/* Override inline styles for items in flex */
+.content-stores .tree-children.has-grid .tree-item .tree-node {
+  width: auto;
+  display: flex;
+  box-sizing: border-box;
+}
+
+/* Button-specific styling in grid */
+.content-stores .tree-children.has-grid .tree-item.button-item {
+  font-family: var(--heading-font-family);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+/* Show all children button */
+.content-stores .show-all-children {
+  margin-top: 12px;
+  padding: 8px 16px;
+  background-color: rgb(245 245 245);
+  border: 1px solid var(--primary-color);
   border-radius: 8px;
+  color: var(--primary-color);
   font-size: var(--body-font-size-xs);
-  line-height: 1.6;
-  border-left: 4px solid var(--primary-color);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  user-select: none;
+}
+
+.content-stores .show-all-children:hover {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.content-stores .show-all-children:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+/* Accordion Items Styling */
+.content-stores .tree-item[data-item-type="accordion"] {
+  margin-bottom: 1rem;
+  border-radius: 30px;
+  border: 1px solid #e0e0e0;
+  background: white;
+}
+
+/* Accordion expanded state - with scrolling */
+.content-stores .tree-item[data-item-type="accordion"]:has(.tree-node.expanded) {
+  max-height: 300px;
+  overflow: hidden auto;
+}
+
+/* Custom scrollbar for accordion items */
+.content-stores .tree-item[data-item-type="accordion"]::-webkit-scrollbar {
+  width: 6px;
+}
+
+.content-stores .tree-item[data-item-type="accordion"]::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 50px 0 20px;
+}
+
+.content-stores .tree-item[data-item-type="accordion"]::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 3px;
+}
+
+.content-stores .tree-item[data-item-type="accordion"]::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color-hover);
+}
+
+/* Disable all transitions on accordion and its children */
+.content-stores .tree-item[data-item-type="accordion"],
+.content-stores .tree-item[data-item-type="accordion"] *,
+.content-stores .tree-item[data-item-type="accordion"] *::before,
+.content-stores .tree-item[data-item-type="accordion"] *::after {
+  transition: none !important;
+}
+
+/* Accordion node styling - collapsed state */
+.content-stores .tree-item[data-item-type="accordion"] .tree-node {
+  background: white;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  transition: none;
+  min-height: 50px;
+}
+
+.content-stores .tree-item[data-item-type="accordion"] .tree-node:hover {
+  background: white;
+}
+
+/* Hide the default expand icon for accordion items */
+.content-stores .tree-item[data-item-type="accordion"] .expand-icon {
+  display: none;
+  transition: none;
+}
+
+/* Accordion title - default (collapsed) state */
+.content-stores .tree-item[data-item-type="accordion"] .node-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #000;
+  font-family: "TCCC UnityText Medium", roboto-condensed-fallback, sans-serif;
+  transition: none;
+}
+
+/* Add down arrow for collapsed accordion */
+.content-stores .tree-item[data-item-type="accordion"] .tree-node::before {
+  content: '';
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  background-image: url('/icons/arrow-down-nav-menu.svg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+/* Red down arrow on hover (collapsed state) */
+.content-stores .tree-item[data-item-type="accordion"] .tree-node:hover::before {
+  background-image: url('/icons/down-arrow-icon-red.svg');
+}
+
+/* Expanded state - red text and up caret */
+.content-stores .tree-item[data-item-type="accordion"] .tree-node.expanded {
+  background: white;
+  border-radius: 30px 30px 0 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.content-stores .tree-item[data-item-type="accordion"] .tree-node.expanded .node-title {
+  color: var(--primary-color);
+}
+
+/* Red up arrow when expanded (overrides hover) */
+.content-stores .tree-item[data-item-type="accordion"] .tree-node.expanded::before {
+  background-image: url('/icons/up-arrow-red-icon.svg');
+}
+
+.content-stores .tree-item .rich-content {
+  font-size: 14px;
+  line-height: 2.5;
   font-family: var(--body-font-family);
   color: var(--text-color);
+  overflow-y: auto;
+  transition: none;
 }
 
-.content-stores .rich-content a {
-  color: var(--link-color);
-  text-decoration: none;
-  transition: color 0.2s ease;
+/* Text items with links should look clickable */
+.content-stores .tree-item[data-item-type="text"] .rich-content.has-link {
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 0.1s ease;
 }
 
-.content-stores .rich-content a:hover {
-  color: var(--link-hover-color);
+.content-stores .tree-item[data-item-type="text"] .rich-content.has-link:hover {
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
+/* Rich content area - shown when expanded */
+.content-stores .tree-item[data-item-type="accordion"] .rich-content {
+  margin: 0;
+  padding: 10px 24px;
+  background: white;
+  border: none;
+  border-radius: 0;
+}
+
+.content-stores .tree-item[data-item-type="accordion"] .rich-content.tree-children.expanded {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Custom scrollbar styling */
+.content-stores .tree-item[data-item-type="accordion"] .rich-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.content-stores .tree-item[data-item-type="accordion"] .rich-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.content-stores .tree-item[data-item-type="accordion"] .rich-content::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 3px;
+}
+
+.content-stores .tree-item[data-item-type="accordion"] .rich-content::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color-hover);
+}
+
+/* List styling inside accordion */
+.content-stores .tree-item[data-item-type="accordion"] .rich-content ul {
+  list-style: disc;
+  padding-left: 20px;
+  margin: 0;
+}
+
+.content-stores .tree-item[data-item-type="accordion"] .rich-content li {
+  margin-bottom: 8px;
+}
+
+/* Paragraph tags with links displayed as bullet points */
+.content-stores .tree-item[data-item-type="accordion"] .rich-content p {
+  margin: 0 0 3px;
+  padding-left: 20px;
+  position: relative;
+}
+
+.content-stores .tree-item[data-item-type="accordion"] .rich-content p::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  font-weight: bold;
+}
+
+/* Link styling inside accordion - underlined by default */
+.content-stores .tree-item[data-item-type="accordion"] .rich-content a,
+.content-stores .tree-item[data-item-type="accordion"] .rich-content a * {
+  color: var(--text-color);
+  text-decoration: underline;
+  font-weight: 500;
+  font-family: "TCCC UnityText Medium", roboto-condensed-fallback, sans-serif;
+}
+
+.content-stores .tree-item[data-item-type="accordion"] .rich-content a:hover {
+  color: var(--primary-color);
   text-decoration: underline;
 }
 
@@ -247,7 +885,7 @@
   }
 
   .content-stores .content {
-    padding: 1rem;
+    padding: 0;
   }
 
   .content-stores .controls {
@@ -264,5 +902,23 @@
     width: 100%;
     margin-left: 0;
     justify-content: flex-start;
+  }
+
+  .content-stores .tree-children.has-grid {
+    flex-direction: column;
+  }
+
+  .content-stores .tree-item[data-item-type="section-title"] {
+    padding: 24px 1.5rem;
+  }
+
+  .content-stores .content > .tree-item:not([data-item-type="section-title"]) {
+    padding: 0 1.5rem;
+  }
+
+  .content-stores .tree-item {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
   }
 }

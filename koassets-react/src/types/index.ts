@@ -433,6 +433,13 @@ export interface ImageGalleryProps {
     onClearAllFacets?: () => void;
     deepLinkAsset?: Asset | null;
     onCloseDeepLinkModal?: () => void;
+    query?: string;
+    facetCheckedState?: FacetCheckedState;
+    selectedNumericFilters?: string[];
+    rightsStartDate?: DateValue | null;
+    rightsEndDate?: DateValue | null;
+    selectedMarkets?: Set<RightsData>;
+    selectedMediaChannels?: Set<RightsData>;
 }
 
 // Main App types (for the most complex component)
@@ -463,6 +470,7 @@ export enum WorkflowStep {
     REQUEST_DOWNLOAD = 'request-download',
     RIGHTS_CHECK = 'rights-check',
     REQUEST_RIGHTS_EXTENSION = 'request-rights-extension',
+    RIGHTS_EXTENSION_SUBMITTED = 'rights-extension-submitted',
     DOWNLOAD = 'download',
     CLOSE_DOWNLOAD = 'close-download'
 }
@@ -476,6 +484,7 @@ export interface WorkflowStepStatuses {
     [WorkflowStep.REQUEST_DOWNLOAD]?: StepStatus;
     [WorkflowStep.RIGHTS_CHECK]?: StepStatus;
     [WorkflowStep.REQUEST_RIGHTS_EXTENSION]?: StepStatus;
+    [WorkflowStep.RIGHTS_EXTENSION_SUBMITTED]?: StepStatus;
     [WorkflowStep.DOWNLOAD]?: StepStatus;
     [WorkflowStep.CLOSE_DOWNLOAD]?: StepStatus;
 }
@@ -616,6 +625,7 @@ export interface SearchPanelProps {
     selectAuthorized?: boolean;
     onSelectAuthorized?: (isChecked: boolean) => void;
     isRightsSearch?: boolean;
+    onShareSearch?: () => void;
 }
 
 // Download archive data structure for sessionStorage
@@ -696,7 +706,7 @@ export interface AssetMetadata {
     'tccc:assignedAM'?: string;
     'tccc:agencyName'?: string;
     'tccc:autoPublish'?: boolean;
-    'tccc:assetType'?: string;
+    'tccc:contentType'?: string;
     'tccc:packageDepicted'?: string;
     'tccc:masterOrAdaptation'?: string;
     'tccc:fundingBU'?: string[];
@@ -761,7 +771,7 @@ declare global {
         toggleCart?: () => void;
         updateCartBadge?: (numItems: number) => void;
 
-        // Download panel management functions  
+        // Download panel management functions
         openDownloadPanel?: () => void;
         closeDownloadPanel?: () => void;
         toggleDownloadPanel?: () => void;

@@ -199,7 +199,7 @@ async function searchAuthorization(request, env, search) {
   }
 
   // INTENDED CUSTOMER CHECK
-  const customerCheck = `(NOT tccc-assetType:'customers'${user.customers.map(c => ` OR tccc-intendedCustomers:'${c}'`).join('')})`;
+  const customerCheck = `(NOT tccc-contentType:'customers'${user.customers.map(c => ` OR tccc-intendedCustomers:'${c}'`).join('')})`;
 
   // all checks are required (AND)
   const constraint = [bottlerCountryCheck, customerCheck, brandCheck].filter(c => c).join(' AND ');

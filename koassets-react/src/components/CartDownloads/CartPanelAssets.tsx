@@ -19,9 +19,13 @@ import './CartPanelAssets.css';
 import CartRequestDownload from './CartRequestDownload';
 import CartRequestRightsExtension from './CartRequestRightsExtension';
 import CartRightsCheck from './CartRightsCheck';
+import CartRightsExtensionSubmitted from './CartRightsExtensionSubmitted';
 import EmptyCartDownloadContent from './EmptyCartDownloadContent';
 import { WorkflowProgress } from './WorkflowProgress';
 import { EAGER_LOAD_IMAGE_COUNT } from '../../constants/images';
+import { calendarDateToISO } from '../../utils/dateConverters';
+// @ts-expect-error - vanilla JS module from parent directory
+import showToast from '@scripts/toast/toast';
 
 // Component for rendering individual cart item row
 interface CartAssetItemRowProps {
@@ -93,7 +97,7 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
             const detail = { assets: cartAssetItems } as unknown as Record<string, unknown>;
             window.dispatchEvent(new CustomEvent('openCollectionModal', { detail }));
         } catch (err) {
-            console.warn('Failed to open Add to Collection modal from cart:', err);
+            console.trace('Failed to open Add to Collection modal from cart:', err);
         }
     };
 
@@ -104,7 +108,7 @@ const CartActionsFooter: React.FC<CartActionsFooterProps> = ({
             const detail = { assets: cartAssetItems } as unknown as Record<string, unknown>;
             window.dispatchEvent(new CustomEvent('openShareModal', { detail }));
         } catch (err) {
-            console.warn('Failed to open Share modal from cart:', err);
+            console.trace('Failed to open Share modal from cart:', err);
         }
     };
 
@@ -170,11 +174,15 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         [WorkflowStep.REQUEST_DOWNLOAD]: StepStatus.INIT,
         [WorkflowStep.RIGHTS_CHECK]: StepStatus.INIT,
         [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: StepStatus.INIT,
+        [WorkflowStep.RIGHTS_EXTENSION_SUBMITTED]: StepStatus.INIT,
         [WorkflowStep.DOWNLOAD]: StepStatus.INIT,
         [WorkflowStep.CLOSE_DOWNLOAD]: StepStatus.INIT
     });
     const [filteredItems, setFilteredItems] = useState<{ [key in FilteredItemsType]: Asset[] }>({} as { [key in FilteredItemsType]: Asset[] });
     const [showDownloadContent, setShowDownloadContent] = useState(false);
+    
+    // Track all executed workflow steps
+    const [executedSteps, setExecutedSteps] = useState<WorkflowStep[]>([WorkflowStep.CART]);
 
     // State for storing step form data
     const [stepData, setStepData] = useState<WorkflowStepData>({});
@@ -213,6 +221,19 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         onActiveStepChange(activeStep);
     }, [activeStep, onActiveStepChange]);
 
+    // Track executed steps when activeStep changes
+    useEffect(() => {
+        setExecutedSteps(prev => {
+            // Only add if not already in the list
+            if (!prev.includes(activeStep)) {
+                const newSteps = [...prev, activeStep];
+                console.debug('Executed workflow steps:', newSteps);
+                return newSteps;
+            }
+            return prev;
+        });
+    }, [activeStep]);
+
 
     // Update filteredItems when cartAssetItems changes
     useEffect(() => {
@@ -234,7 +255,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
 
     // Handler for opening rights check with intended use data
     const handleOpenRightsCheck = useCallback((requestDownloadData: RequestDownloadStepData): void => {
-        console.log('Opening rights check with request download data:', requestDownloadData);
+        console.trace('Opening rights check with request download data:', requestDownloadData);
 
         // Initialize the rights check form data with default values
         setRightsCheckFormData({
@@ -288,7 +309,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     }, [rightsCheckFormData]);
 
     // Handler for sending rights extension request
-    const handleSendRightsExtensionRequest = useCallback((rightsExtensionData: RequestRightsExtensionStepData): void => {
+    const handleSendRightsExtensionRequest = useCallback(async (rightsExtensionData: RequestRightsExtensionStepData): Promise<void> => {
         // Update the form data state
         setRightsExtensionFormData(rightsExtensionData);
 
@@ -298,25 +319,51 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
             rightsExtension: rightsExtensionData
         }));
 
-        // TODO: Implement API call to submit rights extension request
-        console.log('Rights extension request sent:', rightsExtensionData);
+        try {
+            // Merge requestDownload data (air/pull dates, markets, media) with rightsExtension data
+            const payload = {
+                ...rightsExtensionData,
+                airDate: calendarDateToISO(stepData.requestDownload?.airDate),
+                pullDate: calendarDateToISO(stepData.requestDownload?.pullDate),
+                materialsRequiredDate: calendarDateToISO(rightsExtensionData.materialsRequiredDate),
+                selectedMarkets: Array.from(stepData.requestDownload?.selectedMarkets || []),
+                selectedMediaChannels: Array.from(stepData.requestDownload?.selectedMediaChannels || [])
+            };
 
-        // Remove restricted assets from cart
-        if (rightsExtensionData.restrictedAssets && rightsExtensionData.restrictedAssets.length > 0) {
-            const restrictedAssetIds = rightsExtensionData.restrictedAssets.map(asset => asset.assetId);
-            const authorizedItems = cartAssetItems.filter(item => !restrictedAssetIds.includes(item.assetId));
+            const response = await fetch('/api/rightsrequests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(payload)
+            });
 
-            setCartAssetItems(authorizedItems);
-
-            // If there are still items in cart after removal, go back to RIGHTS_CHECK
-            if (authorizedItems.length > 0) {
-                setStepStatus(prev => ({ ...prev, [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: StepStatus.SUCCESS }));
-                setActiveStep(WorkflowStep.RIGHTS_CHECK);
-                setStepStatus(prev => ({ ...prev, [WorkflowStep.RIGHTS_CHECK]: StepStatus.CURRENT }));
+            if (!response.ok) {
+                throw new Error(`Failed to submit rights request: ${response.statusText}`);
             }
-            // If no items left, the auto-close useEffect will handle closing the cart
+
+            const result = await response.json();
+            console.trace('Rights extension request submitted successfully:', result);
+
+            // Remove the submitted assets from the cart
+            if (rightsExtensionData.restrictedAssets && rightsExtensionData.restrictedAssets.length > 0) {
+                const submittedAssetIds = rightsExtensionData.restrictedAssets.map(asset => asset.assetId);
+                const remainingItems = cartAssetItems.filter(item => !submittedAssetIds.includes(item.assetId));
+                setCartAssetItems(remainingItems);
+            }
+
+            // Mark REQUEST_RIGHTS_EXTENSION step as successful
+            setStepStatus(prev => ({ ...prev, [WorkflowStep.REQUEST_RIGHTS_EXTENSION]: StepStatus.SUCCESS }));
+
+            // Move to RIGHTS_EXTENSION_SUBMITTED step
+            setActiveStep(WorkflowStep.RIGHTS_EXTENSION_SUBMITTED);
+            setStepStatus(prev => ({ ...prev, [WorkflowStep.RIGHTS_EXTENSION_SUBMITTED]: StepStatus.CURRENT }));
+
+        } catch (error) {
+            console.error('Error submitting rights extension request:', error); // Keep as error
+            showToast('Error submitting rights extension request', 'error');
+            return Promise.reject(error);
         }
-    }, [cartAssetItems, setCartAssetItems]);
+    }, [cartAssetItems, setCartAssetItems, stepData.requestDownload]);
 
     const handleOpenDownload = useCallback(async (): Promise<void> => {
         setStepStatus(prev => ({ ...prev, [WorkflowStep.CART]: stepStatus[WorkflowStep.CART] === StepStatus.INIT ? StepStatus.SUCCESS : stepStatus[WorkflowStep.CART] }));
@@ -325,7 +372,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
 
         // Get ready-to-use items for download
         const readyToUseItems = filteredItems[FilteredItemsType.READY_TO_USE] || [];
-        console.log('Ready to use items for download:', readyToUseItems);
+        console.trace('Ready to use items for download:', readyToUseItems);
 
         // Show download content with ready-to-use items
         if (readyToUseItems.length > 0) {
@@ -334,11 +381,15 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     }, [stepStatus, filteredItems]);
 
     const handleCloseDownload = useCallback(async (): Promise<void> => {
+        // Clear executed steps tracking
+        setExecutedSteps([WorkflowStep.CART]);
         onCloseCartPanel();
     }, [onCloseCartPanel]);
 
     // Handler for canceling from request download step
     const handleCancelRequestDownload = useCallback((): void => {
+        // Clear executed steps tracking
+        setExecutedSteps([WorkflowStep.CART]);
         // Go back to CART step
         setActiveStep(WorkflowStep.CART);
         setStepStatus(prev => ({ ...prev, [WorkflowStep.REQUEST_DOWNLOAD]: StepStatus.INIT }));
@@ -348,18 +399,50 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
         setShowDownloadContent(false);
     }, []);
 
+    // Handler for continuing after rights extension submission
+    const handleContinueAfterRightsExtensionSubmitted = useCallback(() => {
+        // Mark RIGHTS_EXTENSION_SUBMITTED step as successful
+        setStepStatus(prev => ({ ...prev, [WorkflowStep.RIGHTS_EXTENSION_SUBMITTED]: StepStatus.SUCCESS }));
+        // Check if there are still items in cart (authorized items)
+        if (cartAssetItems.length > 0) {
+            // Go back to RIGHTS_CHECK step
+            setActiveStep(WorkflowStep.RIGHTS_CHECK);
+            setStepStatus(prev => ({ ...prev, [WorkflowStep.RIGHTS_CHECK]: StepStatus.CURRENT }));
+        } else {
+            setActiveStep(WorkflowStep.CLOSE_DOWNLOAD);
+        }
+    }, [cartAssetItems]);
+
     const handleDownloadCompleted = useCallback((success: boolean, successfulAssets?: Asset[]) => {
         if (success) {
             setStepStatus(prev => ({ ...prev, [WorkflowStep.DOWNLOAD]: StepStatus.SUCCESS }));
             setActiveStep(WorkflowStep.CLOSE_DOWNLOAD);
-            console.log('Download completed successfully for assets:', successfulAssets);
+            console.trace('Download completed successfully for assets:', successfulAssets);
 
             // Remove successfully downloaded assets from cart
             if (successfulAssets && successfulAssets.length > 0) {
                 const successfulAssetIds = successfulAssets.map(asset => asset.assetId);
                 const newCartAssetItems = cartAssetItems.filter(item => !successfulAssetIds.includes(item.assetId));
                 setCartAssetItems(newCartAssetItems);
+                if (newCartAssetItems.length > 0) {
+                    // Pop the DOWNLOAD step from executedSteps and set activeStep to the last step
+                    setExecutedSteps(prev => {
+                        const filteredSteps = prev.filter(step => step !== WorkflowStep.DOWNLOAD);
+                        console.debug('Executed steps after download:', filteredSteps);
+                        
+                        // Set activeStep to the last step in the array
+                        if (filteredSteps.length > 0) {
+                            const lastStep = filteredSteps[filteredSteps.length - 1];
+                            setActiveStep(lastStep);
+                            setStepStatus(prevStatus => ({ ...prevStatus, [lastStep]: StepStatus.CURRENT }));
+                        }
+                        
+                        return filteredSteps;
+                    });
+                }
             }
+
+            
         } else {
             setStepStatus(prev => ({ ...prev, [WorkflowStep.DOWNLOAD]: StepStatus.FAILURE }));
         }
@@ -462,7 +545,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
     //     }
     // }, [cartAssetItems.length, onClose]);
 
-    if (cartAssetItemsCount === 0) {
+    if (cartAssetItemsCount === 0 && activeStep === WorkflowStep.CART) {
         return <EmptyCartDownloadContent msg="Your cart is empty" />;
     }
 
@@ -473,6 +556,7 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                 activeStep={activeStep}
                 hasAllItemsReadyToUse={hasAllItemsReadyToUse}
                 stepStatus={stepStatus}
+                executedSteps={executedSteps}
             />
 
             {/* Direct Download */}
@@ -574,6 +658,10 @@ const CartPanelAssets: React.FC<CartPanelAssetsProps> = ({
                         }));
                     }}
                     initialData={rightsExtensionFormData}
+                />
+            ) : activeStep === WorkflowStep.RIGHTS_EXTENSION_SUBMITTED ? (
+                <CartRightsExtensionSubmitted
+                    onContinue={handleContinueAfterRightsExtensionSubmitted}
                 />
             ) : (
                 <>

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useAppConfig } from '../../hooks/useAppConfig';
 import type { AssetDetailsProps, Rendition, Asset, Metadata } from '../../types';
 
-import { AuthorizationStatus } from '../../clients/fadel-client';
+import { AuthorizationStatus, FadelClient } from '../../clients/fadel-client';
 import ActionButton from '../ActionButton';
 import { BUTTON_CONFIGS } from '../ActionButtonConfigs';
 import DownloadRenditionsModal from '../DownloadRenditionsModal';
@@ -23,8 +23,9 @@ import AssetDetailsSystem from './AssetDetailsSystem';
 import AssetDetailsSystemInfoLegacy from './AssetDetailsSystemInfoLegacy';
 import AssetDetailsTechnicalInfo from './AssetDetailsTechnicalInfo';
 import { isPdfPreview } from '../../constants/filetypes';
-import PDFViewer from '../PDFViewer';
 import { populateAssetFromMetadata } from '../../utils/assetTransformers';
+import AdobePDFViewer from '../AdobePDFViewer';
+import { loadDetailsCollapseAllState, saveDetailsCollapseAllState } from '../../utils/toggleStateStorage';
 
 /* Displayed on the asset details modal header section
 campaignName 
@@ -46,13 +47,22 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
 }) => {
     // Get dynamicMediaClient from context
     const { dynamicMediaClient } = useAppConfig();
-    const [collapseAll, setCollapseAll] = useState<boolean>(false);
+    // Collapse All toggle state - load from local storage or use default (false)
+    const [collapseAll, setCollapseAll] = useState<boolean>(() => loadDetailsCollapseAllState(false));
     const [showDownloadRenditionsModal, setShowDownloadRenditionsModal] = useState<boolean>(false);
     const [actionButtonEnable, setActionButtonEnable] = useState<boolean>(false);
     const [watermarkRendition, setWatermarkRendition] = useState<Rendition | undefined>(undefined);
     const [populatedImage, setPopulatedImage] = useState<Asset>(selectedImage as Asset);
+    const [showPdfModal, setShowPdfModal] = useState<boolean>(false);
+    const [pdfUrl, setPdfUrl] = useState<string>('');
+    const [isLoadingRightsProfile, setIsLoadingRightsProfile] = useState<boolean>(false);
 
     const rightsFree: boolean = (populatedImage?.readyToUse?.toLowerCase() === 'yes' || populatedImage?.authorized === AuthorizationStatus.AVAILABLE) ? true : false;
+
+    // Persist collapseAll state to local storage whenever it changes
+    useEffect(() => {
+        saveDetailsCollapseAllState(collapseAll);
+    }, [collapseAll]);
 
     const handleToggleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setCollapseAll(e.target.checked);
@@ -125,6 +135,42 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
         }
     };
 
+    const handlePdfPreviewClick = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!populatedImage || !dynamicMediaClient) {
+            return;
+        }
+
+        // Check if this is a PDF
+        if (!isPdfPreview(populatedImage.format as string)) {
+            return;
+        }
+
+        // Find the PDF rendition
+        const pdfRendition = renditions.items
+            ?.filter((item: Rendition) => isPdfPreview(item.format as string))
+            ?.sort((a: Rendition, b: Rendition) => (a.size ?? 0) - (b.size ?? 0))?.[0];
+
+        if (!pdfRendition) {
+            console.warn('No PDF rendition found');
+            return;
+        }
+
+        // Get the PDF URL
+        const url = dynamicMediaClient.getPreviewPdfUrl(
+            populatedImage.assetId as string,
+            populatedImage.name as string,
+            pdfRendition.name as string
+        );
+        
+        if (url) {
+            setPdfUrl(url);
+            setShowPdfModal(true);
+        }
+    };
+
     const handleCloseDownloadRenditionsModal = () => {
         setShowDownloadRenditionsModal(false);
     };
@@ -139,6 +185,24 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                     const populatedAsset = populateAssetFromMetadata(metadata as Metadata);
                     console.debug('Setting populated image with metadata:', populatedAsset.assetId);
                     setPopulatedImage(populatedAsset);
+
+                    // Fetch rights profile from FADEL
+                    setIsLoadingRightsProfile(true);
+                    try {
+                        const fadelClient = FadelClient.getInstance();
+                        const rightsProfiles = await fadelClient.getAssetRightsProfile(selectedImage.assetId);
+                        
+                        if (rightsProfiles.length > 0) {
+                            const rightsProfileTitle = rightsProfiles[0].description || rightsProfiles[0].rightsProfileTitle;
+                            if (rightsProfileTitle) {
+                                setPopulatedImage(prev => ({ ...prev, rightsProfileTitle }));
+                            }
+                        }
+                    } catch (fadelError) {
+                        console.error('Failed to fetch rights profile:', fadelError);
+                    } finally {
+                        setIsLoadingRightsProfile(false);
+                    }
                 } catch (error) {
                     console.error('Failed to fetch metadata:', error);
                     // Fallback to the provided asset
@@ -205,12 +269,37 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
         return modalRoot;
     };
 
+    const handlePdfModalOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (e.target === e.currentTarget) {
+            setShowPdfModal(false);
+        }
+    };
+
+    const handlePdfModalContentClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        e.stopPropagation();
+    };
+
     return (
-        createPortal(<div className="asset-details-modal portal-modal"
-            onClick={handleOverlayClick}
-            style={{ pointerEvents: 'auto' }} // Re-enable pointer events for the modal
-        >
-            <div className="asset-details-modal-inner" onClick={handleModalClick}>
+        createPortal(<>
+            {showPdfModal && (
+                <div className="pdf-modal-overlay" onClick={handlePdfModalOverlayClick}>
+                    <div className="pdf-modal-content" onClick={handlePdfModalContentClick}>
+                        <AdobePDFViewer
+                            pdfUrl={pdfUrl}
+                            fileName={populatedImage.title as string || 'document.pdf'}
+                            showDownloadPDF={false}
+                            showPrintPDF={false}
+                            onClose={() => setShowPdfModal(false)}
+                        />
+                    </div>
+                </div>
+            )}
+
+            <div className="asset-details-modal portal-modal"
+                onClick={handleOverlayClick}
+                style={{ pointerEvents: 'auto' }} // Re-enable pointer events for the modal
+            >
+                <div className="asset-details-modal-inner" onClick={handleModalClick}>
                 <div className="asset-details-main-main-section">
                     <div className="asset-details-main-image-section">
                         <div className="asset-details-image-wrapper">
@@ -221,27 +310,31 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     <span>Add to Collection</span>
                                 </div>
                             </div>
-                            {(() => {
-                                const pictureComponent = (
-                                    <Picture
-                                        key={selectedImage?.assetId}
-                                        asset={selectedImage as Asset}
-                                        width={1200}
-                                        className="asset-details-main-image"
-                                        eager={true}
-                                        fetchPriority="high"
-                                    />
-                                );
-                                return isPdfPreview(selectedImage?.format as string) ? (
-                                    <PDFViewer 
-                                        selectedImage={selectedImage as Asset} 
-                                        renditions={renditions}
-                                        fallbackComponent={pictureComponent}
-                                    />
-                                ) : (
-                                    pictureComponent
-                                );
-                            })()}
+                            <div 
+                                className="asset-details-image-container"
+                                onClick={isPdfPreview(populatedImage?.format as string) && populatedImage?.readyToUse?.toLowerCase() === 'yes' ? handlePdfPreviewClick : undefined}
+                                style={isPdfPreview(populatedImage?.format as string) && populatedImage?.readyToUse?.toLowerCase() === 'yes' ? { cursor: 'pointer' } : undefined}
+                            >
+                                <Picture
+                                    key={populatedImage?.assetId}
+                                    asset={populatedImage as Asset}
+                                    width={1200}
+                                    className="asset-details-main-image"
+                                    eager={true}
+                                    fetchPriority="high"
+                                />
+                                {/* Magnifying Glass Overlay for Rights Free PDFs only */}
+                                {isPdfPreview(populatedImage?.format as string) && populatedImage?.readyToUse?.toLowerCase() === 'yes' && (
+                                    <button 
+                                        className="pdf-preview-magnify-button"
+                                        onClick={handlePdfPreviewClick}
+                                        aria-label="View PDF in full screen"
+                                        title="View PDF"
+                                    >
+                                        <img src="/icons/zoom.svg" alt="View PDF" />
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -313,7 +406,9 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                                     <div className="tccc-assets-rights-grid">
                                         <div className="tccc-assets-rights-group">
                                             <span className="tccc-metadata-label">RIGHTS PROFILE TITLE</span>
-                                            <span className="tccc-metadata-value">{populatedImage?.rightsProfileTitle as string}</span>
+                                            <span className="tccc-metadata-value">
+                                                {isLoadingRightsProfile ? 'Loading...' : (populatedImage?.rightsProfileTitle as string)}
+                                            </span>
                                         </div>
                                         <div className="tccc-assets-rights-group">
                                             <span className="tccc-metadata-label">MARKET COVERED</span>
@@ -410,7 +505,8 @@ const AssetDetails: React.FC<AssetDetailsProps> = ({
                 />,
                 document.body
             )}
-        </div>,
+        </div>
+        </>,
             getModalRoot()
         )
     );

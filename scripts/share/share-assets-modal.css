@@ -1,233 +1,4 @@
-/* Share Assets Modal Styles */
-
-.share-assets-modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgb(0 0 0 / 60%);
-  justify-content: center;
-  align-items: center;
-  z-index: 10000;
-  animation: fade-in 0.3s ease;
-}
-
-.share-assets-modal-content {
-  background-color: white;
-  border-radius: 16px;
-  width: 90%;
-  max-width: 900px;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: 0 10px 30px rgb(0 0 0 / 30%);
-  animation: slide-in 0.3s ease;
-}
-
-.share-assets-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 2rem 2rem 1rem;
-  border-bottom: 1px solid #eee;
-}
-
-.share-assets-modal-title {
-  font-size: 1.5rem;
-  font-weight: 500;
-  color: #333;
-  margin: 0;
-}
-
-.share-assets-modal-close {
-  background: none;
-  border: none;
-  font-size: 2rem;
-  color: #999;
-  cursor: pointer;
-  padding: 0;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.share-assets-modal-close:hover {
-  color: #333;
-}
-
-.share-assets-modal-body {
-  padding: 2rem;
-}
-
-/* Two Column Layout */
-.share-modal-columns {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 2rem;
-  min-width: 0; /* Allow columns to shrink */
-}
-
-.share-assets-column,
-.share-options-column {
-  min-width: 0; /* Prevent column expansion */
-}
-
-/* Column Headers */
-.share-column-header {
-  margin: 0 0 1rem;
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: #333;
-}
-
-.share-assets-list {
-  max-height: 400px;
-  overflow: hidden auto;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 0.5rem;
-}
-
-.share-asset-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border-radius: 6px;
-  transition: background-color 0.2s ease;
-  min-width: 0; /* Prevent item expansion */
-}
-
-.share-asset-item:hover {
-  background-color: #f8f8f8;
-}
-
-.share-asset-preview {
-  flex: 0 0 40px;
-  width: 40px;
-  height: 40px;
-  border-radius: 4px;
-  overflow: hidden;
-  background-color: #f0f0f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.share-asset-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.asset-placeholder {
-  width: 20px;
-  height: 20px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23999'%3E%3Cpath d='M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z'/%3E%3C/svg%3E");
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-}
-
-.share-asset-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.share-asset-name {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #333;
-  line-height: 1.4;
-  word-break: break-word;
-  overflow-wrap: break-word;
-}
-
-/* Right Column: Share Form */
-.share-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.form-group label {
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: #333;
-}
-
-.form-input {
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-family: inherit;
-  color: #333;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: #e60012;
-  box-shadow: 0 0 0 3px rgb(230 0 18 / 10%);
-}
-
-.form-textarea {
-  resize: vertical;
-  min-height: 100px;
-}
-
-/* Modal Footer */
-.share-assets-modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  padding: 1rem 2rem 2rem;
-  border-top: 1px solid #eee;
-}
-
-.btn-cancel,
-.btn-share {
-  padding: 0.75rem 1.5rem;
-  border-radius: 25px;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.btn-cancel {
-  background-color: white;
-  color: #333;
-  border: 1px solid #ddd;
-}
-
-.btn-cancel:hover {
-  background-color: #f5f5f5;
-  border-color: #ccc;
-}
-
-.btn-share {
-  background-color: #e60012;
-  color: white;
-  border: none;
-}
-
-.btn-share:hover {
-  background-color: #cc0010;
-}
+/* Share Assets Email Preview Modal Styles */
 
 /* Animations */
 @keyframes fade-in {
@@ -252,7 +23,7 @@
   }
 }
 
-/* Email Preview Modal Styles */
+/* Email Preview Modal */
 .email-preview-modal {
   display: none;
   position: fixed;
@@ -263,7 +34,7 @@
   background-color: rgb(0 0 0 / 60%);
   justify-content: center;
   align-items: center;
-  z-index: 10001; /* Higher than share modal */
+  z-index: 10000;
   animation: fade-in 0.3s ease;
 }
 
@@ -336,7 +107,6 @@
   color: #333;
 }
 
-.btn-copy-subject,
 .btn-copy-body {
   background-color: #f5f5f5;
   color: #333;
@@ -349,7 +119,6 @@
   transition: all 0.2s ease;
 }
 
-.btn-copy-subject:hover,
 .btn-copy-body:hover {
   background-color: #e0e0e0;
   border-color: #ccc;
@@ -400,37 +169,6 @@
 
 /* Responsive Design */
 @media (width <= 768px) {
-  .share-assets-modal-content {
-    width: 95%;
-    margin: 1rem;
-    max-height: 90vh;
-  }
-
-  .share-modal-columns {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
-
-  .share-assets-modal-header,
-  .share-assets-modal-body,
-  .share-assets-modal-footer {
-    padding: 1.5rem;
-  }
-
-  .share-assets-modal-footer {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .btn-cancel,
-  .btn-share {
-    width: 100%;
-  }
-
-  .share-assets-list {
-    max-height: 250px;
-  }
-
   .email-preview-modal-content {
     width: 95%;
     margin: 1rem;
@@ -449,7 +187,6 @@
     gap: 0.5rem;
   }
 
-  .btn-copy-subject,
   .btn-copy-body {
     width: 100%;
   }

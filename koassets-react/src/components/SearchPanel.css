@@ -82,6 +82,32 @@
     gap: 12px;
 }
 
+/* Share Search Button */
+.share-search-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.6rem;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.share-search-btn:hover {
+    background-color: #f0f0f0;
+}
+
+.share-search-btn::before {
+    content: '';
+    width: 20px;
+    height: 20px;
+    background: url('/icons/share.svg') center center / contain no-repeat;
+    display: block;
+}
+
 /* Card View Container */
 .card-view-container {
     display: flex;

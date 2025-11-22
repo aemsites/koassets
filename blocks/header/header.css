@@ -554,7 +554,8 @@ header nav .nav-tools .nav-icons-wrapper {
 }
 
 header nav .nav-tools .nav-cart-icon,
-header nav .nav-tools .nav-download-icon {
+header nav .nav-tools .nav-download-icon,
+header nav .nav-tools .nav-message-icon {
   padding: 10px 10px 10px 0;
 }
 
@@ -565,7 +566,8 @@ header nav .nav-tools .nav-download-icon {
 }
 
 header nav .nav-tools .nav-cart-icon button,
-header nav .nav-tools .nav-download-icon button {
+header nav .nav-tools .nav-download-icon button,
+header nav .nav-tools .nav-message-icon button {
   position: relative;
   background: none;
   border: none;
@@ -574,7 +576,8 @@ header nav .nav-tools .nav-download-icon button {
 }
 
 header nav .nav-tools .nav-cart-icon button img,
-header nav .nav-tools .nav-download-icon button img {
+header nav .nav-tools .nav-download-icon button img,
+header nav .nav-tools .nav-message-icon button img {
   height: 30px;
   transition: opacity 0.2s ease;
 }
@@ -588,7 +591,8 @@ header nav .nav-tools .nav-download-icon button:hover img {
 }
 
 header nav .nav-tools .nav-cart-icon .cart-badge,
-header nav .nav-tools .nav-download-icon .download-badge {
+header nav .nav-tools .nav-download-icon .download-badge,
+header nav .nav-tools .nav-message-icon .message-badge {
   position: absolute;
   color: white;
   font-family: TCCC-UnityText, sans-serif;
@@ -620,6 +624,20 @@ header nav .nav-tools .nav-download-icon .download-badge {
   color: #1e1e1e !important;
   background: #6ac9ce !important;
   border-color: #6ac9ce !important;
+}
+
+/* Message badge - simple red circle indicator (no number) */
+header nav .nav-tools .nav-message-icon .message-badge {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  width: 12px;
+  height: 12px;
+  min-width: 12px;
+  min-height: 12px;
+  border-radius: 50%;
+  padding: 0 !important;
+  right: 0.5em;
+  top: 0.5em;
 }
 
 /* Header with integrated koassets-search - always hidden */

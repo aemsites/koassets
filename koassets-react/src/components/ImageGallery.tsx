@@ -1,15 +1,59 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { ToastQueue } from '@react-spectrum/toast';
 import { AuthorizationStatus } from '../clients/fadel-client';
 import { DEFAULT_ACCORDION_CONFIG } from '../constants/accordion';
 import { useAppConfig } from '../hooks/useAppConfig';
 import type { Asset, ImageGalleryProps } from '../types';
 import { populateAssetFromHit } from '../utils/assetTransformers';
+import { calendarDateToEpoch } from '../utils/formatters';
+import buildSavedSearchUrl from '../../../scripts/saved-searches/saved-search-utils.js';
+import { isPdfModalHandlingEscape } from '../../../blocks/pdfviewer/pdfviewer.js';
 import AssetCard from './AssetCard';
 import AssetDetails from './AssetDetails/';
 import AssetPreview from './AssetPreview';
 import './ImageGallery.css';
 import SearchPanel from './SearchPanel';
+import { loadSearchExpandAllDetailsState, saveSearchExpandAllDetailsState } from '../utils/toggleStateStorage';
+
+/**
+ * Sanitize HTML content to prevent XSS attacks
+ * Removes script tags, event handlers, and dangerous protocols
+ */
+function sanitizeHTML(html: string): string {
+    if (!html) return '';
+
+    // Create a temporary div to parse HTML
+    const temp = document.createElement('div');
+    temp.textContent = html; // This escapes all HTML
+    let sanitized = temp.innerHTML;
+
+    // If the original HTML contains actual tags (not just text), use a more permissive approach
+    if (html.includes('<') && html !== sanitized) {
+        temp.innerHTML = html;
+
+        // Remove script and style tags
+        temp.querySelectorAll('script, style').forEach(el => el.remove());
+
+        // Remove event handler attributes
+        temp.querySelectorAll('*').forEach(el => {
+            Array.from(el.attributes).forEach(attr => {
+                if (
+                    attr.name.startsWith('on') ||
+                    (attr.name === 'href' && (
+                        /^(\s*)(javascript:|data:|vbscript:)/i.test(attr.value)
+                    ))
+                ) {
+                    el.removeAttribute(attr.name);
+                }
+            });
+        });
+
+        sanitized = temp.innerHTML;
+    }
+
+    return sanitized;
+}
 
 // Display list of images
 const ImageGallery: React.FC<ImageGalleryProps> = ({
@@ -42,7 +86,14 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     onFacetCheckbox,
     onClearAllFacets,
     deepLinkAsset,
-    onCloseDeepLinkModal
+    onCloseDeepLinkModal,
+    query = '',
+    facetCheckedState = {},
+    selectedNumericFilters = [],
+    rightsStartDate,
+    rightsEndDate,
+    selectedMarkets,
+    selectedMediaChannels
 }: ImageGalleryProps) => {
     // Get external params and dynamic media client from context
     const { externalParams } = useAppConfig();
@@ -50,8 +101,9 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     console.debug('ImageGallery received deepLinkAsset:', deepLinkAsset);
 
     // Extract accordion parameters from external params with fallbacks
-    const accordionTitle = externalParams?.accordionTitle || DEFAULT_ACCORDION_CONFIG.accordionTitle;
-    const accordionContent = externalParams?.accordionContent || DEFAULT_ACCORDION_CONFIG.accordionContent;
+    // Sanitize HTML content to prevent XSS attacks
+    const accordionTitle = sanitizeHTML(externalParams?.accordionTitle || DEFAULT_ACCORDION_CONFIG.accordionTitle);
+    const accordionContent = sanitizeHTML(externalParams?.accordionContent || DEFAULT_ACCORDION_CONFIG.accordionContent);
 
     // Modal state management for asset preview
     const [selectedCard, setSelectedCard] = useState<Asset | null>(null);
@@ -60,8 +112,8 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     const [showDetailsModal, setShowDetailsModal] = useState<boolean>(false);
     // Checkbox selection state
     const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
-    // Show full details toggle state
-    const [expandAllDetails, setExpandAllDetails] = useState<boolean>(true);
+    // Show full details toggle state - load from local storage or use default (true)
+    const [expandAllDetails, setExpandAllDetails] = useState<boolean>(() => loadSearchExpandAllDetailsState(true));
     // View type state (grid or list)
     const [viewType, setViewType] = useState<'grid' | 'list'>('grid');
     // Title expansion state
@@ -73,6 +125,16 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
 
     const displayedCount = visibleImages.length;
     const selectedCount = selectedCards.size;
+
+    // Track if we're closing due to browser back button
+    const isClosingViaBackButton = useRef<boolean>(false);
+    // Track if we pushed a history state for the current modal
+    const hasPushedHistoryState = useRef<boolean>(false);
+
+    // Persist expandAllDetails state to local storage whenever it changes
+    useEffect(() => {
+        saveSearchExpandAllDetailsState(expandAllDetails);
+    }, [expandAllDetails]);
 
     useEffect(() => {
         selectAuthorized ? setVisibleImages(images.filter(image => image.authorized === undefined || image.authorized === AuthorizationStatus.AVAILABLE)) : setVisibleImages(images);
@@ -94,16 +156,43 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     const closeDetailsModal = useCallback(() => {
         setSelectedCard(null);
         setShowDetailsModal(false);
+        
+        // Clean up deep link URL parameter if this was opened via deep link
+        if (isDeepLinkAsset) {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('assetid')) {
+                url.searchParams.delete('assetid');
+                // Use replaceState to clean up URL without adding to history
+                window.history.replaceState({}, '', url.toString());
+            }
+        }
+        
+        // If we pushed a history state and we're NOT closing via back button,
+        // we need to go back to clean up the history state
+        if (hasPushedHistoryState.current && !isClosingViaBackButton.current) {
+            hasPushedHistoryState.current = false;
+            window.history.back();
+        }
+        
+        // Reset the flag
+        isClosingViaBackButton.current = false;
+        
         // If this was a deep link modal, notify parent
         if (deepLinkAsset && onCloseDeepLinkModal) {
             onCloseDeepLinkModal();
         }
-    }, [deepLinkAsset, onCloseDeepLinkModal]);
+    }, [deepLinkAsset, onCloseDeepLinkModal, isDeepLinkAsset]);
 
     // Handle keyboard events for modals
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
+                // Check if PDF modal is handling the escape - if so, don't close the underlying modal
+                if (isPdfModalHandlingEscape()) {
+                    // PDF modal is handling this escape, don't close React modals
+                    return;
+                }
+                
                 if (showDetailsModal) {
                     // Don't close if this is a deep link asset
                     if (!isDeepLinkAsset) {
@@ -126,6 +215,27 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         };
     }, [showPreviewModal, showDetailsModal, closeDetailsModal, isDeepLinkAsset]);
 
+    // Handle browser back button for asset details modal
+    useEffect(() => {
+        const handlePopState = () => {
+            // Only handle back button if modal is open and we pushed a history state for it
+            // This prevents incorrectly closing the modal if other parts of the app use history API
+            if (showDetailsModal && hasPushedHistoryState.current) {
+                // Mark that we're closing via back button to prevent double history manipulation
+                isClosingViaBackButton.current = true;
+                hasPushedHistoryState.current = false;
+                // Close the modal
+                closeDetailsModal();
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+
+        return () => {
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, [showDetailsModal, closeDetailsModal]);
+
     // Create stable callback for opening details view
     const openDetailsView = useCallback(async (asset?: Asset) => {
         console.debug('openDetailsView called with asset:', JSON.stringify(asset, null, 2));
@@ -144,6 +254,14 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         } else {
             console.log('No asset provided to openDetailsView');
         }
+        
+        // Push a history state so the back button can close the modal
+        // Only push if we haven't already pushed one (prevents multiple history entries)
+        if (!hasPushedHistoryState.current) {
+            window.history.pushState({ assetDetailsModal: true }, '', window.location.href);
+            hasPushedHistoryState.current = true;
+        }
+        
         setShowDetailsModal(true);
     }, []);
 
@@ -189,8 +307,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
     // Handler for card click to show asset details modal
     const handleCardDetailClick = (image: Asset, e: React.MouseEvent) => {
         e.stopPropagation();
-        setSelectedCard(image);
-        setShowDetailsModal(true);
+        openDetailsView(image);
     };
 
     // Handle checkbox selection
@@ -265,6 +382,61 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
         setSelectedCards(new Set());
     };
 
+    // Handle share search - copy current search URL to clipboard
+    const handleShareSearch = () => {
+        // Build rights filters object if applicable
+        const rightsFilters: Record<string, unknown> = {};
+        if (isRightsSearch) {
+            if (rightsStartDate) {
+                rightsFilters.startDate = calendarDateToEpoch(rightsStartDate);
+            }
+            if (rightsEndDate) {
+                rightsFilters.endDate = calendarDateToEpoch(rightsEndDate);
+            }
+            if (selectedMarkets && selectedMarkets.size > 0) {
+                rightsFilters.markets = Array.from(selectedMarkets);
+            }
+            if (selectedMediaChannels && selectedMediaChannels.size > 0) {
+                rightsFilters.mediaChannels = Array.from(selectedMediaChannels);
+            }
+        }
+
+        // Get current search type path from URL
+        const currentPath = window.location.pathname;
+        let searchType = '/search/all';
+        if (currentPath.includes('/search/assets')) {
+            searchType = '/search/assets';
+        } else if (currentPath.includes('/search/products')) {
+            searchType = '/search/products';
+        }
+
+        // Build search object
+        const searchObject = {
+            searchTerm: query,
+            facetFilters: facetCheckedState,
+            numericFilters: selectedNumericFilters,
+            rightsFilters: Object.keys(rightsFilters).length > 0 ? rightsFilters : undefined,
+            searchType
+        };
+
+        // Build URL using shared utility
+        const searchUrl = buildSavedSearchUrl(searchObject);
+
+        // Copy to clipboard
+        navigator.clipboard.writeText(searchUrl).then(() => {
+            ToastQueue.positive('SEARCH LINK COPIED TO CLIPBOARD', { timeout: 3000 });
+        }).catch(() => {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = searchUrl;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            ToastQueue.positive('SEARCH LINK COPIED TO CLIPBOARD', { timeout: 3000 });
+        });
+    };
+
     // Handle title expansion toggle
     const handleTitleToggle = () => {
         setIsTitleExpanded(!isTitleExpanded);
@@ -328,6 +500,7 @@ const ImageGallery: React.FC<ImageGalleryProps> = ({
                 selectAuthorized={selectAuthorized}
                 onSelectAuthorized={handleSelectAuthorized}
                 isRightsSearch={isRightsSearch}
+                onShareSearch={handleShareSearch}
             />
 
             <div className="image-grid-wrapper">

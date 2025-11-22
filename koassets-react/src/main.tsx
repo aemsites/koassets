@@ -4,6 +4,8 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './index.css';
 import { getExternalParams } from './utils/config';
+// Import toast CSS
+import '../../scripts/toast/toast.css';
 
 /*
 // Monitor LCP performance - detect if LCP element is being lazy loaded

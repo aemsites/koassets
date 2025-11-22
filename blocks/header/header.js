@@ -151,6 +151,21 @@ async function createNavBar() {
     const iconsWrapper = document.createElement('div');
     iconsWrapper.classList.add('nav-icons-wrapper');
 
+    // Create message icon (bell with circle)
+    const messageIcon = document.createElement('div');
+    messageIcon.classList.add('nav-message-icon');
+    messageIcon.innerHTML = `
+      <button type="button" aria-label="Notifications">
+        <img src="/icons/bell-circle.svg" alt="Notifications" />
+        <span class="message-badge" style="display: none;"></span>
+      </button>
+    `;
+
+    // Add click handler for message icon
+    messageIcon.addEventListener('click', () => {
+      window.location.href = '/my-notifications';
+    });
+
     // Create cart icon
     const cartIcon = document.createElement('div');
     cartIcon.classList.add('nav-cart-icon');
@@ -189,12 +204,25 @@ async function createNavBar() {
       }
     });
 
-    // Append icons to wrapper (download icon first, then cart icon)
+    // Append icons to wrapper (message, download, cart)
+    iconsWrapper.appendChild(messageIcon);
     iconsWrapper.appendChild(downloadIcon);
     iconsWrapper.appendChild(cartIcon);
 
     // Append wrapper to tools
     tools.appendChild(iconsWrapper);
+
+    // Expose function to update message badge (shows red circle indicator)
+    window.updateMessageBadge = function (unreadCount) {
+      const badge = messageIcon.querySelector('.message-badge');
+      if (badge) {
+        if (unreadCount && unreadCount > 0) {
+          badge.style.display = 'block'; // Show red circle
+        } else {
+          badge.style.display = 'none'; // Hide circle
+        }
+      }
+    };
 
     // Expose function to update cart badge
     window.updateCartBadge = function (numCartAssetItems) {
@@ -378,7 +406,8 @@ async function createHeaderBar() {
     myAccountMenu.innerHTML = `
       <ul>
         <li><a href="#" id="my-profile-link">My Profile</a></li>
-        <li><a href="#">My Rights Requests</a></li>
+        <li><a href="/my-rights-requests">My Rights Requests</a></li>
+        <li><a href="/my-rights-reviews">My Rights Reviews</a></li>
         <li><a href="#">My Saved Templates</a></li>
         <li><a href="#">My Print Jobs</a></li>
         <li><a href="/my-collections">My Collections</a></li>
