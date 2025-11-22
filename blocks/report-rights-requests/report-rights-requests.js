@@ -1126,7 +1126,7 @@ function exportToCSV() {
     'LAST MODIFIED',
     'TITLE',
     'RIGHTSREQUESTSTATUS',
-    'RIGHTSMANAGER',
+    'MANAGERIGHTS',
     'RIGHTSREQUESTAPPROVEDORREJECTEDDATE',
     'NAME',
     'EMAILADDRESS',
@@ -1449,7 +1449,7 @@ function createTableHeader() {
     'LAST MODIFIED',
     'TITLE',
     'RIGHTSREQUESTSTATUS',
-    'RIGHTSMANAGER',
+    'MANAGERIGHTS',
     'RIGHTSREQUESTAPPROVEDORREJECTEDDATE',
     'NAME',
     'EMAILADDRESS',
@@ -1516,7 +1516,7 @@ function createTableRow(request) {
   statusCell.appendChild(statusBadge);
   row.appendChild(statusCell);
 
-  // RIGHTSMANAGER
+  // MANAGERIGHTS
   row.appendChild(createCell(reviewDetails.rightsReviewer || '-'));
 
   // RIGHTSREQUESTAPPROVEDORREJECTEDDATE
