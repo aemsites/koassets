@@ -24,6 +24,8 @@ import { notificationsApi } from './api/notifications';
 // Shared CORS origins
 const allowedOrigins = [
   'https://koassets.adobeaem.workers.dev',
+  // customer URLs
+  /https:\/\/(.*\.)?assets\.coke\.com$/,
   // development URLs
   /https:\/\/.*-koassets\.adobeaem\.workers\.dev$/,
   /https:\/\/.*-koassets--aemsites\.aem\.(live|page)$/,
@@ -33,52 +35,14 @@ const allowedOrigins = [
 // Standard CORS for most routes (GET, POST only)
 const { preflight, corsify } = cors({
   origin: allowedOrigins,
-  allowMethods: ['GET', 'POST'],
-  credentials: true,
-  maxAge: 600,
-});
-
-// Extended CORS for Saved Searches API routes (includes DELETE, PUT)
-const { preflight: savedSearchesPreflight, corsify: savedSearchesCorsify } = cors({
-  origin: allowedOrigins,
   allowMethods: ['GET', 'POST', 'DELETE', 'PUT'],
   credentials: true,
   maxAge: 600,
 });
 
-// Extended CORS for Messages API routes (includes DELETE)
-const { preflight: messagesPreflight, corsify: messagesCorsify } = cors({
-  origin: allowedOrigins,
-  allowMethods: ['GET', 'POST', 'DELETE'],
-  credentials: true,
-  maxAge: 600,
-});
-
-// Middleware to apply extended CORS for saved searches and messages routes
-const savedSearchesCorsMiddleware = (request) => {
-  if (request.url.includes('/api/savedsearches/')) {
-    return savedSearchesPreflight(request);
-  }
-  if (request.url.includes('/api/messages')) {
-    return messagesPreflight(request);
-  }
-  return preflight(request);
-};
-
-// Finally middleware that applies appropriate CORS
-const finalCorsMiddleware = (response, request) => {
-  if (request.url.includes('/api/savedsearches/')) {
-    return savedSearchesCorsify(response, request);
-  }
-  if (request.url.includes('/api/messages')) {
-    return messagesCorsify(response, request);
-  }
-  return corsify(response, request);
-};
-
 const router = Router({
-  before: [savedSearchesCorsMiddleware],
-  finally: [finalCorsMiddleware],
+  before: [preflight],
+  finally: [corsify],
   catch: (err) => {
     // log stack traces for debugging
     console.error('error', err);

@@ -22,6 +22,8 @@ tools/assets-browser/config.js
 # Local development config (never commit)
 **/config.local.js
 
+.claude/settings.local.json
+
 todo.md
 curl.md
 local.sh
